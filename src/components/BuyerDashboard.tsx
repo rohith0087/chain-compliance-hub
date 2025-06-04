@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,13 +19,19 @@ import {
   Building2
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import RoleSwitcher from '@/components/RoleSwitcher';
 
 interface BuyerDashboardProps {
-  user: { role: 'buyer' | 'supplier'; name: string };
+  user: { 
+    roles: ('buyer' | 'supplier')[];
+    name: string;
+    currentRole: 'buyer' | 'supplier';
+  };
   onLogout: () => void;
+  onRoleSwitch: (role: 'buyer' | 'supplier') => void;
 }
 
-const BuyerDashboard = ({ user, onLogout }: BuyerDashboardProps) => {
+const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) => {
   const [activeTab, setActiveTab] = useState('overview');
 
   // Mock data for demonstration
@@ -115,6 +120,11 @@ const BuyerDashboard = ({ user, onLogout }: BuyerDashboardProps) => {
               <Badge variant="secondary">Buyer Portal</Badge>
             </div>
             <div className="flex items-center space-x-4">
+              <RoleSwitcher 
+                currentRole={user.currentRole}
+                availableRoles={user.roles}
+                onRoleSwitch={onRoleSwitch}
+              />
               <Button variant="ghost" size="sm">
                 <Bell className="w-4 h-4 mr-2" />
                 Notifications

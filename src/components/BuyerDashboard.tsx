@@ -16,7 +16,8 @@ import {
   Bell,
   Download,
   Plus,
-  Search
+  Search,
+  Building2
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 

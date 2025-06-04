@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,8 +8,21 @@ import BuyerDashboard from '@/components/BuyerDashboard';
 import SupplierDashboard from '@/components/SupplierDashboard';
 
 const Index = () => {
-  const [currentUser, setCurrentUser] = useState<{role: 'buyer' | 'supplier', name: string} | null>(null);
+  const [currentUser, setCurrentUser] = useState<{
+    roles: ('buyer' | 'supplier')[], 
+    name: string, 
+    currentRole: 'buyer' | 'supplier'
+  } | null>(null);
   const [showAuth, setShowAuth] = useState(false);
+
+  const handleRoleSwitch = (newRole: 'buyer' | 'supplier') => {
+    if (currentUser && currentUser.roles.includes(newRole)) {
+      setCurrentUser({
+        ...currentUser,
+        currentRole: newRole
+      });
+    }
+  };
 
   const features = [
     {
@@ -55,9 +67,17 @@ const Index = () => {
   ];
 
   if (currentUser) {
-    return currentUser.role === 'buyer' ? 
-      <BuyerDashboard user={currentUser} onLogout={() => setCurrentUser(null)} /> :
-      <SupplierDashboard user={currentUser} onLogout={() => setCurrentUser(null)} />;
+    return currentUser.currentRole === 'buyer' ? 
+      <BuyerDashboard 
+        user={currentUser} 
+        onLogout={() => setCurrentUser(null)}
+        onRoleSwitch={handleRoleSwitch}
+      /> :
+      <SupplierDashboard 
+        user={currentUser} 
+        onLogout={() => setCurrentUser(null)}
+        onRoleSwitch={handleRoleSwitch}
+      />;
   }
 
   return (

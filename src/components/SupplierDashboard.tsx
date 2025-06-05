@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,13 +16,19 @@ import {
   Download,
   Plus
 } from 'lucide-react';
+import RoleSwitcher from '@/components/RoleSwitcher';
 
 interface SupplierDashboardProps {
-  user: { role: 'buyer' | 'supplier'; name: string };
+  user: { 
+    roles: ('buyer' | 'supplier')[];
+    name: string;
+    currentRole: 'buyer' | 'supplier';
+  };
   onLogout: () => void;
+  onRoleSwitch: (role: 'buyer' | 'supplier') => void;
 }
 
-const SupplierDashboard = ({ user, onLogout }: SupplierDashboardProps) => {
+const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardProps) => {
   const [activeTab, setActiveTab] = useState('overview');
 
   // Mock data for demonstration
@@ -120,6 +125,11 @@ const SupplierDashboard = ({ user, onLogout }: SupplierDashboardProps) => {
               <Badge variant="secondary" className="bg-green-100 text-green-800">Supplier Portal</Badge>
             </div>
             <div className="flex items-center space-x-4">
+              <RoleSwitcher 
+                currentRole={user.currentRole}
+                availableRoles={user.roles}
+                onRoleSwitch={onRoleSwitch}
+              />
               <Button variant="ghost" size="sm">
                 <Bell className="w-4 h-4 mr-2" />
                 Notifications

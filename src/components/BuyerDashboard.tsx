@@ -16,10 +16,12 @@ import {
   Download,
   Plus,
   Search,
-  Building2
+  Building2,
+  FileText
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import RoleSwitcher from '@/components/RoleSwitcher';
+import NewRequestModal from '@/components/NewRequestModal';
 
 interface BuyerDashboardProps {
   user: { 
@@ -33,6 +35,8 @@ interface BuyerDashboardProps {
 
 const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [showNewRequestModal, setShowNewRequestModal] = useState(false);
+  const [requests, setRequests] = useState<any[]>([]);
 
   // Mock data for demonstration
   const stats = {
@@ -104,6 +108,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
       case 'non-compliant': return <FileX className="w-4 h-4" />;
       default: return <Clock className="w-4 h-4" />;
     }
+  };
+
+  const handleCreateRequest = (newRequest: any) => {
+    setRequests(prev => [...prev, newRequest]);
+    console.log('New request created:', newRequest);
   };
 
   return (
@@ -321,23 +330,67 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Document Requests</CardTitle>
-                <Button>
+                <Button onClick={() => setShowNewRequestModal(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   New Request
                 </Button>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-12">
-                  <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Request Management</h3>
-                  <p className="text-gray-500 mb-6">Create and track document requests to suppliers</p>
-                  <Button>Create New Request</Button>
-                </div>
+                {requests.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Request Management</h3>
+                    <p className="text-gray-500 mb-6">Create and track document requests to suppliers</p>
+                    <Button onClick={() => setShowNewRequestModal(true)}>Create New Request</Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {requests.map((request) => (
+                      <div key={request.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <FileText className="w-6 h-6 text-blue-600" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold">{request.documentType}</h3>
+                              <p className="text-sm text-gray-500">Supplier: {request.supplier}</p>
+                              <p className="text-xs text-gray-400">Due: {new Date(request.dueDate).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-4">
+                            <Badge variant="secondary">{request.category}</Badge>
+                            <Badge 
+                              className={
+                                request.priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                                request.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                                request.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-green-100 text-green-800'
+                              }
+                              variant="secondary"
+                            >
+                              {request.priority}
+                            </Badge>
+                            <Badge variant="outline">{request.status}</Badge>
+                            <Button variant="outline" size="sm">View Details</Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </div>
+
+      <NewRequestModal
+        isOpen={showNewRequestModal}
+        onClose={() => setShowNewRequestModal(false)}
+        onCreateRequest={handleCreateRequest}
+        userType={user.name}
+      />
     </div>
   );
 };

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,8 @@ import RoleSwitcher from '@/components/RoleSwitcher';
 import SupplierProfileSetup from '@/components/supplier/SupplierProfileSetup';
 import ConnectionRequests from '@/components/supplier/ConnectionRequests';
 import ConnectedBuyersTab from '@/components/supplier/ConnectedBuyersTab';
+import DocumentRequestCard from '@/components/supplier/DocumentRequestCard';
+import DocumentRequestsFilter from '@/components/supplier/DocumentRequestsFilter';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import { useAuth } from '@/hooks/useAuth';
 import { useCompanySetup } from '@/hooks/useCompanySetup';
@@ -45,6 +48,16 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
   const [connectedBuyers, setConnectedBuyers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  
+  // Filter state for document requests
+  const [filters, setFilters] = useState({
+    search: '',
+    status: '',
+    priority: '',
+    buyer: '',
+    category: '',
+    documentType: ''
+  });
   
   const { user: authUser } = useAuth();
   const { getSupplierProfile } = useCompanySetup();
@@ -131,6 +144,31 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
     loadSupplierData();
     setShowSettings(false);
   };
+
+  // Filter document requests based on current filters
+  const filteredRequests = documentRequests.filter(request => {
+    const searchLower = filters.search.toLowerCase();
+    const matchesSearch = !filters.search || 
+      request.title.toLowerCase().includes(searchLower) ||
+      request.document_type.toLowerCase().includes(searchLower) ||
+      request.buyers?.company_name?.toLowerCase().includes(searchLower);
+    
+    const matchesStatus = !filters.status || request.status === filters.status;
+    const matchesPriority = !filters.priority || request.priority === filters.priority;
+    const matchesBuyer = !filters.buyer || request.buyer_id === filters.buyer;
+    const matchesCategory = !filters.category || request.category === filters.category;
+    const matchesDocumentType = !filters.documentType || request.document_type === filters.documentType;
+
+    return matchesSearch && matchesStatus && matchesPriority && matchesBuyer && matchesCategory && matchesDocumentType;
+  });
+
+  // Get unique buyers for filter dropdown
+  const uniqueBuyers = documentRequests
+    .filter(req => req.buyers)
+    .map(req => req.buyers)
+    .filter((buyer, index, self) => 
+      index === self.findIndex(b => b.id === buyer.id)
+    );
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -382,51 +420,38 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
           </TabsContent>
 
           <TabsContent value="requests" className="space-y-6">
+            {/* Filter Component */}
+            <DocumentRequestsFilter 
+              filters={filters}
+              onFiltersChange={setFilters}
+              buyers={uniqueBuyers}
+            />
+
+            {/* Document Requests List */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Document Requests</CardTitle>
-                <Button>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload Document
-                </Button>
+                <CardTitle>Document Requests ({filteredRequests.length})</CardTitle>
               </CardHeader>
               <CardContent>
-                {documentRequests.length > 0 ? (
+                {filteredRequests.length > 0 ? (
                   <div className="space-y-4">
-                    {documentRequests.map(request => (
-                      <div key={request.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                              <FileCheck className="w-6 h-6 text-gray-600" />
-                            </div>
-                            <div>
-                              <h3 className="font-semibold">{request.title}</h3>
-                              <p className="text-sm text-gray-500">Type: {request.document_type}</p>
-                              <p className="text-sm text-gray-500">Due: {request.due_date || 'No due date'}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-4">
-                            <Badge className={getPriorityColor(request.priority || 'medium')} variant="secondary">
-                              {request.priority || 'medium'} priority
-                            </Badge>
-                            <Badge className={getStatusColor(request.status)} variant="secondary">
-                              {getStatusIcon(request.status)}
-                              <span className="ml-1 capitalize">{request.status}</span>
-                            </Badge>
-                            <Button variant="outline" size="sm">
-                              {request.status === 'pending' ? 'Upload' : 'View Details'}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
+                    {filteredRequests.map(request => (
+                      <DocumentRequestCard
+                        key={request.id}
+                        request={request}
+                        onUploadSuccess={loadSupplierData}
+                      />
                     ))}
                   </div>
                 ) : (
                   <div className="text-center py-12">
                     <FileCheck className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Document Requests</h3>
-                    <p className="text-gray-500">You don't have any document requests yet.</p>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Document Requests Found</h3>
+                    <p className="text-gray-500">
+                      {documentRequests.length === 0 
+                        ? "You don't have any document requests yet." 
+                        : "No requests match your current filters."}
+                    </p>
                   </div>
                 )}
               </CardContent>

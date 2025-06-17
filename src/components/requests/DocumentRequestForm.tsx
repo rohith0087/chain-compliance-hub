@@ -27,30 +27,52 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [dueDate, setDueDate] = useState<Date>();
   const [selectedSupplier, setSelectedSupplier] = useState('');
-  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [connectedSuppliers, setConnectedSuppliers] = useState<any[]>([]);
+  const [buyerProfile, setBuyerProfile] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (isOpen) {
-      fetchSuppliers();
+    if (isOpen && user) {
+      fetchBuyerData();
     }
-  }, [isOpen]);
+  }, [isOpen, user]);
 
-  const fetchSuppliers = async () => {
-    const { data } = await supabase
-      .from('suppliers')
-      .select('*');
-    
-    if (data) {
-      setSuppliers(data);
+  const fetchBuyerData = async () => {
+    try {
+      // Get buyer profile
+      const { data: buyer } = await supabase
+        .from('buyers')
+        .select('*')
+        .eq('profile_id', user?.id)
+        .single();
+
+      if (buyer) {
+        setBuyerProfile(buyer);
+
+        // Get connected suppliers
+        const { data: connections } = await supabase
+          .from('buyer_supplier_connections')
+          .select(`
+            *,
+            suppliers (*)
+          `)
+          .eq('buyer_id', buyer.id)
+          .eq('status', 'approved');
+
+        if (connections) {
+          setConnectedSuppliers(connections.map(conn => conn.suppliers));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching buyer data:', error);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !buyerProfile) return;
 
     setLoading(true);
 
@@ -66,6 +88,7 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
           priority,
           due_date: dueDate?.toISOString().split('T')[0],
           supplier_id: selectedSupplier,
+          buyer_id: buyerProfile.id,
           requester_id: user.id,
         })
         .select()
@@ -74,7 +97,7 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
       if (error) throw error;
 
       // Create notification for supplier
-      const supplier = suppliers.find(s => s.id === selectedSupplier);
+      const supplier = connectedSuppliers.find(s => s.id === selectedSupplier);
       if (supplier) {
         await supabase.rpc('create_notification', {
           p_user_id: supplier.profile_id,
@@ -110,6 +133,42 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
     }
   };
 
+  if (!buyerProfile) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Setup Required</DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-4">
+            <p>Please complete your buyer profile and connect with suppliers before creating document requests.</p>
+            <Button onClick={onClose} className="mt-4">
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (connectedSuppliers.length === 0) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>No Connected Suppliers</DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-4">
+            <p>You need to connect with suppliers before creating document requests.</p>
+            <Button onClick={onClose} className="mt-4">
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -134,7 +193,7 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
                   <SelectValue placeholder="Select supplier" />
                 </SelectTrigger>
                 <SelectContent>
-                  {suppliers.map((supplier) => (
+                  {connectedSuppliers.map((supplier) => (
                     <SelectItem key={supplier.id} value={supplier.id}>
                       {supplier.company_name}
                     </SelectItem>

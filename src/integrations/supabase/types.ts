@@ -9,8 +9,98 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      buyer_supplier_connections: {
+        Row: {
+          buyer_id: string | null
+          id: string
+          notes: string | null
+          requested_at: string | null
+          responded_at: string | null
+          status: string
+          supplier_id: string | null
+        }
+        Insert: {
+          buyer_id?: string | null
+          id?: string
+          notes?: string | null
+          requested_at?: string | null
+          responded_at?: string | null
+          status?: string
+          supplier_id?: string | null
+        }
+        Update: {
+          buyer_id?: string | null
+          id?: string
+          notes?: string | null
+          requested_at?: string | null
+          responded_at?: string | null
+          status?: string
+          supplier_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyer_supplier_connections_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_supplier_connections_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      buyers: {
+        Row: {
+          address: string | null
+          company_name: string
+          contact_email: string
+          created_at: string | null
+          id: string
+          industry: string | null
+          phone: string | null
+          profile_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          company_name: string
+          contact_email: string
+          created_at?: string | null
+          id?: string
+          industry?: string | null
+          phone?: string | null
+          profile_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          company_name?: string
+          contact_email?: string
+          created_at?: string | null
+          id?: string
+          industry?: string | null
+          phone?: string | null
+          profile_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_requests: {
         Row: {
+          buyer_id: string | null
           category: string
           created_at: string | null
           description: string | null
@@ -27,6 +117,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          buyer_id?: string | null
           category: string
           created_at?: string | null
           description?: string | null
@@ -43,6 +134,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          buyer_id?: string | null
           category?: string
           created_at?: string | null
           description?: string | null
@@ -59,6 +151,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "document_requests_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "document_requests_requester_id_fkey"
             columns: ["requester_id"]

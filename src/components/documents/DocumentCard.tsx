@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,9 @@ import {
   Clock,
   Download,
   Eye,
-  Upload
+  Upload,
+  ThumbsUp,
+  ThumbsDown
 } from 'lucide-react';
 
 interface DocumentCardProps {
@@ -38,6 +39,8 @@ interface DocumentCardProps {
   onView?: () => void;
   onDownload?: () => void;
   onUpload?: () => void;
+  onApprove?: () => void;
+  onDecline?: () => void;
   showActions?: boolean;
   userRole?: 'buyer' | 'supplier';
 }
@@ -47,6 +50,8 @@ const DocumentCard = ({
   onView, 
   onDownload, 
   onUpload, 
+  onApprove,
+  onDecline,
   showActions = true,
   userRole = 'supplier'
 }: DocumentCardProps) => {
@@ -99,6 +104,8 @@ const DocumentCard = ({
     return new Date(expirationDate) < new Date();
   };
 
+  const canApproveOrDecline = userRole === 'buyer' && document.status === 'submitted' && document.file_name;
+
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
@@ -142,6 +149,28 @@ const DocumentCard = ({
                   <Upload className="w-4 h-4 mr-2" />
                   Upload
                 </Button>
+              )}
+              {canApproveOrDecline && (
+                <>
+                  <Button 
+                    size="sm" 
+                    variant="default" 
+                    className="bg-green-600 hover:bg-green-700"
+                    onClick={onApprove}
+                  >
+                    <ThumbsUp className="w-4 h-4 mr-2" />
+                    Approve
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="border-red-300 text-red-600 hover:bg-red-50"
+                    onClick={onDecline}
+                  >
+                    <ThumbsDown className="w-4 h-4 mr-2" />
+                    Decline
+                  </Button>
+                </>
               )}
             </div>
           )}

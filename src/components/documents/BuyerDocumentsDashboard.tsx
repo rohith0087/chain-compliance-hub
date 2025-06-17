@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,6 +13,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 import DocumentsFilter from './DocumentsFilter';
 import DocumentCard from './DocumentCard';
 import DocumentTimeline from './DocumentTimeline';
@@ -32,6 +32,7 @@ const BuyerDocumentsDashboard = () => {
   });
   
   const { user } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (user) {
@@ -139,6 +140,64 @@ const BuyerDocumentsDashboard = () => {
       console.error('Error loading documents:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleApproveDocument = async (documentId: string) => {
+    try {
+      const { error } = await supabase
+        .from('document_requests')
+        .update({ 
+          status: 'approved',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', documentId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Document Approved",
+        description: "The document has been successfully approved.",
+      });
+
+      // Reload documents to reflect the change
+      loadDocuments();
+    } catch (error) {
+      console.error('Error approving document:', error);
+      toast({
+        title: "Error",
+        description: "Failed to approve the document. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeclineDocument = async (documentId: string) => {
+    try {
+      const { error } = await supabase
+        .from('document_requests')
+        .update({ 
+          status: 'rejected',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', documentId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Document Declined",
+        description: "The document has been declined.",
+      });
+
+      // Reload documents to reflect the change
+      loadDocuments();
+    } catch (error) {
+      console.error('Error declining document:', error);
+      toast({
+        title: "Error",
+        description: "Failed to decline the document. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -297,6 +356,8 @@ const BuyerDocumentsDashboard = () => {
                       userRole="buyer"
                       onView={() => console.log('View document:', doc.id)}
                       onDownload={() => console.log('Download document:', doc.id)}
+                      onApprove={() => handleApproveDocument(doc.id)}
+                      onDecline={() => handleDeclineDocument(doc.id)}
                     />
                   ))}
                 </div>

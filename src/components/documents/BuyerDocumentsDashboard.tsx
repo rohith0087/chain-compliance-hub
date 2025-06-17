@@ -76,8 +76,9 @@ const BuyerDocumentsDashboard = () => {
         .order('created_at', { ascending: false });
 
       // Apply filters with proper type checking
-      if (filters.status && ['pending', 'submitted', 'approved', 'rejected'].includes(filters.status)) {
-        query = query.eq('status', filters.status);
+      const validStatuses = ['pending', 'submitted', 'approved', 'rejected'] as const;
+      if (filters.status && validStatuses.includes(filters.status as any)) {
+        query = query.eq('status', filters.status as typeof validStatuses[number]);
       }
       if (filters.category) {
         query = query.eq('category', filters.category);

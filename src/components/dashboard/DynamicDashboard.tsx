@@ -97,6 +97,13 @@ const DynamicDashboard = () => {
     );
   }
 
+  // Create user object with expected structure for dashboard components
+  const dashboardUser = {
+    roles: profile.roles as ('buyer' | 'supplier')[],
+    name: profile.full_name || 'User',
+    currentRole: currentRole
+  };
+
   return (
     <div className="space-y-6">
       {hasMultipleRoles && (
@@ -105,13 +112,13 @@ const DynamicDashboard = () => {
       
       {currentRole === 'supplier' ? (
         <SupplierDashboard 
-          user={user} 
+          user={dashboardUser} 
           onLogout={signOut} 
           onRoleSwitch={handleRoleSwitch} 
         />
       ) : (
         <BuyerDashboard 
-          user={user} 
+          user={dashboardUser} 
           onLogout={signOut} 
           onRoleSwitch={handleRoleSwitch} 
         />

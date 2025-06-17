@@ -127,8 +127,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
             <div className="flex items-center space-x-4">
               <RoleSwitcher 
                 currentRole={user.currentRole}
-                availableRoles={user.roles}
-                onRoleSwitch={onRoleSwitch}
+                onRoleChange={onRoleSwitch}
               />
               <Button variant="ghost" size="sm">
                 <Bell className="w-4 h-4 mr-2" />

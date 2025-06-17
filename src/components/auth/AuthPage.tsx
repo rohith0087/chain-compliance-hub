@@ -49,7 +49,6 @@ const AuthPage = () => {
     
     setLoading(true);
     
-    // Include the selected roles in the user metadata
     const { error } = await signUp(email, password, fullName, selectedRoles);
     
     if (error) {

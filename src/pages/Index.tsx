@@ -1,28 +1,12 @@
-import { useState } from 'react';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Shield, FileCheck, Users, BarChart3, AlertTriangle, Clock, CheckCircle, Building2 } from 'lucide-react';
-import AuthModal from '@/components/AuthModal';
-import BuyerDashboard from '@/components/BuyerDashboard';
-import SupplierDashboard from '@/components/SupplierDashboard';
+import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
-  const [currentUser, setCurrentUser] = useState<{
-    roles: ('buyer' | 'supplier')[], 
-    name: string, 
-    currentRole: 'buyer' | 'supplier'
-  } | null>(null);
-  const [showAuth, setShowAuth] = useState(false);
-
-  const handleRoleSwitch = (newRole: 'buyer' | 'supplier') => {
-    if (currentUser && currentUser.roles.includes(newRole)) {
-      setCurrentUser({
-        ...currentUser,
-        currentRole: newRole
-      });
-    }
-  };
+  const navigate = useNavigate();
 
   const features = [
     {
@@ -66,20 +50,6 @@ const Index = () => {
     { name: "Construction", icon: "🏗️" }
   ];
 
-  if (currentUser) {
-    return currentUser.currentRole === 'buyer' ? 
-      <BuyerDashboard 
-        user={currentUser} 
-        onLogout={() => setCurrentUser(null)}
-        onRoleSwitch={handleRoleSwitch}
-      /> :
-      <SupplierDashboard 
-        user={currentUser} 
-        onLogout={() => setCurrentUser(null)}
-        onRoleSwitch={handleRoleSwitch}
-      />;
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
@@ -92,7 +62,7 @@ const Index = () => {
               </div>
               <h1 className="text-2xl font-bold text-gray-900">ComplianceFlow</h1>
             </div>
-            <Button onClick={() => setShowAuth(true)} className="bg-blue-600 hover:bg-blue-700">
+            <Button onClick={() => navigate('/auth')} className="bg-blue-600 hover:bg-blue-700">
               Sign In
             </Button>
           </div>
@@ -125,7 +95,7 @@ const Index = () => {
             </Badge>
           </div>
           <Button 
-            onClick={() => setShowAuth(true)} 
+            onClick={() => navigate('/auth')} 
             size="lg" 
             className="bg-blue-600 hover:bg-blue-700 px-8 py-3 text-lg"
           >
@@ -197,7 +167,7 @@ const Index = () => {
             Join leading organizations that trust ComplianceFlow for their supply chain documentation
           </p>
           <Button 
-            onClick={() => setShowAuth(true)}
+            onClick={() => navigate('/auth')}
             size="lg" 
             variant="secondary" 
             className="px-8 py-3 text-lg"
@@ -206,12 +176,6 @@ const Index = () => {
           </Button>
         </div>
       </section>
-
-      <AuthModal 
-        isOpen={showAuth} 
-        onClose={() => setShowAuth(false)} 
-        onLogin={setCurrentUser}
-      />
     </div>
   );
 };

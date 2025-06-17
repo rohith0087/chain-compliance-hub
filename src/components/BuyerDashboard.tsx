@@ -1,11 +1,12 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from '@/hooks/useAuth';
-import RequestsList from '@/components/buyer/RequestsList';
+import RequestsList from '@/components/requests/RequestsList';
 import SupplierDiscovery from '@/components/buyer/SupplierDiscovery';
-import FileUploadZone from '@/components/buyer/FileUploadZone';
+import FileUploadZone from '@/components/uploads/FileUploadZone';
 import { Building2, Users, FileUp, ListChecks } from 'lucide-react';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 

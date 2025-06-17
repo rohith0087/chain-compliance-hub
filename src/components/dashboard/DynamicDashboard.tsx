@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCompanySetup } from '@/hooks/useCompanySetup';
@@ -9,7 +10,7 @@ import RoleSwitcher from '@/components/RoleSwitcher';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const DynamicDashboard = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const { getSupplierProfile, getBuyerProfile } = useCompanySetup();
   const [currentRole, setCurrentRole] = useState<'buyer' | 'supplier'>('supplier');
   const [supplierProfile, setSupplierProfile] = useState<any>(null);
@@ -43,6 +44,10 @@ const DynamicDashboard = () => {
     }
   };
 
+  const handleRoleSwitch = (newRole: 'buyer' | 'supplier') => {
+    setCurrentRole(newRole);
+  };
+
   if (!user || !profile) {
     return (
       <Card className="max-w-md mx-auto mt-8">
@@ -74,7 +79,7 @@ const DynamicDashboard = () => {
     return (
       <div className="space-y-6">
         {hasMultipleRoles && (
-          <RoleSwitcher currentRole={currentRole} onRoleChange={setCurrentRole} />
+          <RoleSwitcher currentRole={currentRole} onRoleChange={handleRoleSwitch} />
         )}
         <SupplierProfileSetup />
       </div>
@@ -85,7 +90,7 @@ const DynamicDashboard = () => {
     return (
       <div className="space-y-6">
         {hasMultipleRoles && (
-          <RoleSwitcher currentRole={currentRole} onRoleChange={setCurrentRole} />
+          <RoleSwitcher currentRole={currentRole} onRoleChange={handleRoleSwitch} />
         )}
         <BuyerProfileSetup />
       </div>
@@ -95,13 +100,21 @@ const DynamicDashboard = () => {
   return (
     <div className="space-y-6">
       {hasMultipleRoles && (
-        <RoleSwitcher currentRole={currentRole} onRoleChange={setCurrentRole} />
+        <RoleSwitcher currentRole={currentRole} onRoleChange={handleRoleSwitch} />
       )}
       
       {currentRole === 'supplier' ? (
-        <SupplierDashboard />
+        <SupplierDashboard 
+          user={user} 
+          onLogout={signOut} 
+          onRoleSwitch={handleRoleSwitch} 
+        />
       ) : (
-        <BuyerDashboard />
+        <BuyerDashboard 
+          user={user} 
+          onLogout={signOut} 
+          onRoleSwitch={handleRoleSwitch} 
+        />
       )}
     </div>
   );

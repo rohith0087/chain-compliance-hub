@@ -308,9 +308,11 @@ export type Database = {
       suppliers: {
         Row: {
           address: string | null
+          auto_approve_connections: boolean | null
           company_name: string
           contact_email: string
           created_at: string | null
+          description: string | null
           id: string
           industry: string | null
           phone: string | null
@@ -319,9 +321,11 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          auto_approve_connections?: boolean | null
           company_name: string
           contact_email: string
           created_at?: string | null
+          description?: string | null
           id?: string
           industry?: string | null
           phone?: string | null
@@ -330,9 +334,11 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          auto_approve_connections?: boolean | null
           company_name?: string
           contact_email?: string
           created_at?: string | null
+          description?: string | null
           id?: string
           industry?: string | null
           phone?: string | null

@@ -5,17 +5,11 @@ import { ShoppingCart, Building2, ArrowLeftRight } from 'lucide-react';
 
 interface RoleSwitcherProps {
   currentRole: 'buyer' | 'supplier';
-  availableRoles: ('buyer' | 'supplier')[];
-  onRoleSwitch: (role: 'buyer' | 'supplier') => void;
+  onRoleChange: (role: 'buyer' | 'supplier') => void;
 }
 
-const RoleSwitcher = ({ currentRole, availableRoles, onRoleSwitch }: RoleSwitcherProps) => {
-  if (availableRoles.length <= 1) {
-    return null; // Don't show switcher if user only has one role
-  }
-
-  const otherRole = availableRoles.find(role => role !== currentRole);
-  if (!otherRole) return null;
+const RoleSwitcher = ({ currentRole, onRoleChange }: RoleSwitcherProps) => {
+  const otherRole = currentRole === 'buyer' ? 'supplier' : 'buyer';
 
   return (
     <div className="flex items-center space-x-2">
@@ -35,7 +29,7 @@ const RoleSwitcher = ({ currentRole, availableRoles, onRoleSwitch }: RoleSwitche
       <Button 
         variant="outline" 
         size="sm" 
-        onClick={() => onRoleSwitch(otherRole)}
+        onClick={() => onRoleChange(otherRole)}
         className="flex items-center gap-2"
       >
         <ArrowLeftRight className="w-3 h-3" />

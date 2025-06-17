@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useBuyerSetup } from '@/hooks/useBuyerSetup';
 import { INDUSTRIES } from '@/config/industries';
+import IndustryBasedSupplierSetup from './IndustryBasedSupplierSetup';
 
 const SupplierDiscovery = () => {
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -20,6 +21,7 @@ const SupplierDiscovery = () => {
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
   const [connections, setConnections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showIndustrySetup, setShowIndustrySetup] = useState(false);
   const { user } = useAuth();
   const { getBuyerProfile } = useBuyerSetup();
   const { toast } = useToast();
@@ -36,17 +38,6 @@ const SupplierDiscovery = () => {
       const buyer = await getBuyerProfile();
       setBuyerProfile(buyer);
 
-      // Fetch all suppliers
-      const { data: suppliersData } = await supabase
-        .from('suppliers')
-        .select('*')
-        .order('company_name');
-
-      if (suppliersData) {
-        setSuppliers(suppliersData);
-        setFilteredSuppliers(suppliersData);
-      }
-
       // Fetch existing connections if buyer profile exists
       if (buyer) {
         const { data: connectionsData } = await supabase
@@ -56,7 +47,25 @@ const SupplierDiscovery = () => {
 
         if (connectionsData) {
           setConnections(connectionsData);
+          
+          // If no connections exist, show industry setup
+          if (connectionsData.length === 0) {
+            setShowIndustrySetup(true);
+          }
+        } else {
+          setShowIndustrySetup(true);
         }
+      }
+
+      // Fetch all suppliers
+      const { data: suppliersData } = await supabase
+        .from('suppliers')
+        .select('*')
+        .order('company_name');
+
+      if (suppliersData) {
+        setSuppliers(suppliersData);
+        setFilteredSuppliers(suppliersData);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -135,6 +144,11 @@ const SupplierDiscovery = () => {
     return connection?.status || null;
   };
 
+  const handleIndustrySetupComplete = () => {
+    setShowIndustrySetup(false);
+    fetchData(); // Refresh data to show new connections
+  };
+
   if (loading) {
     return <div className="text-center py-8">Loading suppliers...</div>;
   }
@@ -148,6 +162,32 @@ const SupplierDiscovery = () => {
           <p className="text-gray-600">Please set up your buyer profile to discover and connect with suppliers.</p>
         </CardContent>
       </Card>
+    );
+  }
+
+  // Show industry-based setup if no connections exist
+  if (showIndustrySetup) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-semibold mb-2">Let's Get You Connected!</h2>
+          <p className="text-gray-600">
+            You haven't connected with any suppliers yet. Let's find some suppliers in your industry of interest.
+          </p>
+        </div>
+        <IndustryBasedSupplierSetup 
+          buyerProfile={buyerProfile}
+          onComplete={handleIndustrySetupComplete}
+        />
+        <div className="text-center">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowIndustrySetup(false)}
+          >
+            Browse All Suppliers Instead
+          </Button>
+        </div>
+      </div>
     );
   }
 
@@ -175,7 +215,7 @@ const SupplierDiscovery = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">All Industries</SelectItem>
-              {INDUSTRIES.map((industry) => (
+              {INDUSTRIES.filter(industry => industry && industry.trim() !== '').map((industry) => (
                 <SelectItem key={industry} value={industry}>
                   {industry}
                 </SelectItem>
@@ -184,6 +224,23 @@ const SupplierDiscovery = () => {
           </Select>
         </div>
       </div>
+
+      {connections.length === 0 && (
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-gray-600 mb-2">
+              No connections yet? 
+            </p>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowIndustrySetup(true)}
+            >
+              Get Industry-Based Recommendations
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredSuppliers.map((supplier) => {

@@ -30,8 +30,15 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Log industries to debug
+  // Triple filter industries to ensure absolutely no empty values
+  const validIndustries = INDUSTRIES
+    .filter(Boolean) // Remove falsy values
+    .filter(industry => typeof industry === 'string') // Ensure it's a string
+    .filter(industry => industry.trim() !== '') // Remove empty strings
+    .filter(industry => industry.length > 0); // Extra check for length
+
   console.log('INDUSTRIES array in BuyerProfileSetup:', INDUSTRIES);
+  console.log('Valid industries after filtering:', validIndustries);
   console.log('Current industry value:', formData.industry);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -147,8 +154,8 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
                     <SelectValue placeholder="Select your industry" />
                   </SelectTrigger>
                   <SelectContent>
-                    {INDUSTRIES.filter(industry => industry && industry.trim() !== '').map((industry) => {
-                      console.log('Rendering industry SelectItem in BuyerProfileSetup:', industry);
+                    {validIndustries.map((industry) => {
+                      console.log('Rendering industry SelectItem in BuyerProfileSetup:', industry, 'length:', industry.length);
                       return (
                         <SelectItem key={industry} value={industry}>
                           {industry}

@@ -15,6 +15,6 @@ export const INDUSTRIES = [
   'Pharmaceuticals',
   'Logistics & Transportation',
   'Real Estate'
-] as const;
+].filter(industry => industry && industry.trim() !== '') as const;
 
 export type Industry = typeof INDUSTRIES[number];

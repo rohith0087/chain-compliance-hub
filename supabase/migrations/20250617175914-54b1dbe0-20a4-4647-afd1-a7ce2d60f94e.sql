@@ -1,4 +1,11 @@
 
+-- Ensure enum types exist before updating the function
+DO $$ BEGIN
+    CREATE TYPE public.user_role AS ENUM ('buyer', 'supplier', 'admin');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
 -- Update the trigger function to handle roles from user metadata
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$

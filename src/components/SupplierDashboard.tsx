@@ -31,6 +31,7 @@ import NotificationCenter from '@/components/notifications/NotificationCenter';
 import { useAuth } from '@/hooks/useAuth';
 import { useCompanySetup } from '@/hooks/useCompanySetup';
 import { supabase } from '@/integrations/supabase/client';
+import SupplierDocumentsDashboard from '@/components/documents/SupplierDocumentsDashboard';
 
 interface SupplierDashboardProps {
   user: { 
@@ -340,10 +341,13 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
               <BarChart3 className="w-4 h-4 mr-2" />
               Compliance
             </TabsTrigger>
+            <TabsTrigger value="documents">
+              <FileCheck className="w-4 h-4 mr-2" />
+              Documents
+            </TabsTrigger>
             <TabsTrigger value="connections">Connection Requests</TabsTrigger>
             <TabsTrigger value="requests">Document Requests</TabsTrigger>
             <TabsTrigger value="buyers">Connected Buyers</TabsTrigger>
-            <TabsTrigger value="documents">My Documents</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -424,6 +428,10 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
             <SupplierComplianceDashboard />
           </TabsContent>
 
+          <TabsContent value="documents" className="space-y-6">
+            <SupplierDocumentsDashboard />
+          </TabsContent>
+
           <TabsContent value="connections" className="space-y-6">
             <ConnectionRequests />
           </TabsContent>
@@ -469,26 +477,6 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
 
           <TabsContent value="buyers">
             <ConnectedBuyersTab connectedBuyers={connectedBuyers} />
-          </TabsContent>
-
-          <TabsContent value="documents">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Document Library</CardTitle>
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Document
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12">
-                  <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Document Management</h3>
-                  <p className="text-gray-500 mb-6">Upload, organize, and manage your compliance documents</p>
-                  <Button>Upload New Document</Button>
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
       </div>

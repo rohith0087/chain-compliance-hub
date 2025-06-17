@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload, File, X } from 'lucide-react';
+import { Upload, File, X, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,6 +20,7 @@ interface DocumentUploadDialogProps {
 const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: DocumentUploadDialogProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [notes, setNotes] = useState('');
+  const [expirationDate, setExpirationDate] = useState('');
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -69,7 +70,8 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
             file_size: file.size,
             mime_type: file.type,
             status: 'pending_review',
-            reviewer_notes: notes || null
+            reviewer_notes: notes || null,
+            expiration_date: expirationDate || null
           });
 
         if (insertError) throw insertError;
@@ -85,7 +87,8 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
             file_size: file.size,
             mime_type: file.type,
             status: 'pending_review',
-            reviewer_notes: notes || null
+            reviewer_notes: notes || null,
+            expiration_date: expirationDate || null
           });
 
         if (insertError) throw insertError;
@@ -131,6 +134,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
   const resetForm = () => {
     setFile(null);
     setNotes('');
+    setExpirationDate('');
   };
 
   const handleClose = () => {
@@ -191,6 +195,25 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
               </Button>
             </div>
           )}
+
+          {/* Expiration Date */}
+          <div>
+            <Label htmlFor="expiration-date" className="flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              Document Expiration Date (Optional)
+            </Label>
+            <Input
+              id="expiration-date"
+              type="date"
+              value={expirationDate}
+              onChange={(e) => setExpirationDate(e.target.value)}
+              className="mt-1"
+              min={new Date().toISOString().split('T')[0]}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Set when this document expires (e.g., certificate expiry, license renewal date)
+            </p>
+          </div>
 
           {/* Notes */}
           <div>

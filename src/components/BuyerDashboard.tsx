@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,8 +7,10 @@ import RequestsList from '@/components/requests/RequestsList';
 import SupplierDiscovery from '@/components/buyer/SupplierDiscovery';
 import DocumentRequestForm from '@/components/requests/DocumentRequestForm';
 import BuyerComplianceDashboard from '@/components/dashboard/BuyerComplianceDashboard';
-import { Building2, Users, ListChecks, Plus, BarChart3 } from 'lucide-react';
+import { Building2, Users, ListChecks, Plus, BarChart3, FileCheck } from 'lucide-react';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
+import DocumentRoadmap from '@/components/dashboard/DocumentRoadmap';
+import BuyerDocumentsDashboard from '@/components/documents/BuyerDocumentsDashboard';
 
 interface BuyerDashboardProps {
   user: {
@@ -66,6 +67,10 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
           <TabsTrigger value="compliance">
             <BarChart3 className="w-4 h-4 mr-2" />
             Compliance
+          </TabsTrigger>
+          <TabsTrigger value="documents">
+            <FileCheck className="w-4 h-4 mr-2" />
+            Documents
           </TabsTrigger>
           <TabsTrigger value="requests">
             <ListChecks className="w-4 h-4 mr-2" />
@@ -140,6 +145,10 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         
         <TabsContent value="compliance" className="space-y-2">
           <BuyerComplianceDashboard />
+        </TabsContent>
+
+        <TabsContent value="documents" className="space-y-2">
+          <BuyerDocumentsDashboard />
         </TabsContent>
         
         <TabsContent value="requests" className="space-y-2">

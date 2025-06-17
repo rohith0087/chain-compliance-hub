@@ -20,7 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 const DynamicDashboard = () => {
   const { user, profile, signOut } = useAuth();
-  const { createDemoData } = useDemoData();
+  const { createCompanySupplierRecord } = useDemoData();
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [currentRole, setCurrentRole] = useState<'buyer' | 'supplier'>('supplier');
   const [stats, setStats] = useState({
@@ -123,6 +123,7 @@ const DynamicDashboard = () => {
   const isBuyer = profile?.roles?.includes('buyer');
   const isSupplier = profile?.roles?.includes('supplier');
   const availableRoles = profile?.roles || [];
+  const companyName = profile.company_name || `${profile.full_name}'s Company`;
 
   // If user has multiple roles, show role-specific dashboard
   if (availableRoles.length > 1 || currentRole === 'buyer') {
@@ -166,7 +167,7 @@ const DynamicDashboard = () => {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">ComplianceFlow</h1>
-                <p className="text-sm text-gray-500">Welcome, {profile?.full_name}</p>
+                <p className="text-sm text-gray-500">{companyName}</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -201,11 +202,11 @@ const DynamicDashboard = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Demo Notice */}
+        {/* Welcome Message */}
         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h3 className="text-sm font-medium text-blue-800 mb-1">Demo Mode Active</h3>
+          <h3 className="text-sm font-medium text-blue-800 mb-1">Welcome to ComplianceFlow</h3>
           <p className="text-sm text-blue-600">
-            This demo shows the complete document request workflow. As a {isBuyer ? 'buyer' : 'supplier'}, you can {isBuyer ? 'create requests and review documents' : 'upload documents and respond to requests'}.
+            Manage your compliance documents and supplier relationships efficiently. As a {isBuyer ? 'buyer' : 'supplier'}, you can {isBuyer ? 'request documents from suppliers and review submissions' : 'upload documents and respond to compliance requests'}.
           </p>
         </div>
 

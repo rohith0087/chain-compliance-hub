@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatDistanceToNow } from 'date-fns';
 import FileUploadZone from '@/components/uploads/FileUploadZone';
 import RequestsListEmpty from './RequestsListEmpty';
+
+type RequestStatus = 'pending' | 'submitted' | 'approved' | 'rejected' | 'expired';
 
 const RequestsList = () => {
   const [requests, setRequests] = useState<any[]>([]);
@@ -159,7 +160,7 @@ const RequestsList = () => {
     }
   };
 
-  const handleUpdateStatus = async (requestId: string, newStatus: string) => {
+  const handleUpdateStatus = async (requestId: string, newStatus: RequestStatus) => {
     try {
       const { error } = await supabase
         .from('document_requests')

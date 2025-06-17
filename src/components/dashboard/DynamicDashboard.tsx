@@ -63,6 +63,17 @@ const DynamicDashboard = () => {
     }, 500);
   };
 
+  const handleLogout = async () => {
+    try {
+      console.log('Logout button clicked');
+      await signOut();
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // Force redirect even if there's an error
+      window.location.href = '/';
+    }
+  };
+
   // Check if buyer profile is properly set up (not just auto-created with defaults)
   const isBuyerProfileComplete = (buyer: any) => {
     if (!buyer) return false;
@@ -188,13 +199,13 @@ const DynamicDashboard = () => {
       {currentRole === 'supplier' ? (
         <SupplierDashboard 
           user={dashboardUser} 
-          onLogout={signOut} 
+          onLogout={handleLogout} 
           onRoleSwitch={handleRoleSwitch} 
         />
       ) : (
         <BuyerDashboard 
           user={dashboardUser} 
-          onLogout={signOut} 
+          onLogout={handleLogout} 
           onRoleSwitch={handleRoleSwitch} 
         />
       )}

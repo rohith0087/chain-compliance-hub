@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,15 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
     setActiveTab('suppliers');
   };
 
+  const handleLogoutClick = async () => {
+    try {
+      console.log('Buyer dashboard logout clicked');
+      await onLogout();
+    } catch (error) {
+      console.error('Error in buyer dashboard logout:', error);
+    }
+  };
+
   return (
     <div className="container mx-auto py-10">
       <div className="mb-8 flex items-center justify-between">
@@ -41,7 +51,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
               Switch to Supplier
             </Button>
           )}
-          <Button variant="destructive" size="sm" onClick={onLogout}>
+          <Button variant="destructive" size="sm" onClick={handleLogoutClick}>
             Logout
           </Button>
         </div>

@@ -30,6 +30,10 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  // Log industries to debug
+  console.log('INDUSTRIES array in BuyerProfileSetup:', INDUSTRIES);
+  console.log('Current industry value:', formData.industry);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -143,11 +147,14 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
                     <SelectValue placeholder="Select your industry" />
                   </SelectTrigger>
                   <SelectContent>
-                    {INDUSTRIES.map((industry) => (
-                      <SelectItem key={industry} value={industry}>
-                        {industry}
-                      </SelectItem>
-                    ))}
+                    {INDUSTRIES.filter(industry => industry && industry.trim() !== '').map((industry) => {
+                      console.log('Rendering industry SelectItem in BuyerProfileSetup:', industry);
+                      return (
+                        <SelectItem key={industry} value={industry}>
+                          {industry}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>

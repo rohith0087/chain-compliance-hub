@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -96,7 +97,27 @@ const BuyerDocumentsDashboard = () => {
       }
 
       // Process and filter documents
-      let processedDocuments = data || [];
+      let processedDocuments = (data || []).map(doc => {
+        // Determine the effective status based on document status and uploads
+        let effectiveStatus = doc.status;
+        
+        // If document has uploads, check their status
+        if (doc.document_uploads && doc.document_uploads.length > 0) {
+          const latestUpload = doc.document_uploads[0]; // Assuming uploads are ordered by creation
+          if (latestUpload.status === 'pending_review') {
+            effectiveStatus = 'submitted'; // Treat pending_review as submitted for buyer view
+          } else if (latestUpload.status === 'approved') {
+            effectiveStatus = 'approved';
+          } else if (latestUpload.status === 'rejected') {
+            effectiveStatus = 'rejected';
+          }
+        }
+        
+        return {
+          ...doc,
+          effectiveStatus
+        };
+      });
 
       // Apply search filter
       if (filters.search) {
@@ -145,7 +166,27 @@ const BuyerDocumentsDashboard = () => {
 
   const handleApproveDocument = async (documentId: string) => {
     try {
-      const { error } = await supabase
+      // Find the document and its upload
+      const document = documents.find(doc => doc.id === documentId);
+      if (!document || !document.document_uploads?.[0]) {
+        throw new Error('Document or upload not found');
+      }
+
+      const uploadId = document.document_uploads[0].id;
+
+      // Update the upload status to approved
+      const { error: uploadError } = await supabase
+        .from('document_uploads')
+        .update({ 
+          status: 'approved',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', uploadId);
+
+      if (uploadError) throw uploadError;
+
+      // Update the document request status to approved
+      const { error: requestError } = await supabase
         .from('document_requests')
         .update({ 
           status: 'approved',
@@ -153,7 +194,7 @@ const BuyerDocumentsDashboard = () => {
         })
         .eq('id', documentId);
 
-      if (error) throw error;
+      if (requestError) throw requestError;
 
       toast({
         title: "Document Approved",
@@ -174,7 +215,27 @@ const BuyerDocumentsDashboard = () => {
 
   const handleDeclineDocument = async (documentId: string) => {
     try {
-      const { error } = await supabase
+      // Find the document and its upload
+      const document = documents.find(doc => doc.id === documentId);
+      if (!document || !document.document_uploads?.[0]) {
+        throw new Error('Document or upload not found');
+      }
+
+      const uploadId = document.document_uploads[0].id;
+
+      // Update the upload status to rejected
+      const { error: uploadError } = await supabase
+        .from('document_uploads')
+        .update({ 
+          status: 'rejected',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', uploadId);
+
+      if (uploadError) throw uploadError;
+
+      // Update the document request status to rejected
+      const { error: requestError } = await supabase
         .from('document_requests')
         .update({ 
           status: 'rejected',
@@ -182,7 +243,7 @@ const BuyerDocumentsDashboard = () => {
         })
         .eq('id', documentId);
 
-      if (error) throw error;
+      if (requestError) throw requestError;
 
       toast({
         title: "Document Declined",
@@ -201,20 +262,20 @@ const BuyerDocumentsDashboard = () => {
     }
   };
 
-  // Calculate stats
+  // Calculate stats using effective status
   const stats = {
     total: documents.length,
-    pending: documents.filter(doc => doc.status === 'pending').length,
-    submitted: documents.filter(doc => doc.status === 'submitted').length,
-    approved: documents.filter(doc => doc.status === 'approved').length,
-    rejected: documents.filter(doc => doc.status === 'rejected').length
+    pending: documents.filter(doc => doc.effectiveStatus === 'pending').length,
+    submitted: documents.filter(doc => doc.effectiveStatus === 'submitted').length,
+    approved: documents.filter(doc => doc.effectiveStatus === 'approved').length,
+    rejected: documents.filter(doc => doc.effectiveStatus === 'rejected').length
   };
 
   // Generate timeline events
   const timelineEvents = documents.slice(0, 10).map(doc => ({
     id: doc.id,
-    type: doc.status as 'created' | 'submitted' | 'approved' | 'rejected' | 'expired' | 'reminder',
-    title: `Document ${doc.status}`,
+    type: doc.effectiveStatus as 'created' | 'submitted' | 'approved' | 'rejected' | 'expired' | 'reminder',
+    title: `Document ${doc.effectiveStatus}`,
     description: `${doc.title} - ${doc.suppliers?.company_name || 'Unknown Supplier'}`,
     date: doc.updated_at || doc.created_at,
     documentTitle: doc.title
@@ -222,11 +283,11 @@ const BuyerDocumentsDashboard = () => {
 
   // Generate roadmap items with proper status mapping
   const roadmapItems = documents
-    .filter(doc => doc.status !== 'approved')
+    .filter(doc => doc.effectiveStatus !== 'approved')
     .map(doc => {
       let roadmapStatus: 'pending' | 'completed' | 'in_progress' | 'overdue';
       
-      switch (doc.status) {
+      switch (doc.effectiveStatus) {
         case 'pending':
           roadmapStatus = 'pending';
           break;
@@ -345,6 +406,7 @@ const BuyerDocumentsDashboard = () => {
                       key={doc.id}
                       document={{
                         ...doc,
+                        status: doc.effectiveStatus, // Use effective status for display
                         supplier: doc.suppliers,
                         ...(doc.document_uploads?.[0] && {
                           file_name: doc.document_uploads[0].file_name,

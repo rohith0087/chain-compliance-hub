@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -104,6 +105,7 @@ const DocumentCard = ({
     return new Date(expirationDate) < new Date();
   };
 
+  // Show approve/decline buttons for buyers when document is submitted and has a file
   const canApproveOrDecline = userRole === 'buyer' && document.status === 'submitted' && document.file_name;
 
   return (

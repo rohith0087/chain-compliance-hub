@@ -4,7 +4,7 @@ import { useDropzone } from 'react-dropzone';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
-import { Upload, File, X, AlertCircle } from 'lucide-react';
+import { Upload, FileText, X, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -70,30 +70,41 @@ const FileUploadZone = ({ requestId, onUploadComplete }: FileUploadZoneProps) =>
             file_path: fileName,
             file_size: file.size,
             mime_type: file.type,
+            status: 'pending_review'
           });
 
         if (dbError) throw dbError;
 
         // Update progress
         setUploadProgress(((i + 1) / selectedFiles.length) * 100);
+      }
 
-        // Create notification if this is for a specific request
-        if (requestId) {
-          const { data: request } = await supabase
-            .from('document_requests')
-            .select('requester_id, title')
-            .eq('id', requestId)
-            .single();
+      // Update request status to submitted if this was for a specific request
+      if (requestId) {
+        const { error: statusError } = await supabase
+          .from('document_requests')
+          .update({ status: 'submitted' })
+          .eq('id', requestId);
 
-          if (request && request.requester_id !== user.id) {
-            await supabase.rpc('create_notification', {
-              p_user_id: request.requester_id,
-              p_title: 'Document Uploaded',
-              p_message: `A document has been uploaded for request: ${request.title}`,
-              p_type: 'document_uploaded',
-              p_reference_id: requestId
-            });
-          }
+        if (statusError) {
+          console.error('Error updating request status:', statusError);
+        }
+
+        // Get request details for notification
+        const { data: request } = await supabase
+          .from('document_requests')
+          .select('requester_id, title')
+          .eq('id', requestId)
+          .single();
+
+        if (request && request.requester_id !== user.id) {
+          await supabase.rpc('create_notification', {
+            p_user_id: request.requester_id,
+            p_title: 'Document Uploaded',
+            p_message: `Documents have been uploaded for request: ${request.title}`,
+            p_type: 'document_uploaded',
+            p_reference_id: requestId
+          });
         }
       }
 
@@ -149,7 +160,7 @@ const FileUploadZone = ({ requestId, onUploadComplete }: FileUploadZoneProps) =>
               {selectedFiles.map((file, index) => (
                 <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                   <div className="flex items-center space-x-2">
-                    <File className="w-4 h-4 text-gray-500" />
+                    <FileText className="w-4 h-4 text-gray-500" />
                     <span className="text-sm">{file.name}</span>
                     <span className="text-xs text-gray-400">
                       ({(file.size / 1024 / 1024).toFixed(2)} MB)

@@ -3,12 +3,12 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Shield, LogOut, FileText, Upload, Clock, CheckCircle, 
   AlertTriangle, Plus, Building2, ShoppingCart 
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useDemoData } from '@/hooks/useDemoData';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import DocumentRequestForm from '@/components/requests/DocumentRequestForm';
 import RequestsList from '@/components/requests/RequestsList';
@@ -20,6 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 const DynamicDashboard = () => {
   const { user, profile, signOut } = useAuth();
+  const { createDemoData } = useDemoData();
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [currentRole, setCurrentRole] = useState<'buyer' | 'supplier'>('supplier');
   const [stats, setStats] = useState({
@@ -41,11 +42,41 @@ const DynamicDashboard = () => {
 
     const fetchStats = async () => {
       try {
-        // Fetch request stats with proper error handling
-        const { data: requests, error: requestsError } = await supabase
+        let requestQuery = supabase
           .from('document_requests')
-          .select('status')
-          .or(`requester_id.eq.${user.id},supplier_id.eq.${user.id}`);
+          .select('status, requester_id');
+
+        // Filter based on user role
+        const isSupplier = profile.roles?.includes('supplier');
+        const isBuyer = profile.roles?.includes('buyer');
+
+        if (isSupplier && !isBuyer) {
+          const { data: supplierData } = await supabase
+            .from('suppliers')
+            .select('id')
+            .eq('profile_id', user.id)
+            .single();
+          
+          if (supplierData) {
+            requestQuery = requestQuery.eq('supplier_id', supplierData.id);
+          }
+        } else if (isBuyer && !isSupplier) {
+          requestQuery = requestQuery.eq('requester_id', user.id);
+        } else if (isBuyer && isSupplier) {
+          const { data: supplierData } = await supabase
+            .from('suppliers')
+            .select('id')
+            .eq('profile_id', user.id)
+            .single();
+          
+          if (supplierData) {
+            requestQuery = requestQuery.or(`requester_id.eq.${user.id},supplier_id.eq.${supplierData.id}`);
+          } else {
+            requestQuery = requestQuery.eq('requester_id', user.id);
+          }
+        }
+
+        const { data: requests, error: requestsError } = await requestQuery;
 
         if (requestsError) {
           console.error('Error fetching requests:', requestsError);
@@ -170,6 +201,14 @@ const DynamicDashboard = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Demo Notice */}
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h3 className="text-sm font-medium text-blue-800 mb-1">Demo Mode Active</h3>
+          <p className="text-sm text-blue-600">
+            This demo shows the complete document request workflow. As a {isBuyer ? 'buyer' : 'supplier'}, you can {isBuyer ? 'create requests and review documents' : 'upload documents and respond to requests'}.
+          </p>
+        </div>
+
         {/* Stats Cards */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
           <Card>
@@ -179,6 +218,7 @@ const DynamicDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalRequests}</div>
+              <p className="text-xs text-muted-foreground">Document requests</p>
             </CardContent>
           </Card>
           <Card>
@@ -188,6 +228,7 @@ const DynamicDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-orange-600">{stats.pendingRequests}</div>
+              <p className="text-xs text-muted-foreground">Awaiting action</p>
             </CardContent>
           </Card>
           <Card>
@@ -197,6 +238,7 @@ const DynamicDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">{stats.approvedRequests}</div>
+              <p className="text-xs text-muted-foreground">Completed</p>
             </CardContent>
           </Card>
           <Card>
@@ -206,6 +248,7 @@ const DynamicDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalUploads}</div>
+              <p className="text-xs text-muted-foreground">Documents uploaded</p>
             </CardContent>
           </Card>
         </div>

@@ -1,218 +1,197 @@
 
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 export const useDemoData = () => {
-  const [isCreating, setIsCreating] = useState(false);
-  const { toast } = useToast();
+  const { user } = useAuth();
 
-  const createDemoUsers = async () => {
-    setIsCreating(true);
-    
+  const createDemoData = async () => {
+    if (!user) return;
+
     try {
-      // Demo users data
-      const demoUsers = [
+      // Create demo suppliers for non-demo users
+      const supplierData = [
         {
-          email: 'sonic@franchise.com',
-          password: 'demo123',
-          fullName: 'Sonic Franchisee',
-          roles: ['buyer', 'supplier'] as ('buyer' | 'supplier')[],
-          companyName: 'Sonic Drive-In Franchise'
+          company_name: 'Premium Farms LLC',
+          contact_email: 'contact@premiumfarms.com',
+          industry: 'Agriculture',
+          phone: '555-0101',
+          address: '123 Farm Road, Rural Valley, CA 95123'
         },
         {
-          email: 'processor@chicken.com',
-          password: 'demo123',
-          fullName: 'Chicken Processor Co',
-          roles: ['buyer', 'supplier'] as ('buyer' | 'supplier')[],
-          companyName: 'Premium Chicken Processing LLC'
+          company_name: 'FreshSource Distributors',
+          contact_email: 'orders@freshsource.com',
+          industry: 'Food Distribution',
+          phone: '555-0102',
+          address: '456 Distribution Center, Metro City, CA 90210'
         },
         {
-          email: 'farm@organic.com',
-          password: 'demo123',
-          fullName: 'Organic Farm',
-          roles: ['supplier'] as ('buyer' | 'supplier')[],
-          companyName: 'Green Valley Organic Farm'
+          company_name: 'Quality Feed Solutions',
+          contact_email: 'info@qualityfeed.com',
+          industry: 'Animal Feed',
+          phone: '555-0103',
+          address: '789 Feed Mill Lane, Farm County, CA 93001'
         }
       ];
 
-      // Create demo users
-      for (const user of demoUsers) {
-        const { error } = await supabase.auth.signUp({
-          email: user.email,
-          password: user.password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`,
-            data: {
-              full_name: user.fullName,
-              roles: user.roles,
-              company_name: user.companyName
-            }
-          }
-        });
+      // Check if suppliers already exist
+      const { data: existingSuppliers } = await supabase
+        .from('suppliers')
+        .select('company_name');
 
-        if (error && !error.message.includes('already registered')) {
-          console.error(`Error creating demo user ${user.email}:`, error);
+      const existingCompanyNames = existingSuppliers?.map(s => s.company_name) || [];
+      const newSuppliers = supplierData.filter(s => !existingCompanyNames.includes(s.company_name));
+
+      if (newSuppliers.length > 0) {
+        const { error: supplierError } = await supabase
+          .from('suppliers')
+          .insert(newSuppliers);
+
+        if (supplierError) {
+          console.error('Error creating demo suppliers:', supplierError);
         }
       }
 
-      // Wait a bit for profiles to be created
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Create supplier records for demo users
-      await createSuppliersForDemoUsers();
-
-      // Create sample requests
-      await createSampleRequests();
-
-      toast({
-        title: "Demo Data Created",
-        description: "Demo accounts and data are ready to use!",
-      });
-
-    } catch (error) {
-      console.error('Error creating demo data:', error);
-      toast({
-        title: "Demo Data Creation Failed",
-        description: "There was an error setting up demo accounts.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  const createSuppliersForDemoUsers = async () => {
-    try {
-      // Get the demo users from profiles
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('email', ['sonic@franchise.com', 'processor@chicken.com', 'farm@organic.com']);
-
-      if (!profiles || profiles.length === 0) {
-        console.log('No demo profiles found to create suppliers');
-        return;
-      }
-
-      // Create supplier records
-      const suppliersData = profiles.map(profile => ({
-        profile_id: profile.id,
-        company_name: profile.company_name || profile.full_name,
-        contact_email: profile.email,
-        phone: '555-0123',
-        address: '123 Demo Street, Demo City, DC 12345',
-        industry: profile.email.includes('farm') ? 'Agriculture' : 
-                 profile.email.includes('processor') ? 'Food Processing' : 'Restaurant'
-      }));
-
-      const { error } = await supabase
+      // Get all suppliers for creating requests
+      const { data: allSuppliers } = await supabase
         .from('suppliers')
-        .insert(suppliersData);
+        .select('*');
 
-      if (error) {
-        console.error('Error creating suppliers:', error);
-      } else {
-        console.log('Suppliers created successfully');
-      }
+      if (!allSuppliers || allSuppliers.length === 0) return;
 
-    } catch (error) {
-      console.error('Error in createSuppliersForDemoUsers:', error);
-    }
-  };
+      // Create demo document requests from current user to suppliers
+      const today = new Date();
+      const futureDate = new Date(today);
+      futureDate.setDate(today.getDate() + 14);
 
-  const createSampleRequests = async () => {
-    try {
-      // First, get the demo users from profiles
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('email', ['sonic@franchise.com', 'processor@chicken.com', 'farm@organic.com']);
-
-      if (!profiles || profiles.length === 0) {
-        console.log('No demo profiles found to create sample requests');
-        return;
-      }
-
-      // Get supplier records
-      const { data: suppliers } = await supabase
-        .from('suppliers')
-        .select('*')
-        .in('profile_id', profiles.map(p => p.id));
-
-      if (!suppliers || suppliers.length === 0) {
-        console.log('No suppliers found to create sample requests');
-        return;
-      }
-
-      const sonicProfile = profiles.find(p => p.email === 'sonic@franchise.com');
-      const processorProfile = profiles.find(p => p.email === 'processor@chicken.com');
-      const farmProfile = profiles.find(p => p.email === 'farm@organic.com');
-
-      const processorSupplier = suppliers.find(s => s.profile_id === processorProfile?.id);
-      const farmSupplier = suppliers.find(s => s.profile_id === farmProfile?.id);
-
-      if (!sonicProfile || !processorProfile || !farmProfile || !processorSupplier || !farmSupplier) {
-        console.log('Not all demo profiles or suppliers found');
-        return;
-      }
-
-      // Sample document requests with proper typing
-      const sampleRequests = [
+      const requestsData = [
         {
-          title: 'Food Safety Certificate',
-          document_type: 'Food Safety Certificate',
-          category: 'Safety',
-          description: 'Required food safety certification for chicken processing',
-          requester_id: sonicProfile.id,
-          supplier_id: processorSupplier.id,
+          title: 'ISO 9001 Quality Management Certificate',
+          document_type: 'certificate',
+          category: 'quality',
+          description: 'Current ISO 9001 certification demonstrating quality management system compliance',
+          requester_id: user.id,
+          supplier_id: allSuppliers[0]?.id,
           priority: 'high' as const,
           status: 'pending' as const,
-          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          due_date: futureDate.toISOString().split('T')[0]
         },
         {
-          title: 'Organic Certification',
-          document_type: 'Organic Certificate',
-          category: 'Quality',
-          description: 'Organic certification for farm products',
-          requester_id: processorProfile.id,
-          supplier_id: farmSupplier.id,
+          title: 'Food Safety Certificate',
+          document_type: 'certificate',
+          category: 'safety',
+          description: 'HACCP and food safety certification for all processed products',
+          requester_id: user.id,
+          supplier_id: allSuppliers[1]?.id,
+          priority: 'urgent' as const,
+          status: 'submitted' as const,
+          due_date: futureDate.toISOString().split('T')[0]
+        },
+        {
+          title: 'Environmental Impact Report',
+          document_type: 'audit_report',
+          category: 'environmental',
+          description: 'Annual environmental compliance and sustainability report',
+          requester_id: user.id,
+          supplier_id: allSuppliers[2]?.id,
           priority: 'medium' as const,
-          status: 'pending' as const,
-          due_date: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          status: 'approved' as const,
+          due_date: futureDate.toISOString().split('T')[0]
         },
         {
           title: 'Insurance Certificate',
-          document_type: 'Insurance Certificate',
-          category: 'Legal',
-          description: 'General liability insurance certificate',
-          requester_id: sonicProfile.id,
-          supplier_id: farmSupplier.id,
+          document_type: 'insurance',
+          category: 'financial',
+          description: 'General liability and product liability insurance coverage proof',
+          requester_id: user.id,
+          supplier_id: allSuppliers[0]?.id,
           priority: 'low' as const,
-          status: 'approved' as const,
-          due_date: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          status: 'rejected' as const,
+          due_date: futureDate.toISOString().split('T')[0]
         }
       ];
 
-      // Insert sample requests
-      const { error } = await supabase
+      // Check existing requests to avoid duplicates
+      const { data: existingRequests } = await supabase
         .from('document_requests')
-        .insert(sampleRequests);
+        .select('title')
+        .eq('requester_id', user.id);
 
-      if (error) {
-        console.error('Error creating sample requests:', error);
-      } else {
-        console.log('Sample requests created successfully');
+      const existingTitles = existingRequests?.map(r => r.title) || [];
+      const newRequests = requestsData.filter(r => !existingTitles.includes(r.title));
+
+      if (newRequests.length > 0) {
+        const { data: createdRequests, error: requestError } = await supabase
+          .from('document_requests')
+          .insert(newRequests)
+          .select();
+
+        if (requestError) {
+          console.error('Error creating demo requests:', requestError);
+        } else {
+          console.log(`Created ${createdRequests?.length} demo requests`);
+          
+          // Create some demo document uploads for submitted/approved requests
+          const submittedRequest = createdRequests?.find(r => r.status === 'submitted');
+          const approvedRequest = createdRequests?.find(r => r.status === 'approved');
+
+          if (submittedRequest || approvedRequest) {
+            const uploadData = [];
+            
+            if (submittedRequest) {
+              uploadData.push({
+                request_id: submittedRequest.id,
+                uploader_id: user.id,
+                file_name: 'food_safety_certificate.pdf',
+                file_path: `demo/${submittedRequest.id}/food_safety_certificate.pdf`,
+                file_size: 2457600, // 2.4MB
+                mime_type: 'application/pdf',
+                status: 'pending_review'
+              });
+            }
+
+            if (approvedRequest) {
+              uploadData.push({
+                request_id: approvedRequest.id,
+                uploader_id: user.id,
+                file_name: 'environmental_report_2024.pdf',
+                file_path: `demo/${approvedRequest.id}/environmental_report_2024.pdf`,
+                file_size: 5242880, // 5MB
+                mime_type: 'application/pdf',
+                status: 'approved'
+              });
+            }
+
+            if (uploadData.length > 0) {
+              const { error: uploadError } = await supabase
+                .from('document_uploads')
+                .insert(uploadData);
+
+              if (uploadError) {
+                console.error('Error creating demo uploads:', uploadError);
+              }
+            }
+          }
+        }
       }
 
+      console.log('Demo data creation completed');
     } catch (error) {
-      console.error('Error in createSampleRequests:', error);
+      console.error('Error in createDemoData:', error);
     }
   };
 
-  return {
-    createDemoUsers,
-    createSampleRequests,
-    isCreating
-  };
+  useEffect(() => {
+    if (user) {
+      // Small delay to ensure user profile is loaded
+      const timer = setTimeout(() => {
+        createDemoData();
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
+
+  return { createDemoData };
 };

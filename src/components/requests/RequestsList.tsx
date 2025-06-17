@@ -3,34 +3,80 @@ import { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Clock, FileText, AlertTriangle, CheckCircle, Upload } from 'lucide-react';
+import { Clock, FileText, AlertTriangle, CheckCircle, Upload, Download, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDistanceToNow } from 'date-fns';
 import FileUploadZone from '@/components/uploads/FileUploadZone';
+import RequestsListEmpty from './RequestsListEmpty';
 
 const RequestsList = () => {
   const [requests, setRequests] = useState<any[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<string | null>(null);
-  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const { user, profile } = useAuth();
 
   useEffect(() => {
     if (!user) return;
 
     const fetchRequests = async () => {
-      const { data } = await supabase
-        .from('document_requests')
-        .select(`
-          *,
-          suppliers (company_name),
-          profiles (full_name),
-          document_uploads (*)
-        `)
-        .or(`requester_id.eq.${user.id},supplier_id.in.(select id from suppliers where profile_id = ${user.id})`)
-        .order('created_at', { ascending: false });
+      try {
+        // Determine the query based on user role
+        const isSupplier = profile?.roles?.includes('supplier');
+        const isBuyer = profile?.roles?.includes('buyer');
+        
+        let query = supabase
+          .from('document_requests')
+          .select(`
+            *,
+            suppliers (company_name, contact_email),
+            profiles!document_requests_requester_id_fkey (full_name),
+            document_uploads (*)
+          `)
+          .order('created_at', { ascending: false });
 
-      if (data) {
-        setRequests(data);
+        // If user is only a supplier, show requests for their supplier profile
+        if (isSupplier && !isBuyer) {
+          const { data: supplierData } = await supabase
+            .from('suppliers')
+            .select('id')
+            .eq('profile_id', user.id)
+            .single();
+          
+          if (supplierData) {
+            query = query.eq('supplier_id', supplierData.id);
+          }
+        } 
+        // If user is only a buyer, show their created requests
+        else if (isBuyer && !isSupplier) {
+          query = query.eq('requester_id', user.id);
+        }
+        // If user has both roles, show all relevant requests
+        else if (isBuyer && isSupplier) {
+          const { data: supplierData } = await supabase
+            .from('suppliers')
+            .select('id')
+            .eq('profile_id', user.id)
+            .single();
+          
+          if (supplierData) {
+            query = query.or(`requester_id.eq.${user.id},supplier_id.eq.${supplierData.id}`);
+          } else {
+            query = query.eq('requester_id', user.id);
+          }
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.error('Error fetching requests:', error);
+        } else {
+          setRequests(data || []);
+        }
+      } catch (error) {
+        console.error('Error in fetchRequests:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -50,12 +96,23 @@ const RequestsList = () => {
           fetchRequests();
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'document_uploads'
+        },
+        () => {
+          fetchRequests();
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, profile]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -102,17 +159,67 @@ const RequestsList = () => {
     }
   };
 
+  const handleUpdateStatus = async (requestId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('document_requests')
+        .update({ status: newStatus })
+        .eq('id', requestId);
+
+      if (error) {
+        console.error('Error updating status:', error);
+      }
+    } catch (error) {
+      console.error('Error in handleUpdateStatus:', error);
+    }
+  };
+
+  const downloadFile = async (filePath: string, fileName: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('compliance-documents')
+        .download(filePath);
+
+      if (error) {
+        console.error('Error downloading file:', error);
+        return;
+      }
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error in downloadFile:', error);
+    }
+  };
+
+  const isSupplier = profile?.roles?.includes('supplier');
+  const isBuyer = profile?.roles?.includes('buyer');
+
+  if (loading) {
+    return <div className="text-center py-8">Loading requests...</div>;
+  }
+
+  if (requests.length === 0) {
+    return <RequestsListEmpty />;
+  }
+
   return (
     <div className="space-y-4">
-      {requests.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
-          No document requests found
-        </div>
-      ) : (
-        requests.map((request) => (
+      {requests.map((request) => {
+        const hasUploads = request.document_uploads && request.document_uploads.length > 0;
+        const canUpload = isSupplier && request.status === 'pending';
+        const canReview = isBuyer && request.requester_id === user?.id && request.status === 'submitted';
+        
+        return (
           <Card key={request.id} className="hover:shadow-md transition-shadow">
             <CardContent className="p-4">
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center space-x-2 mb-2">
                     {getStatusIcon(request.status)}
@@ -127,30 +234,34 @@ const RequestsList = () => {
                   
                   <p className="text-sm text-gray-600 mb-2">{request.description}</p>
                   
-                  <div className="flex items-center space-x-4 text-sm text-gray-500">
+                  <div className="flex items-center space-x-4 text-sm text-gray-500 mb-2">
                     <span>Type: {request.document_type}</span>
                     <span>Category: {request.category}</span>
                     {request.suppliers && (
                       <span>Supplier: {request.suppliers.company_name}</span>
+                    )}
+                    {request.profiles && (
+                      <span>Requested by: {request.profiles.full_name}</span>
                     )}
                     {request.due_date && (
                       <span>Due: {new Date(request.due_date).toLocaleDateString()}</span>
                     )}
                   </div>
                   
-                  <div className="mt-2 text-xs text-gray-400">
+                  <div className="text-xs text-gray-400">
                     Created {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  {request.document_uploads && request.document_uploads.length > 0 && (
-                    <Badge variant="outline">
+                  {hasUploads && (
+                    <Badge variant="outline" className="flex items-center gap-1">
+                      <FileText className="w-3 h-3" />
                       {request.document_uploads.length} files
                     </Badge>
                   )}
                   
-                  {request.status === 'pending' && request.supplier_id && (
+                  {canUpload && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -162,18 +273,88 @@ const RequestsList = () => {
                       Upload
                     </Button>
                   )}
+                  
+                  {hasUploads && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSelectedRequest(
+                        selectedRequest === request.id ? null : request.id
+                      )}
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      View Files
+                    </Button>
+                  )}
+                  
+                  {canReview && (
+                    <div className="flex space-x-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-green-600 border-green-600 hover:bg-green-50"
+                        onClick={() => handleUpdateStatus(request.id, 'approved')}
+                      >
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-red-600 border-red-600 hover:bg-red-50"
+                        onClick={() => handleUpdateStatus(request.id, 'rejected')}
+                      >
+                        <AlertTriangle className="w-4 h-4 mr-1" />
+                        Reject
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
               
               {selectedRequest === request.id && (
                 <div className="mt-4 pt-4 border-t">
-                  <FileUploadZone requestId={request.id} />
+                  {canUpload ? (
+                    <FileUploadZone 
+                      requestId={request.id} 
+                      onUploadComplete={() => {
+                        // Update the request status to submitted after upload
+                        handleUpdateStatus(request.id, 'submitted');
+                        setSelectedRequest(null);
+                      }}
+                    />
+                  ) : hasUploads ? (
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Uploaded Documents:</h4>
+                      {request.document_uploads.map((upload: any) => (
+                        <div key={upload.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                          <div className="flex items-center space-x-2">
+                            <FileText className="w-4 h-4 text-gray-500" />
+                            <span className="text-sm">{upload.file_name}</span>
+                            <span className="text-xs text-gray-400">
+                              ({(upload.file_size / 1024 / 1024).toFixed(2)} MB)
+                            </span>
+                            <Badge variant="outline" className={getStatusColor(upload.status || 'pending')}>
+                              {upload.status || 'pending'}
+                            </Badge>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => downloadFile(upload.file_path, upload.file_name)}
+                          >
+                            <Download className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               )}
             </CardContent>
           </Card>
-        ))
-      )}
+        );
+      })}
     </div>
   );
 };

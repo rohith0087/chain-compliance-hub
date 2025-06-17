@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +23,8 @@ const ConnectionRequests = () => {
 
   const fetchData = async () => {
     try {
+      console.log('Fetching supplier data for user:', user?.id);
+      
       // Get supplier profile
       const { data: supplier } = await supabase
         .from('suppliers')
@@ -31,10 +32,11 @@ const ConnectionRequests = () => {
         .eq('profile_id', user?.id)
         .single();
 
+      console.log('Supplier profile:', supplier);
       setSupplierProfile(supplier);
 
       if (supplier) {
-        // Fetch connection requests
+        // Fetch connection requests with buyer information
         const { data: requestsData } = await supabase
           .from('buyer_supplier_connections')
           .select(`
@@ -44,12 +46,14 @@ const ConnectionRequests = () => {
               contact_email,
               industry,
               phone,
-              address
+              address,
+              profile_id
             )
           `)
           .eq('supplier_id', supplier.id)
           .order('requested_at', { ascending: false });
 
+        console.log('Connection requests:', requestsData);
         if (requestsData) {
           setRequests(requestsData);
         }
@@ -63,6 +67,8 @@ const ConnectionRequests = () => {
 
   const handleRequestResponse = async (requestId: string, status: 'approved' | 'rejected') => {
     try {
+      console.log(`${status === 'approved' ? 'Approving' : 'Rejecting'} request:`, requestId);
+      
       const { error } = await supabase
         .from('buyer_supplier_connections')
         .update({ 
@@ -73,16 +79,26 @@ const ConnectionRequests = () => {
 
       if (error) throw error;
 
-      // Create notification for buyer
+      // Find the request to get buyer information
       const request = requests.find(r => r.id === requestId);
-      if (request?.buyers) {
-        await supabase.rpc('create_notification', {
-          p_user_id: request.buyer_id, // This should be the buyer's profile_id
+      console.log('Request found for notification:', request);
+      
+      if (request?.buyers?.profile_id) {
+        console.log('Creating notification for buyer:', request.buyers.profile_id);
+        
+        const { data: notificationId, error: notificationError } = await supabase.rpc('create_notification', {
+          p_user_id: request.buyers.profile_id,
           p_title: status === 'approved' ? 'Connection Approved' : 'Connection Rejected',
           p_message: `${supplierProfile.company_name} has ${status} your connection request.`,
           p_type: 'connection_response',
           p_reference_id: requestId
         });
+
+        if (notificationError) {
+          console.error('Error creating notification:', notificationError);
+        } else {
+          console.log('Notification created successfully:', notificationId);
+        }
       }
 
       toast({
@@ -92,6 +108,7 @@ const ConnectionRequests = () => {
 
       fetchData(); // Refresh data
     } catch (error: any) {
+      console.error('Error responding to request:', error);
       toast({
         title: "Error",
         description: error.message,

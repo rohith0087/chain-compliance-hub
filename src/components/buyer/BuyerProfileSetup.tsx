@@ -1,201 +1,107 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Building2, Save, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { INDUSTRIES } from '@/config/industries';
-import SupplierSelection from './SupplierSelection';
+import { useToast } from '@/hooks/use-toast';
+import { Building2 } from 'lucide-react';
+import { industries } from '@/config/industries';
 
 interface BuyerProfileSetupProps {
-  onProfileCreated?: () => void;
+  onProfileCreated: () => void;
 }
 
 const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
-  const [step, setStep] = useState(1); // 1 = Profile Setup, 2 = Supplier Selection
-  const [companyName, setCompanyName] = useState('');
-  const [industry, setIndustry] = useState('');
-  const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
-  const [existingProfile, setExistingProfile] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  
-  const { user, profile } = useAuth();
+  const [formData, setFormData] = useState({
+    companyName: '',
+    industry: '',
+    contactEmail: '',
+    phone: '',
+    address: '',
+    description: ''
+  });
+
+  const { user } = useAuth();
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (user && profile) {
-      console.log('User and profile loaded, checking for buyer profile...');
-      loadExistingProfile();
-    }
-  }, [user, profile]);
-
-  const getBuyerProfile = async () => {
-    if (!user) {
-      console.log('No user found');
-      return null;
-    }
-
-    try {
-      console.log('Fetching buyer profile for user:', user.id);
-      const { data: buyers, error } = await supabase
-        .from('buyers')
-        .select('*')
-        .eq('profile_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (error) {
-        console.error('Error fetching buyer profile:', error);
-        // Don't throw error for PGRST116 (no rows found)
-        if (error.code !== 'PGRST116') {
-          throw error;
-        }
-        return null;
-      }
-
-      console.log('Buyer profile query result:', buyers);
-      return buyers && buyers.length > 0 ? buyers[0] : null;
-    } catch (error) {
-      console.error('Error in getBuyerProfile:', error);
-      return null;
-    }
-  };
-
-  const loadExistingProfile = async () => {
-    try {
-      console.log('Loading existing buyer profile...');
-      const buyer = await getBuyerProfile();
-      console.log('Found buyer profile:', buyer);
-      
-      if (buyer) {
-        setExistingProfile(buyer);
-        
-        // Check if this is a properly configured profile or just auto-created defaults
-        const isAutoCreated = (buyer.company_name === "James's Company" || 
-                              buyer.company_name === `${profile?.full_name}'s Company`) &&
-                              buyer.industry === 'General Business';
-        
-        if (isAutoCreated) {
-          console.log('Found auto-created profile, showing setup form');
-          // Pre-fill with profile data if available, but clear the defaults
-          setCompanyName(profile?.company_name || '');
-          setIndustry('');
-          setPhone(buyer.phone || '');
-          setAddress(buyer.address || '');
-          setStep(1); // Show setup form
-        } else {
-          console.log('Found complete profile, pre-filling form');
-          // Profile is complete, pre-fill the form
-          setCompanyName(buyer.company_name || '');
-          setIndustry(buyer.industry || '');
-          setPhone(buyer.phone || '');
-          setAddress(buyer.address || '');
-          // Skip to supplier selection if profile is complete
-          setStep(2);
-        }
-      } else {
-        console.log('No buyer profile found, using profile data for pre-fill');
-        // Pre-fill with profile data if available
-        setCompanyName(profile?.company_name || '');
-        setStep(1); // Show setup form
-      }
-    } catch (error) {
-      console.error('Error loading buyer profile:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load buyer profile. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setInitialLoading(false);
-    }
-  };
-
-  const handleProfileSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!companyName.trim() || !industry) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in company name and select an industry.",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!user) return;
 
+    console.log('Starting buyer profile setup...', formData);
     setLoading(true);
 
     try {
-      console.log('Submitting buyer profile...');
+      // First check if buyer profile already exists
+      const { data: existingBuyer } = await supabase
+        .from('buyers')
+        .select('id')
+        .eq('profile_id', user.id)
+        .limit(1)
+        .maybeSingle();
+
+      let buyerResult;
       
-      if (existingProfile) {
-        console.log('Updating existing buyer profile:', existingProfile.id);
-        // Update existing profile
-        const { error } = await supabase
+      if (existingBuyer) {
+        console.log('Updating existing buyer profile:', existingBuyer.id);
+        // Update existing buyer profile
+        const { data, error } = await supabase
           .from('buyers')
           .update({
-            company_name: companyName,
-            industry,
-            phone,
-            address,
+            company_name: formData.companyName,
+            industry: formData.industry,
+            contact_email: formData.contactEmail,
+            phone: formData.phone,
+            address: formData.address,
             updated_at: new Date().toISOString()
           })
-          .eq('id', existingProfile.id);
+          .eq('id', existingBuyer.id)
+          .select()
+          .single();
 
-        if (error) {
-          console.error('Error updating buyer profile:', error);
-          throw error;
-        }
-
-        toast({
-          title: "Profile Updated",
-          description: "Your buyer profile has been updated successfully.",
-        });
+        if (error) throw error;
+        buyerResult = data;
       } else {
-        console.log('Creating new buyer profile for user:', user?.id);
-        // Create new profile
+        console.log('Creating new buyer profile...');
+        // Create new buyer profile
         const { data, error } = await supabase
           .from('buyers')
           .insert({
-            profile_id: user?.id,
-            company_name: companyName,
-            contact_email: profile?.email || user?.email,
-            industry,
-            phone,
-            address
+            profile_id: user.id,
+            company_name: formData.companyName,
+            industry: formData.industry,
+            contact_email: formData.contactEmail,
+            phone: formData.phone,
+            address: formData.address
           })
           .select()
           .single();
 
-        if (error) {
-          console.error('Error creating buyer profile:', error);
-          throw error;
-        }
-
-        console.log('Buyer profile created successfully:', data);
-        setExistingProfile(data);
-
-        toast({
-          title: "Profile Created",
-          description: "Your buyer profile has been created successfully.",
-        });
+        if (error) throw error;
+        buyerResult = data;
       }
 
-      // Move to supplier selection step
-      setStep(2);
+      console.log('Buyer profile saved successfully:', buyerResult);
+
+      toast({
+        title: "Profile Created",
+        description: "Your buyer profile has been set up successfully.",
+      });
+
+      // Call the callback to refresh parent component
+      onProfileCreated();
+      
     } catch (error: any) {
-      console.error('Error in handleProfileSubmit:', error);
+      console.error('Error creating buyer profile:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to save profile. Please try again.",
+        description: error.message || "Failed to create profile. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -203,112 +109,101 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
     }
   };
 
-  const handleComplete = () => {
-    console.log('Buyer profile setup completed');
-    if (onProfileCreated) {
-      onProfileCreated();
-    }
-  };
-
-  if (initialLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your profile...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (step === 2 && existingProfile) {
-    return (
-      <SupplierSelection
-        selectedIndustry={industry}
-        buyerProfile={existingProfile}
-        onComplete={handleComplete}
-      />
-    );
-  }
-
   return (
-    <Card className="max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Building2 className="w-5 h-5" />
-          {existingProfile ? 'Complete Your Buyer Profile' : 'Setup Buyer Profile'}
-        </CardTitle>
-        <p className="text-sm text-gray-600">
-          Step 1 of 2: Set up your company information to get started
-        </p>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleProfileSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="companyName">Company Name *</Label>
-            <Input
-              id="companyName"
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-              placeholder="Enter your company name"
-              required
-            />
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <Card className="w-full max-w-2xl">
+        <CardHeader className="text-center">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Building2 className="w-8 h-8 text-blue-600" />
           </div>
+          <CardTitle className="text-2xl">Complete Your Buyer Profile</CardTitle>
+          <p className="text-gray-600">Let's set up your company information to get started.</p>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="companyName">Company Name *</Label>
+                <Input
+                  id="companyName"
+                  value={formData.companyName}
+                  onChange={(e) => setFormData({...formData, companyName: e.target.value})}
+                  placeholder="Enter your company name"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="industry">Industry *</Label>
+                <Select 
+                  value={formData.industry} 
+                  onValueChange={(value) => setFormData({...formData, industry: value})}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select your industry" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {industries.map((industry) => (
+                      <SelectItem key={industry} value={industry}>
+                        {industry}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-          <div>
-            <Label htmlFor="industry">Industry *</Label>
-            <Select value={industry} onValueChange={setIndustry} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Select your industry" />
-              </SelectTrigger>
-              <SelectContent>
-                {INDUSTRIES.map((ind) => (
-                  <SelectItem key={ind} value={ind}>
-                    {ind}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="contactEmail">Contact Email *</Label>
+                <Input
+                  id="contactEmail"
+                  type="email"
+                  value={formData.contactEmail}
+                  onChange={(e) => setFormData({...formData, contactEmail: e.target.value})}
+                  placeholder="Enter contact email"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                  placeholder="Enter phone number"
+                />
+              </div>
+            </div>
 
-          <div>
-            <Label htmlFor="phone">Phone</Label>
-            <Input
-              id="phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="Enter your phone number"
-            />
-          </div>
+            <div>
+              <Label htmlFor="address">Business Address</Label>
+              <Input
+                id="address"
+                value={formData.address}
+                onChange={(e) => setFormData({...formData, address: e.target.value})}
+                placeholder="Enter your business address"
+              />
+            </div>
 
-          <div>
-            <Label htmlFor="address">Address</Label>
-            <Textarea
-              id="address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Enter your company address"
-              rows={3}
-            />
-          </div>
+            <div>
+              <Label htmlFor="description">Company Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                placeholder="Tell us about your company..."
+                rows={3}
+              />
+            </div>
 
-          <Button type="submit" disabled={loading || !companyName.trim() || !industry} className="w-full">
-            {loading ? (
-              <>
-                <Save className="w-4 h-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <ArrowRight className="w-4 h-4 mr-2" />
-                Continue to Supplier Selection
-              </>
-            )}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Setting up..." : "Complete Setup"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,19 +10,20 @@ import {
   AlertTriangle, 
   CheckCircle, 
   Clock, 
-  FileX, 
+  FileText, 
   Users, 
-  TrendingUp,
-  Bell,
-  Download,
   Plus,
-  Search,
-  Building2,
-  FileText
+  Settings,
+  Building2
 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
 import RoleSwitcher from '@/components/RoleSwitcher';
-import NewRequestModal from '@/components/NewRequestModal';
+import DocumentRequestForm from '@/components/requests/DocumentRequestForm';
+import SupplierDiscovery from '@/components/buyer/SupplierDiscovery';
+import BuyerProfileSetup from '@/components/buyer/BuyerProfileSetup';
+import NotificationCenter from '@/components/notifications/NotificationCenter';
+import { useAuth } from '@/hooks/useAuth';
+import { useCompanySetup } from '@/hooks/useCompanySetup';
+import { supabase } from '@/integrations/supabase/client';
 
 interface BuyerDashboardProps {
   user: { 
@@ -35,85 +37,156 @@ interface BuyerDashboardProps {
 
 const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) => {
   const [activeTab, setActiveTab] = useState('overview');
-  const [showNewRequestModal, setShowNewRequestModal] = useState(false);
-  const [requests, setRequests] = useState<any[]>([]);
+  const [showRequestForm, setShowRequestForm] = useState(false);
+  const [showSupplierDiscovery, setShowSupplierDiscovery] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [buyerProfile, setBuyerProfile] = useState<any>(null);
+  const [documentRequests, setDocumentRequests] = useState<any[]>([]);
+  const [connectedSuppliers, setConnectedSuppliers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  const { user: authUser } = useAuth();
+  const { getBuyerProfile } = useCompanySetup();
 
-  // Mock data for demonstration
+  // Calculate stats from real data
   const stats = {
-    totalSuppliers: 24,
-    compliantSuppliers: 18,
-    pendingDocuments: 12,
-    expiringDocuments: 5
+    totalRequests: documentRequests.length,
+    pendingRequests: documentRequests.filter(req => req.status === 'pending').length,
+    approvedRequests: documentRequests.filter(req => req.status === 'approved').length,
+    connectedSuppliers: connectedSuppliers.length
   };
 
-  const complianceRate = Math.round((stats.compliantSuppliers / stats.totalSuppliers) * 100);
+  const completionRate = documentRequests.length > 0 
+    ? Math.round((stats.approvedRequests / documentRequests.length) * 100) 
+    : 0;
 
-  const suppliers = [
-    { 
-      id: 1, 
-      name: 'FreshProduce Co.', 
-      status: 'compliant', 
-      documents: 8, 
-      lastUpdate: '2 days ago',
-      compliance: 95 
-    },
-    { 
-      id: 2, 
-      name: 'PackagingSolutions LLC', 
-      status: 'pending', 
-      documents: 5, 
-      lastUpdate: '1 week ago',
-      compliance: 75 
-    },
-    { 
-      id: 3, 
-      name: 'LogisticsCorp', 
-      status: 'expiring', 
-      documents: 6, 
-      lastUpdate: '3 days ago',
-      compliance: 60 
-    },
-    { 
-      id: 4, 
-      name: 'QualityMaterials Inc.', 
-      status: 'non-compliant', 
-      documents: 3, 
-      lastUpdate: '2 weeks ago',
-      compliance: 30 
+  useEffect(() => {
+    if (authUser) {
+      loadBuyerData();
     }
-  ];
+  }, [authUser]);
 
-  const recentActivity = [
-    { action: 'Document uploaded', supplier: 'FreshProduce Co.', time: '2 hours ago', type: 'upload' },
-    { action: 'Compliance review completed', supplier: 'LogisticsCorp', time: '4 hours ago', type: 'review' },
-    { action: 'Document request sent', supplier: 'New Supplier', time: '1 day ago', type: 'request' },
-    { action: 'Certificate expired', supplier: 'PackagingSolutions LLC', time: '2 days ago', type: 'expire' }
-  ];
+  const loadBuyerData = async () => {
+    setLoading(true);
+    try {
+      console.log('Loading buyer data for user:', authUser?.id);
+      
+      // Load buyer profile
+      const profile = await getBuyerProfile();
+      console.log('Buyer profile loaded:', profile);
+      setBuyerProfile(profile);
+
+      if (profile) {
+        // Load document requests for this buyer
+        const { data: requests, error: requestsError } = await supabase
+          .from('document_requests')
+          .select(`
+            *,
+            suppliers (
+              company_name,
+              industry
+            )
+          `)
+          .eq('buyer_id', profile.id)
+          .order('created_at', { ascending: false });
+
+        if (requestsError) {
+          console.error('Error loading document requests:', requestsError);
+        } else {
+          console.log('Document requests loaded:', requests);
+          setDocumentRequests(requests || []);
+        }
+
+        // Load connected suppliers
+        const { data: connections, error: connectionsError } = await supabase
+          .from('buyer_supplier_connections')
+          .select(`
+            *,
+            suppliers (
+              id,
+              company_name,
+              industry,
+              contact_email,
+              description
+            )
+          `)
+          .eq('buyer_id', profile.id)
+          .eq('status', 'approved');
+
+        if (connectionsError) {
+          console.error('Error loading supplier connections:', connectionsError);
+        } else {
+          console.log('Connected suppliers loaded:', connections);
+          setConnectedSuppliers(connections || []);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading buyer data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProfileUpdated = () => {
+    loadBuyerData();
+    setShowSettings(false);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'compliant': return 'bg-green-100 text-green-800';
+      case 'approved': return 'bg-green-100 text-green-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'expiring': return 'bg-orange-100 text-orange-800';
-      case 'non-compliant': return 'bg-red-100 text-red-800';
+      case 'submitted': return 'bg-blue-100 text-blue-800';
+      case 'rejected': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent': return 'bg-red-100 text-red-800';
+      case 'high': return 'bg-orange-100 text-orange-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'low': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'compliant': return <CheckCircle className="w-4 h-4" />;
+      case 'approved': return <CheckCircle className="w-4 h-4" />;
       case 'pending': return <Clock className="w-4 h-4" />;
-      case 'expiring': return <AlertTriangle className="w-4 h-4" />;
-      case 'non-compliant': return <FileX className="w-4 h-4" />;
+      case 'submitted': return <FileText className="w-4 h-4" />;
+      case 'rejected': return <AlertTriangle className="w-4 h-4" />;
       default: return <Clock className="w-4 h-4" />;
     }
   };
 
-  const handleCreateRequest = (newRequest: any) => {
-    setRequests(prev => [...prev, newRequest]);
-    console.log('New request created:', newRequest);
-  };
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+
+  if (showSettings) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white shadow-sm border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center space-x-3">
+                <Button variant="ghost" onClick={() => setShowSettings(false)}>
+                  ← Back to Dashboard
+                </Button>
+                <h1 className="text-xl font-bold text-gray-900">Company Settings</h1>
+              </div>
+            </div>
+          </div>
+        </header>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <BuyerProfileSetup onProfileCreated={handleProfileUpdated} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -126,17 +199,20 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                 <Shield className="w-5 h-5 text-white" />
               </div>
               <h1 className="text-xl font-bold text-gray-900">ComplianceFlow</h1>
-              <Badge variant="secondary">Buyer Portal</Badge>
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800">Buyer Portal</Badge>
             </div>
             <div className="flex items-center space-x-4">
-              <RoleSwitcher 
-                currentRole={user.currentRole}
-                onRoleChange={onRoleSwitch}
-              />
-              <Button variant="ghost" size="sm">
-                <Bell className="w-4 h-4 mr-2" />
-                Notifications
+              {user.roles.length > 1 && (
+                <RoleSwitcher 
+                  currentRole={user.currentRole}
+                  onRoleChange={onRoleSwitch}
+                />
+              )}
+              <Button variant="ghost" size="sm" onClick={() => setShowSettings(true)}>
+                <Settings className="w-4 h-4 mr-2" />
+                Company Settings
               </Button>
+              <NotificationCenter />
               <span className="text-sm text-gray-600">Welcome, {user.name}</span>
               <Button variant="outline" size="sm" onClick={onLogout}>
                 Logout
@@ -147,49 +223,73 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Company Info Banner */}
+        {buyerProfile && (
+          <Card className="mb-8">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Building2 className="w-8 h-8 text-blue-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">{buyerProfile.company_name}</h2>
+                    <p className="text-gray-600">{buyerProfile.industry}</p>
+                    <p className="text-sm text-gray-500">{buyerProfile.contact_email}</p>
+                  </div>
+                </div>
+                <Button variant="outline" onClick={() => setShowSettings(true)}>
+                  <Settings className="w-4 h-4 mr-2" />
+                  Edit Profile
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Suppliers</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Total Requests</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalSuppliers}</div>
-              <p className="text-xs text-muted-foreground">+2 from last month</p>
+              <div className="text-2xl font-bold">{stats.totalRequests}</div>
+              <p className="text-xs text-muted-foreground">Document requests sent</p>
             </CardContent>
           </Card>
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Compliance Rate</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
+              <CheckCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{complianceRate}%</div>
-              <Progress value={complianceRate} className="mt-2" />
+              <div className="text-2xl font-bold">{completionRate}%</div>
+              <Progress value={completionRate} className="mt-2" />
             </CardContent>
           </Card>
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Documents</CardTitle>
+              <CardTitle className="text-sm font-medium">Pending Reviews</CardTitle>
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.pendingDocuments}</div>
-              <p className="text-xs text-muted-foreground">Awaiting submission</p>
+              <div className="text-2xl font-bold">{stats.pendingRequests}</div>
+              <p className="text-xs text-muted-foreground">Awaiting supplier response</p>
             </CardContent>
           </Card>
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Expiring Soon</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Connected Suppliers</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{stats.expiringDocuments}</div>
-              <p className="text-xs text-muted-foreground">Next 30 days</p>
+              <div className="text-2xl font-bold">{stats.connectedSuppliers}</div>
+              <p className="text-xs text-muted-foreground">Active partnerships</p>
             </CardContent>
           </Card>
         </div>
@@ -198,197 +298,150 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="requests">Document Requests</TabsTrigger>
             <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
-            <TabsTrigger value="documents">Documents</TabsTrigger>
-            <TabsTrigger value="requests">Requests</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid lg:grid-cols-2 gap-6">
-              {/* Suppliers Status */}
+              {/* Recent Requests */}
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Supplier Compliance Status</CardTitle>
-                  <Button variant="outline" size="sm">
-                    <Download className="w-4 h-4 mr-2" />
-                    Export
-                  </Button>
+                <CardHeader>
+                  <CardTitle>Recent Document Requests</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {suppliers.map(supplier => (
-                      <div key={supplier.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                          <div>
-                            <p className="font-medium">{supplier.name}</p>
-                            <p className="text-sm text-gray-500">{supplier.documents} documents</p>
+                  {documentRequests.length > 0 ? (
+                    <div className="space-y-4">
+                      {documentRequests.slice(0, 3).map(request => (
+                        <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                            <div>
+                              <p className="font-medium">{request.title}</p>
+                              <p className="text-sm text-gray-500">{request.suppliers?.company_name}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Badge className={getPriorityColor(request.priority || 'medium')} variant="secondary">
+                              {request.priority || 'medium'}
+                            </Badge>
+                            <Badge className={getStatusColor(request.status)} variant="secondary">
+                              {getStatusIcon(request.status)}
+                              <span className="ml-1 capitalize">{request.status}</span>
+                            </Badge>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm font-medium">{supplier.compliance}%</span>
-                          <Badge className={getStatusColor(supplier.status)} variant="secondary">
-                            {getStatusIcon(supplier.status)}
-                            <span className="ml-1 capitalize">{supplier.status}</span>
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-gray-500 py-8">No document requests yet</p>
+                  )}
+                  <Button variant="outline" className="w-full mt-4" onClick={() => setActiveTab('requests')}>
+                    View All Requests
+                  </Button>
                 </CardContent>
               </Card>
 
-              {/* Recent Activity */}
+              {/* Connected Suppliers */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
+                  <CardTitle>Connected Suppliers</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {recentActivity.map((activity, index) => (
-                      <div key={index} className="flex items-start space-x-3">
-                        <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{activity.action}</p>
-                          <p className="text-sm text-gray-500">{activity.supplier}</p>
-                          <p className="text-xs text-gray-400">{activity.time}</p>
+                  {connectedSuppliers.length > 0 ? (
+                    <div className="space-y-4">
+                      {connectedSuppliers.slice(0, 3).map((connection) => (
+                        <div key={connection.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <Users className="w-5 h-5 text-blue-500" />
+                            <div>
+                              <p className="font-medium">{connection.suppliers?.company_name}</p>
+                              <p className="text-sm text-gray-500">{connection.suppliers?.industry}</p>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="text-green-600">
+                            Connected
+                          </Badge>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-gray-500 py-8">No connected suppliers yet</p>
+                  )}
+                  <Button variant="outline" className="w-full mt-4" onClick={() => setActiveTab('suppliers')}>
+                    View All Suppliers
+                  </Button>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
 
-          <TabsContent value="suppliers" className="space-y-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Supplier Management</CardTitle>
-                <div className="flex space-x-2">
-                  <div className="relative">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                    <Input placeholder="Search suppliers..." className="pl-10 w-64" />
-                  </div>
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Supplier
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {suppliers.map(supplier => (
-                    <div key={supplier.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                            <Building2 className="w-6 h-6 text-gray-600" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold">{supplier.name}</h3>
-                            <p className="text-sm text-gray-500">Last updated: {supplier.lastUpdate}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                          <div className="text-right">
-                            <p className="text-sm font-medium">{supplier.compliance}% Compliant</p>
-                            <Progress value={supplier.compliance} className="w-24 mt-1" />
-                          </div>
-                          <Badge className={getStatusColor(supplier.status)} variant="secondary">
-                            {getStatusIcon(supplier.status)}
-                            <span className="ml-1 capitalize">{supplier.status}</span>
-                          </Badge>
-                          <Button variant="outline" size="sm">View Details</Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="documents">
-            <Card>
-              <CardHeader>
-                <CardTitle>Document Center</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12">
-                  <FileX className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Document Management</h3>
-                  <p className="text-gray-500 mb-6">View, track, and manage all compliance documents</p>
-                  <Button>Explore Documents</Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="requests">
+          <TabsContent value="requests" className="space-y-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Document Requests</CardTitle>
-                <Button onClick={() => setShowNewRequestModal(true)}>
+                <Button onClick={() => setShowRequestForm(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   New Request
                 </Button>
               </CardHeader>
               <CardContent>
-                {requests.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Request Management</h3>
-                    <p className="text-gray-500 mb-6">Create and track document requests to suppliers</p>
-                    <Button onClick={() => setShowNewRequestModal(true)}>Create New Request</Button>
-                  </div>
-                ) : (
+                {documentRequests.length > 0 ? (
                   <div className="space-y-4">
-                    {requests.map((request) => (
+                    {documentRequests.map(request => (
                       <div key={request.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                              <FileText className="w-6 h-6 text-blue-600" />
+                            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                              <FileText className="w-6 h-6 text-gray-600" />
                             </div>
                             <div>
-                              <h3 className="font-semibold">{request.documentType}</h3>
-                              <p className="text-sm text-gray-500">Supplier: {request.supplier}</p>
-                              <p className="text-xs text-gray-400">Due: {new Date(request.dueDate).toLocaleDateString()}</p>
+                              <h3 className="font-semibold">{request.title}</h3>
+                              <p className="text-sm text-gray-500">To: {request.suppliers?.company_name}</p>
+                              <p className="text-sm text-gray-500">Due: {request.due_date || 'No due date'}</p>
                             </div>
                           </div>
                           <div className="flex items-center space-x-4">
-                            <Badge variant="secondary">{request.category}</Badge>
-                            <Badge 
-                              className={
-                                request.priority === 'urgent' ? 'bg-red-100 text-red-800' :
-                                request.priority === 'high' ? 'bg-orange-100 text-orange-800' :
-                                request.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-green-100 text-green-800'
-                              }
-                              variant="secondary"
-                            >
-                              {request.priority}
+                            <Badge className={getPriorityColor(request.priority || 'medium')} variant="secondary">
+                              {request.priority || 'medium'} priority
                             </Badge>
-                            <Badge variant="outline">{request.status}</Badge>
-                            <Button variant="outline" size="sm">View Details</Button>
+                            <Badge className={getStatusColor(request.status)} variant="secondary">
+                              {getStatusIcon(request.status)}
+                              <span className="ml-1 capitalize">{request.status}</span>
+                            </Badge>
+                            <Button variant="outline" size="sm">
+                              View Details
+                            </Button>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Document Requests</h3>
+                    <p className="text-gray-500 mb-6">Start by creating your first document request.</p>
+                    <Button onClick={() => setShowRequestForm(true)}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Request
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="suppliers">
+            <SupplierDiscovery onSupplierConnected={loadBuyerData} />
+          </TabsContent>
         </Tabs>
       </div>
 
-      <NewRequestModal
-        isOpen={showNewRequestModal}
-        onClose={() => setShowNewRequestModal(false)}
-        onCreateRequest={handleCreateRequest}
-        userType={user.name}
+      {/* Modals */}
+      <DocumentRequestForm
+        isOpen={showRequestForm}
+        onClose={() => setShowRequestForm(false)}
       />
     </div>
   );

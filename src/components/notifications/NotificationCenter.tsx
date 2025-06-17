@@ -12,8 +12,16 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
 
 const NotificationCenter = () => {
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, loading } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
+
+  if (loading) {
+    return (
+      <Button variant="outline" size="sm" disabled>
+        <Bell className="w-4 h-4" />
+      </Button>
+    );
+  }
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>

@@ -3,13 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Building2 } from 'lucide-react';
 import { VALID_INDUSTRIES } from '@/config/industries';
+import { SafeSelect, SafeSelectItem } from '@/components/ui/SafeSelect';
+import { createSafeSelectValue } from '@/utils/selectValidation';
 
 interface BuyerProfileSetupProps {
   onProfileCreated: () => void;
@@ -111,6 +112,12 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
     }
   };
 
+  const handleIndustryChange = (value: string) => {
+    const safeValue = createSafeSelectValue(value, 'Technology');
+    console.log('Industry changed to:', safeValue);
+    setFormData({...formData, industry: safeValue});
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl">
@@ -136,25 +143,20 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
               </div>
               <div>
                 <Label htmlFor="industry">Industry *</Label>
-                <Select 
+                <SafeSelect 
                   value={formData.industry} 
-                  onValueChange={(value) => setFormData({...formData, industry: value})}
-                  required
+                  onValueChange={handleIndustryChange}
+                  placeholder="Select your industry"
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your industry" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {VALID_INDUSTRIES.map((industry) => {
-                      console.log('Rendering industry SelectItem in BuyerProfileSetup:', industry, 'length:', industry.length);
-                      return (
-                        <SelectItem key={industry} value={industry}>
-                          {industry}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
+                  {VALID_INDUSTRIES.map((industry) => {
+                    console.log('Rendering industry SafeSelectItem in BuyerProfileSetup:', industry, 'length:', industry.length);
+                    return (
+                      <SafeSelectItem key={industry} value={industry}>
+                        {industry}
+                      </SafeSelectItem>
+                    );
+                  })}
+                </SafeSelect>
               </div>
             </div>
 

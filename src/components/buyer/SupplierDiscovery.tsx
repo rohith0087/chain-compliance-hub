@@ -1,23 +1,23 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Building2, Search, Send, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useBuyerSetup } from '@/hooks/useBuyerSetup';
-import { INDUSTRIES } from '@/config/industries';
+import { VALID_INDUSTRIES } from '@/config/industries';
+import { SafeSelect, SafeSelectItem } from '@/components/ui/SafeSelect';
+import { createSafeSelectValue } from '@/utils/selectValidation';
 import IndustryBasedSupplierSetup from './IndustryBasedSupplierSetup';
 
 const SupplierDiscovery = () => {
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [filteredSuppliers, setFilteredSuppliers] = useState<any[]>([]);
-  const [selectedIndustry, setSelectedIndustry] = useState('');
+  const [selectedIndustry, setSelectedIndustry] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
   const [connections, setConnections] = useState<any[]>([]);
@@ -27,16 +27,8 @@ const SupplierDiscovery = () => {
   const { getBuyerProfile } = useBuyerSetup();
   const { toast } = useToast();
 
-  // Filter industries to ensure no empty values - this is crucial for preventing Select.Item errors
-  const validIndustries = INDUSTRIES.filter(industry => 
-    industry && 
-    typeof industry === 'string' && 
-    industry.trim() !== '' && 
-    industry !== null && 
-    industry !== undefined
-  );
-
-  console.log('Valid industries:', validIndustries);
+  console.log('Valid industries:', VALID_INDUSTRIES);
+  console.log('Selected industry:', selectedIndustry);
 
   useEffect(() => {
     if (user) {
@@ -109,7 +101,7 @@ const SupplierDiscovery = () => {
   useEffect(() => {
     let filtered = suppliers;
 
-    if (selectedIndustry) {
+    if (selectedIndustry && selectedIndustry !== 'all') {
       filtered = filtered.filter(supplier => supplier.industry === selectedIndustry);
     }
 
@@ -183,6 +175,12 @@ const SupplierDiscovery = () => {
     fetchData(); // Refresh data to show new connections
   };
 
+  const handleIndustryChange = (value: string) => {
+    const safeValue = createSafeSelectValue(value, 'all');
+    console.log('Industry filter changed to:', safeValue);
+    setSelectedIndustry(safeValue);
+  };
+
   if (loading) {
     return (
       <Card>
@@ -244,19 +242,19 @@ const SupplierDiscovery = () => {
         </div>
         <div>
           <Label htmlFor="industry">Filter by Industry</Label>
-          <Select value={selectedIndustry} onValueChange={setSelectedIndustry}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="All Industries" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All Industries</SelectItem>
-              {validIndustries.map((industry) => (
-                <SelectItem key={industry} value={industry}>
-                  {industry}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SafeSelect 
+            value={selectedIndustry} 
+            onValueChange={handleIndustryChange}
+            placeholder="All Industries"
+            className="w-48"
+          >
+            <SafeSelectItem value="all">All Industries</SafeSelectItem>
+            {VALID_INDUSTRIES.map((industry) => (
+              <SafeSelectItem key={industry} value={industry}>
+                {industry}
+              </SafeSelectItem>
+            ))}
+          </SafeSelect>
         </div>
       </div>
 

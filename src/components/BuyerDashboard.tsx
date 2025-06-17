@@ -25,10 +25,40 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
   const [showRequestForm, setShowRequestForm] = useState(false);
   const { profile } = useAuth();
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'dashboard':
-        return (
+  return (
+    <div className="container mx-auto py-10">
+      <div className="mb-8 flex items-center justify-between">
+        <h1 className="text-3xl font-semibold">Buyer Dashboard</h1>
+        <div className="space-x-4 flex items-center">
+          <NotificationCenter />
+          {profile?.roles?.includes('supplier') && (
+            <Button variant="outline" size="sm" onClick={() => onRoleSwitch('supplier')}>
+              Switch to Supplier
+            </Button>
+          )}
+          <Button variant="destructive" size="sm" onClick={onLogout}>
+            Logout
+          </Button>
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="dashboard">
+            <Building2 className="w-4 h-4 mr-2" />
+            Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="requests">
+            <ListChecks className="w-4 h-4 mr-2" />
+            My Requests
+          </TabsTrigger>
+          <TabsTrigger value="suppliers">
+            <Users className="w-4 h-4 mr-2" />
+            Suppliers
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="dashboard" className="space-y-2">
           <div className="space-y-6">
             <Card>
               <CardHeader>
@@ -72,56 +102,14 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
               </CardContent>
             </Card>
           </div>
-        );
-      case 'requests':
-        return <RequestsList />;
-      case 'suppliers':
-        return <SupplierDiscovery />;
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <div className="container mx-auto py-10">
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-3xl font-semibold">Buyer Dashboard</h1>
-        <div className="space-x-4 flex items-center">
-          <NotificationCenter />
-          {profile?.roles?.includes('supplier') && (
-            <Button variant="outline" size="sm" onClick={() => onRoleSwitch('supplier')}>
-              Switch to Supplier
-            </Button>
-          )}
-          <Button variant="destructive" size="sm" onClick={onLogout}>
-            Logout
-          </Button>
-        </div>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="dashboard">
-            <Building2 className="w-4 h-4 mr-2" />
-            Dashboard
-          </TabsTrigger>
-          <TabsTrigger value="requests">
-            <ListChecks className="w-4 h-4 mr-2" />
-            My Requests
-          </TabsTrigger>
-          <TabsTrigger value="suppliers">
-            <Users className="w-4 h-4 mr-2" />
-            Suppliers
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="dashboard" className="space-y-2">
-          {renderContent()}
         </TabsContent>
+        
         <TabsContent value="requests" className="space-y-2">
-          {renderContent()}
+          <RequestsList />
         </TabsContent>
+        
         <TabsContent value="suppliers" className="space-y-2">
-          {renderContent()}
+          <SupplierDiscovery />
         </TabsContent>
       </Tabs>
 

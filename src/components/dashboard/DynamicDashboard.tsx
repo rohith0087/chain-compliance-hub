@@ -78,7 +78,7 @@ const DynamicDashboard = () => {
     );
   }
 
-  // If user has both roles, show role switcher
+  // Check if user has multiple roles
   const hasMultipleRoles = profile.roles?.length > 1;
 
   // Check if current role needs profile setup
@@ -90,6 +90,7 @@ const DynamicDashboard = () => {
   console.log('Buyer profile:', buyerProfile);
   console.log('Needs supplier setup:', needsSupplierSetup);
   console.log('Needs buyer setup:', needsBuyerSetup);
+  console.log('Has multiple roles:', hasMultipleRoles);
 
   if (needsSupplierSetup) {
     return (
@@ -120,12 +121,9 @@ const DynamicDashboard = () => {
     currentRole: currentRole
   };
 
+  // Don't show role switcher in the dashboard components since we handle it here
   return (
     <div className="space-y-6">
-      {hasMultipleRoles && (
-        <RoleSwitcher currentRole={currentRole} onRoleChange={handleRoleSwitch} />
-      )}
-      
       {currentRole === 'supplier' ? (
         <SupplierDashboard 
           user={dashboardUser} 

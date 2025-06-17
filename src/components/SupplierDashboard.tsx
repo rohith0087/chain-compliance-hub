@@ -75,10 +75,19 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
       setSupplierProfile(profile);
 
       if (profile) {
-        // Load document requests for this supplier
+        // Load document requests for this supplier with buyer information
         const { data: requests, error: requestsError } = await supabase
           .from('document_requests')
-          .select('*')
+          .select(`
+            *,
+            buyers (
+              id,
+              company_name,
+              industry,
+              contact_email,
+              profile_id
+            )
+          `)
           .eq('supplier_id', profile.id)
           .order('created_at', { ascending: false });
 

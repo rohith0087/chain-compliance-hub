@@ -36,6 +36,9 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
 
+  // Filter industries to ensure no empty values
+  const validIndustries = INDUSTRIES.filter(industry => industry && industry.trim() !== '');
+
   useEffect(() => {
     if (selectedIndustry) {
       fetchSuppliers();
@@ -147,10 +150,10 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Building2 className="w-5 h-5" />
-            Connect with Suppliers
+            Hey! You don't have any suppliers in your network yet
           </CardTitle>
           <p className="text-sm text-gray-600">
-            Select an industry to find and connect with relevant suppliers for your business needs.
+            Let's fix that! Select an industry below to discover and connect with relevant suppliers for your business needs.
           </p>
         </CardHeader>
         <CardContent>
@@ -162,7 +165,7 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
                   <SelectValue placeholder="Choose an industry to explore suppliers" />
                 </SelectTrigger>
                 <SelectContent>
-                  {INDUSTRIES.filter(industry => industry && industry.trim() !== '').map((industry) => (
+                  {validIndustries.map((industry) => (
                     <SelectItem key={industry} value={industry}>
                       {industry}
                     </SelectItem>

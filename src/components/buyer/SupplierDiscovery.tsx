@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Search, Send } from 'lucide-react';
+import { Building2, Search, Send, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +26,9 @@ const SupplierDiscovery = () => {
   const { user } = useAuth();
   const { getBuyerProfile } = useBuyerSetup();
   const { toast } = useToast();
+
+  // Filter industries to ensure no empty values
+  const validIndustries = INDUSTRIES.filter(industry => industry && industry.trim() !== '');
 
   useEffect(() => {
     if (user) {
@@ -169,12 +173,6 @@ const SupplierDiscovery = () => {
   if (showIndustrySetup) {
     return (
       <div className="space-y-6">
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-semibold mb-2">Let's Get You Connected!</h2>
-          <p className="text-gray-600">
-            You haven't connected with any suppliers yet. Let's find some suppliers in your industry of interest.
-          </p>
-        </div>
         <IndustryBasedSupplierSetup 
           buyerProfile={buyerProfile}
           onComplete={handleIndustrySetupComplete}
@@ -215,7 +213,7 @@ const SupplierDiscovery = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">All Industries</SelectItem>
-              {INDUSTRIES.filter(industry => industry && industry.trim() !== '').map((industry) => (
+              {validIndustries.map((industry) => (
                 <SelectItem key={industry} value={industry}>
                   {industry}
                 </SelectItem>
@@ -228,15 +226,16 @@ const SupplierDiscovery = () => {
       {connections.length === 0 && (
         <Card>
           <CardContent className="p-4 text-center">
+            <Plus className="w-8 h-8 text-blue-600 mx-auto mb-2" />
             <p className="text-gray-600 mb-2">
-              No connections yet? 
+              You don't have any supplier connections yet! 
             </p>
             <Button 
               variant="outline" 
               size="sm"
               onClick={() => setShowIndustrySetup(true)}
             >
-              Get Industry-Based Recommendations
+              Add Your First Suppliers
             </Button>
           </CardContent>
         </Card>

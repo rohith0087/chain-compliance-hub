@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,11 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Building2, Save } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useBuyerSetup } from '@/hooks/useBuyerSetup';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
-const BuyerProfileSetup = () => {
+interface BuyerProfileSetupProps {
+  onProfileCreated?: () => void;
+}
+
+const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
   const [companyName, setCompanyName] = useState('');
   const [industry, setIndustry] = useState('');
   const [phone, setPhone] = useState('');
@@ -82,12 +84,28 @@ const BuyerProfileSetup = () => {
         });
       } else {
         // Create new profile
-        await createBuyerRecord(companyName, industry);
+        const { error } = await supabase
+          .from('buyers')
+          .insert({
+            profile_id: user?.id,
+            company_name: companyName,
+            contact_email: profile?.email || user?.email,
+            industry,
+            phone,
+            address
+          });
+
+        if (error) throw error;
 
         toast({
           title: "Profile Created",
           description: "Your buyer profile has been created successfully.",
         });
+
+        // Notify parent component that profile was created
+        if (onProfileCreated) {
+          onProfileCreated();
+        }
       }
 
       // Reload the profile

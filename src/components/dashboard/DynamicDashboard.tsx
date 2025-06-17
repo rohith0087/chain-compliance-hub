@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCompanySetup } from '@/hooks/useCompanySetup';
@@ -29,11 +30,13 @@ const DynamicDashboard = () => {
     try {
       if (profile?.roles?.includes('supplier')) {
         const supplier = await getSupplierProfile();
+        console.log('Loaded supplier profile:', supplier);
         setSupplierProfile(supplier);
       }
       
       if (profile?.roles?.includes('buyer')) {
         const buyer = await getBuyerProfile();
+        console.log('Loaded buyer profile:', buyer);
         setBuyerProfile(buyer);
       }
     } catch (error) {
@@ -47,9 +50,12 @@ const DynamicDashboard = () => {
     setCurrentRole(newRole);
   };
 
-  const handleProfileCreated = () => {
+  const handleProfileCreated = async () => {
     console.log('Profile created, reloading profiles...');
-    loadProfiles();
+    // Add a small delay to ensure database has updated
+    setTimeout(async () => {
+      await loadProfiles();
+    }, 500);
   };
 
   if (!user || !profile) {
@@ -79,6 +85,12 @@ const DynamicDashboard = () => {
   const needsSupplierSetup = currentRole === 'supplier' && profile.roles?.includes('supplier') && !supplierProfile;
   const needsBuyerSetup = currentRole === 'buyer' && profile.roles?.includes('buyer') && !buyerProfile;
 
+  console.log('Current role:', currentRole);
+  console.log('Supplier profile:', supplierProfile);
+  console.log('Buyer profile:', buyerProfile);
+  console.log('Needs supplier setup:', needsSupplierSetup);
+  console.log('Needs buyer setup:', needsBuyerSetup);
+
   if (needsSupplierSetup) {
     return (
       <div className="space-y-6">
@@ -96,7 +108,7 @@ const DynamicDashboard = () => {
         {hasMultipleRoles && (
           <RoleSwitcher currentRole={currentRole} onRoleChange={handleRoleSwitch} />
         )}
-        <BuyerProfileSetup />
+        <BuyerProfileSetup onProfileCreated={handleProfileCreated} />
       </div>
     );
   }

@@ -24,7 +24,6 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
   const [initialLoading, setInitialLoading] = useState(true);
   
   const { user, profile } = useAuth();
-  const { createBuyerRecord, getBuyerProfile } = useBuyerSetup();
   const { toast } = useToast();
 
   const industries = [
@@ -37,6 +36,27 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
       loadExistingProfile();
     }
   }, [user]);
+
+  const getBuyerProfile = async () => {
+    if (!user) return null;
+
+    try {
+      const { data: buyer, error } = await supabase
+        .from('buyers')
+        .select('*')
+        .eq('profile_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching buyer profile:', error);
+      }
+
+      return buyer;
+    } catch (error) {
+      console.error('Error in getBuyerProfile:', error);
+      return null;
+    }
+  };
 
   const loadExistingProfile = async () => {
     try {

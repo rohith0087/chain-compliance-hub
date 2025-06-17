@@ -27,8 +27,16 @@ const SupplierDiscovery = () => {
   const { getBuyerProfile } = useBuyerSetup();
   const { toast } = useToast();
 
-  // Filter industries to ensure no empty values
-  const validIndustries = INDUSTRIES.filter(industry => industry && industry.trim() !== '');
+  // Filter industries to ensure no empty values - this is crucial for preventing Select.Item errors
+  const validIndustries = INDUSTRIES.filter(industry => 
+    industry && 
+    typeof industry === 'string' && 
+    industry.trim() !== '' && 
+    industry !== null && 
+    industry !== undefined
+  );
+
+  console.log('Valid industries:', validIndustries);
 
   useEffect(() => {
     if (user) {
@@ -37,42 +45,62 @@ const SupplierDiscovery = () => {
   }, [user]);
 
   const fetchData = async () => {
+    console.log('Fetching supplier discovery data...');
+    setLoading(true);
     try {
       // Get buyer profile
       const buyer = await getBuyerProfile();
+      console.log('Buyer profile:', buyer);
       setBuyerProfile(buyer);
 
       // Fetch existing connections if buyer profile exists
       if (buyer) {
-        const { data: connectionsData } = await supabase
+        const { data: connectionsData, error: connectionsError } = await supabase
           .from('buyer_supplier_connections')
           .select('*')
           .eq('buyer_id', buyer.id);
 
+        if (connectionsError) {
+          console.error('Error fetching connections:', connectionsError);
+        }
+
         if (connectionsData) {
+          console.log('Connections found:', connectionsData);
           setConnections(connectionsData);
           
           // If no connections exist, show industry setup
           if (connectionsData.length === 0) {
+            console.log('No connections found, showing industry setup');
             setShowIndustrySetup(true);
           }
         } else {
+          console.log('No connections data, showing industry setup');
           setShowIndustrySetup(true);
         }
       }
 
       // Fetch all suppliers
-      const { data: suppliersData } = await supabase
+      const { data: suppliersData, error: suppliersError } = await supabase
         .from('suppliers')
         .select('*')
         .order('company_name');
 
+      if (suppliersError) {
+        console.error('Error fetching suppliers:', suppliersError);
+      }
+
       if (suppliersData) {
+        console.log('Suppliers found:', suppliersData.length);
         setSuppliers(suppliersData);
         setFilteredSuppliers(suppliersData);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load data. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -135,6 +163,7 @@ const SupplierDiscovery = () => {
 
       fetchData(); // Refresh data
     } catch (error: any) {
+      console.error('Error sending connection request:', error);
       toast({
         title: "Error",
         description: error.message,
@@ -149,12 +178,20 @@ const SupplierDiscovery = () => {
   };
 
   const handleIndustrySetupComplete = () => {
+    console.log('Industry setup completed, refreshing data...');
     setShowIndustrySetup(false);
     fetchData(); // Refresh data to show new connections
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading suppliers...</div>;
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading suppliers...</p>
+        </CardContent>
+      </Card>
+    );
   }
 
   if (!buyerProfile) {

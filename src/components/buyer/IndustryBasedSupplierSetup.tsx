@@ -36,8 +36,16 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
 
-  // Filter industries to ensure no empty values
-  const validIndustries = INDUSTRIES.filter(industry => industry && industry.trim() !== '');
+  // Filter industries to ensure no empty values - this prevents the Select.Item error
+  const validIndustries = INDUSTRIES.filter(industry => 
+    industry && 
+    typeof industry === 'string' && 
+    industry.trim() !== '' && 
+    industry !== null && 
+    industry !== undefined
+  );
+
+  console.log('IndustryBasedSupplierSetup - Valid industries:', validIndustries);
 
   useEffect(() => {
     if (selectedIndustry) {
@@ -48,6 +56,7 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
   const fetchSuppliers = async () => {
     if (!selectedIndustry) return;
     
+    console.log('Fetching suppliers for industry:', selectedIndustry);
     setLoading(true);
     try {
       const { data: suppliersData, error } = await supabase
@@ -56,8 +65,12 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
         .eq('industry', selectedIndustry)
         .order('company_name');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching suppliers:', error);
+        throw error;
+      }
 
+      console.log('Suppliers found for industry:', suppliersData?.length || 0);
       setSuppliers(suppliersData || []);
     } catch (error) {
       console.error('Error fetching suppliers:', error);
@@ -89,12 +102,15 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
       return;
     }
 
+    console.log('Connecting with suppliers:', selectedSuppliers);
     setSubmitting(true);
 
     try {
       // Create connection requests for selected suppliers
       const connectionPromises = selectedSuppliers.map(async (supplierId) => {
         const supplier = suppliers.find(s => s.id === supplierId);
+        
+        console.log('Creating connection for supplier:', supplier?.company_name);
         
         // Insert connection record
         const { error: connectionError } = await supabase
@@ -105,7 +121,10 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
             status: supplier?.auto_approve_connections ? 'approved' : 'pending'
           });
 
-        if (connectionError) throw connectionError;
+        if (connectionError) {
+          console.error('Error creating connection:', connectionError);
+          throw connectionError;
+        }
 
         // Create notification for supplier if approval is required
         if (!supplier?.auto_approve_connections) {
@@ -131,6 +150,7 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
         description: `Connected with ${selectedSuppliers.length} supplier(s). ${approvedCount} approved automatically, ${pendingCount} pending approval.`,
       });
 
+      console.log('Connections created successfully');
       onComplete();
     } catch (error: any) {
       console.error('Error creating connections:', error);
@@ -176,6 +196,7 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
 
             {loading && (
               <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
                 Loading suppliers in {selectedIndustry}...
               </div>
             )}

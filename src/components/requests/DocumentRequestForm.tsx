@@ -24,7 +24,7 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
   const [description, setDescription] = useState('');
   const [documentType, setDocumentType] = useState('');
   const [category, setCategory] = useState('');
-  const [priority, setPriority] = useState('medium');
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [dueDate, setDueDate] = useState<Date>();
   const [selectedSupplier, setSelectedSupplier] = useState('');
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -189,7 +189,7 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
             </div>
             <div>
               <Label htmlFor="priority">Priority</Label>
-              <Select value={priority} onValueChange={setPriority}>
+              <Select value={priority} onValueChange={(value) => setPriority(value as 'low' | 'medium' | 'high' | 'urgent')}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

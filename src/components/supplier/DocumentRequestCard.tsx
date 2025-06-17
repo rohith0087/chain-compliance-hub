@@ -13,9 +13,11 @@ import {
   Building2,
   User,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  Eye
 } from 'lucide-react';
 import DocumentUploadDialog from './DocumentUploadDialog';
+import DocumentPreview from './DocumentPreview';
 
 interface DocumentRequestCardProps {
   request: any;
@@ -24,6 +26,7 @@ interface DocumentRequestCardProps {
 
 const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardProps) => {
   const [showUpload, setShowUpload] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -194,6 +197,18 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                 </DialogContent>
               </Dialog>
               
+              {/* Show preview button for submitted/approved documents */}
+              {(request.status === 'submitted' || request.status === 'approved') && (
+                <Button 
+                  variant="outline"
+                  size="sm" 
+                  onClick={() => setShowPreview(true)}
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  Preview
+                </Button>
+              )}
+              
               {request.status === 'pending' && (
                 <Button 
                   size="sm" 
@@ -239,6 +254,12 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
           setShowUpload(false);
           onUploadSuccess();
         }}
+      />
+
+      <DocumentPreview
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        request={request}
       />
     </>
   );

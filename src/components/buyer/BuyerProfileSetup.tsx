@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Building2 } from 'lucide-react';
-import { industries } from '@/config/industries';
+import { INDUSTRIES } from '@/config/industries';
 
 interface BuyerProfileSetupProps {
   onProfileCreated: () => void;
@@ -143,7 +143,7 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
                     <SelectValue placeholder="Select your industry" />
                   </SelectTrigger>
                   <SelectContent>
-                    {industries.map((industry) => (
+                    {INDUSTRIES.map((industry) => (
                       <SelectItem key={industry} value={industry}>
                         {industry}
                       </SelectItem>

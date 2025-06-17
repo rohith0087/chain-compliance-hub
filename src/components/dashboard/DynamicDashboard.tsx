@@ -8,7 +8,7 @@ import {
   AlertTriangle, Plus, Building2, ShoppingCart 
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useDemoData } from '@/hooks/useDemoData';
+import { useCompanySetup } from '@/hooks/useDemoData';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import DocumentRequestForm from '@/components/requests/DocumentRequestForm';
 import RequestsList from '@/components/requests/RequestsList';
@@ -20,7 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 const DynamicDashboard = () => {
   const { user, profile, signOut } = useAuth();
-  const { createCompanySupplierRecord } = useDemoData();
+  const { createSupplierRecord } = useCompanySetup();
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [currentRole, setCurrentRole] = useState<'buyer' | 'supplier'>('supplier');
   const [stats, setStats] = useState({

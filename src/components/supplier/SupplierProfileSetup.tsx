@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +11,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
-const SupplierProfileSetup = () => {
+interface SupplierProfileSetupProps {
+  onProfileCreated?: () => void;
+}
+
+const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) => {
   const [companyName, setCompanyName] = useState('');
   const [industry, setIndustry] = useState('');
   const [phone, setPhone] = useState('');
@@ -115,6 +118,11 @@ const SupplierProfileSetup = () => {
           title: "Profile Created",
           description: "Your supplier profile has been created successfully.",
         });
+
+        // Notify parent component that profile was created
+        if (onProfileCreated) {
+          onProfileCreated();
+        }
       }
 
       // Reload the profile

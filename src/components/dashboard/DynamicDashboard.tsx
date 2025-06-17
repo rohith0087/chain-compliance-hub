@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCompanySetup } from '@/hooks/useCompanySetup';
@@ -48,6 +47,11 @@ const DynamicDashboard = () => {
     setCurrentRole(newRole);
   };
 
+  const handleProfileCreated = () => {
+    console.log('Profile created, reloading profiles...');
+    loadProfiles();
+  };
+
   if (!user || !profile) {
     return (
       <Card className="max-w-md mx-auto mt-8">
@@ -81,7 +85,7 @@ const DynamicDashboard = () => {
         {hasMultipleRoles && (
           <RoleSwitcher currentRole={currentRole} onRoleChange={handleRoleSwitch} />
         )}
-        <SupplierProfileSetup />
+        <SupplierProfileSetup onProfileCreated={handleProfileCreated} />
       </div>
     );
   }

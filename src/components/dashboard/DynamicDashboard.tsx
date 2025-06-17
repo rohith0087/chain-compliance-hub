@@ -1,299 +1,107 @@
-
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Shield, LogOut, FileText, Upload, Clock, CheckCircle, 
-  AlertTriangle, Plus, Building2, ShoppingCart 
-} from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useCompanySetup } from '@/hooks/useDemoData';
-import NotificationCenter from '@/components/notifications/NotificationCenter';
-import DocumentRequestForm from '@/components/requests/DocumentRequestForm';
-import RequestsList from '@/components/requests/RequestsList';
-import FileUploadZone from '@/components/uploads/FileUploadZone';
+import { useCompanySetup } from '@/hooks/useCompanySetup';
 import BuyerDashboard from '@/components/BuyerDashboard';
 import SupplierDashboard from '@/components/SupplierDashboard';
+import SupplierProfileSetup from '@/components/supplier/SupplierProfileSetup';
+import BuyerProfileSetup from '@/components/buyer/BuyerProfileSetup';
 import RoleSwitcher from '@/components/RoleSwitcher';
-import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const DynamicDashboard = () => {
-  const { user, profile, signOut } = useAuth();
-  const { createSupplierRecord } = useCompanySetup();
-  const [showRequestForm, setShowRequestForm] = useState(false);
+  const { user, profile } = useAuth();
+  const { getSupplierProfile, getBuyerProfile } = useCompanySetup();
   const [currentRole, setCurrentRole] = useState<'buyer' | 'supplier'>('supplier');
-  const [stats, setStats] = useState({
-    totalRequests: 0,
-    pendingRequests: 0,
-    approvedRequests: 0,
-    totalUploads: 0,
-  });
+  const [supplierProfile, setSupplierProfile] = useState<any>(null);
+  const [buyerProfile, setBuyerProfile] = useState<any>(null);
+  const [profilesLoading, setProfilesLoading] = useState(true);
 
   useEffect(() => {
-    if (!user || !profile) return;
-
-    // Set initial role based on available roles
-    if (profile.roles?.includes('buyer')) {
-      setCurrentRole('buyer');
-    } else if (profile.roles?.includes('supplier')) {
-      setCurrentRole('supplier');
+    if (user && profile && profile.roles?.length > 0) {
+      // Set default role to the first role the user has
+      setCurrentRole(profile.roles.includes('supplier') ? 'supplier' : 'buyer');
+      loadProfiles();
     }
-
-    const fetchStats = async () => {
-      try {
-        let requestQuery = supabase
-          .from('document_requests')
-          .select('status, requester_id');
-
-        // Filter based on user role
-        const isSupplier = profile.roles?.includes('supplier');
-        const isBuyer = profile.roles?.includes('buyer');
-
-        if (isSupplier && !isBuyer) {
-          const { data: supplierData } = await supabase
-            .from('suppliers')
-            .select('id')
-            .eq('profile_id', user.id)
-            .single();
-          
-          if (supplierData) {
-            requestQuery = requestQuery.eq('supplier_id', supplierData.id);
-          }
-        } else if (isBuyer && !isSupplier) {
-          requestQuery = requestQuery.eq('requester_id', user.id);
-        } else if (isBuyer && isSupplier) {
-          const { data: supplierData } = await supabase
-            .from('suppliers')
-            .select('id')
-            .eq('profile_id', user.id)
-            .single();
-          
-          if (supplierData) {
-            requestQuery = requestQuery.or(`requester_id.eq.${user.id},supplier_id.eq.${supplierData.id}`);
-          } else {
-            requestQuery = requestQuery.eq('requester_id', user.id);
-          }
-        }
-
-        const { data: requests, error: requestsError } = await requestQuery;
-
-        if (requestsError) {
-          console.error('Error fetching requests:', requestsError);
-        }
-
-        // Fetch upload stats
-        const { data: uploads, error: uploadsError } = await supabase
-          .from('document_uploads')
-          .select('id')
-          .eq('uploader_id', user.id);
-
-        if (uploadsError) {
-          console.error('Error fetching uploads:', uploadsError);
-        }
-
-        if (requests) {
-          setStats({
-            totalRequests: requests.length,
-            pendingRequests: requests.filter(r => r.status === 'pending').length,
-            approvedRequests: requests.filter(r => r.status === 'approved').length,
-            totalUploads: uploads?.length || 0,
-          });
-        }
-      } catch (error) {
-        console.error('Error in fetchStats:', error);
-      }
-    };
-
-    fetchStats();
   }, [user, profile]);
 
-  const handleRoleSwitch = (role: 'buyer' | 'supplier') => {
-    setCurrentRole(role);
-  };
-
-  const handleLogout = () => {
-    signOut();
+  const loadProfiles = async () => {
+    setProfilesLoading(true);
+    try {
+      if (profile?.roles?.includes('supplier')) {
+        const supplier = await getSupplierProfile();
+        setSupplierProfile(supplier);
+      }
+      
+      if (profile?.roles?.includes('buyer')) {
+        const buyer = await getBuyerProfile();
+        setBuyerProfile(buyer);
+      }
+    } catch (error) {
+      console.error('Error loading profiles:', error);
+    } finally {
+      setProfilesLoading(false);
+    }
   };
 
   if (!user || !profile) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return (
+      <Card className="max-w-md mx-auto mt-8">
+        <CardContent className="pt-6">
+          <p className="text-center text-gray-600">Loading your profile...</p>
+        </CardContent>
+      </Card>
+    );
   }
 
-  const isBuyer = profile?.roles?.includes('buyer');
-  const isSupplier = profile?.roles?.includes('supplier');
-  const availableRoles = profile?.roles || [];
-  const companyName = profile.company_name || `${profile.full_name}'s Company`;
-
-  // If user has multiple roles, show role-specific dashboard
-  if (availableRoles.length > 1 || currentRole === 'buyer') {
-    if (currentRole === 'buyer') {
-      return (
-        <BuyerDashboard
-          user={{
-            roles: availableRoles,
-            name: profile.full_name,
-            currentRole: currentRole
-          }}
-          onLogout={handleLogout}
-          onRoleSwitch={handleRoleSwitch}
-        />
-      );
-    } else {
-      return (
-        <SupplierDashboard
-          user={{
-            roles: availableRoles,
-            name: profile.full_name,
-            currentRole: currentRole
-          }}
-          onLogout={handleLogout}
-          onRoleSwitch={handleRoleSwitch}
-        />
-      );
-    }
+  if (profilesLoading) {
+    return (
+      <Card className="max-w-md mx-auto mt-8">
+        <CardContent className="pt-6">
+          <p className="text-center text-gray-600">Setting up your dashboard...</p>
+        </CardContent>
+      </Card>
+    );
   }
 
-  // Default unified dashboard for single-role users
+  // If user has both roles, show role switcher
+  const hasMultipleRoles = profile.roles?.length > 1;
+
+  // Check if current role needs profile setup
+  const needsSupplierSetup = currentRole === 'supplier' && profile.roles?.includes('supplier') && !supplierProfile;
+  const needsBuyerSetup = currentRole === 'buyer' && profile.roles?.includes('buyer') && !buyerProfile;
+
+  if (needsSupplierSetup) {
+    return (
+      <div className="space-y-6">
+        {hasMultipleRoles && (
+          <RoleSwitcher currentRole={currentRole} onRoleChange={setCurrentRole} />
+        )}
+        <SupplierProfileSetup />
+      </div>
+    );
+  }
+
+  if (needsBuyerSetup) {
+    return (
+      <div className="space-y-6">
+        {hasMultipleRoles && (
+          <RoleSwitcher currentRole={currentRole} onRoleChange={setCurrentRole} />
+        )}
+        <BuyerProfileSetup />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">ComplianceFlow</h1>
-                <p className="text-sm text-gray-500">{companyName}</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <NotificationCenter />
-              <RoleSwitcher
-                currentRole={currentRole}
-                availableRoles={availableRoles}
-                onRoleSwitch={handleRoleSwitch}
-              />
-              <div className="flex items-center space-x-2">
-                {isBuyer && (
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    <ShoppingCart className="w-3 h-3" />
-                    Buyer
-                  </Badge>
-                )}
-                {isSupplier && (
-                  <Badge variant="outline" className="flex items-center gap-1">
-                    <Building2 className="w-3 h-3" />
-                    Supplier
-                  </Badge>
-                )}
-              </div>
-              <Button onClick={signOut} variant="outline" size="sm">
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign Out
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Message */}
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h3 className="text-sm font-medium text-blue-800 mb-1">Welcome to ComplianceFlow</h3>
-          <p className="text-sm text-blue-600">
-            Manage your compliance documents and supplier relationships efficiently. As a {isBuyer ? 'buyer' : 'supplier'}, you can {isBuyer ? 'request documents from suppliers and review submissions' : 'upload documents and respond to compliance requests'}.
-          </p>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Requests</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalRequests}</div>
-              <p className="text-xs text-muted-foreground">Document requests</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{stats.pendingRequests}</div>
-              <p className="text-xs text-muted-foreground">Awaiting action</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Approved</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.approvedRequests}</div>
-              <p className="text-xs text-muted-foreground">Completed</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Uploads</CardTitle>
-              <Upload className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalUploads}</div>
-              <p className="text-xs text-muted-foreground">Documents uploaded</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Dashboard */}
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Document Requests</CardTitle>
-                  {isBuyer && (
-                    <Button onClick={() => setShowRequestForm(true)}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      New Request
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <RequestsList />
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Upload</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <FileUploadZone />
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </main>
-
-      {/* New Request Modal */}
-      {showRequestForm && (
-        <DocumentRequestForm
-          isOpen={showRequestForm}
-          onClose={() => setShowRequestForm(false)}
-        />
+    <div className="space-y-6">
+      {hasMultipleRoles && (
+        <RoleSwitcher currentRole={currentRole} onRoleChange={setCurrentRole} />
+      )}
+      
+      {currentRole === 'supplier' ? (
+        <SupplierDashboard />
+      ) : (
+        <BuyerDashboard />
       )}
     </div>
   );

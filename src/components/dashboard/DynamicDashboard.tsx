@@ -13,11 +13,15 @@ import NotificationCenter from '@/components/notifications/NotificationCenter';
 import DocumentRequestForm from '@/components/requests/DocumentRequestForm';
 import RequestsList from '@/components/requests/RequestsList';
 import FileUploadZone from '@/components/uploads/FileUploadZone';
+import BuyerDashboard from '@/components/BuyerDashboard';
+import SupplierDashboard from '@/components/SupplierDashboard';
+import RoleSwitcher from '@/components/RoleSwitcher';
 import { supabase } from '@/integrations/supabase/client';
 
 const DynamicDashboard = () => {
   const { user, profile, signOut } = useAuth();
   const [showRequestForm, setShowRequestForm] = useState(false);
+  const [currentRole, setCurrentRole] = useState<'buyer' | 'supplier'>('supplier');
   const [stats, setStats] = useState({
     totalRequests: 0,
     pendingRequests: 0,
@@ -26,37 +30,99 @@ const DynamicDashboard = () => {
   });
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !profile) return;
+
+    // Set initial role based on available roles
+    if (profile.roles?.includes('buyer')) {
+      setCurrentRole('buyer');
+    } else if (profile.roles?.includes('supplier')) {
+      setCurrentRole('supplier');
+    }
 
     const fetchStats = async () => {
-      // Fetch request stats
-      const { data: requests } = await supabase
-        .from('document_requests')
-        .select('status')
-        .or(`requester_id.eq.${user.id},supplier_id.in.(select id from suppliers where profile_id = ${user.id})`);
+      try {
+        // Fetch request stats with proper error handling
+        const { data: requests, error: requestsError } = await supabase
+          .from('document_requests')
+          .select('status')
+          .or(`requester_id.eq.${user.id},supplier_id.eq.${user.id}`);
 
-      // Fetch upload stats
-      const { data: uploads } = await supabase
-        .from('document_uploads')
-        .select('id')
-        .eq('uploader_id', user.id);
+        if (requestsError) {
+          console.error('Error fetching requests:', requestsError);
+        }
 
-      if (requests) {
-        setStats({
-          totalRequests: requests.length,
-          pendingRequests: requests.filter(r => r.status === 'pending').length,
-          approvedRequests: requests.filter(r => r.status === 'approved').length,
-          totalUploads: uploads?.length || 0,
-        });
+        // Fetch upload stats
+        const { data: uploads, error: uploadsError } = await supabase
+          .from('document_uploads')
+          .select('id')
+          .eq('uploader_id', user.id);
+
+        if (uploadsError) {
+          console.error('Error fetching uploads:', uploadsError);
+        }
+
+        if (requests) {
+          setStats({
+            totalRequests: requests.length,
+            pendingRequests: requests.filter(r => r.status === 'pending').length,
+            approvedRequests: requests.filter(r => r.status === 'approved').length,
+            totalUploads: uploads?.length || 0,
+          });
+        }
+      } catch (error) {
+        console.error('Error in fetchStats:', error);
       }
     };
 
     fetchStats();
-  }, [user]);
+  }, [user, profile]);
+
+  const handleRoleSwitch = (role: 'buyer' | 'supplier') => {
+    setCurrentRole(role);
+  };
+
+  const handleLogout = () => {
+    signOut();
+  };
+
+  if (!user || !profile) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
 
   const isBuyer = profile?.roles?.includes('buyer');
   const isSupplier = profile?.roles?.includes('supplier');
+  const availableRoles = profile?.roles || [];
 
+  // If user has multiple roles, show role-specific dashboard
+  if (availableRoles.length > 1 || currentRole === 'buyer') {
+    if (currentRole === 'buyer') {
+      return (
+        <BuyerDashboard
+          user={{
+            roles: availableRoles,
+            name: profile.full_name,
+            currentRole: currentRole
+          }}
+          onLogout={handleLogout}
+          onRoleSwitch={handleRoleSwitch}
+        />
+      );
+    } else {
+      return (
+        <SupplierDashboard
+          user={{
+            roles: availableRoles,
+            name: profile.full_name,
+            currentRole: currentRole
+          }}
+          onLogout={handleLogout}
+          onRoleSwitch={handleRoleSwitch}
+        />
+      );
+    }
+  }
+
+  // Default unified dashboard for single-role users
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -74,6 +140,11 @@ const DynamicDashboard = () => {
             </div>
             <div className="flex items-center space-x-4">
               <NotificationCenter />
+              <RoleSwitcher
+                currentRole={currentRole}
+                availableRoles={availableRoles}
+                onRoleSwitch={handleRoleSwitch}
+              />
               <div className="flex items-center space-x-2">
                 {isBuyer && (
                   <Badge variant="secondary" className="flex items-center gap-1">

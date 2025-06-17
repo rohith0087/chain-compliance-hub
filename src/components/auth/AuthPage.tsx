@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Shield, AlertCircle, Building2, ShoppingCart } from 'lucide-react';
+import { Shield, AlertCircle, Building2, ShoppingCart, Users } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -66,6 +66,26 @@ const AuthPage = () => {
     setLoading(false);
   };
 
+  const handleDemoLogin = async (demoUser: {email: string, password: string, name: string}) => {
+    setLoading(true);
+    
+    const { error } = await signIn(demoUser.email, demoUser.password);
+    
+    if (error) {
+      toast({
+        title: "Demo Login Failed",
+        description: "Demo account not found. Please use the sign up form to create an account.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Demo Login Successful",
+        description: `Welcome, ${demoUser.name}!`,
+      });
+    }
+    setLoading(false);
+  };
+
   const toggleRole = (role: 'buyer' | 'supplier') => {
     setSelectedRoles(prev => {
       if (prev.includes(role)) {
@@ -75,6 +95,48 @@ const AuthPage = () => {
       }
     });
   };
+
+  const demoUsers = [
+    {
+      email: 'sonic@franchise.com',
+      password: 'demo123',
+      name: 'Sonic Franchisee',
+      description: 'Buyer & Supplier dashboard',
+      details: [
+        'Buy: Request docs from suppliers (buns, chicken, oil)',
+        'Supply: Provide docs to delivery services',
+        'Switch between roles seamlessly'
+      ],
+      icon: Users,
+      color: 'text-purple-600'
+    },
+    {
+      email: 'processor@chicken.com',
+      password: 'demo123',
+      name: 'Chicken Processor Co',
+      description: 'Middle of supply chain',
+      details: [
+        'Buy: Request docs from farms',
+        'Supply: Provide docs to restaurants',
+        'Complete supply chain visibility'
+      ],
+      icon: Users,
+      color: 'text-orange-600'
+    },
+    {
+      email: 'farm@organic.com',
+      password: 'demo123',
+      name: 'Organic Farm',
+      description: 'Pure supplier role',
+      details: [
+        'Provide compliance docs to processors',
+        'Track document status and expiry',
+        'Single role focused interface'
+      ],
+      icon: Building2,
+      color: 'text-green-600'
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
@@ -87,9 +149,10 @@ const AuthPage = () => {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              <TabsTrigger value="demo">Demo</TabsTrigger>
             </TabsList>
             
             <TabsContent value="signin">
@@ -195,6 +258,35 @@ const AuthPage = () => {
                   {loading ? "Creating Account..." : "Create Account"}
                 </Button>
               </form>
+            </TabsContent>
+
+            <TabsContent value="demo" className="space-y-4">
+              <div className="space-y-3">
+                {demoUsers.map((user, index) => {
+                  const IconComponent = user.icon;
+                  return (
+                    <Card key={index} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleDemoLogin(user)}>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <IconComponent className={`w-5 h-5 ${user.color}`} />
+                          {user.name}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <p className="text-sm text-gray-600 mb-2">{user.description}:</p>
+                        <ul className="text-xs text-gray-500 space-y-1">
+                          {user.details.map((detail, idx) => (
+                            <li key={idx}>• {detail}</li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+              <div className="text-center text-sm text-gray-500 mt-4">
+                Click any demo account above to sign in
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>

@@ -25,6 +25,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
   const [showRequestForm, setShowRequestForm] = useState(false);
   const { profile } = useAuth();
 
+  const handleFindSuppliersClick = () => {
+    console.log('Find Suppliers button clicked, switching to suppliers tab');
+    setActiveTab('suppliers');
+  };
+
   return (
     <div className="container mx-auto py-10">
       <div className="mb-8 flex items-center justify-between">
@@ -77,7 +82,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-3 gap-4">
-                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('suppliers')}>
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={handleFindSuppliersClick}>
                     <CardContent className="p-4 text-center">
                       <Users className="w-8 h-8 mx-auto mb-2 text-blue-600" />
                       <h3 className="font-medium">Find Suppliers</h3>
@@ -99,6 +104,21 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                     </CardContent>
                   </Card>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Show the connect with suppliers message if no connections */}
+            <Card>
+              <CardContent className="p-6 text-center">
+                <Users className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Connect with Suppliers First</h3>
+                <p className="text-gray-600 mb-4">
+                  Before you can request documents, you need to connect with suppliers. Browse and connect with suppliers to start requesting compliance documents.
+                </p>
+                <Button onClick={handleFindSuppliersClick} className="flex items-center gap-2 mx-auto">
+                  <Users className="w-4 h-4" />
+                  Find Suppliers
+                </Button>
               </CardContent>
             </Card>
           </div>

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Building2 } from 'lucide-react';
-import { INDUSTRIES } from '@/config/industries';
+import { VALID_INDUSTRIES } from '@/config/industries';
 
 interface BuyerProfileSetupProps {
   onProfileCreated: () => void;
@@ -30,15 +29,7 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Triple filter industries to ensure absolutely no empty values
-  const validIndustries = INDUSTRIES
-    .filter(Boolean) // Remove falsy values
-    .filter(industry => typeof industry === 'string') // Ensure it's a string
-    .filter(industry => industry.trim() !== '') // Remove empty strings
-    .filter(industry => industry.length > 0); // Extra check for length
-
-  console.log('INDUSTRIES array in BuyerProfileSetup:', INDUSTRIES);
-  console.log('Valid industries after filtering:', validIndustries);
+  console.log('VALID_INDUSTRIES array in BuyerProfileSetup:', VALID_INDUSTRIES);
   console.log('Current industry value:', formData.industry);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -154,7 +145,7 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
                     <SelectValue placeholder="Select your industry" />
                   </SelectTrigger>
                   <SelectContent>
-                    {validIndustries.map((industry) => {
+                    {VALID_INDUSTRIES.map((industry) => {
                       console.log('Rendering industry SelectItem in BuyerProfileSetup:', industry, 'length:', industry.length);
                       return (
                         <SelectItem key={industry} value={industry}>

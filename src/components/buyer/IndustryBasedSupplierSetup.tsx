@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Building2, Users, Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { INDUSTRIES } from '@/config/industries';
+import { VALID_INDUSTRIES } from '@/config/industries';
 
 interface Supplier {
   id: string;
@@ -36,16 +35,7 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
 
-  // Filter industries to ensure no empty values - this prevents the Select.Item error
-  const validIndustries = INDUSTRIES.filter(industry => 
-    industry && 
-    typeof industry === 'string' && 
-    industry.trim() !== '' && 
-    industry !== null && 
-    industry !== undefined
-  );
-
-  console.log('IndustryBasedSupplierSetup - Valid industries:', validIndustries);
+  console.log('IndustryBasedSupplierSetup - Valid industries:', VALID_INDUSTRIES);
 
   useEffect(() => {
     if (selectedIndustry) {
@@ -185,7 +175,7 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
                   <SelectValue placeholder="Choose an industry to explore suppliers" />
                 </SelectTrigger>
                 <SelectContent>
-                  {validIndustries.map((industry) => (
+                  {VALID_INDUSTRIES.map((industry) => (
                     <SelectItem key={industry} value={industry}>
                       {industry}
                     </SelectItem>

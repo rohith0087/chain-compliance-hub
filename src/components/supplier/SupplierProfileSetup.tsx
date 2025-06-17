@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,7 @@ import { Building2, Save } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { INDUSTRIES } from '@/config/industries';
+import { VALID_INDUSTRIES } from '@/config/industries';
 
 interface SupplierProfileSetupProps {
   onProfileCreated?: () => void;
@@ -31,7 +32,7 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
   const { toast } = useToast();
 
   // Log industries to debug
-  console.log('INDUSTRIES array:', INDUSTRIES);
+  console.log('VALID_INDUSTRIES array:', VALID_INDUSTRIES);
   console.log('Current industry value:', industry);
 
   useEffect(() => {
@@ -183,7 +184,7 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
                 <SelectValue placeholder="Select your industry" />
               </SelectTrigger>
               <SelectContent>
-                {INDUSTRIES.filter(ind => ind && ind.trim() !== '').map((ind) => {
+                {VALID_INDUSTRIES.map((ind) => {
                   console.log('Rendering industry SelectItem:', ind);
                   return (
                     <SelectItem key={ind} value={ind}>

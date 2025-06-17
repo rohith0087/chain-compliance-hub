@@ -15,6 +15,11 @@ export const INDUSTRIES = [
   'Pharmaceuticals',
   'Logistics & Transportation',
   'Real Estate'
-].filter(industry => industry && industry.trim() !== '') as const;
+] as const;
+
+// Filter out any potential empty values at runtime
+export const VALID_INDUSTRIES = INDUSTRIES.filter(industry => 
+  industry && industry.trim() !== ''
+);
 
 export type Industry = typeof INDUSTRIES[number];

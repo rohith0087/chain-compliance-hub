@@ -6,8 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from '@/hooks/useAuth';
 import RequestsList from '@/components/requests/RequestsList';
 import SupplierDiscovery from '@/components/buyer/SupplierDiscovery';
-import FileUploadZone from '@/components/uploads/FileUploadZone';
-import { Building2, Users, FileUp, ListChecks } from 'lucide-react';
+import DocumentRequestForm from '@/components/requests/DocumentRequestForm';
+import { Building2, Users, ListChecks, Plus } from 'lucide-react';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 
 interface BuyerDashboardProps {
@@ -22,6 +22,7 @@ interface BuyerDashboardProps {
 
 const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) => {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [showRequestForm, setShowRequestForm] = useState(false);
   const { profile } = useAuth();
 
   const renderContent = () => {
@@ -31,15 +32,43 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-2xl">Welcome, {user.name}!</CardTitle>
-                <p className="text-gray-600">
-                  As a buyer, you can discover new suppliers, manage requests, and upload files.
-                </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-2xl">Welcome, {user.name}!</CardTitle>
+                    <p className="text-gray-600">
+                      As a buyer, you can discover suppliers and request compliance documents.
+                    </p>
+                  </div>
+                  <Button onClick={() => setShowRequestForm(true)} className="flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    New Request
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                <p>
-                  Explore the available tabs to get started.
-                </p>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('suppliers')}>
+                    <CardContent className="p-4 text-center">
+                      <Users className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+                      <h3 className="font-medium">Find Suppliers</h3>
+                      <p className="text-sm text-gray-600">Connect with suppliers</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('requests')}>
+                    <CardContent className="p-4 text-center">
+                      <ListChecks className="w-8 h-8 mx-auto mb-2 text-green-600" />
+                      <h3 className="font-medium">My Requests</h3>
+                      <p className="text-sm text-gray-600">Track document requests</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setShowRequestForm(true)}>
+                    <CardContent className="p-4 text-center">
+                      <Plus className="w-8 h-8 mx-auto mb-2 text-purple-600" />
+                      <h3 className="font-medium">New Request</h3>
+                      <p className="text-sm text-gray-600">Request documents</p>
+                    </CardContent>
+                  </Card>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -48,8 +77,6 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         return <RequestsList />;
       case 'suppliers':
         return <SupplierDiscovery />;
-      case 'uploads':
-        return <FileUploadZone />;
       default:
         return null;
     }
@@ -80,15 +107,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
           </TabsTrigger>
           <TabsTrigger value="requests">
             <ListChecks className="w-4 h-4 mr-2" />
-            Requests
+            My Requests
           </TabsTrigger>
           <TabsTrigger value="suppliers">
             <Users className="w-4 h-4 mr-2" />
             Suppliers
-          </TabsTrigger>
-          <TabsTrigger value="uploads">
-            <FileUp className="w-4 h-4 mr-2" />
-            Uploads
           </TabsTrigger>
         </TabsList>
         <TabsContent value="dashboard" className="space-y-2">
@@ -100,10 +123,12 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         <TabsContent value="suppliers" className="space-y-2">
           {renderContent()}
         </TabsContent>
-        <TabsContent value="uploads" className="space-y-2">
-          {renderContent()}
-        </TabsContent>
       </Tabs>
+
+      <DocumentRequestForm 
+        isOpen={showRequestForm} 
+        onClose={() => setShowRequestForm(false)} 
+      />
     </div>
   );
 };

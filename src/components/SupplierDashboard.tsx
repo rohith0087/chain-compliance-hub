@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,7 +17,8 @@ import {
   Plus,
   Settings,
   Users,
-  Building2
+  Building2,
+  BarChart3
 } from 'lucide-react';
 import RoleSwitcher from '@/components/RoleSwitcher';
 import SupplierProfileSetup from '@/components/supplier/SupplierProfileSetup';
@@ -26,6 +26,7 @@ import ConnectionRequests from '@/components/supplier/ConnectionRequests';
 import ConnectedBuyersTab from '@/components/supplier/ConnectedBuyersTab';
 import DocumentRequestCard from '@/components/supplier/DocumentRequestCard';
 import DocumentRequestsFilter from '@/components/supplier/DocumentRequestsFilter';
+import SupplierComplianceDashboard from '@/components/dashboard/SupplierComplianceDashboard';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import { useAuth } from '@/hooks/useAuth';
 import { useCompanySetup } from '@/hooks/useCompanySetup';
@@ -335,6 +336,10 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="compliance">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Compliance
+            </TabsTrigger>
             <TabsTrigger value="connections">Connection Requests</TabsTrigger>
             <TabsTrigger value="requests">Document Requests</TabsTrigger>
             <TabsTrigger value="buyers">Connected Buyers</TabsTrigger>
@@ -413,6 +418,10 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="compliance" className="space-y-6">
+            <SupplierComplianceDashboard />
           </TabsContent>
 
           <TabsContent value="connections" className="space-y-6">

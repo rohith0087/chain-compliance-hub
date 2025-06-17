@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle, Clock, Building2 } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Building2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -12,32 +12,74 @@ const ConnectionRequests = () => {
   const [requests, setRequests] = useState<any[]>([]);
   const [supplierProfile, setSupplierProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     if (user) {
       fetchData();
+      
+      // Set up real-time subscription for new connection requests
+      const channel = supabase
+        .channel('connection_requests')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'buyer_supplier_connections'
+          },
+          (payload) => {
+            console.log('New connection request received:', payload);
+            fetchData(); // Refresh data when new request comes in
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'buyer_supplier_connections'
+          },
+          (payload) => {
+            console.log('Connection request updated:', payload);
+            fetchData(); // Refresh data when request is updated
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [user]);
 
   const fetchData = async () => {
     try {
+      setLoading(true);
+      setError(null);
       console.log('Fetching supplier data for user:', user?.id);
       
       // Get supplier profile
-      const { data: supplier } = await supabase
+      const { data: supplier, error: supplierError } = await supabase
         .from('suppliers')
         .select('*')
         .eq('profile_id', user?.id)
         .single();
+
+      if (supplierError) {
+        console.error('Error fetching supplier profile:', supplierError);
+        setError('Failed to load supplier profile');
+        return;
+      }
 
       console.log('Supplier profile:', supplier);
       setSupplierProfile(supplier);
 
       if (supplier) {
         // Fetch connection requests with buyer information
-        const { data: requestsData } = await supabase
+        const { data: requestsData, error: requestsError } = await supabase
           .from('buyer_supplier_connections')
           .select(`
             *,
@@ -53,13 +95,18 @@ const ConnectionRequests = () => {
           .eq('supplier_id', supplier.id)
           .order('requested_at', { ascending: false });
 
-        console.log('Connection requests:', requestsData);
-        if (requestsData) {
-          setRequests(requestsData);
+        if (requestsError) {
+          console.error('Error fetching connection requests:', requestsError);
+          setError('Failed to load connection requests');
+          return;
         }
+
+        console.log('Connection requests:', requestsData);
+        setRequests(requestsData || []);
       }
     } catch (error) {
-      console.error('Error fetching connection requests:', error);
+      console.error('Error in fetchData:', error);
+      setError('An unexpected error occurred');
     } finally {
       setLoading(false);
     }
@@ -86,18 +133,22 @@ const ConnectionRequests = () => {
       if (request?.buyers?.profile_id) {
         console.log('Creating notification for buyer:', request.buyers.profile_id);
         
-        const { data: notificationId, error: notificationError } = await supabase.rpc('create_notification', {
-          p_user_id: request.buyers.profile_id,
-          p_title: status === 'approved' ? 'Connection Approved' : 'Connection Rejected',
-          p_message: `${supplierProfile.company_name} has ${status} your connection request.`,
-          p_type: 'connection_response',
-          p_reference_id: requestId
-        });
+        try {
+          const { data: notificationId, error: notificationError } = await supabase.rpc('create_notification', {
+            p_user_id: request.buyers.profile_id,
+            p_title: status === 'approved' ? 'Connection Approved' : 'Connection Rejected',
+            p_message: `${supplierProfile.company_name} has ${status} your connection request.`,
+            p_type: 'connection_response',
+            p_reference_id: requestId
+          });
 
-        if (notificationError) {
-          console.error('Error creating notification:', notificationError);
-        } else {
-          console.log('Notification created successfully:', notificationId);
+          if (notificationError) {
+            console.error('Error creating notification:', notificationError);
+          } else {
+            console.log('Notification created successfully:', notificationId);
+          }
+        } catch (notifError) {
+          console.error('Failed to create notification:', notifError);
         }
       }
 
@@ -111,7 +162,7 @@ const ConnectionRequests = () => {
       console.error('Error responding to request:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || 'Failed to update connection request',
         variant: "destructive",
       });
     }
@@ -144,7 +195,28 @@ const ConnectionRequests = () => {
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading connection requests...</div>;
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <div className="text-center py-8">Loading connection requests...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2 text-red-600">Error Loading Requests</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={fetchData} variant="outline">
+            Try Again
+          </Button>
+        </CardContent>
+      </Card>
+    );
   }
 
   if (!supplierProfile) {
@@ -162,6 +234,9 @@ const ConnectionRequests = () => {
   if (requests.length === 0) {
     return (
       <Card>
+        <CardHeader>
+          <CardTitle>Connection Requests</CardTitle>
+        </CardHeader>
         <CardContent className="p-6 text-center">
           <Building2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">No Connection Requests</h3>
@@ -173,6 +248,15 @@ const ConnectionRequests = () => {
 
   return (
     <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            Connection Requests 
+            <Badge variant="outline">{requests.length} Total</Badge>
+          </CardTitle>
+        </CardHeader>
+      </Card>
+      
       {requests.map((request) => (
         <Card key={request.id} className="hover:shadow-md transition-shadow">
           <CardHeader>

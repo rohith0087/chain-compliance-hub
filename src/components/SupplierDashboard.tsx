@@ -22,6 +22,7 @@ import {
 import RoleSwitcher from '@/components/RoleSwitcher';
 import SupplierProfileSetup from '@/components/supplier/SupplierProfileSetup';
 import ConnectionRequests from '@/components/supplier/ConnectionRequests';
+import ConnectedBuyersTab from '@/components/supplier/ConnectedBuyersTab';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import { useAuth } from '@/hooks/useAuth';
 import { useCompanySetup } from '@/hooks/useCompanySetup';
@@ -96,7 +97,9 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
               id,
               company_name,
               industry,
-              contact_email
+              contact_email,
+              phone,
+              address
             )
           `)
           .eq('supplier_id', profile.id)
@@ -422,49 +425,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
           </TabsContent>
 
           <TabsContent value="buyers">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Connected Buyers</CardTitle>
-                <Badge variant="outline">{connectedBuyers.length} Connected</Badge>
-              </CardHeader>
-              <CardContent>
-                {connectedBuyers.length > 0 ? (
-                  <div className="space-y-4">
-                    {connectedBuyers.map((connection) => (
-                      <div key={connection.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                              <Building2 className="w-6 h-6 text-blue-600" />
-                            </div>
-                            <div>
-                              <h3 className="font-semibold">{connection.buyers?.company_name}</h3>
-                              <p className="text-sm text-gray-500">Industry: {connection.buyers?.industry}</p>
-                              <p className="text-sm text-gray-500">Email: {connection.buyers?.contact_email}</p>
-                              <p className="text-xs text-gray-400">Connected: {new Date(connection.responded_at).toLocaleDateString()}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-4">
-                            <Badge variant="outline" className="text-green-600">
-                              Active
-                            </Badge>
-                            <Button variant="outline" size="sm">
-                              View Details
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Connected Buyers</h3>
-                    <p className="text-gray-500 mb-6">You haven't connected with any buyers yet.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <ConnectedBuyersTab connectedBuyers={connectedBuyers} />
           </TabsContent>
 
           <TabsContent value="documents">

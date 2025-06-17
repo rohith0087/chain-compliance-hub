@@ -77,18 +77,35 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
       
       if (buyer) {
         setExistingProfile(buyer);
-        setCompanyName(buyer.company_name || '');
-        setIndustry(buyer.industry || '');
-        setPhone(buyer.phone || '');
-        setAddress(buyer.address || '');
-        // If profile exists, skip to supplier selection
-        setStep(2);
+        
+        // Check if this is a properly configured profile or just auto-created defaults
+        const isAutoCreated = (buyer.company_name === "James's Company" || 
+                              buyer.company_name === `${profile?.full_name}'s Company`) &&
+                              buyer.industry === 'General Business';
+        
+        if (isAutoCreated) {
+          console.log('Found auto-created profile, showing setup form');
+          // Pre-fill with profile data if available, but clear the defaults
+          setCompanyName(profile?.company_name || '');
+          setIndustry('');
+          setPhone(buyer.phone || '');
+          setAddress(buyer.address || '');
+          setStep(1); // Show setup form
+        } else {
+          console.log('Found complete profile, pre-filling form');
+          // Profile is complete, pre-fill the form
+          setCompanyName(buyer.company_name || '');
+          setIndustry(buyer.industry || '');
+          setPhone(buyer.phone || '');
+          setAddress(buyer.address || '');
+          // Skip to supplier selection if profile is complete
+          setStep(2);
+        }
       } else {
         console.log('No buyer profile found, using profile data for pre-fill');
         // Pre-fill with profile data if available
         setCompanyName(profile?.company_name || '');
-        // Stay on step 1 for profile creation
-        setStep(1);
+        setStep(1); // Show setup form
       }
     } catch (error) {
       console.error('Error loading buyer profile:', error);
@@ -219,10 +236,10 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Building2 className="w-5 h-5" />
-          {existingProfile ? 'Update Buyer Profile' : 'Setup Buyer Profile'}
+          {existingProfile ? 'Complete Your Buyer Profile' : 'Setup Buyer Profile'}
         </CardTitle>
         <p className="text-sm text-gray-600">
-          Step 1 of 2: Set up your company information
+          Step 1 of 2: Set up your company information to get started
         </p>
       </CardHeader>
       <CardContent>
@@ -285,7 +302,7 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
             ) : (
               <>
                 <ArrowRight className="w-4 h-4 mr-2" />
-                {existingProfile ? "Update & Continue" : "Create Profile & Continue"}
+                Continue to Supplier Selection
               </>
             )}
           </Button>

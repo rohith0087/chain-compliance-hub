@@ -63,6 +63,45 @@ const DynamicDashboard = () => {
     }, 500);
   };
 
+  // Check if buyer profile is properly set up (not just auto-created with defaults)
+  const isBuyerProfileComplete = (buyer: any) => {
+    if (!buyer) return false;
+    
+    // Check if it's an auto-created profile with default values
+    const hasDefaultCompanyName = buyer.company_name === "James's Company" || 
+                                  buyer.company_name === `${profile?.full_name}'s Company`;
+    const hasDefaultIndustry = buyer.industry === 'General Business';
+    
+    // If both company name and industry are defaults, consider it incomplete
+    if (hasDefaultCompanyName && hasDefaultIndustry) {
+      return false;
+    }
+    
+    // Also check if essential fields are missing
+    return !!(buyer.company_name && buyer.industry && 
+             buyer.company_name.trim() !== '' && 
+             buyer.industry !== 'General Business');
+  };
+
+  // Check if supplier profile is properly set up
+  const isSupplierProfileComplete = (supplier: any) => {
+    if (!supplier) return false;
+    
+    // Check if it's an auto-created profile with default values
+    const hasDefaultCompanyName = supplier.company_name === "James's Company" || 
+                                  supplier.company_name === `${profile?.full_name}'s Company`;
+    const hasDefaultIndustry = supplier.industry === 'General Business';
+    
+    // If both are defaults, consider it incomplete
+    if (hasDefaultCompanyName && hasDefaultIndustry) {
+      return false;
+    }
+    
+    return !!(supplier.company_name && supplier.industry && 
+             supplier.company_name.trim() !== '' && 
+             supplier.industry !== 'General Business');
+  };
+
   // Show loading while auth is loading or we don't have user/profile yet
   if (authLoading || !user || !profile) {
     return (
@@ -93,14 +132,21 @@ const DynamicDashboard = () => {
   // Check if user has multiple roles
   const hasMultipleRoles = profile.roles?.length > 1;
 
-  // Check if current role needs profile setup
-  const needsSupplierSetup = currentRole === 'supplier' && profile.roles?.includes('supplier') && !supplierProfile;
-  const needsBuyerSetup = currentRole === 'buyer' && profile.roles?.includes('buyer') && !buyerProfile;
+  // Check if current role needs profile setup using the new complete check functions
+  const needsSupplierSetup = currentRole === 'supplier' && 
+                            profile.roles?.includes('supplier') && 
+                            !isSupplierProfileComplete(supplierProfile);
+                            
+  const needsBuyerSetup = currentRole === 'buyer' && 
+                         profile.roles?.includes('buyer') && 
+                         !isBuyerProfileComplete(buyerProfile);
 
   console.log('Dashboard state:', {
     currentRole,
     supplierProfile: !!supplierProfile,
     buyerProfile: !!buyerProfile,
+    supplierProfileComplete: isSupplierProfileComplete(supplierProfile),
+    buyerProfileComplete: isBuyerProfileComplete(buyerProfile),
     needsSupplierSetup,
     needsBuyerSetup,
     hasMultipleRoles,
@@ -136,7 +182,7 @@ const DynamicDashboard = () => {
     currentRole: currentRole
   };
 
-  // Don't show role switcher in the dashboard components since we handle it here
+  // Show the appropriate dashboard based on current role
   return (
     <div className="space-y-6">
       {currentRole === 'supplier' ? (

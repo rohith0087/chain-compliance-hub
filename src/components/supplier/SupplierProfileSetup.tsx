@@ -30,12 +30,9 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
   const { user, profile } = useAuth();
   const { toast } = useToast();
 
-  const industries = [
-    'Technology', 'Manufacturing', 'Healthcare', 'Finance', 'Retail',
-    'Construction', 'Food & Beverage', 'Automotive', 'Energy', 'Education',
-    'Telecommunications', 'Agriculture', 'Transportation', 'Real Estate',
-    'Entertainment', 'Consulting', 'Legal Services', 'Marketing'
-  ];
+  // Log industries to debug
+  console.log('INDUSTRIES array:', INDUSTRIES);
+  console.log('Current industry value:', industry);
 
   useEffect(() => {
     if (user) {
@@ -186,11 +183,14 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
                 <SelectValue placeholder="Select your industry" />
               </SelectTrigger>
               <SelectContent>
-                {INDUSTRIES.map((ind) => (
-                  <SelectItem key={ind} value={ind}>
-                    {ind}
-                  </SelectItem>
-                ))}
+                {INDUSTRIES.filter(ind => ind && ind.trim() !== '').map((ind) => {
+                  console.log('Rendering industry SelectItem:', ind);
+                  return (
+                    <SelectItem key={ind} value={ind}>
+                      {ind}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>

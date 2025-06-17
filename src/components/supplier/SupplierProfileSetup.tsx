@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,15 +45,17 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
 
   const loadExistingProfile = async () => {
     try {
-      const { data: supplier, error } = await supabase
+      const { data: suppliers, error } = await supabase
         .from('suppliers')
         .select('*')
         .eq('profile_id', user?.id)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error loading supplier profile:', error);
-      } else if (supplier) {
+      } else if (suppliers && suppliers.length > 0) {
+        const supplier = suppliers[0];
         setExistingProfile(supplier);
         setCompanyName(supplier.company_name || '');
         setIndustry(supplier.industry || '');

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,17 +42,19 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
     if (!user) return null;
 
     try {
-      const { data: buyer, error } = await supabase
+      const { data: buyers, error } = await supabase
         .from('buyers')
         .select('*')
         .eq('profile_id', user.id)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error fetching buyer profile:', error);
+        return null;
       }
 
-      return buyer;
+      return buyers && buyers.length > 0 ? buyers[0] : null;
     } catch (error) {
       console.error('Error in getBuyerProfile:', error);
       return null;

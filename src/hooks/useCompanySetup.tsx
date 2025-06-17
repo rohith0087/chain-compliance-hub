@@ -12,13 +12,14 @@ export const useCompanySetup = () => {
     try {
       // Only create supplier record if user has supplier role and doesn't have one yet
       if (profile.roles?.includes('supplier')) {
-        const { data: existingSupplier } = await supabase
+        const { data: existingSuppliers } = await supabase
           .from('suppliers')
           .select('id')
           .eq('profile_id', user.id)
-          .single();
+          .order('created_at', { ascending: false })
+          .limit(1);
 
-        if (!existingSupplier) {
+        if (!existingSuppliers || existingSuppliers.length === 0) {
           const { error: supplierError } = await supabase
             .from('suppliers')
             .insert({
@@ -50,13 +51,14 @@ export const useCompanySetup = () => {
     try {
       // Only create buyer record if user has buyer role and doesn't have one yet
       if (profile.roles?.includes('buyer')) {
-        const { data: existingBuyer } = await supabase
+        const { data: existingBuyers } = await supabase
           .from('buyers')
           .select('id')
           .eq('profile_id', user.id)
-          .single();
+          .order('created_at', { ascending: false })
+          .limit(1);
 
-        if (!existingBuyer) {
+        if (!existingBuyers || existingBuyers.length === 0) {
           const { error: buyerError } = await supabase
             .from('buyers')
             .insert({
@@ -84,18 +86,19 @@ export const useCompanySetup = () => {
     if (!user) return null;
 
     try {
-      const { data: supplier, error } = await supabase
+      const { data: suppliers, error } = await supabase
         .from('suppliers')
         .select('*')
         .eq('profile_id', user.id)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error fetching supplier profile:', error);
         return null;
       }
 
-      return supplier;
+      return suppliers && suppliers.length > 0 ? suppliers[0] : null;
     } catch (error) {
       console.error('Error in getSupplierProfile:', error);
       return null;
@@ -106,18 +109,19 @@ export const useCompanySetup = () => {
     if (!user) return null;
 
     try {
-      const { data: buyer, error } = await supabase
+      const { data: buyers, error } = await supabase
         .from('buyers')
         .select('*')
         .eq('profile_id', user.id)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error fetching buyer profile:', error);
         return null;
       }
 
-      return buyer;
+      return buyers && buyers.length > 0 ? buyers[0] : null;
     } catch (error) {
       console.error('Error in getBuyerProfile:', error);
       return null;

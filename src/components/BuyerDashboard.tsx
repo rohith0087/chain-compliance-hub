@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,6 @@ import DocumentRequestForm from '@/components/requests/DocumentRequestForm';
 import BuyerComplianceDashboard from '@/components/dashboard/BuyerComplianceDashboard';
 import { Building2, Users, ListChecks, Plus, BarChart3, FileCheck } from 'lucide-react';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
-import DocumentRoadmap from '@/components/dashboard/DocumentRoadmap';
 import BuyerDocumentsDashboard from '@/components/documents/BuyerDocumentsDashboard';
 
 interface BuyerDashboardProps {

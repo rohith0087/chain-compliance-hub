@@ -75,8 +75,8 @@ const SupplierDocumentsDashboard = () => {
         .eq('supplier_id', supplierProfile.id)
         .order('created_at', { ascending: false });
 
-      // Apply filters
-      if (filters.status) {
+      // Apply filters with proper type checking
+      if (filters.status && ['pending', 'submitted', 'approved', 'rejected'].includes(filters.status)) {
         query = query.eq('status', filters.status);
       }
       if (filters.category) {
@@ -189,26 +189,42 @@ const SupplierDocumentsDashboard = () => {
   // Generate timeline events
   const timelineEvents = documents.slice(0, 10).map(doc => ({
     id: doc.id,
-    type: doc.status,
+    type: doc.status as 'created' | 'submitted' | 'approved' | 'rejected' | 'expired' | 'reminder',
     title: `Document ${doc.status}`,
     description: `${doc.title} - ${doc.buyers?.company_name || 'Unknown Buyer'}`,
     date: doc.updated_at || doc.created_at,
     documentTitle: doc.title
   }));
 
-  // Generate roadmap items
+  // Generate roadmap items with proper status mapping
   const roadmapItems = documents
     .filter(doc => doc.status !== 'approved')
-    .map(doc => ({
-      id: doc.id,
-      title: doc.title,
-      status: doc.status === 'pending' ? 'pending' : 
-              doc.status === 'submitted' ? 'in_progress' : 
-              doc.status === 'rejected' ? 'overdue' : 'pending',
-      dueDate: doc.due_date,
-      description: `${doc.document_type} for ${doc.buyers?.company_name || 'Unknown Buyer'}`,
-      priority: doc.priority || 'medium'
-    }));
+    .map(doc => {
+      let roadmapStatus: 'pending' | 'completed' | 'in_progress' | 'overdue';
+      
+      switch (doc.status) {
+        case 'pending':
+          roadmapStatus = 'pending';
+          break;
+        case 'submitted':
+          roadmapStatus = 'in_progress';
+          break;
+        case 'rejected':
+          roadmapStatus = 'overdue';
+          break;
+        default:
+          roadmapStatus = 'pending';
+      }
+
+      return {
+        id: doc.id,
+        title: doc.title,
+        status: roadmapStatus,
+        dueDate: doc.due_date,
+        description: `${doc.document_type} for ${doc.buyers?.company_name || 'Unknown Buyer'}`,
+        priority: (doc.priority || 'medium') as 'high' | 'medium' | 'low'
+      };
+    });
 
   if (loading) {
     return <div className="flex items-center justify-center h-64">Loading documents...</div>;

@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, AlertCircle } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Shield, AlertCircle, Building2, ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -13,6 +14,7 @@ const AuthPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [selectedRoles, setSelectedRoles] = useState<('buyer' | 'supplier')[]>(['supplier']);
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
@@ -35,9 +37,20 @@ const AuthPage = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (selectedRoles.length === 0) {
+      toast({
+        title: "Role Selection Required",
+        description: "Please select at least one role (Buyer or Supplier).",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setLoading(true);
     
-    const { error } = await signUp(email, password, fullName);
+    // Include the selected roles in the user metadata
+    const { error } = await signUp(email, password, fullName, selectedRoles);
     
     if (error) {
       toast({
@@ -52,6 +65,16 @@ const AuthPage = () => {
       });
     }
     setLoading(false);
+  };
+
+  const toggleRole = (role: 'buyer' | 'supplier') => {
+    setSelectedRoles(prev => {
+      if (prev.includes(role)) {
+        return prev.filter(r => r !== role);
+      } else {
+        return [...prev, role];
+      }
+    });
   };
 
   return (
@@ -130,7 +153,46 @@ const AuthPage = () => {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                
+                <div className="space-y-3">
+                  <Label>Select your role(s):</Label>
+                  <div className="flex flex-col space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="buyer-role-signup"
+                        checked={selectedRoles.includes('buyer')}
+                        onCheckedChange={() => toggleRole('buyer')}
+                      />
+                      <Label htmlFor="buyer-role-signup" className="flex items-center gap-2 cursor-pointer">
+                        <ShoppingCart className="w-4 h-4" />
+                        Buyer (Request documents from suppliers)
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="supplier-role-signup"
+                        checked={selectedRoles.includes('supplier')}
+                        onCheckedChange={() => toggleRole('supplier')}
+                      />
+                      <Label htmlFor="supplier-role-signup" className="flex items-center gap-2 cursor-pointer">
+                        <Building2 className="w-4 h-4" />
+                        Supplier (Provide documents to buyers)
+                      </Label>
+                    </div>
+                  </div>
+                  {selectedRoles.length === 0 && (
+                    <div className="flex items-center gap-2 text-sm text-red-600">
+                      <AlertCircle className="w-4 h-4" />
+                      Please select at least one role
+                    </div>
+                  )}
+                </div>
+                
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={loading || selectedRoles.length === 0}
+                >
                   {loading ? "Creating Account..." : "Create Account"}
                 </Button>
               </form>

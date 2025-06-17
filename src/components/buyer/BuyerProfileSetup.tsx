@@ -20,7 +20,7 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     companyName: '',
-    industry: '',
+    industry: 'Technology', // Set a default value instead of empty string
     contactEmail: '',
     phone: '',
     address: '',

@@ -10,9 +10,9 @@ import RoleSwitcher from '@/components/RoleSwitcher';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const DynamicDashboard = () => {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, loading: authLoading } = useAuth();
   const { getSupplierProfile, getBuyerProfile } = useCompanySetup();
-  const [currentRole, setCurrentRole] = useState<'buyer' | 'supplier'>('supplier');
+  const [currentRole, setCurrentRole] = useState<'buyer' | 'supplier'>('buyer');
   const [supplierProfile, setSupplierProfile] = useState<any>(null);
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
   const [profilesLoading, setProfilesLoading] = useState(true);
@@ -21,7 +21,7 @@ const DynamicDashboard = () => {
     if (user && profile && profile.roles?.length > 0) {
       console.log('User profile loaded with roles:', profile.roles);
       // Set default role to the first role the user has
-      setCurrentRole(profile.roles.includes('supplier') ? 'supplier' : 'buyer');
+      setCurrentRole(profile.roles.includes('buyer') ? 'buyer' : 'supplier');
       loadProfiles();
     }
   }, [user, profile]);
@@ -63,7 +63,8 @@ const DynamicDashboard = () => {
     }, 500);
   };
 
-  if (!user || !profile) {
+  // Show loading while auth is loading or we don't have user/profile yet
+  if (authLoading || !user || !profile) {
     return (
       <Card className="max-w-md mx-auto mt-8">
         <CardContent className="pt-6">

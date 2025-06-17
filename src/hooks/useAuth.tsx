@@ -21,6 +21,71 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const createMissingProfile = async (user: User) => {
+    console.log('Creating missing profile for user:', user.id);
+    try {
+      // Get roles from user metadata, default to buyer if not provided
+      const userRoles = user.user_metadata?.roles || ['buyer'];
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          email: user.email || '',
+          full_name: user.user_metadata?.full_name || user.email || 'User',
+          roles: userRoles,
+          company_name: user.user_metadata?.company_name || null
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating profile:', error);
+        throw error;
+      }
+
+      console.log('Profile created successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('Error in createMissingProfile:', error);
+      throw error;
+    }
+  };
+
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      console.log('Fetching profile for user:', userId);
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle(); // Use maybeSingle to avoid error when no rows found
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        throw error;
+      }
+
+      if (!profile) {
+        console.log('No profile found, creating one...');
+        // Get the current user to create the profile
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const newProfile = await createMissingProfile(user);
+          setProfile(newProfile);
+          return;
+        }
+      }
+
+      console.log('Profile fetched:', profile);
+      setProfile(profile);
+    } catch (error) {
+      console.error('Error in fetchUserProfile:', error);
+      // Don't throw here, just set profile to null
+      setProfile(null);
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -32,22 +97,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (session?.user) {
           // Fetch user profile with delay to avoid deadlock
           setTimeout(async () => {
-            try {
-              const { data: profile, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
-              
-              if (error) {
-                console.error('Error fetching profile:', error);
-              } else {
-                console.log('Profile fetched:', profile);
-                setProfile(profile);
-              }
-            } catch (error) {
-              console.error('Error in profile fetch:', error);
-            }
+            await fetchUserProfile(session.user.id);
           }, 100);
         } else {
           setProfile(null);
@@ -61,6 +111,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('Initial session check:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        // Fetch profile for existing session
+        setTimeout(async () => {
+          await fetchUserProfile(session.user.id);
+        }, 100);
+      }
       setLoading(false);
     });
 
@@ -75,7 +132,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return { error };
   };
 
-  const signUp = async (email: string, password: string, fullName: string, roles: ('buyer' | 'supplier')[] = ['supplier'], companyName?: string) => {
+  const signUp = async (email: string, password: string, fullName: string, roles: ('buyer' | 'supplier')[] = ['buyer'], companyName?: string) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,

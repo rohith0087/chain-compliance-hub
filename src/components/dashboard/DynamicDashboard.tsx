@@ -19,6 +19,7 @@ const DynamicDashboard = () => {
 
   useEffect(() => {
     if (user && profile && profile.roles?.length > 0) {
+      console.log('User profile loaded with roles:', profile.roles);
       // Set default role to the first role the user has
       setCurrentRole(profile.roles.includes('supplier') ? 'supplier' : 'buyer');
       loadProfiles();
@@ -26,15 +27,18 @@ const DynamicDashboard = () => {
   }, [user, profile]);
 
   const loadProfiles = async () => {
+    console.log('Loading profiles...');
     setProfilesLoading(true);
     try {
       if (profile?.roles?.includes('supplier')) {
+        console.log('Loading supplier profile...');
         const supplier = await getSupplierProfile();
         console.log('Loaded supplier profile:', supplier);
         setSupplierProfile(supplier);
       }
       
       if (profile?.roles?.includes('buyer')) {
+        console.log('Loading buyer profile...');
         const buyer = await getBuyerProfile();
         console.log('Loaded buyer profile:', buyer);
         setBuyerProfile(buyer);
@@ -47,6 +51,7 @@ const DynamicDashboard = () => {
   };
 
   const handleRoleSwitch = (newRole: 'buyer' | 'supplier') => {
+    console.log('Switching to role:', newRole);
     setCurrentRole(newRole);
   };
 
@@ -62,7 +67,10 @@ const DynamicDashboard = () => {
     return (
       <Card className="max-w-md mx-auto mt-8">
         <CardContent className="pt-6">
-          <p className="text-center text-gray-600">Loading your profile...</p>
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
+            <p className="text-gray-600">Loading your profile...</p>
+          </div>
         </CardContent>
       </Card>
     );
@@ -72,7 +80,10 @@ const DynamicDashboard = () => {
     return (
       <Card className="max-w-md mx-auto mt-8">
         <CardContent className="pt-6">
-          <p className="text-center text-gray-600">Setting up your dashboard...</p>
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
+            <p className="text-gray-600">Setting up your dashboard...</p>
+          </div>
         </CardContent>
       </Card>
     );
@@ -85,12 +96,15 @@ const DynamicDashboard = () => {
   const needsSupplierSetup = currentRole === 'supplier' && profile.roles?.includes('supplier') && !supplierProfile;
   const needsBuyerSetup = currentRole === 'buyer' && profile.roles?.includes('buyer') && !buyerProfile;
 
-  console.log('Current role:', currentRole);
-  console.log('Supplier profile:', supplierProfile);
-  console.log('Buyer profile:', buyerProfile);
-  console.log('Needs supplier setup:', needsSupplierSetup);
-  console.log('Needs buyer setup:', needsBuyerSetup);
-  console.log('Has multiple roles:', hasMultipleRoles);
+  console.log('Dashboard state:', {
+    currentRole,
+    supplierProfile: !!supplierProfile,
+    buyerProfile: !!buyerProfile,
+    needsSupplierSetup,
+    needsBuyerSetup,
+    hasMultipleRoles,
+    userRoles: profile.roles
+  });
 
   if (needsSupplierSetup) {
     return (

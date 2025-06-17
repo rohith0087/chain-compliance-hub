@@ -31,15 +31,20 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user) {
+    if (user && profile) {
+      console.log('User and profile loaded, checking for buyer profile...');
       loadExistingProfile();
     }
-  }, [user]);
+  }, [user, profile]);
 
   const getBuyerProfile = async () => {
-    if (!user) return null;
+    if (!user) {
+      console.log('No user found');
+      return null;
+    }
 
     try {
+      console.log('Fetching buyer profile for user:', user.id);
       const { data: buyers, error } = await supabase
         .from('buyers')
         .select('*')
@@ -49,9 +54,14 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
 
       if (error) {
         console.error('Error fetching buyer profile:', error);
+        // Don't throw error for PGRST116 (no rows found)
+        if (error.code !== 'PGRST116') {
+          throw error;
+        }
         return null;
       }
 
+      console.log('Buyer profile query result:', buyers);
       return buyers && buyers.length > 0 ? buyers[0] : null;
     } catch (error) {
       console.error('Error in getBuyerProfile:', error);
@@ -61,7 +71,10 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
 
   const loadExistingProfile = async () => {
     try {
+      console.log('Loading existing buyer profile...');
       const buyer = await getBuyerProfile();
+      console.log('Found buyer profile:', buyer);
+      
       if (buyer) {
         setExistingProfile(buyer);
         setCompanyName(buyer.company_name || '');
@@ -71,11 +84,19 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
         // If profile exists, skip to supplier selection
         setStep(2);
       } else {
+        console.log('No buyer profile found, using profile data for pre-fill');
         // Pre-fill with profile data if available
         setCompanyName(profile?.company_name || '');
+        // Stay on step 1 for profile creation
+        setStep(1);
       }
     } catch (error) {
       console.error('Error loading buyer profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load buyer profile. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setInitialLoading(false);
     }
@@ -83,10 +104,23 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!companyName.trim() || !industry) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in company name and select an industry.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
+      console.log('Submitting buyer profile...');
+      
       if (existingProfile) {
+        console.log('Updating existing buyer profile:', existingProfile.id);
         // Update existing profile
         const { error } = await supabase
           .from('buyers')
@@ -99,13 +133,17 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
           })
           .eq('id', existingProfile.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error updating buyer profile:', error);
+          throw error;
+        }
 
         toast({
           title: "Profile Updated",
           description: "Your buyer profile has been updated successfully.",
         });
       } else {
+        console.log('Creating new buyer profile for user:', user?.id);
         // Create new profile
         const { data, error } = await supabase
           .from('buyers')
@@ -120,8 +158,12 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error creating buyer profile:', error);
+          throw error;
+        }
 
+        console.log('Buyer profile created successfully:', data);
         setExistingProfile(data);
 
         toast({
@@ -133,9 +175,10 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
       // Move to supplier selection step
       setStep(2);
     } catch (error: any) {
+      console.error('Error in handleProfileSubmit:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to save profile. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -144,13 +187,21 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
   };
 
   const handleComplete = () => {
+    console.log('Buyer profile setup completed');
     if (onProfileCreated) {
       onProfileCreated();
     }
   };
 
   if (initialLoading) {
-    return <div className="text-center py-8">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your profile...</p>
+        </div>
+      </div>
+    );
   }
 
   if (step === 2 && existingProfile) {
@@ -182,6 +233,7 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
               id="companyName"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
+              placeholder="Enter your company name"
               required
             />
           </div>
@@ -209,6 +261,7 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
+              placeholder="Enter your phone number"
             />
           </div>
 
@@ -218,14 +271,15 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
               id="address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
+              placeholder="Enter your company address"
               rows={3}
             />
           </div>
 
-          <Button type="submit" disabled={loading} className="w-full">
+          <Button type="submit" disabled={loading || !companyName.trim() || !industry} className="w-full">
             {loading ? (
               <>
-                <Save className="w-4 h-4 mr-2" />
+                <Save className="w-4 h-4 mr-2 animate-spin" />
                 Saving...
               </>
             ) : (

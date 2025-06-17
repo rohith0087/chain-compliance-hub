@@ -22,7 +22,9 @@ interface DocumentsFilterProps {
 
 const DocumentsFilter = ({ filters, onFiltersChange, showExpirationFilter = false }: DocumentsFilterProps) => {
   const updateFilter = (key: string, value: string) => {
-    onFiltersChange({ ...filters, [key]: value });
+    // Convert "all" values back to empty strings for the filter logic
+    const actualValue = value === 'all' ? '' : value;
+    onFiltersChange({ ...filters, [key]: actualValue });
   };
 
   const clearFilters = () => {
@@ -35,6 +37,9 @@ const DocumentsFilter = ({ filters, onFiltersChange, showExpirationFilter = fals
       dateRange: ''
     });
   };
+
+  // Convert empty strings to "all" for display purposes
+  const getDisplayValue = (value: string) => value === '' ? 'all' : value;
 
   const activeFiltersCount = Object.values(filters).filter(value => value !== '').length;
 
@@ -71,12 +76,12 @@ const DocumentsFilter = ({ filters, onFiltersChange, showExpirationFilter = fals
           </div>
 
           {/* Status Filter */}
-          <Select value={filters.status} onValueChange={(value) => updateFilter('status', value)}>
+          <Select value={getDisplayValue(filters.status)} onValueChange={(value) => updateFilter('status', value)}>
             <SelectTrigger>
               <SelectValue placeholder="All Statuses" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Statuses</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="submitted">Submitted</SelectItem>
               <SelectItem value="approved">Approved</SelectItem>
@@ -86,12 +91,12 @@ const DocumentsFilter = ({ filters, onFiltersChange, showExpirationFilter = fals
           </Select>
 
           {/* Category Filter */}
-          <Select value={filters.category} onValueChange={(value) => updateFilter('category', value)}>
+          <Select value={getDisplayValue(filters.category)} onValueChange={(value) => updateFilter('category', value)}>
             <SelectTrigger>
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Categories</SelectItem>
+              <SelectItem value="all">All Categories</SelectItem>
               <SelectItem value="compliance">Compliance</SelectItem>
               <SelectItem value="certification">Certification</SelectItem>
               <SelectItem value="insurance">Insurance</SelectItem>
@@ -102,12 +107,12 @@ const DocumentsFilter = ({ filters, onFiltersChange, showExpirationFilter = fals
           </Select>
 
           {/* Document Type Filter */}
-          <Select value={filters.documentType} onValueChange={(value) => updateFilter('documentType', value)}>
+          <Select value={getDisplayValue(filters.documentType)} onValueChange={(value) => updateFilter('documentType', value)}>
             <SelectTrigger>
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Types</SelectItem>
+              <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="certificate">Certificate</SelectItem>
               <SelectItem value="license">License</SelectItem>
               <SelectItem value="permit">Permit</SelectItem>
@@ -119,12 +124,12 @@ const DocumentsFilter = ({ filters, onFiltersChange, showExpirationFilter = fals
 
           {/* Expiration Status Filter (for suppliers) */}
           {showExpirationFilter && (
-            <Select value={filters.expirationStatus} onValueChange={(value) => updateFilter('expirationStatus', value)}>
+            <Select value={getDisplayValue(filters.expirationStatus)} onValueChange={(value) => updateFilter('expirationStatus', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Expiration Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Documents</SelectItem>
+                <SelectItem value="all">All Documents</SelectItem>
                 <SelectItem value="expiring_soon">Expiring Soon (30 days)</SelectItem>
                 <SelectItem value="expired">Expired</SelectItem>
                 <SelectItem value="valid">Valid</SelectItem>
@@ -133,12 +138,12 @@ const DocumentsFilter = ({ filters, onFiltersChange, showExpirationFilter = fals
           )}
 
           {/* Date Range Filter */}
-          <Select value={filters.dateRange} onValueChange={(value) => updateFilter('dateRange', value)}>
+          <Select value={getDisplayValue(filters.dateRange)} onValueChange={(value) => updateFilter('dateRange', value)}>
             <SelectTrigger>
               <SelectValue placeholder="Date Range" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Time</SelectItem>
+              <SelectItem value="all">All Time</SelectItem>
               <SelectItem value="last_7_days">Last 7 Days</SelectItem>
               <SelectItem value="last_30_days">Last 30 Days</SelectItem>
               <SelectItem value="last_90_days">Last 90 Days</SelectItem>

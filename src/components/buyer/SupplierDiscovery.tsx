@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useBuyerSetup } from '@/hooks/useBuyerSetup';
+import { INDUSTRIES } from '@/config/industries';
 
 const SupplierDiscovery = () => {
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -23,11 +23,6 @@ const SupplierDiscovery = () => {
   const { user } = useAuth();
   const { getBuyerProfile } = useBuyerSetup();
   const { toast } = useToast();
-
-  const industries = [
-    'Technology', 'Manufacturing', 'Healthcare', 'Finance', 'Retail',
-    'Construction', 'Food & Beverage', 'Automotive', 'Energy', 'Education'
-  ];
 
   useEffect(() => {
     if (user) {
@@ -180,7 +175,7 @@ const SupplierDiscovery = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">All Industries</SelectItem>
-              {industries.map((industry) => (
+              {INDUSTRIES.map((industry) => (
                 <SelectItem key={industry} value={industry}>
                   {industry}
                 </SelectItem>
@@ -214,6 +209,7 @@ const SupplierDiscovery = () => {
                   <p><strong>Contact:</strong> {supplier.contact_email}</p>
                   {supplier.phone && <p><strong>Phone:</strong> {supplier.phone}</p>}
                   {supplier.address && <p><strong>Address:</strong> {supplier.address}</p>}
+                  {supplier.description && <p><strong>Description:</strong> {supplier.description}</p>}
                 </div>
                 
                 {!connectionStatus && (

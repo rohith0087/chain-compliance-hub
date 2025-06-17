@@ -6,16 +6,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Building2, Save } from 'lucide-react';
+import { Building2, Save, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { INDUSTRIES } from '@/config/industries';
+import SupplierSelection from './SupplierSelection';
 
 interface BuyerProfileSetupProps {
   onProfileCreated?: () => void;
 }
 
 const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
+  const [step, setStep] = useState(1); // 1 = Profile Setup, 2 = Supplier Selection
   const [companyName, setCompanyName] = useState('');
   const [industry, setIndustry] = useState('');
   const [phone, setPhone] = useState('');
@@ -26,11 +29,6 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
   
   const { user, profile } = useAuth();
   const { toast } = useToast();
-
-  const industries = [
-    'Technology', 'Manufacturing', 'Healthcare', 'Finance', 'Retail',
-    'Construction', 'Food & Beverage', 'Automotive', 'Energy', 'Education'
-  ];
 
   useEffect(() => {
     if (user) {
@@ -70,6 +68,8 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
         setIndustry(buyer.industry || '');
         setPhone(buyer.phone || '');
         setAddress(buyer.address || '');
+        // If profile exists, skip to supplier selection
+        setStep(2);
       } else {
         // Pre-fill with profile data if available
         setCompanyName(profile?.company_name || '');
@@ -81,7 +81,7 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
@@ -107,7 +107,7 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
         });
       } else {
         // Create new profile
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('buyers')
           .insert({
             profile_id: user?.id,
@@ -116,23 +116,22 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
             industry,
             phone,
             address
-          });
+          })
+          .select()
+          .single();
 
         if (error) throw error;
+
+        setExistingProfile(data);
 
         toast({
           title: "Profile Created",
           description: "Your buyer profile has been created successfully.",
         });
-
-        // Notify parent component that profile was created
-        if (onProfileCreated) {
-          onProfileCreated();
-        }
       }
 
-      // Reload the profile
-      loadExistingProfile();
+      // Move to supplier selection step
+      setStep(2);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -144,8 +143,24 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
     }
   };
 
+  const handleComplete = () => {
+    if (onProfileCreated) {
+      onProfileCreated();
+    }
+  };
+
   if (initialLoading) {
     return <div className="text-center py-8">Loading...</div>;
+  }
+
+  if (step === 2 && existingProfile) {
+    return (
+      <SupplierSelection
+        selectedIndustry={industry}
+        buyerProfile={existingProfile}
+        onComplete={handleComplete}
+      />
+    );
   }
 
   return (
@@ -155,9 +170,12 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
           <Building2 className="w-5 h-5" />
           {existingProfile ? 'Update Buyer Profile' : 'Setup Buyer Profile'}
         </CardTitle>
+        <p className="text-sm text-gray-600">
+          Step 1 of 2: Set up your company information
+        </p>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleProfileSubmit} className="space-y-4">
           <div>
             <Label htmlFor="companyName">Company Name *</Label>
             <Input
@@ -175,7 +193,7 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
                 <SelectValue placeholder="Select your industry" />
               </SelectTrigger>
               <SelectContent>
-                {industries.map((ind) => (
+                {INDUSTRIES.map((ind) => (
                   <SelectItem key={ind} value={ind}>
                     {ind}
                   </SelectItem>
@@ -205,8 +223,17 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
           </div>
 
           <Button type="submit" disabled={loading} className="w-full">
-            <Save className="w-4 h-4 mr-2" />
-            {loading ? "Saving..." : existingProfile ? "Update Profile" : "Create Profile"}
+            {loading ? (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <ArrowRight className="w-4 h-4 mr-2" />
+                {existingProfile ? "Update & Continue" : "Create Profile & Continue"}
+              </>
+            )}
           </Button>
         </form>
       </CardContent>

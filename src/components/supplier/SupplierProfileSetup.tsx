@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,7 @@ import { Building2, Save } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { INDUSTRIES } from '@/config/industries';
 
 interface SupplierProfileSetupProps {
   onProfileCreated?: () => void;
@@ -21,8 +21,8 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
   const [industry, setIndustry] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
-  const [autoApproveConnections, setAutoApproveConnections] = useState(false);
   const [description, setDescription] = useState('');
+  const [autoApproveConnections, setAutoApproveConnections] = useState(false);
   const [existingProfile, setExistingProfile] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -43,26 +43,40 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
     }
   }, [user]);
 
-  const loadExistingProfile = async () => {
+  const getSupplierProfile = async () => {
+    if (!user) return null;
+
     try {
       const { data: suppliers, error } = await supabase
         .from('suppliers')
         .select('*')
-        .eq('profile_id', user?.id)
+        .eq('profile_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1);
 
       if (error) {
-        console.error('Error loading supplier profile:', error);
-      } else if (suppliers && suppliers.length > 0) {
-        const supplier = suppliers[0];
+        console.error('Error fetching supplier profile:', error);
+        return null;
+      }
+
+      return suppliers && suppliers.length > 0 ? suppliers[0] : null;
+    } catch (error) {
+      console.error('Error in getSupplierProfile:', error);
+      return null;
+    }
+  };
+
+  const loadExistingProfile = async () => {
+    try {
+      const supplier = await getSupplierProfile();
+      if (supplier) {
         setExistingProfile(supplier);
         setCompanyName(supplier.company_name || '');
         setIndustry(supplier.industry || '');
         setPhone(supplier.phone || '');
         setAddress(supplier.address || '');
-        setAutoApproveConnections(supplier.auto_approve_connections || false);
         setDescription(supplier.description || '');
+        setAutoApproveConnections(supplier.auto_approve_connections || false);
       } else {
         // Pre-fill with profile data if available
         setCompanyName(profile?.company_name || '');
@@ -88,8 +102,8 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
             industry,
             phone,
             address,
-            auto_approve_connections: autoApproveConnections,
             description,
+            auto_approve_connections: autoApproveConnections,
             updated_at: new Date().toISOString()
           })
           .eq('id', existingProfile.id);
@@ -111,8 +125,8 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
             industry,
             phone,
             address,
-            auto_approve_connections: autoApproveConnections,
-            description
+            description,
+            auto_approve_connections: autoApproveConnections
           });
 
         if (error) throw error;
@@ -172,13 +186,24 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
                 <SelectValue placeholder="Select your industry" />
               </SelectTrigger>
               <SelectContent>
-                {industries.map((ind) => (
+                {INDUSTRIES.map((ind) => (
                   <SelectItem key={ind} value={ind}>
                     {ind}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="description">Company Description</Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Brief description of your company and services..."
+              rows={3}
+            />
           </div>
 
           <div>
@@ -201,29 +226,18 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
             />
           </div>
 
-          <div>
-            <Label htmlFor="description">Company Description</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description of your company and services"
-              rows={3}
-            />
-          </div>
-
           <div className="flex items-center space-x-2">
             <Switch
               id="autoApprove"
               checked={autoApproveConnections}
               onCheckedChange={setAutoApproveConnections}
             />
-            <Label htmlFor="autoApprove" className="text-sm">
+            <Label htmlFor="autoApprove">
               Auto-approve buyer connection requests
             </Label>
           </div>
-          <p className="text-xs text-gray-600">
-            When enabled, buyers can connect to your company without waiting for approval
+          <p className="text-sm text-gray-600">
+            When enabled, buyers can connect with you instantly without requiring approval.
           </p>
 
           <Button type="submit" disabled={loading} className="w-full">

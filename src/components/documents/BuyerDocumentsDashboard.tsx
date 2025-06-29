@@ -19,6 +19,7 @@ import DocumentsFilter from './DocumentsFilter';
 import DocumentCard from './DocumentCard';
 import DocumentTimeline from './DocumentTimeline';
 import DocumentRoadmap from './DocumentRoadmap';
+import BuyerDocumentsManager from './BuyerDocumentsManager';
 
 const BuyerDocumentsDashboard = () => {
   const [documents, setDocuments] = useState<any[]>([]);
@@ -93,6 +94,11 @@ const BuyerDocumentsDashboard = () => {
 
       if (error) {
         console.error('Error loading documents:', error);
+        toast({
+          title: "Error Loading Documents",
+          description: "Failed to load documents. Please try again.",
+          variant: "destructive"
+        });
         return;
       }
 
@@ -103,9 +109,9 @@ const BuyerDocumentsDashboard = () => {
         
         // If document has uploads, check their status
         if (doc.document_uploads && doc.document_uploads.length > 0) {
-          const latestUpload = doc.document_uploads[0]; // Assuming uploads are ordered by creation
+          const latestUpload = doc.document_uploads[0]; 
           if (latestUpload.status === 'pending_review') {
-            effectiveStatus = 'submitted'; // Treat pending_review as submitted for buyer view
+            effectiveStatus = 'submitted';
           } else if (latestUpload.status === 'approved') {
             effectiveStatus = 'approved';
           } else if (latestUpload.status === 'rejected') {
@@ -115,7 +121,9 @@ const BuyerDocumentsDashboard = () => {
         
         return {
           ...doc,
-          effectiveStatus
+          effectiveStatus,
+          // Pass the effective status as the main status for DocumentCard
+          status: effectiveStatus
         };
       });
 
@@ -159,6 +167,11 @@ const BuyerDocumentsDashboard = () => {
       setDocuments(processedDocuments);
     } catch (error) {
       console.error('Error loading documents:', error);
+      toast({
+        title: "Unexpected Error",
+        description: "An unexpected error occurred while loading documents.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -166,13 +179,22 @@ const BuyerDocumentsDashboard = () => {
 
   const handleApproveDocument = async (documentId: string) => {
     try {
+      console.log('Approving document:', documentId);
+      
       // Find the document and its upload
       const document = documents.find(doc => doc.id === documentId);
-      if (!document || !document.document_uploads?.[0]) {
-        throw new Error('Document or upload not found');
+      if (!document) {
+        throw new Error('Document not found');
+      }
+      
+      console.log('Document found:', document);
+
+      if (!document.document_uploads || document.document_uploads.length === 0) {
+        throw new Error('No file uploaded for this document');
       }
 
       const uploadId = document.document_uploads[0].id;
+      console.log('Upload ID:', uploadId);
 
       // Update the upload status to approved
       const { error: uploadError } = await supabase
@@ -183,7 +205,10 @@ const BuyerDocumentsDashboard = () => {
         })
         .eq('id', uploadId);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload update error:', uploadError);
+        throw uploadError;
+      }
 
       // Update the document request status to approved
       const { error: requestError } = await supabase
@@ -194,11 +219,14 @@ const BuyerDocumentsDashboard = () => {
         })
         .eq('id', documentId);
 
-      if (requestError) throw requestError;
+      if (requestError) {
+        console.error('Request update error:', requestError);
+        throw requestError;
+      }
 
       toast({
         title: "Document Approved",
-        description: "The document has been successfully approved.",
+        description: `"${document.title}" has been successfully approved.`,
       });
 
       // Reload documents to reflect the change
@@ -206,8 +234,8 @@ const BuyerDocumentsDashboard = () => {
     } catch (error) {
       console.error('Error approving document:', error);
       toast({
-        title: "Error",
-        description: "Failed to approve the document. Please try again.",
+        title: "Approval Failed",
+        description: error instanceof Error ? error.message : "Failed to approve the document. Please try again.",
         variant: "destructive"
       });
     }
@@ -215,13 +243,22 @@ const BuyerDocumentsDashboard = () => {
 
   const handleDeclineDocument = async (documentId: string) => {
     try {
+      console.log('Declining document:', documentId);
+      
       // Find the document and its upload
       const document = documents.find(doc => doc.id === documentId);
-      if (!document || !document.document_uploads?.[0]) {
-        throw new Error('Document or upload not found');
+      if (!document) {
+        throw new Error('Document not found');
+      }
+
+      console.log('Document found:', document);
+
+      if (!document.document_uploads || document.document_uploads.length === 0) {
+        throw new Error('No file uploaded for this document');
       }
 
       const uploadId = document.document_uploads[0].id;
+      console.log('Upload ID:', uploadId);
 
       // Update the upload status to rejected
       const { error: uploadError } = await supabase
@@ -232,7 +269,10 @@ const BuyerDocumentsDashboard = () => {
         })
         .eq('id', uploadId);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload update error:', uploadError);
+        throw uploadError;
+      }
 
       // Update the document request status to rejected
       const { error: requestError } = await supabase
@@ -243,11 +283,14 @@ const BuyerDocumentsDashboard = () => {
         })
         .eq('id', documentId);
 
-      if (requestError) throw requestError;
+      if (requestError) {
+        console.error('Request update error:', requestError);
+        throw requestError;
+      }
 
       toast({
         title: "Document Declined",
-        description: "The document has been declined.",
+        description: `"${document.title}" has been declined.`,
       });
 
       // Reload documents to reflect the change
@@ -255,8 +298,8 @@ const BuyerDocumentsDashboard = () => {
     } catch (error) {
       console.error('Error declining document:', error);
       toast({
-        title: "Error",
-        description: "Failed to decline the document. Please try again.",
+        title: "Decline Failed",
+        description: error instanceof Error ? error.message : "Failed to decline the document. Please try again.",
         variant: "destructive"
       });
     }
@@ -349,7 +392,7 @@ const BuyerDocumentsDashboard = () => {
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Submitted</CardTitle>
+            <CardTitle className="text-sm font-medium">Awaiting Review</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -379,15 +422,16 @@ const BuyerDocumentsDashboard = () => {
       </div>
 
       {/* Main Content */}
-      <Tabs defaultValue="documents" className="space-y-6">
+      <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="documents">All Documents</TabsTrigger>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="documents">Document Manager</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
           <TabsTrigger value="roadmap">Roadmap</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="documents" className="space-y-6">
+        <TabsContent value="overview" className="space-y-6">
           <DocumentsFilter 
             filters={filters}
             onFiltersChange={setFilters}
@@ -396,17 +440,16 @@ const BuyerDocumentsDashboard = () => {
           
           <Card>
             <CardHeader>
-              <CardTitle>Document Requests ({documents.length})</CardTitle>
+              <CardTitle>Recent Document Requests ({documents.length})</CardTitle>
             </CardHeader>
             <CardContent>
               {documents.length > 0 ? (
                 <div className="grid gap-6">
-                  {documents.map(doc => (
+                  {documents.slice(0, 5).map(doc => (
                     <DocumentCard
                       key={doc.id}
                       document={{
                         ...doc,
-                        status: doc.effectiveStatus, // Use effective status for display
                         supplier: doc.suppliers,
                         ...(doc.document_uploads?.[0] && {
                           file_name: doc.document_uploads[0].file_name,
@@ -436,6 +479,15 @@ const BuyerDocumentsDashboard = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="documents">
+          <BuyerDocumentsManager 
+            documents={documents}
+            onApprove={handleApproveDocument}
+            onDecline={handleDeclineDocument}
+            onRefresh={loadDocuments}
+          />
         </TabsContent>
 
         <TabsContent value="timeline">

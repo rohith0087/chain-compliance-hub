@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -106,7 +105,17 @@ const DocumentCard = ({
   };
 
   // Show approve/decline buttons for buyers when document is submitted and has a file
-  const canApproveOrDecline = userRole === 'buyer' && document.status === 'submitted' && document.file_name;
+  const canApproveOrDecline = userRole === 'buyer' && 
+    document.status === 'submitted' && 
+    document.file_name;
+
+  console.log('DocumentCard debug:', {
+    documentId: document.id,
+    status: document.status,
+    userRole,
+    hasFileName: !!document.file_name,
+    canApproveOrDecline
+  });
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -152,13 +161,16 @@ const DocumentCard = ({
                   Upload
                 </Button>
               )}
-              {canApproveOrDecline && (
+              {canApproveOrDecline && onApprove && onDecline && (
                 <>
                   <Button 
                     size="sm" 
                     variant="default" 
                     className="bg-green-600 hover:bg-green-700"
-                    onClick={onApprove}
+                    onClick={() => {
+                      console.log('Approve button clicked for document:', document.id);
+                      onApprove();
+                    }}
                   >
                     <ThumbsUp className="w-4 h-4 mr-2" />
                     Approve
@@ -167,7 +179,10 @@ const DocumentCard = ({
                     size="sm" 
                     variant="outline" 
                     className="border-red-300 text-red-600 hover:bg-red-50"
-                    onClick={onDecline}
+                    onClick={() => {
+                      console.log('Decline button clicked for document:', document.id);
+                      onDecline();
+                    }}
                   >
                     <ThumbsDown className="w-4 h-4 mr-2" />
                     Decline
@@ -212,6 +227,31 @@ const DocumentCard = ({
                 <div className="flex items-center space-x-2">
                   <Calendar className="w-4 h-4 text-gray-500" />
                   <span className="text-sm font-medium">Expires:</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm">{formatDate(document.expiration_date)}</span>
+                  {isExpired(document.expiration_date) && (
+                    <Badge variant="destructive" className="text-xs">
+                      Expired
+                    </Badge>
+                  )}
+                  {isExpiringSoon(document.expiration_date) && !isExpired(document.expiration_date) && (
+                    <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800">
+                      Expires Soon
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Expiration Date (for buyers) */}
+          {document.expiration_date && userRole === 'buyer' && (
+            <div className="p-3 rounded-lg border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Calendar className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm font-medium">Document Expires:</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <span className="text-sm">{formatDate(document.expiration_date)}</span>

@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from '@/hooks/useAuth';
 import RequestsList from '@/components/requests/RequestsList';
 import SupplierDiscovery from '@/components/buyer/SupplierDiscovery';
-import DocumentRequestForm from '@/components/requests/DocumentRequestForm';
+import NewRequestModal from '@/components/NewRequestModal';
 import BuyerComplianceDashboard from '@/components/dashboard/BuyerComplianceDashboard';
 import { Building2, Users, ListChecks, Plus, BarChart3, FileCheck } from 'lucide-react';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
@@ -39,6 +39,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
     } catch (error) {
       console.error('Error in buyer dashboard logout:', error);
     }
+  };
+
+  const handleCreateRequest = (request: any) => {
+    console.log('Request created:', request);
+    // Handle the created request - could add to local state, refresh data, etc.
   };
 
   return (
@@ -160,9 +165,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         </TabsContent>
       </Tabs>
 
-      <DocumentRequestForm 
+      <NewRequestModal 
         isOpen={showRequestForm} 
-        onClose={() => setShowRequestForm(false)} 
+        onClose={() => setShowRequestForm(false)}
+        onCreateRequest={handleCreateRequest}
+        userType={profile?.industry || 'General Business'}
       />
     </div>
   );

@@ -7,8 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Send, ArrowLeft } from 'lucide-react';
-import { ComplianceDocument, suppliers } from './ComplianceDocuments';
+import { Send, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
+import { ComplianceDocument } from './ComplianceDocuments';
+import { useSuppliers } from '@/hooks/useSuppliers';
 
 interface RequestConfigurationStepProps {
   selectedDocuments: ComplianceDocument[];
@@ -32,6 +33,8 @@ const RequestConfigurationStep = ({
   onCreateRequests,
   onCancel
 }: RequestConfigurationStepProps) => {
+  const { suppliers, loading: suppliersLoading, error: suppliersError } = useSuppliers();
+
   return (
     <div className="space-y-6">
       {/* Selected Documents Preview */}
@@ -67,19 +70,50 @@ const RequestConfigurationStep = ({
         <div className="space-y-4">
           <div>
             <Label htmlFor="supplier">Select Supplier *</Label>
-            <Select 
-              value={formData.supplier} 
-              onValueChange={(value) => onFormDataChange('supplier', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a supplier" />
-              </SelectTrigger>
-              <SelectContent>
-                {suppliers.map(supplier => (
-                  <SelectItem key={supplier} value={supplier}>{supplier}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {suppliersError ? (
+              <div className="flex items-center gap-2 p-3 border border-red-200 bg-red-50 rounded-md">
+                <AlertCircle className="w-4 h-4 text-red-500" />
+                <span className="text-sm text-red-700">{suppliersError}</span>
+              </div>
+            ) : (
+              <Select 
+                value={formData.supplier} 
+                onValueChange={(value) => onFormDataChange('supplier', value)}
+                disabled={suppliersLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={
+                    suppliersLoading ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Loading suppliers...
+                      </div>
+                    ) : suppliers.length === 0 ? (
+                      "No suppliers available"
+                    ) : (
+                      "Choose a supplier"
+                    )
+                  } />
+                </SelectTrigger>
+                <SelectContent>
+                  {suppliers.map(supplier => (
+                    <SelectItem key={supplier.id} value={supplier.id}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{supplier.company_name}</span>
+                        {supplier.industry && (
+                          <span className="text-xs text-gray-500">{supplier.industry}</span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {suppliers.length === 0 && !suppliersLoading && !suppliersError && (
+              <p className="text-sm text-gray-500 mt-1">
+                No suppliers found. Please add suppliers to your network first.
+              </p>
+            )}
           </div>
 
           <div>
@@ -147,7 +181,7 @@ const RequestConfigurationStep = ({
         </Button>
         <Button 
           onClick={onCreateRequests}
-          disabled={!formData.supplier || !formData.dueDate || selectedDocuments.length === 0}
+          disabled={!formData.supplier || !formData.dueDate || selectedDocuments.length === 0 || suppliersLoading}
           className="bg-green-600 hover:bg-green-700"
         >
           <Send className="w-4 h-4 mr-2" />

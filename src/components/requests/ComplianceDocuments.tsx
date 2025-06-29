@@ -1,4 +1,3 @@
-
 import { 
   FileText, 
   Shield, 
@@ -391,16 +390,3 @@ export const getComplianceDocuments = (userType: string): ComplianceDocument[] =
     }
   ];
 };
-
-export const suppliers = [
-  'Premium Farms LLC',
-  'FreshSource Distributors',
-  'Quality Feed Solutions',
-  'Organic Valley Suppliers',
-  'Regional Transport Co.',
-  'TechFlow Manufacturing',
-  'GreenLeaf Packaging',
-  'Atlantic Supply Chain',
-  'Midwest Industrial Corp',
-  'Pacific Logistics Group'
-];

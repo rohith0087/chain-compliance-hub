@@ -6,7 +6,15 @@ import {
   Building2, 
   Users, 
   ClipboardCheck,
-  AlertTriangle
+  AlertTriangle,
+  Factory,
+  Leaf,
+  Zap,
+  Globe,
+  Heart,
+  Lock,
+  Award,
+  CheckCircle
 } from 'lucide-react';
 
 export interface ComplianceDocument {
@@ -133,37 +141,251 @@ export const getComplianceDocuments = (userType: string): ComplianceDocument[] =
     ];
   }
   
-  // Default templates for other industries
+  // Comprehensive document library for all industries
   return [
+    // Quality Management
     {
-      id: 'iso-certificate',
+      id: 'iso-9001',
       title: 'ISO 9001 Certificate',
       category: 'Quality Management',
-      description: 'Current ISO 9001 quality management certification',
-      icon: Shield,
+      description: 'Current ISO 9001 quality management system certification',
+      icon: Award,
       required: true,
       regulatoryBody: 'ISO',
       template: {
         sections: [
           { name: 'Certificate Details', required: true },
           { name: 'Scope of Certification', required: true },
-          { name: 'Validity Period', required: true }
+          { name: 'Validity Period', required: true },
+          { name: 'Audit Reports', required: false }
         ]
       }
     },
     {
-      id: 'insurance',
-      title: 'Liability Insurance',
+      id: 'iso-14001',
+      title: 'ISO 14001 Environmental Certificate',
+      category: 'Environmental Management',
+      description: 'Environmental management system certification',
+      icon: Leaf,
+      required: false,
+      regulatoryBody: 'ISO',
+      template: {
+        sections: [
+          { name: 'Environmental Policy', required: true },
+          { name: 'Environmental Aspects', required: true },
+          { name: 'Legal Compliance', required: true },
+          { name: 'Performance Monitoring', required: true }
+        ]
+      }
+    },
+    // Insurance & Liability
+    {
+      id: 'general-liability',
+      title: 'General Liability Insurance',
       category: 'Insurance',
       description: 'General and product liability insurance coverage',
-      icon: FileText,
+      icon: Shield,
       required: true,
       regulatoryBody: 'Insurance Provider',
       template: {
         sections: [
           { name: 'Policy Number', required: true },
           { name: 'Coverage Amount', required: true },
-          { name: 'Effective Dates', required: true }
+          { name: 'Effective Dates', required: true },
+          { name: 'Beneficiaries', required: true }
+        ]
+      }
+    },
+    {
+      id: 'professional-indemnity',
+      title: 'Professional Indemnity Insurance',
+      category: 'Insurance',
+      description: 'Professional liability and errors & omissions coverage',
+      icon: FileText,
+      required: false,
+      regulatoryBody: 'Insurance Provider',
+      template: {
+        sections: [
+          { name: 'Coverage Scope', required: true },
+          { name: 'Policy Limits', required: true },
+          { name: 'Exclusions', required: true },
+          { name: 'Claims History', required: false }
+        ]
+      }
+    },
+    // Health & Safety
+    {
+      id: 'ohsas-18001',
+      title: 'OHSAS 18001 Certificate',
+      category: 'Health & Safety',
+      description: 'Occupational health and safety management system',
+      icon: Heart,
+      required: true,
+      regulatoryBody: 'OHSAS',
+      template: {
+        sections: [
+          { name: 'Safety Policy', required: true },
+          { name: 'Risk Assessment', required: true },
+          { name: 'Training Records', required: true },
+          { name: 'Incident Reports', required: true }
+        ]
+      }
+    },
+    {
+      id: 'safety-data-sheets',
+      title: 'Safety Data Sheets (SDS)',
+      category: 'Health & Safety',
+      description: 'Material safety data sheets for all chemicals and hazardous materials',
+      icon: AlertTriangle,
+      required: true,
+      regulatoryBody: 'OSHA',
+      template: {
+        sections: [
+          { name: 'Chemical Identification', required: true },
+          { name: 'Hazard Information', required: true },
+          { name: 'First Aid Measures', required: true },
+          { name: 'Handling & Storage', required: true }
+        ]
+      }
+    },
+    // Information Security
+    {
+      id: 'iso-27001',
+      title: 'ISO 27001 Information Security',
+      category: 'Information Security',
+      description: 'Information security management system certification',
+      icon: Lock,
+      required: false,
+      regulatoryBody: 'ISO',
+      template: {
+        sections: [
+          { name: 'Security Policy', required: true },
+          { name: 'Risk Assessment', required: true },
+          { name: 'Access Controls', required: true },
+          { name: 'Incident Management', required: true }
+        ]
+      }
+    },
+    {
+      id: 'data-protection',
+      title: 'Data Protection Compliance',
+      category: 'Information Security',
+      description: 'GDPR and data protection compliance documentation',
+      icon: Globe,
+      required: true,
+      regulatoryBody: 'Data Protection Authority',
+      template: {
+        sections: [
+          { name: 'Privacy Policy', required: true },
+          { name: 'Data Processing Records', required: true },
+          { name: 'Consent Management', required: true },
+          { name: 'Breach Response Plan', required: true }
+        ]
+      }
+    },
+    // Manufacturing & Industrial
+    {
+      id: 'manufacturing-license',
+      title: 'Manufacturing License',
+      category: 'Manufacturing',
+      description: 'Valid manufacturing or production facility license',
+      icon: Factory,
+      required: true,
+      regulatoryBody: 'Industry Authority',
+      template: {
+        sections: [
+          { name: 'License Number', required: true },
+          { name: 'Permitted Activities', required: true },
+          { name: 'Facility Details', required: true },
+          { name: 'Renewal Date', required: true }
+        ]
+      }
+    },
+    {
+      id: 'equipment-calibration',
+      title: 'Equipment Calibration Records',
+      category: 'Manufacturing',
+      description: 'Calibration certificates for critical equipment and instruments',
+      icon: CheckCircle,
+      required: true,
+      regulatoryBody: 'Calibration Authority',
+      template: {
+        sections: [
+          { name: 'Equipment Inventory', required: true },
+          { name: 'Calibration Schedule', required: true },
+          { name: 'Calibration Certificates', required: true },
+          { name: 'Maintenance Records', required: true }
+        ]
+      }
+    },
+    // Energy & Utilities
+    {
+      id: 'energy-efficiency',
+      title: 'Energy Efficiency Certificate',
+      category: 'Energy Management',
+      description: 'Energy management and efficiency compliance documentation',
+      icon: Zap,
+      required: false,
+      regulatoryBody: 'Energy Authority',
+      template: {
+        sections: [
+          { name: 'Energy Audit', required: true },
+          { name: 'Efficiency Measures', required: true },
+          { name: 'Consumption Data', required: true },
+          { name: 'Improvement Plan', required: false }
+        ]
+      }
+    },
+    // Financial & Tax
+    {
+      id: 'tax-compliance',
+      title: 'Tax Compliance Certificate',
+      category: 'Financial Compliance',
+      description: 'Current tax compliance and clearance certificates',
+      icon: FileText,
+      required: true,
+      regulatoryBody: 'Tax Authority',
+      template: {
+        sections: [
+          { name: 'Tax Registration', required: true },
+          { name: 'Compliance Status', required: true },
+          { name: 'Payment History', required: true },
+          { name: 'Outstanding Liabilities', required: true }
+        ]
+      }
+    },
+    {
+      id: 'financial-statements',
+      title: 'Audited Financial Statements',
+      category: 'Financial Compliance',
+      description: 'Latest audited financial statements and reports',
+      icon: Building2,
+      required: true,
+      regulatoryBody: 'Accounting Standards Board',
+      template: {
+        sections: [
+          { name: 'Balance Sheet', required: true },
+          { name: 'Income Statement', required: true },
+          { name: 'Cash Flow Statement', required: true },
+          { name: 'Auditor Report', required: true }
+        ]
+      }
+    },
+    // Transportation & Logistics
+    {
+      id: 'transport-license',
+      title: 'Transportation License',
+      category: 'Transportation',
+      description: 'Valid commercial transportation and logistics permits',
+      icon: Truck,
+      required: false,
+      regulatoryBody: 'Transport Authority',
+      template: {
+        sections: [
+          { name: 'License Details', required: true },
+          { name: 'Vehicle Fleet', required: true },
+          { name: 'Driver Qualifications', required: true },
+          { name: 'Insurance Coverage', required: true }
         ]
       }
     }
@@ -175,5 +397,10 @@ export const suppliers = [
   'FreshSource Distributors',
   'Quality Feed Solutions',
   'Organic Valley Suppliers',
-  'Regional Transport Co.'
+  'Regional Transport Co.',
+  'TechFlow Manufacturing',
+  'GreenLeaf Packaging',
+  'Atlantic Supply Chain',
+  'Midwest Industrial Corp',
+  'Pacific Logistics Group'
 ];

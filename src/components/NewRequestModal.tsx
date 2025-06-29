@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   FileText, 
   Shield, 
@@ -24,7 +25,9 @@ import {
   AlertTriangle,
   Calendar,
   ArrowLeft,
-  Send
+  Send,
+  X,
+  Plus
 } from 'lucide-react';
 
 interface NewRequestModalProps {
@@ -36,14 +39,12 @@ interface NewRequestModalProps {
 
 const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequestModalProps) => {
   const [step, setStep] = useState(1);
-  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [selectedDocuments, setSelectedDocuments] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     supplier: '',
     priority: 'medium',
     dueDate: '',
     notes: '',
-    documentType: '',
-    templateData: {}
   });
 
   // Industry-specific compliance documents
@@ -203,37 +204,49 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
     'Regional Transport Co.'
   ];
 
-  const handleDocumentSelect = (doc: any) => {
-    setSelectedDocument(doc);
-    setFormData(prev => ({ ...prev, documentType: doc.id }));
-    setStep(2);
+  const handleDocumentToggle = (doc: any, checked: boolean) => {
+    if (checked) {
+      setSelectedDocuments(prev => [...prev, doc]);
+    } else {
+      setSelectedDocuments(prev => prev.filter(d => d.id !== doc.id));
+    }
   };
 
-  const handleCreateRequest = () => {
-    const request = {
-      id: Date.now(),
-      supplier: formData.supplier,
-      documentType: selectedDocument.title,
-      category: selectedDocument.category,
-      priority: formData.priority,
-      dueDate: formData.dueDate,
-      status: 'pending',
-      notes: formData.notes,
-      createdAt: new Date().toISOString(),
-      template: selectedDocument.template
-    };
+  const removeSelectedDocument = (docId: string) => {
+    setSelectedDocuments(prev => prev.filter(d => d.id !== docId));
+  };
+
+  const handleCreateRequests = () => {
+    // Create a separate request for each selected document
+    selectedDocuments.forEach(doc => {
+      const request = {
+        id: Date.now() + Math.random(), // Ensure unique IDs
+        supplier: formData.supplier,
+        documentType: doc.title,
+        category: doc.category,
+        priority: formData.priority,
+        dueDate: formData.dueDate,
+        status: 'pending',
+        notes: formData.notes,
+        createdAt: new Date().toISOString(),
+        template: doc.template
+      };
+      
+      onCreateRequest(request);
+    });
     
-    onCreateRequest(request);
     onClose();
+    resetForm();
+  };
+
+  const resetForm = () => {
     setStep(1);
-    setSelectedDocument(null);
+    setSelectedDocuments([]);
     setFormData({
       supplier: '',
       priority: 'medium',
       dueDate: '',
       notes: '',
-      documentType: '',
-      templateData: {}
     });
   };
 
@@ -241,7 +254,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {step === 2 && (
@@ -254,28 +267,75 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
                 <ArrowLeft className="w-4 h-4" />
               </Button>
             )}
-            {step === 1 ? 'Select Compliance Document' : 'Create Document Request'}
+            {step === 1 ? 'Select Compliance Documents' : 'Create Document Requests'}
           </DialogTitle>
           <DialogDescription>
             {step === 1 
-              ? `Select the required compliance document for ${userType} industry standards`
-              : `Configure the request details for ${selectedDocument?.title}`
+              ? `Select multiple compliance documents for ${userType} industry standards`
+              : `Configure the batch request details for ${selectedDocuments.length} document(s)`
             }
           </DialogDescription>
         </DialogHeader>
 
         {step === 1 && (
           <div className="space-y-6">
+            {/* Selected Documents Summary */}
+            {selectedDocuments.length > 0 && (
+              <Card className="border-blue-200 bg-blue-50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <ClipboardCheck className="w-5 h-5 text-blue-600" />
+                    Selected Documents ({selectedDocuments.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedDocuments.map((doc) => (
+                      <Badge 
+                        key={doc.id} 
+                        variant="secondary" 
+                        className="flex items-center gap-1 px-3 py-1"
+                      >
+                        {doc.title}
+                        <X 
+                          className="w-3 h-3 cursor-pointer hover:text-red-600" 
+                          onClick={() => removeSelectedDocument(doc.id)}
+                        />
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex justify-end">
+                    <Button 
+                      onClick={() => setStep(2)}
+                      disabled={selectedDocuments.length === 0}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      Configure Requests
+                      <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Document Selection Grid */}
             <div className="grid gap-4">
               {complianceDocuments.map((doc) => (
                 <Card 
                   key={doc.id} 
-                  className="cursor-pointer hover:shadow-md transition-shadow border-l-4 border-l-blue-500"
-                  onClick={() => handleDocumentSelect(doc)}
+                  className={`cursor-pointer transition-all border-l-4 ${
+                    selectedDocuments.find(d => d.id === doc.id) 
+                      ? 'border-l-blue-500 bg-blue-50 shadow-md' 
+                      : 'border-l-gray-300 hover:shadow-md hover:border-l-blue-400'
+                  }`}
                 >
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
+                        <Checkbox
+                          checked={!!selectedDocuments.find(d => d.id === doc.id)}
+                          onCheckedChange={(checked) => handleDocumentToggle(doc, checked as boolean)}
+                        />
                         <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                           <doc.icon className="w-5 h-5 text-blue-600" />
                         </div>
@@ -304,20 +364,29 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
           </div>
         )}
 
-        {step === 2 && selectedDocument && (
+        {step === 2 && (
           <div className="space-y-6">
-            <Card className="border-l-4 border-l-blue-500">
+            {/* Selected Documents Preview */}
+            <Card className="border-blue-200 bg-blue-50">
               <CardHeader>
-                <div className="flex items-center gap-3">
-                  <selectedDocument.icon className="w-6 h-6 text-blue-600" />
-                  <div>
-                    <CardTitle>{selectedDocument.title}</CardTitle>
-                    <p className="text-sm text-gray-600">{selectedDocument.description}</p>
-                  </div>
-                </div>
+                <CardTitle className="flex items-center gap-2">
+                  <Send className="w-5 h-5 text-blue-600" />
+                  Creating {selectedDocuments.length} Document Request(s)
+                </CardTitle>
               </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {selectedDocuments.map((doc) => (
+                    <div key={doc.id} className="flex items-center gap-2 p-2 bg-white rounded border">
+                      <doc.icon className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-medium">{doc.title}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
             </Card>
 
+            {/* Request Configuration */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
@@ -363,15 +432,15 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
 
               <div className="space-y-4">
                 <div>
-                  <Label>Required Template Sections</Label>
-                  <div className="space-y-2 mt-2">
-                    {selectedDocument.template.sections.map((section: any, index: number) => (
-                      <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                        <ClipboardCheck className="w-4 h-4 text-green-600" />
-                        <span className="text-sm">{section.name}</span>
-                        {section.required && (
-                          <Badge variant="destructive" className="text-xs ml-auto">Required</Badge>
-                        )}
+                  <Label>Batch Request Summary</Label>
+                  <div className="space-y-2 mt-2 max-h-40 overflow-y-auto">
+                    {selectedDocuments.map((doc, index) => (
+                      <div key={doc.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded text-sm">
+                        <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs font-medium text-blue-600">
+                          {index + 1}
+                        </span>
+                        <span className="flex-1">{doc.title}</span>
+                        <Badge variant="outline" className="text-xs">{doc.category}</Badge>
                       </div>
                     ))}
                   </div>
@@ -380,10 +449,10 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
             </div>
 
             <div>
-              <Label htmlFor="notes">Additional Notes</Label>
+              <Label htmlFor="notes">Additional Notes (Applied to all requests)</Label>
               <Textarea
                 id="notes"
-                placeholder="Add any specific requirements, deadlines, or instructions for the supplier..."
+                placeholder="Add any specific requirements, deadlines, or instructions that apply to all selected documents..."
                 value={formData.notes}
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                 rows={4}
@@ -395,12 +464,12 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
                 Cancel
               </Button>
               <Button 
-                onClick={handleCreateRequest}
-                disabled={!formData.supplier || !formData.dueDate}
-                className="bg-blue-600 hover:bg-blue-700"
+                onClick={handleCreateRequests}
+                disabled={!formData.supplier || !formData.dueDate || selectedDocuments.length === 0}
+                className="bg-green-600 hover:bg-green-700"
               >
                 <Send className="w-4 h-4 mr-2" />
-                Create Request
+                Create {selectedDocuments.length} Request(s)
               </Button>
             </div>
           </div>

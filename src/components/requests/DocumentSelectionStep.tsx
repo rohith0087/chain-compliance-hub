@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -110,7 +109,7 @@ const DocumentSelectionStep = ({
               <Checkbox 
                 id="required-only"
                 checked={showRequiredOnly}
-                onCheckedChange={setShowRequiredOnly}
+                onCheckedChange={(checked) => setShowRequiredOnly(checked === true)}
               />
               <label htmlFor="required-only" className="text-sm font-medium">
                 Required Only
@@ -193,7 +192,7 @@ const DocumentSelectionStep = ({
                   <div className="flex items-center gap-3">
                     <Checkbox
                       checked={!!selectedDocuments.find(d => d.id === doc.id)}
-                      onCheckedChange={(checked) => onDocumentToggle(doc, checked as boolean)}
+                      onCheckedChange={(checked) => onDocumentToggle(doc, checked === true)}
                     />
                     <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                       <doc.icon className="w-5 h-5 text-blue-600" />

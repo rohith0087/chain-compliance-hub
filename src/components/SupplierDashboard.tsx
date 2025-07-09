@@ -85,8 +85,11 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
   const loadSupplierData = async () => {
     setLoading(true);
     try {
+      console.log('Loading supplier data for user:', authUser?.id);
+      
       // Load supplier profile
       const profile = await getSupplierProfile();
+      console.log('Loaded supplier profile:', profile);
       setSupplierProfile(profile);
 
       if (profile) {
@@ -109,10 +112,11 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
         if (requestsError) {
           console.error('Error loading document requests:', requestsError);
         } else {
+          console.log('Loaded document requests:', requests);
           setDocumentRequests(requests || []);
         }
 
-        // Load connected buyers
+        // Load connected buyers with detailed buyer information
         const { data: connections, error: connectionsError } = await supabase
           .from('buyer_supplier_connections')
           .select(`
@@ -132,6 +136,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
         if (connectionsError) {
           console.error('Error loading buyer connections:', connectionsError);
         } else {
+          console.log('Loaded connected buyers:', connections);
           setConnectedBuyers(connections || []);
         }
       }
@@ -202,7 +207,14 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading supplier dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
   if (showSettings) {
@@ -360,29 +372,36 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
                 <CardContent>
                   {documentRequests.length > 0 ? (
                     <div className="space-y-4">
-                      {documentRequests.slice(0, 3).map(request => (
-                        <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                            <div>
-                              <p className="font-medium">{request.title}</p>
-                              <p className="text-sm text-gray-500">{request.document_type}</p>
+                      {documentRequests.slice(0, 3).map(request => {
+                        const buyerName = request.buyers?.company_name || 'Unknown Buyer';
+                        return (
+                          <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                              <div>
+                                <p className="font-medium">{request.title}</p>
+                                <p className="text-sm text-gray-500">{request.document_type}</p>
+                                <p className="text-xs text-gray-400">From: {buyerName}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Badge className={getPriorityColor(request.priority || 'medium')} variant="secondary">
+                                {request.priority || 'medium'}
+                              </Badge>
+                              <Badge className={getStatusColor(request.status)} variant="secondary">
+                                {getStatusIcon(request.status)}
+                                <span className="ml-1 capitalize">{request.status}</span>
+                              </Badge>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <Badge className={getPriorityColor(request.priority || 'medium')} variant="secondary">
-                              {request.priority || 'medium'}
-                            </Badge>
-                            <Badge className={getStatusColor(request.status)} variant="secondary">
-                              {getStatusIcon(request.status)}
-                              <span className="ml-1 capitalize">{request.status}</span>
-                            </Badge>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
-                    <p className="text-center text-gray-500 py-8">No document requests yet</p>
+                    <div className="text-center py-8">
+                      <FileCheck className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-500">No document requests yet</p>
+                    </div>
                   )}
                   <Button variant="outline" className="w-full mt-4" onClick={() => setActiveTab('requests')}>
                     View All Requests
@@ -398,23 +417,34 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
                 <CardContent>
                   {connectedBuyers.length > 0 ? (
                     <div className="space-y-4">
-                      {connectedBuyers.slice(0, 3).map((connection) => (
-                        <div key={connection.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center space-x-3">
-                            <Users className="w-5 h-5 text-blue-500" />
-                            <div>
-                              <p className="font-medium">{connection.buyers?.company_name}</p>
-                              <p className="text-sm text-gray-500">{connection.buyers?.industry}</p>
+                      {connectedBuyers.slice(0, 3).map((connection) => {
+                        const buyerInfo = connection.buyers;
+                        const companyName = buyerInfo?.company_name || 'Unknown Company';
+                        const industry = buyerInfo?.industry || 'Industry not specified';
+                        const contactEmail = buyerInfo?.contact_email || 'Email not provided';
+                        
+                        return (
+                          <div key={connection.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div className="flex items-center space-x-3">
+                              <Users className="w-5 h-5 text-blue-500" />
+                              <div>
+                                <p className="font-medium">{companyName}</p>
+                                <p className="text-sm text-gray-500">{industry}</p>
+                                <p className="text-xs text-gray-400">{contactEmail}</p>
+                              </div>
                             </div>
+                            <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
+                              Connected
+                            </Badge>
                           </div>
-                          <Badge variant="outline" className="text-green-600">
-                            Connected
-                          </Badge>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
-                    <p className="text-center text-gray-500 py-8">No connected buyers yet</p>
+                    <div className="text-center py-8">
+                      <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-500">No connected buyers yet</p>
+                    </div>
                   )}
                   <Button variant="outline" className="w-full mt-4" onClick={() => setActiveTab('buyers')}>
                     View All Buyers

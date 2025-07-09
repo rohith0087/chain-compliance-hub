@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -70,7 +71,7 @@ const ConnectionRequests = () => {
 
       if (supplierError) {
         console.error('Error fetching supplier profile:', supplierError);
-        setError('Failed to load supplier profile');
+        setError('Failed to load supplier profile. Please try refreshing the page.');
         return;
       }
 
@@ -97,16 +98,16 @@ const ConnectionRequests = () => {
 
         if (requestsError) {
           console.error('Error fetching connection requests:', requestsError);
-          setError('Failed to load connection requests');
+          setError('Failed to load connection requests. Please try refreshing the page.');
           return;
         }
 
-        console.log('Connection requests:', requestsData);
+        console.log('Connection requests with buyer data:', requestsData);
         setRequests(requestsData || []);
       }
     } catch (error) {
       console.error('Error in fetchData:', error);
-      setError('An unexpected error occurred');
+      setError('An unexpected error occurred. Please try refreshing the page.');
     } finally {
       setLoading(false);
     }
@@ -197,8 +198,11 @@ const ConnectionRequests = () => {
   if (loading) {
     return (
       <Card>
-        <CardContent className="p-6 text-center">
-          <div className="text-center py-8">Loading connection requests...</div>
+        <CardContent className="p-6">
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading connection requests...</p>
+          </div>
         </CardContent>
       </Card>
     );
@@ -257,78 +261,91 @@ const ConnectionRequests = () => {
         </CardHeader>
       </Card>
       
-      {requests.map((request) => (
-        <Card key={request.id} className="hover:shadow-md transition-shadow">
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  {getStatusIcon(request.status)}
-                  {request.buyers?.company_name}
-                </CardTitle>
-                <p className="text-sm text-gray-600">{request.buyers?.industry}</p>
-              </div>
-              <Badge className={getStatusColor(request.status)}>
-                {request.status}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="grid md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <strong>Contact Email:</strong> {request.buyers?.contact_email}
+      {requests.map((request) => {
+        const buyerInfo = request.buyers;
+        const companyName = buyerInfo?.company_name || 'Unknown Company';
+        const industry = buyerInfo?.industry || 'Industry not specified';
+        const contactEmail = buyerInfo?.contact_email || 'Email not provided';
+        const phone = buyerInfo?.phone;
+        const address = buyerInfo?.address;
+
+        return (
+          <Card key={request.id} className="hover:shadow-md transition-shadow">
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    {getStatusIcon(request.status)}
+                    {companyName}
+                  </CardTitle>
+                  <p className="text-sm text-gray-600 mt-1">{industry}</p>
                 </div>
-                {request.buyers?.phone && (
+                <Badge className={getStatusColor(request.status)}>
+                  {request.status}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4 text-sm">
                   <div>
-                    <strong>Phone:</strong> {request.buyers.phone}
+                    <strong>Contact Email:</strong> 
+                    <p className="text-gray-600">{contactEmail}</p>
+                  </div>
+                  {phone && (
+                    <div>
+                      <strong>Phone:</strong> 
+                      <p className="text-gray-600">{phone}</p>
+                    </div>
+                  )}
+                  {address && (
+                    <div className="md:col-span-2">
+                      <strong>Address:</strong> 
+                      <p className="text-gray-600">{address}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="text-xs text-gray-400 border-t pt-3">
+                  Requested {formatDistanceToNow(new Date(request.requested_at), { addSuffix: true })}
+                  {request.responded_at && (
+                    <span> • Responded {formatDistanceToNow(new Date(request.responded_at), { addSuffix: true })}</span>
+                  )}
+                </div>
+
+                {request.notes && (
+                  <div className="p-3 bg-gray-50 rounded text-sm">
+                    <strong>Notes:</strong> 
+                    <p className="mt-1 text-gray-700">{request.notes}</p>
                   </div>
                 )}
-                {request.buyers?.address && (
-                  <div className="md:col-span-2">
-                    <strong>Address:</strong> {request.buyers.address}
+
+                {request.status === 'pending' && (
+                  <div className="flex gap-2 pt-2 border-t">
+                    <Button
+                      size="sm"
+                      onClick={() => handleRequestResponse(request.id, 'approved')}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleRequestResponse(request.id, 'rejected')}
+                      className="border-red-600 text-red-600 hover:bg-red-50"
+                    >
+                      <XCircle className="w-4 h-4 mr-1" />
+                      Reject
+                    </Button>
                   </div>
                 )}
               </div>
-
-              <div className="text-xs text-gray-400">
-                Requested {formatDistanceToNow(new Date(request.requested_at), { addSuffix: true })}
-                {request.responded_at && (
-                  <span> • Responded {formatDistanceToNow(new Date(request.responded_at), { addSuffix: true })}</span>
-                )}
-              </div>
-
-              {request.notes && (
-                <div className="p-3 bg-gray-50 rounded text-sm">
-                  <strong>Notes:</strong> {request.notes}
-                </div>
-              )}
-
-              {request.status === 'pending' && (
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    size="sm"
-                    onClick={() => handleRequestResponse(request.id, 'approved')}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    <CheckCircle className="w-4 h-4 mr-1" />
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleRequestResponse(request.id, 'rejected')}
-                    className="border-red-600 text-red-600 hover:bg-red-50"
-                  >
-                    <XCircle className="w-4 h-4 mr-1" />
-                    Reject
-                  </Button>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 };

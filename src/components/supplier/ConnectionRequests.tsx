@@ -79,20 +79,10 @@ const ConnectionRequests = () => {
       setSupplierProfile(supplier);
 
       if (supplier) {
-        // Fetch connection requests with buyer information
+        // Fetch connection requests first
         const { data: requestsData, error: requestsError } = await supabase
           .from('buyer_supplier_connections')
-          .select(`
-            *,
-            buyers (
-              company_name,
-              contact_email,
-              industry,
-              phone,
-              address,
-              profile_id
-            )
-          `)
+          .select('*')
           .eq('supplier_id', supplier.id)
           .order('requested_at', { ascending: false });
 
@@ -102,8 +92,45 @@ const ConnectionRequests = () => {
           return;
         }
 
-        console.log('Connection requests with buyer data:', requestsData);
-        setRequests(requestsData || []);
+        console.log('Connection requests:', requestsData);
+        
+        // Now fetch buyer information for each request separately
+        if (requestsData && requestsData.length > 0) {
+          const requestsWithBuyerInfo = await Promise.all(
+            requestsData.map(async (request) => {
+              if (!request.buyer_id) {
+                return {
+                  ...request,
+                  buyers: null
+                };
+              }
+
+              const { data: buyerData, error: buyerError } = await supabase
+                .from('buyers')
+                .select('*')
+                .eq('id', request.buyer_id)
+                .single();
+
+              if (buyerError) {
+                console.error('Error fetching buyer data for request:', request.id, buyerError);
+                return {
+                  ...request,
+                  buyers: null
+                };
+              }
+
+              return {
+                ...request,
+                buyers: buyerData
+              };
+            })
+          );
+
+          console.log('Connection requests with buyer data:', requestsWithBuyerInfo);
+          setRequests(requestsWithBuyerInfo);
+        } else {
+          setRequests([]);
+        }
       }
     } catch (error) {
       console.error('Error in fetchData:', error);

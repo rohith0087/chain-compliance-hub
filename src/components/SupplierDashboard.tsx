@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -116,28 +117,48 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
           setDocumentRequests(requests || []);
         }
 
-        // Load connected buyers with detailed buyer information
+        // Load connected buyers - First get connections, then fetch buyer details separately
         const { data: connections, error: connectionsError } = await supabase
           .from('buyer_supplier_connections')
-          .select(`
-            *,
-            buyers (
-              id,
-              company_name,
-              industry,
-              contact_email,
-              phone,
-              address
-            )
-          `)
+          .select('*')
           .eq('supplier_id', profile.id)
           .eq('status', 'approved');
 
         if (connectionsError) {
           console.error('Error loading buyer connections:', connectionsError);
+          setConnectedBuyers([]);
         } else {
-          console.log('Loaded connected buyers:', connections);
-          setConnectedBuyers(connections || []);
+          console.log('Loaded connections:', connections);
+          
+          // Fetch buyer details separately for each connection
+          if (connections && connections.length > 0) {
+            const buyerDetailsPromises = connections.map(async (connection) => {
+              const { data: buyerData, error: buyerError } = await supabase
+                .from('buyers')
+                .select('*')
+                .eq('id', connection.buyer_id)
+                .single();
+              
+              if (buyerError) {
+                console.error('Error fetching buyer details for connection:', connection.id, buyerError);
+                return {
+                  ...connection,
+                  buyers: null
+                };
+              }
+              
+              return {
+                ...connection,
+                buyers: buyerData
+              };
+            });
+            
+            const connectionsWithBuyers = await Promise.all(buyerDetailsPromises);
+            console.log('Connected buyers with details:', connectionsWithBuyers);
+            setConnectedBuyers(connectionsWithBuyers);
+          } else {
+            setConnectedBuyers([]);
+          }
         }
       }
     } catch (error) {
@@ -426,7 +447,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
                         return (
                           <div key={connection.id} className="flex items-center justify-between p-3 border rounded-lg">
                             <div className="flex items-center space-x-3">
-                              <Users className="w-5 h-5 text-blue-500" />
+                              <Building2 className="w-5 h-5 text-blue-500" />
                               <div>
                                 <p className="font-medium">{companyName}</p>
                                 <p className="text-sm text-gray-500">{industry}</p>

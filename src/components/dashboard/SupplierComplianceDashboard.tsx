@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,11 +15,9 @@ import {
   TrendingUp,
   Building2,
   Users,
-  Upload,
-  BarChart3
+  Upload
 } from 'lucide-react';
 import ComplianceDashboard from './ComplianceDashboard';
-import EnhancedAnalyticsDashboard from '@/components/analytics/EnhancedAnalyticsDashboard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -146,10 +145,7 @@ const SupplierComplianceDashboard = () => {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="analytics">
-            <BarChart3 className="w-4 h-4 mr-2" />
-            Analytics
-          </TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -320,7 +316,7 @@ const SupplierComplianceDashboard = () => {
         </TabsContent>
 
         <TabsContent value="analytics">
-          <EnhancedAnalyticsDashboard />
+          <ComplianceDashboard userRole="supplier" data={documentRequests} />
         </TabsContent>
       </Tabs>
     </div>

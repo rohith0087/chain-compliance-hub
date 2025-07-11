@@ -36,15 +36,15 @@ const DocumentRequestsFilter = ({ filters, onFiltersChange, buyers }: DocumentRe
   const clearFilters = () => {
     onFiltersChange({
       search: '',
-      status: 'all',
-      priority: 'all',
-      buyer: 'all',
-      category: 'all',
-      documentType: 'all'
+      status: '',
+      priority: '',
+      buyer: '',
+      category: '',
+      documentType: ''
     });
   };
 
-  const activeFiltersCount = Object.values(filters).filter(value => value && value !== '' && value !== 'all').length;
+  const activeFiltersCount = Object.values(filters).filter(value => value && value !== '').length;
 
   const documentTypes = [
     'certificate',
@@ -109,7 +109,7 @@ const DocumentRequestsFilter = ({ filters, onFiltersChange, buyers }: DocumentRe
                     <SelectValue placeholder="All statuses" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="">All statuses</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="submitted">Submitted</SelectItem>
                     <SelectItem value="approved">Approved</SelectItem>
@@ -125,7 +125,7 @@ const DocumentRequestsFilter = ({ filters, onFiltersChange, buyers }: DocumentRe
                     <SelectValue placeholder="All priorities" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All priorities</SelectItem>
+                    <SelectItem value="">All priorities</SelectItem>
                     <SelectItem value="urgent">Urgent</SelectItem>
                     <SelectItem value="high">High</SelectItem>
                     <SelectItem value="medium">Medium</SelectItem>
@@ -141,7 +141,7 @@ const DocumentRequestsFilter = ({ filters, onFiltersChange, buyers }: DocumentRe
                     <SelectValue placeholder="All buyers" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All buyers</SelectItem>
+                    <SelectItem value="">All buyers</SelectItem>
                     {buyers.map((buyer) => (
                       <SelectItem key={buyer.id} value={buyer.id}>
                         {buyer.company_name}
@@ -158,7 +158,7 @@ const DocumentRequestsFilter = ({ filters, onFiltersChange, buyers }: DocumentRe
                     <SelectValue placeholder="All categories" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All categories</SelectItem>
+                    <SelectItem value="">All categories</SelectItem>
                     {categories.map((category) => (
                       <SelectItem key={category} value={category}>
                         {category.charAt(0).toUpperCase() + category.slice(1)}
@@ -175,7 +175,7 @@ const DocumentRequestsFilter = ({ filters, onFiltersChange, buyers }: DocumentRe
                     <SelectValue placeholder="All types" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All types</SelectItem>
+                    <SelectItem value="">All types</SelectItem>
                     {documentTypes.map((type) => (
                       <SelectItem key={type} value={type}>
                         {type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
@@ -196,34 +196,34 @@ const DocumentRequestsFilter = ({ filters, onFiltersChange, buyers }: DocumentRe
                   <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('search', '')} />
                 </Badge>
               )}
-              {filters.status && filters.status !== 'all' && (
+              {filters.status && (
                 <Badge variant="secondary" className="gap-1">
                   Status: {filters.status}
-                  <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('status', 'all')} />
+                  <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('status', '')} />
                 </Badge>
               )}
-              {filters.priority && filters.priority !== 'all' && (
+              {filters.priority && (
                 <Badge variant="secondary" className="gap-1">
                   Priority: {filters.priority}
-                  <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('priority', 'all')} />
+                  <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('priority', '')} />
                 </Badge>
               )}
-              {filters.buyer && filters.buyer !== 'all' && (
+              {filters.buyer && (
                 <Badge variant="secondary" className="gap-1">
                   Buyer: {buyers.find(b => b.id === filters.buyer)?.company_name || filters.buyer}
-                  <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('buyer', 'all')} />
+                  <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('buyer', '')} />
                 </Badge>
               )}
-              {filters.category && filters.category !== 'all' && (
+              {filters.category && (
                 <Badge variant="secondary" className="gap-1">
                   Category: {filters.category}
-                  <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('category', 'all')} />
+                  <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('category', '')} />
                 </Badge>
               )}
-              {filters.documentType && filters.documentType !== 'all' && (
+              {filters.documentType && (
                 <Badge variant="secondary" className="gap-1">
                   Type: {filters.documentType.replace('_', ' ')}
-                  <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('documentType', 'all')} />
+                  <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('documentType', '')} />
                 </Badge>
               )}
             </div>

@@ -378,6 +378,10 @@ export type Database = {
         }
         Returns: string
       }
+      supplier_can_view_buyer: {
+        Args: { buyer_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       request_priority: "low" | "medium" | "high" | "urgent"

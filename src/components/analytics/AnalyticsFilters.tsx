@@ -53,7 +53,7 @@ const AnalyticsFilters = ({
   const clearAllFilters = () => {
     onBuyersChange([]);
     onDateRangeChange('30d');
-    onCategoryChange('');
+    onCategoryChange('all');
     onComparisonModeChange(false);
   };
 
@@ -154,7 +154,7 @@ const AnalyticsFilters = ({
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
+                <SelectItem value="all">All Categories</SelectItem>
                 <SelectItem value="Insurance">Insurance</SelectItem>
                 <SelectItem value="Certifications">Certifications</SelectItem>
                 <SelectItem value="Financial">Financial</SelectItem>

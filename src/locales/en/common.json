@@ -1,0 +1,50 @@
+
+{
+  "navigation": {
+    "signIn": "Sign In",
+    "getStarted": "Get Started Today",
+    "startFreeTrial": "Start Your Free Trial",
+    "logout": "Logout",
+    "switchTo": "Switch to {{role}}",
+    "dashboard": "Dashboard",
+    "compliance": "Compliance",
+    "documents": "Documents",
+    "requests": "My Requests",
+    "suppliers": "Suppliers"
+  },
+  "buttons": {
+    "refresh": "Refresh Data",
+    "export": "Export",
+    "view": "View",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "submit": "Submit",
+    "upload": "Upload",
+    "download": "Download",
+    "approve": "Approve",
+    "reject": "Reject",
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected"
+  },
+  "forms": {
+    "required": "This field is required",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "company": "Company",
+    "industry": "Industry"
+  },
+  "messages": {
+    "loading": "Loading...",
+    "noData": "No data available",
+    "error": "An error occurred",
+    "success": "Success",
+    "welcome": "Welcome",
+    "selectRegion": "Select your region"
+  }
+}

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useTranslation } from 'react-i18next';
 import { 
   Shield, 
   Users, 
@@ -26,6 +27,7 @@ const BuyerComplianceDashboard = () => {
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { t } = useTranslation(['dashboard', 'common']);
 
   useEffect(() => {
     if (user) {
@@ -109,15 +111,15 @@ const BuyerComplianceDashboard = () => {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center py-8">Loading dashboard...</div>;
+    return <div className="flex items-center justify-center py-8">{t('common:messages.loading')}</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Compliance Dashboard</h2>
+        <h2 className="text-2xl font-bold">{t('dashboard:compliance.title')}</h2>
         <Button variant="outline" onClick={loadDashboardData}>
-          Refresh Data
+          {t('common:buttons.refresh')}
         </Button>
       </div>
 
@@ -133,7 +135,7 @@ const BuyerComplianceDashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Suppliers</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('dashboard:compliance.totalSuppliers')}</CardTitle>
                 <Building2 className="h-4 w-4 text-blue-500" />
               </CardHeader>
               <CardContent>
@@ -144,7 +146,7 @@ const BuyerComplianceDashboard = () => {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg Compliance</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('dashboard:compliance.overallScore')}</CardTitle>
                 <Shield className="h-4 w-4 text-green-500" />
               </CardHeader>
               <CardContent>
@@ -155,7 +157,7 @@ const BuyerComplianceDashboard = () => {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('dashboard:compliance.pendingRequests')}</CardTitle>
                 <Clock className="h-4 w-4 text-yellow-500" />
               </CardHeader>
               <CardContent>
@@ -166,7 +168,7 @@ const BuyerComplianceDashboard = () => {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">High Risk</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('dashboard:compliance.highRisk')}</CardTitle>
                 <AlertTriangle className="h-4 w-4 text-red-500" />
               </CardHeader>
               <CardContent>
@@ -177,7 +179,7 @@ const BuyerComplianceDashboard = () => {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Requests</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('dashboard:compliance.totalRequests')}</CardTitle>
                 <FileCheck className="h-4 w-4 text-blue-500" />
               </CardHeader>
               <CardContent>
@@ -190,7 +192,7 @@ const BuyerComplianceDashboard = () => {
           {/* Recent Activity */}
           <Card>
             <CardHeader>
-              <CardTitle>Recent Document Requests</CardTitle>
+              <CardTitle>{t('dashboard:compliance.recentActivity')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -217,7 +219,7 @@ const BuyerComplianceDashboard = () => {
                           request.status === 'rejected' ? 'bg-red-100 text-red-800' : ''
                         }
                       >
-                        {request.status}
+                        {t(`common:buttons.${request.status}`)}
                       </Badge>
                       <Button variant="ghost" size="sm">
                         <Eye className="w-4 h-4" />
@@ -233,7 +235,7 @@ const BuyerComplianceDashboard = () => {
         <TabsContent value="suppliers">
           <Card>
             <CardHeader>
-              <CardTitle>Supplier Compliance Scores</CardTitle>
+              <CardTitle>{t('dashboard:compliance.supplierCompliance')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">

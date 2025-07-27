@@ -4,50 +4,53 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Shield, FileCheck, Users, BarChart3, AlertTriangle, Clock, CheckCircle, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import RegionSelector from '@/components/RegionSelector';
 
 const Index = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation(['home', 'common']);
 
   const features = [
     {
       icon: FileCheck,
-      title: "Document Management",
-      description: "Streamlined document requests, uploads, and validation with automated metadata capture"
+      title: t('home:features.documentManagement.title'),
+      description: t('home:features.documentManagement.description')
     },
     {
       icon: Shield,
-      title: "Compliance Tracking",
-      description: "Real-time monitoring of compliance status across your entire supply chain"
+      title: t('home:features.complianceTracking.title'),
+      description: t('home:features.complianceTracking.description')
     },
     {
       icon: Users,
-      title: "Role-Based Access",
-      description: "Separate dashboards for buyers, suppliers, and internal reviewers with granular permissions"
+      title: t('home:features.roleBasedAccess.title'),
+      description: t('home:features.roleBasedAccess.description')
     },
     {
       icon: BarChart3,
-      title: "Analytics & Reporting",
-      description: "Comprehensive reports and dashboards with exportable compliance data"
+      title: t('home:features.analytics.title'),
+      description: t('home:features.analytics.description')
     },
     {
       icon: AlertTriangle,
-      title: "Smart Alerts",
-      description: "Automated reminders for expiring documents and missing critical compliance items"
+      title: t('home:features.smartAlerts.title'),
+      description: t('home:features.smartAlerts.description')
     },
     {
       icon: Clock,
-      title: "Audit Trail",
-      description: "Complete version control and audit logs for all document activities"
+      title: t('home:features.auditTrail.title'),
+      description: t('home:features.auditTrail.description')
     }
   ];
 
   const industries = [
-    { name: "Food Service", icon: "🍽️" },
-    { name: "Pharmaceuticals", icon: "💊" },
-    { name: "Manufacturing", icon: "🏭" },
-    { name: "Retail", icon: "🛍️" },
-    { name: "Logistics", icon: "🚛" },
-    { name: "Construction", icon: "🏗️" }
+    { name: t('home:industries.foodService'), icon: "🍽️" },
+    { name: t('home:industries.pharmaceuticals'), icon: "💊" },
+    { name: t('home:industries.manufacturing'), icon: "🏭" },
+    { name: t('home:industries.retail'), icon: "🛍️" },
+    { name: t('home:industries.logistics'), icon: "🚛" },
+    { name: t('home:industries.construction'), icon: "🏗️" }
   ];
 
   return (
@@ -63,7 +66,7 @@ const Index = () => {
               <h1 className="text-2xl font-bold text-gray-900">ComplianceFlow</h1>
             </div>
             <Button onClick={() => navigate('/auth')} className="bg-blue-600 hover:bg-blue-700">
-              Sign In
+              {t('common:navigation.signIn')}
             </Button>
           </div>
         </div>
@@ -73,25 +76,24 @@ const Index = () => {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center">
           <h2 className="text-5xl font-bold text-gray-900 mb-6">
-            Streamline Supply Chain
-            <span className="text-blue-600 block">Compliance Management</span>
+            {t('home:hero.title')}
+            <span className="text-blue-600 block">{t('home:hero.subtitle')}</span>
           </h2>
           <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            End-to-end document management platform for buyers and suppliers. 
-            Track compliance, automate workflows, and maintain audit-ready documentation across your entire supply chain.
+            {t('home:hero.description')}
           </p>
           <div className="flex flex-wrap justify-center gap-4 mb-12">
             <Badge variant="secondary" className="px-4 py-2 text-sm">
               <CheckCircle className="w-4 h-4 mr-2" />
-              Real-time Tracking
+              {t('home:hero.badges.realTimeTracking')}
             </Badge>
             <Badge variant="secondary" className="px-4 py-2 text-sm">
               <Shield className="w-4 h-4 mr-2" />
-              Audit-Ready
+              {t('home:hero.badges.auditReady')}
             </Badge>
             <Badge variant="secondary" className="px-4 py-2 text-sm">
               <Building2 className="w-4 h-4 mr-2" />
-              Multi-Industry
+              {t('home:hero.badges.multiIndustry')}
             </Badge>
           </div>
           <Button 
@@ -99,7 +101,7 @@ const Index = () => {
             size="lg" 
             className="bg-blue-600 hover:bg-blue-700 px-8 py-3 text-lg"
           >
-            Get Started Today
+            {t('common:navigation.getStarted')}
           </Button>
         </div>
       </section>
@@ -108,10 +110,10 @@ const Index = () => {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center mb-16">
           <h3 className="text-3xl font-bold text-gray-900 mb-4">
-            Everything You Need for Compliance Management
+            {t('home:features.title')}
           </h3>
           <p className="text-lg text-gray-600">
-            Comprehensive tools designed for modern supply chain compliance
+            {t('home:features.subtitle')}
           </p>
         </div>
         
@@ -137,10 +139,10 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h3 className="text-3xl font-bold text-gray-900 mb-4">
-              Trusted Across Industries
+              {t('home:industries.title')}
             </h3>
             <p className="text-lg text-gray-600">
-              Scalable compliance solutions for diverse industry requirements
+              {t('home:industries.subtitle')}
             </p>
           </div>
           
@@ -161,10 +163,10 @@ const Index = () => {
       <section className="bg-blue-600 py-20">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h3 className="text-3xl font-bold text-white mb-4">
-            Ready to Transform Your Compliance Management?
+            {t('home:cta.title')}
           </h3>
           <p className="text-xl text-blue-100 mb-8">
-            Join leading organizations that trust ComplianceFlow for their supply chain documentation
+            {t('home:cta.subtitle')}
           </p>
           <Button 
             onClick={() => navigate('/auth')}
@@ -172,10 +174,13 @@ const Index = () => {
             variant="secondary" 
             className="px-8 py-3 text-lg"
           >
-            Start Your Free Trial
+            {t('common:navigation.startFreeTrial')}
           </Button>
         </div>
       </section>
+
+      {/* Region Selector */}
+      <RegionSelector />
     </div>
   );
 };

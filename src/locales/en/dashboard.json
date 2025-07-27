@@ -1,0 +1,42 @@
+
+{
+  "buyer": {
+    "title": "Buyer Dashboard",
+    "welcome": "Welcome, {{name}}!",
+    "description": "As a buyer, you can discover suppliers and request compliance documents.",
+    "findSuppliers": "Find Suppliers",
+    "connectSuppliers": "Connect with suppliers",
+    "myRequests": "My Requests",
+    "trackRequests": "Track document requests",
+    "newRequest": "New Request",
+    "requestDocuments": "Request documents",
+    "connectFirst": {
+      "title": "Connect with Suppliers First",
+      "description": "Before you can request documents, you need to connect with suppliers. Browse and connect with suppliers to start requesting compliance documents."
+    }
+  },
+  "supplier": {
+    "title": "Supplier Dashboard",
+    "welcome": "Welcome, {{name}}!",
+    "description": "As a supplier, you can manage your compliance documents and respond to buyer requests.",
+    "documentRequests": "Document Requests",
+    "manageRequests": "Manage requests",
+    "myDocuments": "My Documents",
+    "uploadDocuments": "Upload documents",
+    "connectedBuyers": "Connected Buyers",
+    "manageBuyers": "Manage buyers"
+  },
+  "compliance": {
+    "title": "Compliance Dashboard",
+    "overallScore": "Compliance Score",
+    "criticalIssues": "Critical Issues",
+    "completionRate": "Completion Rate",
+    "avgResponseTime": "Avg Response Time",
+    "totalSuppliers": "Total Suppliers",
+    "pendingRequests": "Pending Requests",
+    "highRisk": "High Risk",
+    "totalRequests": "Total Requests",
+    "recentActivity": "Recent Document Requests",
+    "supplierCompliance": "Supplier Compliance Scores"
+  }
+}

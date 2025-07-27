@@ -1,0 +1,64 @@
+
+{
+  "hero": {
+    "title": "Optimiza la Cadena de Suministro",
+    "subtitle": "Gestión de Cumplimiento",
+    "description": "Plataforma integral de gestión documental para compradores y proveedores. Rastrea el cumplimiento, automatiza flujos de trabajo y mantén documentación lista para auditorías en toda tu cadena de suministro.",
+    "badges": {
+      "realTimeTracking": "Seguimiento en Tiempo Real",
+      "auditReady": "Listo para Auditorías",
+      "multiIndustry": "Multi-Industrial"
+    }
+  },
+  "features": {
+    "title": "Todo lo que Necesitas para la Gestión de Cumplimiento",
+    "subtitle": "Herramientas integrales diseñadas para el cumplimiento moderno de la cadena de suministro",
+    "documentManagement": {
+      "title": "Gestión de Documentos",
+      "description": "Solicitudes de documentos simplificadas, cargas y validación con captura automatizada de metadatos"
+    },
+    "complianceTracking": {
+      "title": "Seguimiento de Cumplimiento",
+      "description": "Monitoreo en tiempo real del estado de cumplimiento en toda tu cadena de suministro"
+    },
+    "roleBasedAccess": {
+      "title": "Acceso Basado en Roles",
+      "description": "Paneles separados para compradores, proveedores y revisores internos con permisos granulares"
+    },
+    "analytics": {
+      "title": "Análisis e Informes",
+      "description": "Informes completos y paneles con datos de cumplimiento exportables"
+    },
+    "smartAlerts": {
+      "title": "Alertas Inteligentes",
+      "description": "Recordatorios automatizados para documentos que expiran y elementos críticos de cumplimiento faltantes"
+    },
+    "auditTrail": {
+      "title": "Rastro de Auditoría",
+      "description": "Control de versiones completo y registros de auditoría para todas las actividades de documentos"
+    }
+  },
+  "industries": {
+    "title": "Confiado en Todas las Industrias",
+    "subtitle": "Soluciones de cumplimiento escalables para diversos requisitos industriales",
+    "foodService": "Servicios de Comida",
+    "pharmaceuticals": "Farmacéuticos",
+    "manufacturing": "Manufactura",
+    "retail": "Comercio Minorista",
+    "logistics": "Logística",
+    "construction": "Construcción"
+  },
+  "cta": {
+    "title": "¿Listo para Transformar tu Gestión de Cumplimiento?",
+    "subtitle": "Únete a las organizaciones líderes que confían en ComplianceFlow para su documentación de cadena de suministro"
+  },
+  "regionSelector": {
+    "title": "Selecciona tu Región",
+    "regions": {
+      "northAmerica": "América del Norte",
+      "europe": "Europa",
+      "asia": "Asia",
+      "latinAmerica": "América Latina"
+    }
+  }
+}

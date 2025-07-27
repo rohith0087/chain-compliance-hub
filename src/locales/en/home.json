@@ -1,0 +1,64 @@
+
+{
+  "hero": {
+    "title": "Streamline Supply Chain",
+    "subtitle": "Compliance Management",
+    "description": "End-to-end document management platform for buyers and suppliers. Track compliance, automate workflows, and maintain audit-ready documentation across your entire supply chain.",
+    "badges": {
+      "realTimeTracking": "Real-time Tracking",
+      "auditReady": "Audit-Ready",
+      "multiIndustry": "Multi-Industry"
+    }
+  },
+  "features": {
+    "title": "Everything You Need for Compliance Management",
+    "subtitle": "Comprehensive tools designed for modern supply chain compliance",
+    "documentManagement": {
+      "title": "Document Management",
+      "description": "Streamlined document requests, uploads, and validation with automated metadata capture"
+    },
+    "complianceTracking": {
+      "title": "Compliance Tracking",
+      "description": "Real-time monitoring of compliance status across your entire supply chain"
+    },
+    "roleBasedAccess": {
+      "title": "Role-Based Access",
+      "description": "Separate dashboards for buyers, suppliers, and internal reviewers with granular permissions"
+    },
+    "analytics": {
+      "title": "Analytics & Reporting",
+      "description": "Comprehensive reports and dashboards with exportable compliance data"
+    },
+    "smartAlerts": {
+      "title": "Smart Alerts",
+      "description": "Automated reminders for expiring documents and missing critical compliance items"
+    },
+    "auditTrail": {
+      "title": "Audit Trail",
+      "description": "Complete version control and audit logs for all document activities"
+    }
+  },
+  "industries": {
+    "title": "Trusted Across Industries",
+    "subtitle": "Scalable compliance solutions for diverse industry requirements",
+    "foodService": "Food Service",
+    "pharmaceuticals": "Pharmaceuticals",
+    "manufacturing": "Manufacturing",
+    "retail": "Retail",
+    "logistics": "Logistics",
+    "construction": "Construction"
+  },
+  "cta": {
+    "title": "Ready to Transform Your Compliance Management?",
+    "subtitle": "Join leading organizations that trust ComplianceFlow for their supply chain documentation"
+  },
+  "regionSelector": {
+    "title": "Select Your Region",
+    "regions": {
+      "northAmerica": "North America",
+      "europe": "Europe",
+      "asia": "Asia",
+      "latinAmerica": "Latin America"
+    }
+  }
+}

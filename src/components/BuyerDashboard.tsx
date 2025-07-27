@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from '@/hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 import RequestsList from '@/components/requests/RequestsList';
 import SupplierDiscovery from '@/components/buyer/SupplierDiscovery';
 import NewRequestModal from '@/components/NewRequestModal';
@@ -26,6 +27,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showRequestForm, setShowRequestForm] = useState(false);
   const { profile } = useAuth();
+  const { t } = useTranslation(['dashboard', 'common']);
 
   const handleFindSuppliersClick = () => {
     console.log('Find Suppliers button clicked, switching to suppliers tab');
@@ -49,16 +51,16 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
   return (
     <div className="container mx-auto py-10">
       <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-3xl font-semibold">Buyer Dashboard</h1>
+        <h1 className="text-3xl font-semibold">{t('dashboard:buyer.title')}</h1>
         <div className="space-x-4 flex items-center">
           <NotificationCenter />
           {profile?.roles?.includes('supplier') && (
             <Button variant="outline" size="sm" onClick={() => onRoleSwitch('supplier')}>
-              Switch to Supplier
+              {t('common:navigation.switchTo', { role: 'supplier' })}
             </Button>
           )}
           <Button variant="destructive" size="sm" onClick={handleLogoutClick}>
-            Logout
+            {t('common:navigation.logout')}
           </Button>
         </div>
       </div>
@@ -67,23 +69,23 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         <TabsList>
           <TabsTrigger value="dashboard">
             <Building2 className="w-4 h-4 mr-2" />
-            Dashboard
+            {t('common:navigation.dashboard')}
           </TabsTrigger>
           <TabsTrigger value="compliance">
             <BarChart3 className="w-4 h-4 mr-2" />
-            Compliance
+            {t('common:navigation.compliance')}
           </TabsTrigger>
           <TabsTrigger value="documents">
             <FileCheck className="w-4 h-4 mr-2" />
-            Documents
+            {t('common:navigation.documents')}
           </TabsTrigger>
           <TabsTrigger value="requests">
             <ListChecks className="w-4 h-4 mr-2" />
-            My Requests
+            {t('common:navigation.requests')}
           </TabsTrigger>
           <TabsTrigger value="suppliers">
             <Users className="w-4 h-4 mr-2" />
-            Suppliers
+            {t('common:navigation.suppliers')}
           </TabsTrigger>
         </TabsList>
         
@@ -93,14 +95,14 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-2xl">Welcome, {user.name}!</CardTitle>
+                    <CardTitle className="text-2xl">{t('dashboard:buyer.welcome', { name: user.name })}</CardTitle>
                     <p className="text-gray-600">
-                      As a buyer, you can discover suppliers and request compliance documents.
+                      {t('dashboard:buyer.description')}
                     </p>
                   </div>
                   <Button onClick={() => setShowRequestForm(true)} className="flex items-center gap-2">
                     <Plus className="w-4 h-4" />
-                    New Request
+                    {t('dashboard:buyer.newRequest')}
                   </Button>
                 </div>
               </CardHeader>
@@ -109,22 +111,22 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                   <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={handleFindSuppliersClick}>
                     <CardContent className="p-4 text-center">
                       <Users className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-                      <h3 className="font-medium">Find Suppliers</h3>
-                      <p className="text-sm text-gray-600">Connect with suppliers</p>
+                      <h3 className="font-medium">{t('dashboard:buyer.findSuppliers')}</h3>
+                      <p className="text-sm text-gray-600">{t('dashboard:buyer.connectSuppliers')}</p>
                     </CardContent>
                   </Card>
                   <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('requests')}>
                     <CardContent className="p-4 text-center">
                       <ListChecks className="w-8 h-8 mx-auto mb-2 text-green-600" />
-                      <h3 className="font-medium">My Requests</h3>
-                      <p className="text-sm text-gray-600">Track document requests</p>
+                      <h3 className="font-medium">{t('dashboard:buyer.myRequests')}</h3>
+                      <p className="text-sm text-gray-600">{t('dashboard:buyer.trackRequests')}</p>
                     </CardContent>
                   </Card>
                   <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setShowRequestForm(true)}>
                     <CardContent className="p-4 text-center">
                       <Plus className="w-8 h-8 mx-auto mb-2 text-purple-600" />
-                      <h3 className="font-medium">New Request</h3>
-                      <p className="text-sm text-gray-600">Request documents</p>
+                      <h3 className="font-medium">{t('dashboard:buyer.newRequest')}</h3>
+                      <p className="text-sm text-gray-600">{t('dashboard:buyer.requestDocuments')}</p>
                     </CardContent>
                   </Card>
                 </div>
@@ -135,13 +137,13 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
             <Card>
               <CardContent className="p-6 text-center">
                 <Users className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Connect with Suppliers First</h3>
+                <h3 className="text-xl font-semibold mb-2">{t('dashboard:buyer.connectFirst.title')}</h3>
                 <p className="text-gray-600 mb-4">
-                  Before you can request documents, you need to connect with suppliers. Browse and connect with suppliers to start requesting compliance documents.
+                  {t('dashboard:buyer.connectFirst.description')}
                 </p>
                 <Button onClick={handleFindSuppliersClick} className="flex items-center gap-2 mx-auto">
                   <Users className="w-4 h-4" />
-                  Find Suppliers
+                  {t('dashboard:buyer.findSuppliers')}
                 </Button>
               </CardContent>
             </Card>

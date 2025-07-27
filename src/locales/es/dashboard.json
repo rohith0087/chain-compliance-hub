@@ -1,0 +1,42 @@
+
+{
+  "buyer": {
+    "title": "Panel del Comprador",
+    "welcome": "¡Bienvenido, {{name}}!",
+    "description": "Como comprador, puedes descubrir proveedores y solicitar documentos de cumplimiento.",
+    "findSuppliers": "Buscar Proveedores",
+    "connectSuppliers": "Conectar con proveedores",
+    "myRequests": "Mis Solicitudes",
+    "trackRequests": "Rastrear solicitudes de documentos",
+    "newRequest": "Nueva Solicitud",
+    "requestDocuments": "Solicitar documentos",
+    "connectFirst": {
+      "title": "Conecta con Proveedores Primero",
+      "description": "Antes de poder solicitar documentos, necesitas conectarte con proveedores. Navega y conecta con proveedores para comenzar a solicitar documentos de cumplimiento."
+    }
+  },
+  "supplier": {
+    "title": "Panel del Proveedor",
+    "welcome": "¡Bienvenido, {{name}}!",
+    "description": "Como proveedor, puedes gestionar tus documentos de cumplimiento y responder a solicitudes de compradores.",
+    "documentRequests": "Solicitudes de Documentos",
+    "manageRequests": "Gestionar solicitudes",
+    "myDocuments": "Mis Documentos",
+    "uploadDocuments": "Subir documentos",
+    "connectedBuyers": "Compradores Conectados",
+    "manageBuyers": "Gestionar compradores"
+  },
+  "compliance": {
+    "title": "Panel de Cumplimiento",
+    "overallScore": "Puntuación de Cumplimiento",
+    "criticalIssues": "Problemas Críticos",
+    "completionRate": "Tasa de Finalización",
+    "avgResponseTime": "Tiempo de Respuesta Promedio",
+    "totalSuppliers": "Total de Proveedores",
+    "pendingRequests": "Solicitudes Pendientes",
+    "highRisk": "Alto Riesgo",
+    "totalRequests": "Total de Solicitudes",
+    "recentActivity": "Actividad Reciente de Solicitudes de Documentos",
+    "supplierCompliance": "Puntuaciones de Cumplimiento de Proveedores"
+  }
+}

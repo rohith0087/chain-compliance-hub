@@ -1,0 +1,50 @@
+
+{
+  "navigation": {
+    "signIn": "Iniciar Sesión",
+    "getStarted": "Comenzar Hoy",
+    "startFreeTrial": "Iniciar Prueba Gratuita",
+    "logout": "Cerrar Sesión",
+    "switchTo": "Cambiar a {{role}}",
+    "dashboard": "Panel de Control",
+    "compliance": "Cumplimiento",
+    "documents": "Documentos",
+    "requests": "Mis Solicitudes",
+    "suppliers": "Proveedores"
+  },
+  "buttons": {
+    "refresh": "Actualizar Datos",
+    "export": "Exportar",
+    "view": "Ver",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "submit": "Enviar",
+    "upload": "Subir",
+    "download": "Descargar",
+    "approve": "Aprobar",
+    "reject": "Rechazar",
+    "pending": "Pendiente",
+    "approved": "Aprobado",
+    "rejected": "Rechazado"
+  },
+  "forms": {
+    "required": "Este campo es obligatorio",
+    "email": "Correo Electrónico",
+    "password": "Contraseña",
+    "confirmPassword": "Confirmar Contraseña",
+    "firstName": "Nombre",
+    "lastName": "Apellido",
+    "company": "Empresa",
+    "industry": "Industria"
+  },
+  "messages": {
+    "loading": "Cargando...",
+    "noData": "No hay datos disponibles",
+    "error": "Ocurrió un error",
+    "success": "Éxito",
+    "welcome": "Bienvenido",
+    "selectRegion": "Selecciona tu región"
+  }
+}

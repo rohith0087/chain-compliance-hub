@@ -116,11 +116,14 @@ const BuyerDocumentsDashboard = () => {
 
       // Process and filter documents
       let processedDocuments = (data || []).map(doc => {
-        // Determine the effective status based on document status and uploads
+        // Determine the effective status with priority logic
         let effectiveStatus = doc.status;
         
-        // If document has uploads, check their status
-        if (doc.document_uploads && doc.document_uploads.length > 0) {
+        // Priority: document_requests status takes precedence for approved/rejected
+        if (doc.status === 'approved' || doc.status === 'rejected') {
+          effectiveStatus = doc.status;
+        } else if (doc.document_uploads && doc.document_uploads.length > 0) {
+          // For other statuses, check upload status
           const latestUpload = doc.document_uploads[0]; 
           if (latestUpload.status === 'pending_review') {
             effectiveStatus = 'submitted';
@@ -209,32 +212,30 @@ const BuyerDocumentsDashboard = () => {
       const uploadId = document.document_uploads[0].id;
       console.log('Upload ID:', uploadId);
 
-      // Update the upload status to approved
-      const { error: uploadError } = await supabase
-        .from('document_uploads')
-        .update({ 
-          status: 'approved',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', uploadId);
+      // Update both document_requests and document_uploads in a transaction-like manner
+      const [requestUpdate, uploadUpdate] = await Promise.all([
+        supabase
+          .from('document_requests')
+          .update({ 
+            status: 'approved',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', documentId),
+        supabase
+          .from('document_uploads')
+          .update({ 
+            status: 'approved',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', uploadId)
+      ]);
 
-      if (uploadError) {
-        console.error('Upload update error:', uploadError);
-        throw uploadError;
+      if (requestUpdate.error) {
+        throw new Error(`Failed to update document request: ${requestUpdate.error.message}`);
       }
 
-      // Update the document request status to approved
-      const { error: requestError } = await supabase
-        .from('document_requests')
-        .update({ 
-          status: 'approved',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', documentId);
-
-      if (requestError) {
-        console.error('Request update error:', requestError);
-        throw requestError;
+      if (uploadUpdate.error) {
+        throw new Error(`Failed to update document upload: ${uploadUpdate.error.message}`);
       }
 
       // Send notification to supplier
@@ -287,32 +288,30 @@ const BuyerDocumentsDashboard = () => {
       const uploadId = document.document_uploads[0].id;
       console.log('Upload ID:', uploadId);
 
-      // Update the upload status to rejected
-      const { error: uploadError } = await supabase
-        .from('document_uploads')
-        .update({ 
-          status: 'rejected',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', uploadId);
+      // Update both document_requests and document_uploads in a transaction-like manner
+      const [requestUpdate, uploadUpdate] = await Promise.all([
+        supabase
+          .from('document_requests')
+          .update({ 
+            status: 'rejected',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', documentId),
+        supabase
+          .from('document_uploads')
+          .update({ 
+            status: 'rejected',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', uploadId)
+      ]);
 
-      if (uploadError) {
-        console.error('Upload update error:', uploadError);
-        throw uploadError;
+      if (requestUpdate.error) {
+        throw new Error(`Failed to update document request: ${requestUpdate.error.message}`);
       }
 
-      // Update the document request status to rejected
-      const { error: requestError } = await supabase
-        .from('document_requests')
-        .update({ 
-          status: 'rejected',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', documentId);
-
-      if (requestError) {
-        console.error('Request update error:', requestError);
-        throw requestError;
+      if (uploadUpdate.error) {
+        throw new Error(`Failed to update document upload: ${uploadUpdate.error.message}`);
       }
 
       // Send notification to supplier with reason

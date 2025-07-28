@@ -10,6 +10,9 @@ import {
 import DocumentSelectionStep from './requests/DocumentSelectionStep';
 import RequestConfigurationStep from './requests/RequestConfigurationStep';
 import { getComplianceDocuments, ComplianceDocument } from './requests/ComplianceDocuments';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface NewRequestModalProps {
   isOpen: boolean;
@@ -27,8 +30,57 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
     dueDate: '',
     notes: '',
   });
+  const [loading, setLoading] = useState(false);
+  const [buyerProfile, setBuyerProfile] = useState<any>(null);
+  const [connectedSuppliers, setConnectedSuppliers] = useState<any[]>([]);
 
+  const { user } = useAuth();
+  const { toast } = useToast();
   const complianceDocuments = getComplianceDocuments(userType);
+
+  // Fetch buyer data and connected suppliers when modal opens
+  React.useEffect(() => {
+    if (isOpen && user) {
+      fetchBuyerData();
+    }
+  }, [isOpen, user]);
+
+  const fetchBuyerData = async () => {
+    try {
+      // Get buyer profile
+      const { data: buyer, error: buyerError } = await supabase
+        .from('buyers')
+        .select('*')
+        .eq('profile_id', user?.id)
+        .single();
+
+      if (buyerError) {
+        console.error('Error fetching buyer profile:', buyerError);
+        return;
+      }
+
+      setBuyerProfile(buyer);
+
+      // Get connected suppliers
+      const { data: connections, error: connectionsError } = await supabase
+        .from('buyer_supplier_connections')
+        .select(`
+          *,
+          suppliers (*)
+        `)
+        .eq('buyer_id', buyer.id)
+        .eq('status', 'approved');
+
+      if (connectionsError) {
+        console.error('Error fetching connections:', connectionsError);
+        return;
+      }
+
+      setConnectedSuppliers(connections?.map(conn => conn.suppliers) || []);
+    } catch (error) {
+      console.error('Error in fetchBuyerData:', error);
+    }
+  };
 
   const handleDocumentToggle = (doc: ComplianceDocument, checked: boolean) => {
     if (checked) {
@@ -46,27 +98,78 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleCreateRequests = () => {
-    // Create a separate request for each selected document
-    selectedDocuments.forEach(doc => {
-      const request = {
-        id: Date.now() + Math.random(), // Ensure unique IDs
-        supplier: formData.supplier,
-        documentType: doc.title,
-        category: doc.category,
-        priority: formData.priority,
-        dueDate: formData.dueDate,
-        status: 'pending',
-        notes: formData.notes,
-        createdAt: new Date().toISOString(),
-        template: doc.template
-      };
-      
-      onCreateRequest(request);
-    });
-    
-    onClose();
-    resetForm();
+  const handleCreateRequests = async () => {
+    if (!user || !buyerProfile || selectedDocuments.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one document and ensure all fields are filled.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Create a separate request for each selected document
+      for (const doc of selectedDocuments) {
+        const { data: request, error } = await supabase
+          .from('document_requests')
+          .insert({
+            title: doc.title,
+            description: doc.description,
+            document_type: doc.title,
+            category: doc.category,
+            priority: formData.priority,
+            due_date: formData.dueDate || null,
+            supplier_id: formData.supplier,
+            buyer_id: buyerProfile.id,
+            requester_id: user.id,
+            notes: formData.notes || null,
+            template_sections: doc.template || null,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error creating request:', error);
+          throw error;
+        }
+
+        // Create notification for supplier
+        const supplier = connectedSuppliers.find(s => s.id === formData.supplier);
+        if (supplier) {
+          await supabase.rpc('create_notification', {
+            p_user_id: supplier.profile_id,
+            p_title: 'New Document Request',
+            p_message: `You have received a new document request: ${doc.title}`,
+            p_type: 'request_created',
+            p_reference_id: request.id
+          });
+        }
+
+        // Call the callback to update the parent component
+        onCreateRequest(request);
+      }
+
+      toast({
+        title: "Requests Created",
+        description: `Successfully created ${selectedDocuments.length} document request(s).`,
+      });
+
+      // Reset form and close modal
+      resetForm();
+      onClose();
+    } catch (error: any) {
+      console.error('Error creating requests:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create requests. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resetForm = () => {
@@ -79,6 +182,38 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
       notes: '',
     });
   };
+
+  // Show setup message if buyer profile is not available
+  if (isOpen && !buyerProfile) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Setup Required</DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-4">
+            <p>Please complete your buyer profile setup before creating document requests.</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Show connection message if no suppliers are connected
+  if (isOpen && connectedSuppliers.length === 0) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>No Connected Suppliers</DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-4">
+            <p>You need to connect with suppliers before creating document requests.</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -113,6 +248,8 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
             onBack={() => setStep(1)}
             onCreateRequests={handleCreateRequests}
             onCancel={onClose}
+            loading={loading}
+            connectedSuppliers={connectedSuppliers}
           />
         )}
       </DialogContent>

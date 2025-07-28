@@ -3,13 +3,15 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Send, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon, X } from 'lucide-react';
+import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ComplianceDocument } from './ComplianceDocuments';
-import { useSuppliers } from '@/hooks/useSuppliers';
 
 interface RequestConfigurationStepProps {
   selectedDocuments: ComplianceDocument[];
@@ -23,6 +25,8 @@ interface RequestConfigurationStepProps {
   onBack: () => void;
   onCreateRequests: () => void;
   onCancel: () => void;
+  loading?: boolean;
+  connectedSuppliers: any[];
 }
 
 const RequestConfigurationStep = ({
@@ -31,93 +35,62 @@ const RequestConfigurationStep = ({
   onFormDataChange,
   onBack,
   onCreateRequests,
-  onCancel
+  onCancel,
+  loading = false,
+  connectedSuppliers
 }: RequestConfigurationStepProps) => {
-  const { suppliers, loading: suppliersLoading, error: suppliersError } = useSuppliers();
+  const [dueDate, setDueDate] = React.useState<Date>();
+
+  const handleDateChange = (date: Date | undefined) => {
+    setDueDate(date);
+    onFormDataChange('dueDate', date ? date.toISOString().split('T')[0] : '');
+  };
+
+  const isFormValid = formData.supplier && selectedDocuments.length > 0;
 
   return (
     <div className="space-y-6">
-      {/* Selected Documents Preview */}
-      <Card className="border-blue-200 bg-blue-50">
+      {/* Selected Documents Summary */}
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onBack}
-              className="mr-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-            <Send className="w-5 h-5 text-blue-600" />
-            Creating {selectedDocuments.length} Document Request(s)
-          </CardTitle>
+          <CardTitle>Selected Documents ({selectedDocuments.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="flex flex-wrap gap-2">
             {selectedDocuments.map((doc) => (
-              <div key={doc.id} className="flex items-center gap-2 p-2 bg-white rounded border">
-                <doc.icon className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium">{doc.title}</span>
-              </div>
+              <Badge key={doc.id} variant="secondary" className="flex items-center gap-1">
+                {doc.title}
+                <span className="text-xs text-muted-foreground">({doc.category})</span>
+              </Badge>
             ))}
           </div>
         </CardContent>
       </Card>
 
-      {/* Request Configuration */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-4">
+      {/* Configuration Form */}
+      <div className="grid gap-4">
+        <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="supplier">Select Supplier *</Label>
-            {suppliersError ? (
-              <div className="flex items-center gap-2 p-3 border border-red-200 bg-red-50 rounded-md">
-                <AlertCircle className="w-4 h-4 text-red-500" />
-                <span className="text-sm text-red-700">{suppliersError}</span>
-              </div>
-            ) : (
-              <Select 
-                value={formData.supplier} 
-                onValueChange={(value) => onFormDataChange('supplier', value)}
-                disabled={suppliersLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={
-                    suppliersLoading ? (
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Loading suppliers...
-                      </div>
-                    ) : suppliers.length === 0 ? (
-                      "No suppliers available"
-                    ) : (
-                      "Choose a supplier"
-                    )
-                  } />
-                </SelectTrigger>
-                <SelectContent>
-                  {suppliers.map(supplier => (
-                    <SelectItem key={supplier.id} value={supplier.id}>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{supplier.company_name}</span>
-                        {supplier.industry && (
-                          <span className="text-xs text-gray-500">{supplier.industry}</span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            {suppliers.length === 0 && !suppliersLoading && !suppliersError && (
-              <p className="text-sm text-gray-500 mt-1">
-                No suppliers found. Please add suppliers to your network first.
-              </p>
-            )}
+            <Label htmlFor="supplier">Supplier *</Label>
+            <Select 
+              value={formData.supplier} 
+              onValueChange={(value) => onFormDataChange('supplier', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select supplier" />
+              </SelectTrigger>
+              <SelectContent>
+                {connectedSuppliers.map((supplier) => (
+                  <SelectItem key={supplier.id} value={supplier.id}>
+                    {supplier.company_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
-            <Label htmlFor="priority">Priority Level</Label>
+            <Label htmlFor="priority">Priority</Label>
             <Select 
               value={formData.priority} 
               onValueChange={(value) => onFormDataChange('priority', value)}
@@ -133,60 +106,60 @@ const RequestConfigurationStep = ({
               </SelectContent>
             </Select>
           </div>
-
-          <div>
-            <Label htmlFor="dueDate">Due Date *</Label>
-            <Input
-              id="dueDate"
-              type="date"
-              value={formData.dueDate}
-              onChange={(e) => onFormDataChange('dueDate', e.target.value)}
-              required
-            />
-          </div>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <Label>Batch Request Summary</Label>
-            <div className="space-y-2 mt-2 max-h-40 overflow-y-auto">
-              {selectedDocuments.map((doc, index) => (
-                <div key={doc.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded text-sm">
-                  <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs font-medium text-blue-600">
-                    {index + 1}
-                  </span>
-                  <span className="flex-1">{doc.title}</span>
-                  <Badge variant="outline" className="text-xs">{doc.category}</Badge>
-                </div>
-              ))}
-            </div>
-          </div>
+        <div>
+          <Label>Due Date</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start text-left font-normal"
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dueDate ? format(dueDate, "PPP") : "Select a due date (optional)"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={dueDate}
+                onSelect={handleDateChange}
+                disabled={(date) => date < new Date()}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        <div>
+          <Label htmlFor="notes">Additional Notes</Label>
+          <Textarea
+            id="notes"
+            placeholder="Add any additional requirements or instructions..."
+            value={formData.notes}
+            onChange={(e) => onFormDataChange('notes', e.target.value)}
+            rows={3}
+          />
         </div>
       </div>
 
-      <div>
-        <Label htmlFor="notes">Additional Notes (Applied to all requests)</Label>
-        <Textarea
-          id="notes"
-          placeholder="Add any specific requirements, deadlines, or instructions that apply to all selected documents..."
-          value={formData.notes}
-          onChange={(e) => onFormDataChange('notes', e.target.value)}
-          rows={4}
-        />
-      </div>
-
-      <div className="flex justify-end gap-3 pt-4">
-        <Button variant="outline" onClick={onCancel}>
-          Cancel
+      {/* Action Buttons */}
+      <div className="flex justify-between">
+        <Button variant="outline" onClick={onBack}>
+          Back
         </Button>
-        <Button 
-          onClick={onCreateRequests}
-          disabled={!formData.supplier || !formData.dueDate || selectedDocuments.length === 0 || suppliersLoading}
-          className="bg-green-600 hover:bg-green-700"
-        >
-          <Send className="w-4 h-4 mr-2" />
-          Create {selectedDocuments.length} Request(s)
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={onCreateRequests} 
+            disabled={!isFormValid || loading}
+          >
+            {loading ? 'Creating Requests...' : `Create ${selectedDocuments.length} Request(s)`}
+          </Button>
+        </div>
       </div>
     </div>
   );

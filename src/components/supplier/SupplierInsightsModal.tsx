@@ -37,10 +37,26 @@ const SupplierInsightsModal = ({ isOpen, onClose, supplier, buyerId }: SupplierI
   const [categoryStats, setCategoryStats] = useState<any>({});
 
   useEffect(() => {
-    if (isOpen && supplier) {
+    if (isOpen && supplier && buyerId) {
       loadSupplierData();
     }
   }, [isOpen, supplier, buyerId]);
+
+  // Add defensive check for supplier
+  if (!supplier) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Supplier Insights</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center justify-center py-8">
+            <p className="text-muted-foreground">No supplier data available</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   const loadSupplierData = async () => {
     setLoading(true);

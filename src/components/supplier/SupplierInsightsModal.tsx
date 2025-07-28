@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Building2, 
   TrendingUp, 
@@ -18,7 +20,10 @@ import {
   Calendar,
   Target,
   Award,
-  XCircle
+  XCircle,
+  Info,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -35,6 +40,7 @@ const SupplierInsightsModal = ({ isOpen, onClose, supplier, buyerId }: SupplierI
   const [uploads, setUploads] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [categoryStats, setCategoryStats] = useState<any>({});
+  const { toast } = useToast();
 
   useEffect(() => {
     if (isOpen && supplier && buyerId) {
@@ -126,13 +132,127 @@ const SupplierInsightsModal = ({ isOpen, onClose, supplier, buyerId }: SupplierI
     overdueCount: requests.filter(r => r.due_date && new Date(r.due_date) < new Date() && r.status === 'pending').length
   };
 
-  const riskLevel = overallMetrics.complianceScore >= 90 ? 'Low' :
-                   overallMetrics.complianceScore >= 70 ? 'Medium' : 'High';
+  // Enhanced risk calculation with multiple factors
+  const calculateRiskAssessment = () => {
+    const complianceScore = overallMetrics.complianceScore;
+    const overdueRate = overallMetrics.totalRequests > 0 ? (overallMetrics.overdueCount / overallMetrics.totalRequests) * 100 : 0;
+    const rejectionRate = overallMetrics.totalRequests > 0 ? (overallMetrics.rejectedRequests / overallMetrics.totalRequests) * 100 : 0;
+    const pendingRate = overallMetrics.totalRequests > 0 ? (overallMetrics.pendingRequests / overallMetrics.totalRequests) * 100 : 0;
+    
+    const riskFactors = [];
+    let riskScore = 0;
+    
+    // Compliance score factor (most important)
+    if (complianceScore < 70) {
+      riskScore += 40;
+      riskFactors.push(`Low compliance rate (${complianceScore}%)`);
+    } else if (complianceScore < 90) {
+      riskScore += 20;
+      riskFactors.push(`Moderate compliance rate (${complianceScore}%)`);
+    } else {
+      riskFactors.push(`High compliance rate (${complianceScore}%)`);
+    }
+    
+    // Overdue factor
+    if (overdueRate > 20) {
+      riskScore += 25;
+      riskFactors.push(`High overdue rate (${overdueRate.toFixed(1)}%)`);
+    } else if (overdueRate > 10) {
+      riskScore += 15;
+      riskFactors.push(`Moderate overdue rate (${overdueRate.toFixed(1)}%)`);
+    }
+    
+    // Rejection factor
+    if (rejectionRate > 15) {
+      riskScore += 20;
+      riskFactors.push(`High rejection rate (${rejectionRate.toFixed(1)}%)`);
+    } else if (rejectionRate > 5) {
+      riskScore += 10;
+      riskFactors.push(`Moderate rejection rate (${rejectionRate.toFixed(1)}%)`);
+    }
+    
+    // Pending requests factor
+    if (pendingRate > 30) {
+      riskScore += 15;
+      riskFactors.push(`Many pending requests (${pendingRate.toFixed(1)}%)`);
+    }
+    
+    const level = riskScore >= 50 ? 'High' : riskScore >= 25 ? 'Medium' : 'Low';
+    
+    return { level, factors: riskFactors, score: riskScore };
+  };
+
+  const riskAssessment = calculateRiskAssessment();
+  const riskLevel = riskAssessment.level;
 
   const getRiskColor = () => {
     if (riskLevel === 'Low') return 'text-green-600 bg-green-100';
     if (riskLevel === 'Medium') return 'text-yellow-600 bg-yellow-100';
     return 'text-red-600 bg-red-100';
+  };
+
+  // Contact functionality
+  const handleContact = () => {
+    if (supplier.contact_email) {
+      const subject = `Regarding ${supplier.company_name} - Compliance Documentation`;
+      const body = `Dear ${supplier.company_name} team,\n\nI hope this message finds you well. I wanted to reach out regarding your compliance documentation status.\n\nBest regards`;
+      const mailtoLink = `mailto:${supplier.contact_email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.open(mailtoLink, '_blank');
+    } else {
+      toast({
+        title: "Contact Information Unavailable",
+        description: "No email address found for this supplier.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleCopyEmail = () => {
+    if (supplier.contact_email) {
+      navigator.clipboard.writeText(supplier.contact_email);
+      toast({
+        title: "Email Copied",
+        description: "Supplier's email address copied to clipboard.",
+      });
+    }
+  };
+
+  // Export functionality
+  const handleExport = () => {
+    const exportData = {
+      supplierInfo: {
+        name: supplier.company_name,
+        industry: supplier.industry,
+        email: supplier.contact_email,
+        phone: supplier.phone
+      },
+      metrics: overallMetrics,
+      riskAssessment: riskAssessment,
+      requests: requests.map(r => ({
+        title: r.title,
+        type: r.document_type,
+        category: r.category,
+        status: r.status,
+        priority: r.priority,
+        dueDate: r.due_date,
+        createdDate: r.created_at
+      })),
+      categoryStats: categoryStats
+    };
+
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    const exportFileDefaultName = `${supplier.company_name}_compliance_report_${format(new Date(), 'yyyy-MM-dd')}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+
+    toast({
+      title: "Report Exported",
+      description: "Supplier compliance report downloaded successfully.",
+    });
   };
 
   return (
@@ -178,14 +298,55 @@ const SupplierInsightsModal = ({ isOpen, onClose, supplier, buyerId }: SupplierI
                     </div>
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Risk Level</p>
-                      <Badge className={getRiskColor()}>{riskLevel} Risk</Badge>
+                      <HoverCard>
+                        <HoverCardTrigger asChild>
+                          <div className="flex items-center gap-1 cursor-help">
+                            <Badge className={getRiskColor()}>{riskLevel} Risk</Badge>
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </HoverCardTrigger>
+                        <HoverCardContent className="w-80">
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-semibold">Risk Assessment Details</h4>
+                            <p className="text-sm text-muted-foreground">
+                              Risk level: <span className="font-medium">{riskLevel}</span> (Score: {riskAssessment.score}/100)
+                            </p>
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium">Contributing factors:</p>
+                              {riskAssessment.factors.map((factor, index) => (
+                                <p key={index} className="text-xs text-muted-foreground">• {factor}</p>
+                              ))}
+                            </div>
+                            {riskLevel === 'High' && (
+                              <p className="text-xs text-red-600 font-medium">
+                                ⚠️ Requires immediate attention and closer monitoring
+                              </p>
+                            )}
+                            {riskLevel === 'Medium' && (
+                              <p className="text-xs text-yellow-600 font-medium">
+                                ⚡ Monitor closely and provide additional support if needed
+                              </p>
+                            )}
+                            {riskLevel === 'Low' && (
+                              <p className="text-xs text-green-600 font-medium">
+                                ✅ Performing well with minimal oversight required
+                              </p>
+                            )}
+                          </div>
+                        </HoverCardContent>
+                      </HoverCard>
                     </div>
                     <div className="flex gap-2 pt-4">
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={handleContact}>
                         <Mail className="h-4 w-4 mr-2" />
                         Contact
                       </Button>
-                      <Button variant="outline" size="sm">
+                      {supplier.contact_email && (
+                        <Button variant="ghost" size="sm" onClick={handleCopyEmail}>
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button variant="outline" size="sm" onClick={handleExport}>
                         <Download className="h-4 w-4 mr-2" />
                         Export
                       </Button>

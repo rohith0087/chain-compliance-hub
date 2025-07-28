@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           buyer_id: string | null
           id: string
+          initiated_by: string | null
           notes: string | null
           requested_at: string | null
           responded_at: string | null
@@ -27,6 +28,7 @@ export type Database = {
         Insert: {
           buyer_id?: string | null
           id?: string
+          initiated_by?: string | null
           notes?: string | null
           requested_at?: string | null
           responded_at?: string | null
@@ -36,6 +38,7 @@ export type Database = {
         Update: {
           buyer_id?: string | null
           id?: string
+          initiated_by?: string | null
           notes?: string | null
           requested_at?: string | null
           responded_at?: string | null
@@ -62,6 +65,7 @@ export type Database = {
       buyers: {
         Row: {
           address: string | null
+          buyer_id_number: string | null
           company_name: string
           contact_email: string
           created_at: string | null
@@ -73,6 +77,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          buyer_id_number?: string | null
           company_name: string
           contact_email: string
           created_at?: string | null
@@ -84,6 +89,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          buyer_id_number?: string | null
           company_name?: string
           contact_email?: string
           created_at?: string | null
@@ -377,6 +383,14 @@ export type Database = {
           p_reference_id?: string
         }
         Returns: string
+      }
+      create_supplier_to_buyer_connection: {
+        Args: {
+          p_buyer_id_number: string
+          p_supplier_profile_id: string
+          p_notes?: string
+        }
+        Returns: Json
       }
       supplier_can_view_buyer: {
         Args: { buyer_id: string }

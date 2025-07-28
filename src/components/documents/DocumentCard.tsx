@@ -17,7 +17,7 @@ import {
 interface DocumentCardProps {
   document: {
     id: string;
-    title: string;
+    title?: string;
     document_type: string;
     category: string;
     status: string;
@@ -43,6 +43,8 @@ interface DocumentCardProps {
   onDecline?: () => void;
   showActions?: boolean;
   userRole?: 'buyer' | 'supplier';
+  approveLoading?: boolean;
+  declineLoading?: boolean;
 }
 
 const DocumentCard = ({ 
@@ -53,7 +55,9 @@ const DocumentCard = ({
   onApprove,
   onDecline,
   showActions = true,
-  userRole = 'supplier'
+  userRole = 'supplier',
+  approveLoading = false,
+  declineLoading = false
 }: DocumentCardProps) => {
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -126,7 +130,7 @@ const DocumentCard = ({
               <FileText className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <CardTitle className="text-lg">{document.title}</CardTitle>
+              <CardTitle className="text-lg">{document.title || document.document_type}</CardTitle>
               <div className="flex items-center space-x-2 mt-1">
                 <Badge variant="outline" className="text-xs">
                   {document.document_type}
@@ -167,25 +171,39 @@ const DocumentCard = ({
                     size="sm" 
                     variant="default" 
                     className="bg-green-600 hover:bg-green-700"
-                    onClick={() => {
-                      console.log('Approve button clicked for document:', document.id);
-                      onApprove();
-                    }}
+                    onClick={onApprove}
+                    disabled={approveLoading || declineLoading}
                   >
-                    <ThumbsUp className="w-4 h-4 mr-2" />
-                    Approve
+                    {approveLoading ? (
+                      <>
+                        <Clock className="w-4 h-4 mr-2 animate-spin" />
+                        Approving...
+                      </>
+                    ) : (
+                      <>
+                        <ThumbsUp className="w-4 h-4 mr-2" />
+                        Approve
+                      </>
+                    )}
                   </Button>
                   <Button 
                     size="sm" 
                     variant="outline" 
                     className="border-red-300 text-red-600 hover:bg-red-50"
-                    onClick={() => {
-                      console.log('Decline button clicked for document:', document.id);
-                      onDecline();
-                    }}
+                    onClick={onDecline}
+                    disabled={approveLoading || declineLoading}
                   >
-                    <ThumbsDown className="w-4 h-4 mr-2" />
-                    Decline
+                    {declineLoading ? (
+                      <>
+                        <Clock className="w-4 h-4 mr-2 animate-spin" />
+                        Declining...
+                      </>
+                    ) : (
+                      <>
+                        <ThumbsDown className="w-4 h-4 mr-2" />
+                        Decline
+                      </>
+                    )}
                   </Button>
                 </>
               )}

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Dialog, 
@@ -26,7 +25,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
   const [selectedDocuments, setSelectedDocuments] = useState<ComplianceDocument[]>([]);
   const [formData, setFormData] = useState({
     supplier: '',
-    priority: 'medium',
+    priority: 'medium' as 'high' | 'medium' | 'low' | 'urgent',
     dueDate: '',
     notes: '',
   });
@@ -116,7 +115,6 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
         const { data: request, error } = await supabase
           .from('document_requests')
           .insert({
-            title: doc.title,
             description: doc.description,
             document_type: doc.title,
             category: doc.category,
@@ -177,7 +175,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
     setSelectedDocuments([]);
     setFormData({
       supplier: '',
-      priority: 'medium',
+      priority: 'medium' as 'high' | 'medium' | 'low' | 'urgent',
       dueDate: '',
       notes: '',
     });

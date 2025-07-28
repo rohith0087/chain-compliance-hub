@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,10 +19,22 @@ import DocumentCard from './DocumentCard';
 import DocumentTimeline from './DocumentTimeline';
 import DocumentRoadmap from './DocumentRoadmap';
 import BuyerDocumentsManager from './BuyerDocumentsManager';
+import DocumentDeclineDialog from './DocumentDeclineDialog';
 
 const BuyerDocumentsDashboard = () => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [approveLoading, setApproveLoading] = useState<string | null>(null);
+  const [declineLoading, setDeclineLoading] = useState<string | null>(null);
+  const [declineDialog, setDeclineDialog] = useState<{
+    isOpen: boolean;
+    documentId: string;
+    documentTitle: string;
+  }>({
+    isOpen: false,
+    documentId: '',
+    documentTitle: ''
+  });
   const [filters, setFilters] = useState({
     search: '',
     status: '',
@@ -61,7 +72,8 @@ const BuyerDocumentsDashboard = () => {
           *,
           suppliers (
             company_name,
-            industry
+            industry,
+            profile_id
           ),
           document_uploads (
             id,
@@ -178,6 +190,7 @@ const BuyerDocumentsDashboard = () => {
   };
 
   const handleApproveDocument = async (documentId: string) => {
+    setApproveLoading(documentId);
     try {
       console.log('Approving document:', documentId);
       
@@ -224,9 +237,20 @@ const BuyerDocumentsDashboard = () => {
         throw requestError;
       }
 
+      // Send notification to supplier
+      if (document.suppliers?.profile_id) {
+        await supabase.rpc('create_notification', {
+          p_user_id: document.suppliers.profile_id,
+          p_title: 'Document Approved',
+          p_message: `Your document "${document.document_type}" has been approved and meets all requirements.`,
+          p_type: 'document_approved',
+          p_reference_id: documentId
+        });
+      }
+
       toast({
         title: "Document Approved",
-        description: `"${document.title}" has been successfully approved.`,
+        description: `"${document.document_type}" has been successfully approved.`,
       });
 
       // Reload documents to reflect the change
@@ -238,10 +262,13 @@ const BuyerDocumentsDashboard = () => {
         description: error instanceof Error ? error.message : "Failed to approve the document. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setApproveLoading(null);
     }
   };
 
-  const handleDeclineDocument = async (documentId: string) => {
+  const handleDeclineDocument = async (documentId: string, reason: string) => {
+    setDeclineLoading(documentId);
     try {
       console.log('Declining document:', documentId);
       
@@ -288,12 +315,28 @@ const BuyerDocumentsDashboard = () => {
         throw requestError;
       }
 
+      // Send notification to supplier with reason
+      if (document.suppliers?.profile_id) {
+        const message = reason 
+          ? `Your document "${document.document_type}" has been declined. Reason: ${reason}`
+          : `Your document "${document.document_type}" has been declined. Please contact the buyer for more details.`;
+
+        await supabase.rpc('create_notification', {
+          p_user_id: document.suppliers.profile_id,
+          p_title: 'Document Declined',
+          p_message: message,
+          p_type: 'document_declined',
+          p_reference_id: documentId
+        });
+      }
+
       toast({
         title: "Document Declined",
-        description: `"${document.title}" has been declined.`,
+        description: `"${document.document_type}" has been declined.`,
       });
 
-      // Reload documents to reflect the change
+      // Close decline dialog and reload documents
+      setDeclineDialog({ isOpen: false, documentId: '', documentTitle: '' });
       loadDocuments();
     } catch (error) {
       console.error('Error declining document:', error);
@@ -302,7 +345,17 @@ const BuyerDocumentsDashboard = () => {
         description: error instanceof Error ? error.message : "Failed to decline the document. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setDeclineLoading(null);
     }
+  };
+
+  const openDeclineDialog = (documentId: string, documentTitle: string) => {
+    setDeclineDialog({
+      isOpen: true,
+      documentId,
+      documentTitle
+    });
   };
 
   // Calculate stats using effective status
@@ -319,9 +372,9 @@ const BuyerDocumentsDashboard = () => {
     id: doc.id,
     type: doc.effectiveStatus as 'created' | 'submitted' | 'approved' | 'rejected' | 'expired' | 'reminder',
     title: `Document ${doc.effectiveStatus}`,
-    description: `${doc.title} - ${doc.suppliers?.company_name || 'Unknown Supplier'}`,
+    description: `${doc.document_type} - ${doc.suppliers?.company_name || 'Unknown Supplier'}`,
     date: doc.updated_at || doc.created_at,
-    documentTitle: doc.title
+    documentTitle: doc.document_type
   }));
 
   // Generate roadmap items with proper status mapping
@@ -346,7 +399,7 @@ const BuyerDocumentsDashboard = () => {
 
       return {
         id: doc.id,
-        title: doc.title,
+        title: doc.document_type,
         status: roadmapStatus,
         dueDate: doc.due_date,
         description: `${doc.document_type} from ${doc.suppliers?.company_name || 'Unknown Supplier'}`,
@@ -462,7 +515,9 @@ const BuyerDocumentsDashboard = () => {
                       onView={() => console.log('View document:', doc.id)}
                       onDownload={() => console.log('Download document:', doc.id)}
                       onApprove={() => handleApproveDocument(doc.id)}
-                      onDecline={() => handleDeclineDocument(doc.id)}
+                      onDecline={() => openDeclineDialog(doc.id, doc.document_type)}
+                      approveLoading={approveLoading === doc.id}
+                      declineLoading={declineLoading === doc.id}
                     />
                   ))}
                 </div>
@@ -485,8 +540,13 @@ const BuyerDocumentsDashboard = () => {
           <BuyerDocumentsManager 
             documents={documents}
             onApprove={handleApproveDocument}
-            onDecline={handleDeclineDocument}
+            onDecline={(documentId) => {
+              const doc = documents.find(d => d.id === documentId);
+              openDeclineDialog(documentId, doc?.document_type || 'Document');
+            }}
             onRefresh={loadDocuments}
+            approveLoading={approveLoading}
+            declineLoading={declineLoading}
           />
         </TabsContent>
 
@@ -529,6 +589,15 @@ const BuyerDocumentsDashboard = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Decline Dialog */}
+      <DocumentDeclineDialog
+        isOpen={declineDialog.isOpen}
+        onClose={() => setDeclineDialog({ isOpen: false, documentId: '', documentTitle: '' })}
+        onConfirm={(reason) => handleDeclineDocument(declineDialog.documentId, reason)}
+        documentTitle={declineDialog.documentTitle}
+        loading={declineLoading === declineDialog.documentId}
+      />
     </div>
   );
 };

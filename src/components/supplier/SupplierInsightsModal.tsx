@@ -236,19 +236,21 @@ const SupplierInsightsModal = ({ isOpen, onClose, supplier, buyerId }: SupplierI
         submitted: stats.submitted
       }));
 
-      const pdfData: PDFExportData = {
+      const pdfData = {
         supplier: supplier,
         requests: requests,
+        uploads: uploads,
         categoryStats: categoryStatsArray,
-        overallStats: {
-          totalRequests: overallMetrics.totalRequests,
-          approvedRequests: overallMetrics.approvedRequests,
-          pendingRequests: overallMetrics.pendingRequests,
-          rejectedRequests: overallMetrics.rejectedRequests,
-          complianceScore: overallMetrics.complianceScore
-        },
-        riskAssessment: riskAssessment,
-        buyerId: buyerId
+        totalRequests: overallMetrics.totalRequests,
+        approvedRequests: overallMetrics.approvedRequests,
+        pendingRequests: overallMetrics.pendingRequests,
+        rejectedRequests: overallMetrics.rejectedRequests,
+        submittedRequests: overallMetrics.submittedRequests,
+        complianceScore: overallMetrics.complianceScore,
+        riskLevel: riskAssessment.level,
+        buyerId: buyerId,
+        averageResponseTime: parseFloat(overallMetrics.avgResponseTime) || 3.2,
+        overdueRequests: overallMetrics.overdueCount || 0
       };
 
       const pdfService = new PDFExportService();

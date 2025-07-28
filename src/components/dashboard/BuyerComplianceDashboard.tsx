@@ -30,6 +30,7 @@ const BuyerComplianceDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [showInsightsModal, setShowInsightsModal] = useState(false);
+  const [buyerData, setBuyerData] = useState<any>(null);
   const [buyerId, setBuyerId] = useState<string>('');
   const { user } = useAuth();
   const { t } = useTranslation(['dashboard', 'common']);
@@ -52,6 +53,7 @@ const BuyerComplianceDashboard = () => {
 
       if (buyerProfile) {
         setBuyerId(buyerProfile.id);
+        setBuyerData(buyerProfile);
         
         // Load document requests with supplier info
         const { data: requests } = await supabase
@@ -118,7 +120,10 @@ const BuyerComplianceDashboard = () => {
   };
 
   const handleSupplierClick = (supplier: any) => {
-    setSelectedSupplier(supplier);
+    setSelectedSupplier({
+      ...supplier,
+      buyerId: buyerData?.buyer_id_number || buyerData?.id // Use human-readable ID
+    });
     setShowInsightsModal(true);
   };
 
@@ -297,7 +302,7 @@ const BuyerComplianceDashboard = () => {
         isOpen={showInsightsModal}
         onClose={() => setShowInsightsModal(false)}
         supplier={selectedSupplier}
-        buyerId={buyerId}
+        buyerId={buyerData?.buyer_id_number || buyerId}
       />
     </div>
   );

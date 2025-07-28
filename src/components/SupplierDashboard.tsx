@@ -527,7 +527,10 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
           </TabsContent>
 
           <TabsContent value="buyers">
-            <ConnectedBuyersTab connectedBuyers={connectedBuyers} />
+            <ConnectedBuyersTab 
+              connectedBuyers={connectedBuyers} 
+              onConnectionRequest={loadSupplierData}
+            />
           </TabsContent>
         </Tabs>
       </div>

@@ -4,12 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Building2, Users, Mail, MapPin, Phone, AlertCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ConnectWithBuyerModal } from './ConnectWithBuyerModal';
 
 interface ConnectedBuyersTabProps {
   connectedBuyers: any[];
+  onConnectionRequest?: () => void;
 }
 
-const ConnectedBuyersTab = ({ connectedBuyers }: ConnectedBuyersTabProps) => {
+const ConnectedBuyersTab = ({ connectedBuyers, onConnectionRequest }: ConnectedBuyersTabProps) => {
   console.log('ConnectedBuyersTab received data:', connectedBuyers);
 
   if (connectedBuyers.length === 0) {
@@ -20,12 +22,13 @@ const ConnectedBuyersTab = ({ connectedBuyers }: ConnectedBuyersTabProps) => {
           <Badge variant="outline">0 Connected</Badge>
         </CardHeader>
         <CardContent>
+          <ConnectWithBuyerModal onConnectionRequest={onConnectionRequest || (() => {})} />
           <div className="text-center py-12">
             <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No Connected Buyers</h3>
             <p className="text-gray-500 mb-6">You haven't connected with any buyers yet.</p>
             <p className="text-sm text-gray-400">
-              Buyers will appear here once they send connection requests and you approve them.
+              Buyers will appear here once they send connection requests and you approve them, or you can connect directly using a buyer ID.
             </p>
           </div>
         </CardContent>
@@ -40,6 +43,7 @@ const ConnectedBuyersTab = ({ connectedBuyers }: ConnectedBuyersTabProps) => {
         <Badge variant="outline">{connectedBuyers.length} Connected</Badge>
       </CardHeader>
       <CardContent>
+        <ConnectWithBuyerModal onConnectionRequest={onConnectionRequest || (() => {})} />
         <div className="space-y-4">
           {connectedBuyers.map((connection) => {
             const buyerInfo = connection.buyers;

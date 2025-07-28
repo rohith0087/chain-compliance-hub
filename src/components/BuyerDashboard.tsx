@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -12,6 +12,8 @@ import BuyerComplianceDashboard from '@/components/dashboard/BuyerComplianceDash
 import { Building2, Users, ListChecks, Plus, BarChart3, FileCheck } from 'lucide-react';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import BuyerDocumentsDashboard from '@/components/documents/BuyerDocumentsDashboard';
+import { BuyerIdCard } from '@/components/buyer/BuyerIdCard';
+import { supabase } from '@/integrations/supabase/client';
 
 interface BuyerDashboardProps {
   user: {
@@ -26,8 +28,35 @@ interface BuyerDashboardProps {
 const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showRequestForm, setShowRequestForm] = useState(false);
-  const { profile } = useAuth();
+  const [buyerProfile, setBuyerProfile] = useState<any>(null);
+  const { user: authUser, profile } = useAuth();
   const { t } = useTranslation(['dashboard', 'common']);
+
+  // Fetch buyer profile data
+  useEffect(() => {
+    const fetchBuyerProfile = async () => {
+      if (!authUser) return;
+
+      try {
+        const { data: buyer, error } = await supabase
+          .from('buyers')
+          .select('*')
+          .eq('profile_id', authUser.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching buyer profile:', error);
+          return;
+        }
+
+        setBuyerProfile(buyer);
+      } catch (error) {
+        console.error('Error in fetchBuyerProfile:', error);
+      }
+    };
+
+    fetchBuyerProfile();
+  }, [authUser]);
 
   const handleFindSuppliersClick = () => {
     console.log('Find Suppliers button clicked, switching to suppliers tab');
@@ -132,6 +161,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                 </div>
               </CardContent>
             </Card>
+
+            {/* Show Buyer ID Card if available */}
+            {buyerProfile?.buyer_id_number && (
+              <BuyerIdCard buyerId={buyerProfile.buyer_id_number} />
+            )}
 
             {/* Show the connect with suppliers message if no connections */}
             <Card>

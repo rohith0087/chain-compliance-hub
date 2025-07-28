@@ -294,7 +294,7 @@ const BuyerComplianceDashboard = () => {
         </TabsContent>
 
         <TabsContent value="analytics">
-          <ComplianceDashboard userRole="buyer" data={documentRequests} />
+          <ComplianceDashboard userRole="buyer" data={{ documentRequests }} />
         </TabsContent>
       </Tabs>
 

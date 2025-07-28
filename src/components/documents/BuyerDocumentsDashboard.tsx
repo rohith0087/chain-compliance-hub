@@ -16,7 +16,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import DocumentsFilter from './DocumentsFilter';
 import DocumentCard from './DocumentCard';
-import DocumentTimeline from './DocumentTimeline';
+import DocumentActivityDashboard from './DocumentActivityDashboard';
 import DocumentRoadmap from './DocumentRoadmap';
 import BuyerDocumentsManager from './BuyerDocumentsManager';
 import DocumentDeclineDialog from './DocumentDeclineDialog';
@@ -366,14 +366,17 @@ const BuyerDocumentsDashboard = () => {
     rejected: documents.filter(doc => doc.effectiveStatus === 'rejected').length
   };
 
-  // Generate timeline events
-  const timelineEvents = documents.slice(0, 10).map(doc => ({
+  // Generate activity events for the new dashboard
+  const activityEvents = documents.map(doc => ({
     id: doc.id,
     type: doc.effectiveStatus as 'created' | 'submitted' | 'approved' | 'rejected' | 'expired' | 'reminder',
     title: `Document ${doc.effectiveStatus}`,
     description: `${doc.document_type} - ${doc.suppliers?.company_name || 'Unknown Supplier'}`,
     date: doc.updated_at || doc.created_at,
-    documentTitle: doc.document_type
+    documentTitle: doc.document_type,
+    supplier: doc.suppliers?.company_name,
+    priority: doc.priority as 'high' | 'medium' | 'low',
+    category: doc.category
   }));
 
   // Generate roadmap items with proper status mapping
@@ -478,7 +481,7 @@ const BuyerDocumentsDashboard = () => {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="documents">Document Manager</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          <TabsTrigger value="timeline">Activity</TabsTrigger>
           <TabsTrigger value="roadmap">Roadmap</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
@@ -550,7 +553,7 @@ const BuyerDocumentsDashboard = () => {
         </TabsContent>
 
         <TabsContent value="timeline">
-          <DocumentTimeline events={timelineEvents} />
+          <DocumentActivityDashboard events={activityEvents} documents={documents} />
         </TabsContent>
 
         <TabsContent value="roadmap">

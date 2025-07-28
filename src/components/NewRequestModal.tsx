@@ -115,6 +115,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
         const { data: request, error } = await supabase
           .from('document_requests')
           .insert({
+            title: doc.title,
             description: doc.description,
             document_type: doc.title,
             category: doc.category,

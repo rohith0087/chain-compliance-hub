@@ -254,7 +254,7 @@ const BuyerDocumentsDashboard = () => {
       });
 
       // Reload documents to reflect the change
-      loadDocuments();
+      await loadDocuments();
     } catch (error) {
       console.error('Error approving document:', error);
       toast({
@@ -337,7 +337,7 @@ const BuyerDocumentsDashboard = () => {
 
       // Close decline dialog and reload documents
       setDeclineDialog({ isOpen: false, documentId: '', documentTitle: '' });
-      loadDocuments();
+      await loadDocuments();
     } catch (error) {
       console.error('Error declining document:', error);
       toast({

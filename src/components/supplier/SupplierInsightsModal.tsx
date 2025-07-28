@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { PDFExportService, PDFExportData } from '@/services/PDFExportService';
 
 interface SupplierInsightsModalProps {
   isOpen: boolean;
@@ -217,42 +218,54 @@ const SupplierInsightsModal = ({ isOpen, onClose, supplier, buyerId }: SupplierI
     }
   };
 
-  // Export functionality
-  const handleExport = () => {
-    const exportData = {
-      supplierInfo: {
-        name: supplier.company_name,
-        industry: supplier.industry,
-        email: supplier.contact_email,
-        phone: supplier.phone
-      },
-      metrics: overallMetrics,
-      riskAssessment: riskAssessment,
-      requests: requests.map(r => ({
-        title: r.title,
-        type: r.document_type,
-        category: r.category,
-        status: r.status,
-        priority: r.priority,
-        dueDate: r.due_date,
-        createdDate: r.created_at
-      })),
-      categoryStats: categoryStats
-    };
+  // Enhanced PDF Export functionality
+  const handleExport = async () => {
+    try {
+      toast({
+        title: "Generating PDF Report",
+        description: "Please wait while we prepare your compliance report...",
+      });
 
-    const dataStr = JSON.stringify(exportData, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    const exportFileDefaultName = `${supplier.company_name}_compliance_report_${format(new Date(), 'yyyy-MM-dd')}.json`;
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
+      // Convert category stats to array format
+      const categoryStatsArray = Object.entries(categoryStats).map(([category, stats]: [string, any]) => ({
+        category,
+        total: stats.total,
+        approved: stats.approved,
+        pending: stats.pending,
+        rejected: stats.rejected,
+        submitted: stats.submitted
+      }));
 
-    toast({
-      title: "Report Exported",
-      description: "Supplier compliance report downloaded successfully.",
-    });
+      const pdfData: PDFExportData = {
+        supplier: supplier,
+        requests: requests,
+        categoryStats: categoryStatsArray,
+        overallStats: {
+          totalRequests: overallMetrics.totalRequests,
+          approvedRequests: overallMetrics.approvedRequests,
+          pendingRequests: overallMetrics.pendingRequests,
+          rejectedRequests: overallMetrics.rejectedRequests,
+          complianceScore: overallMetrics.complianceScore
+        },
+        riskAssessment: riskAssessment,
+        buyerId: buyerId
+      };
+
+      const pdfService = new PDFExportService();
+      await pdfService.generateSupplierReport(pdfData);
+
+      toast({
+        title: "PDF Report Generated",
+        description: "Supplier compliance report downloaded successfully as PDF with visualizations.",
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to generate PDF report. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (

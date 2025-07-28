@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -35,39 +35,144 @@ const ComplianceDashboard = ({ userRole, data }: ComplianceDashboardProps) => {
 
   const COLORS = ['#10b981', '#f59e0b', '#ef4444', '#3b82f6'];
 
-  // Sample data - in real app this would come from props
-  const complianceData = {
-    overallScore: 85,
-    trend: +12,
-    criticalIssues: 3,
-    expiringDocuments: 5,
-    completionRate: 78,
-    avgResponseTime: '2.3 days'
-  };
+  // Extract document requests from data
+  const documentRequests = data?.documentRequests || [];
 
-  const statusDistribution = [
-    { name: 'Approved', value: 45, color: '#10b981' },
-    { name: 'Pending', value: 30, color: '#f59e0b' },
-    { name: 'Rejected', value: 15, color: '#ef4444' },
-    { name: 'Submitted', value: 10, color: '#3b82f6' }
-  ];
+  // Calculate dynamic metrics
+  const dynamicMetrics = useMemo(() => {
+    if (!documentRequests.length) {
+      return {
+        complianceData: { overallScore: 0, trend: 0, criticalIssues: 0, completionRate: 0, avgResponseTime: '0 days' },
+        statusDistribution: [],
+        monthlyTrend: [],
+        categoryBreakdown: [],
+        upcomingDeadlines: [],
+        actionItems: { critical: 0, upcoming: 0, completed: 0 }
+      };
+    }
 
-  const monthlyTrend = [
-    { month: 'Jan', requests: 20, completed: 18 },
-    { month: 'Feb', requests: 25, completed: 22 },
-    { month: 'Mar', requests: 30, completed: 28 },
-    { month: 'Apr', requests: 28, completed: 25 },
-    { month: 'May', requests: 35, completed: 32 },
-    { month: 'Jun', requests: 32, completed: 30 }
-  ];
+    // Calculate overall metrics
+    const totalRequests = documentRequests.length;
+    const approvedCount = documentRequests.filter(req => req.status === 'approved').length;
+    const rejectedCount = documentRequests.filter(req => req.status === 'rejected').length;
+    const pendingCount = documentRequests.filter(req => req.status === 'pending').length;
+    const submittedCount = documentRequests.filter(req => req.status === 'submitted').length;
 
-  const categoryBreakdown = [
-    { category: 'Insurance', count: 12, compliance: 85 },
-    { category: 'Certifications', count: 8, compliance: 92 },
-    { category: 'Financial', count: 6, compliance: 78 },
-    { category: 'Safety', count: 10, compliance: 88 },
-    { category: 'Quality', count: 7, compliance: 82 }
-  ];
+    // Calculate compliance score (approved / total * 100)
+    const overallScore = totalRequests > 0 ? Math.round((approvedCount / totalRequests) * 100) : 0;
+    
+    // Calculate completion rate (approved + submitted / total * 100)
+    const completionRate = totalRequests > 0 ? Math.round(((approvedCount + submittedCount) / totalRequests) * 100) : 0;
+
+    // Count critical issues (overdue + rejected)
+    const now = new Date();
+    const overdueCount = documentRequests.filter(req => 
+      req.due_date && new Date(req.due_date) < now && req.status !== 'approved'
+    ).length;
+    const criticalIssues = overdueCount + rejectedCount;
+
+    // Calculate average response time
+    const completedRequests = documentRequests.filter(req => req.status === 'approved' || req.status === 'submitted');
+    let avgResponseTime = '0 days';
+    if (completedRequests.length > 0) {
+      const totalDays = completedRequests.reduce((sum, req) => {
+        const created = new Date(req.created_at);
+        const updated = new Date(req.updated_at);
+        const daysDiff = Math.ceil((updated.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+        return sum + daysDiff;
+      }, 0);
+      const avgDays = Math.round(totalDays / completedRequests.length);
+      avgResponseTime = `${avgDays} days`;
+    }
+
+    // Status distribution for pie chart
+    const statusDistribution = [
+      { name: 'Approved', value: approvedCount, color: '#10b981' },
+      { name: 'Pending', value: pendingCount, color: '#f59e0b' },
+      { name: 'Rejected', value: rejectedCount, color: '#ef4444' },
+      { name: 'Submitted', value: submittedCount, color: '#3b82f6' }
+    ].filter(item => item.value > 0);
+
+    // Monthly trend data
+    const monthlyData = {};
+    documentRequests.forEach(req => {
+      const month = new Date(req.created_at).toLocaleDateString('en-US', { month: 'short' });
+      if (!monthlyData[month]) {
+        monthlyData[month] = { month, requests: 0, completed: 0 };
+      }
+      monthlyData[month].requests++;
+      if (req.status === 'approved' || req.status === 'submitted') {
+        monthlyData[month].completed++;
+      }
+    });
+    const monthlyTrend = Object.values(monthlyData);
+
+    // Category breakdown
+    const categoryData: Record<string, { category: string; count: number; approved: number }> = {};
+    documentRequests.forEach(req => {
+      const category = req.category || 'Other';
+      if (!categoryData[category]) {
+        categoryData[category] = { category, count: 0, approved: 0 };
+      }
+      categoryData[category].count++;
+      if (req.status === 'approved') {
+        categoryData[category].approved++;
+      }
+    });
+    const categoryBreakdown = Object.values(categoryData).map(cat => ({
+      ...cat,
+      compliance: cat.count > 0 ? Math.round((cat.approved / cat.count) * 100) : 0
+    }));
+
+    // Upcoming deadlines
+    const upcomingDeadlines = documentRequests
+      .filter(req => req.due_date && req.status !== 'approved')
+      .map(req => {
+        const dueDate = new Date(req.due_date);
+        const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        return {
+          ...req,
+          daysUntilDue,
+          isOverdue: daysUntilDue < 0,
+          isUrgent: daysUntilDue <= 3 && daysUntilDue >= 0
+        };
+      })
+      .sort((a, b) => a.daysUntilDue - b.daysUntilDue)
+      .slice(0, 5);
+
+    // Action items
+    const upcomingCount = documentRequests.filter(req => {
+      if (!req.due_date || req.status === 'approved') return false;
+      const daysUntilDue = Math.ceil((new Date(req.due_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      return daysUntilDue <= 7 && daysUntilDue >= 0;
+    }).length;
+
+    const thisMonth = new Date().getMonth();
+    const completedThisMonth = documentRequests.filter(req => 
+      req.status === 'approved' && new Date(req.updated_at).getMonth() === thisMonth
+    ).length;
+
+    return {
+      complianceData: {
+        overallScore,
+        trend: 0, // Would need historical data to calculate trend
+        criticalIssues,
+        completionRate,
+        avgResponseTime
+      },
+      statusDistribution,
+      monthlyTrend,
+      categoryBreakdown,
+      upcomingDeadlines,
+      actionItems: {
+        critical: criticalIssues,
+        upcoming: upcomingCount,
+        completed: completedThisMonth
+      }
+    };
+  }, [documentRequests]);
+
+  const { complianceData, statusDistribution, monthlyTrend, categoryBreakdown, upcomingDeadlines, actionItems } = dynamicMetrics;
 
   return (
     <div className="space-y-6">
@@ -237,38 +342,63 @@ const ComplianceDashboard = ({ userRole, data }: ComplianceDashboardProps) => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 border rounded-lg border-red-200 bg-red-50">
-                <div className="flex items-center space-x-3">
-                  <AlertCircle className="w-5 h-5 text-red-500" />
-                  <div>
-                    <p className="font-medium">ISO 9001 Certificate</p>
-                    <p className="text-sm text-gray-500">Quality Management</p>
-                  </div>
+              {upcomingDeadlines.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No upcoming deadlines</p>
                 </div>
-                <Badge variant="destructive">Due in 2 days</Badge>
-              </div>
-              
-              <div className="flex items-center justify-between p-3 border rounded-lg border-yellow-200 bg-yellow-50">
-                <div className="flex items-center space-x-3">
-                  <Calendar className="w-5 h-5 text-yellow-500" />
-                  <div>
-                    <p className="font-medium">Insurance Policy</p>
-                    <p className="text-sm text-gray-500">General Liability</p>
-                  </div>
-                </div>
-                <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Due in 5 days</Badge>
-              </div>
-
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <Clock className="w-5 h-5 text-blue-500" />
-                  <div>
-                    <p className="font-medium">Safety Training Records</p>
-                    <p className="text-sm text-gray-500">Annual Update</p>
-                  </div>
-                </div>
-                <Badge variant="outline">Due in 10 days</Badge>
-              </div>
+              ) : (
+                upcomingDeadlines.map((deadline, index) => {
+                  const isOverdue = deadline.isOverdue;
+                  const isUrgent = deadline.isUrgent;
+                  const daysText = isOverdue 
+                    ? `Overdue by ${Math.abs(deadline.daysUntilDue)} days`
+                    : `Due in ${deadline.daysUntilDue} days`;
+                  
+                  return (
+                    <div 
+                      key={index} 
+                      className={`flex items-center justify-between p-3 border rounded-lg ${
+                        isOverdue 
+                          ? 'border-red-200 bg-red-50' 
+                          : isUrgent 
+                          ? 'border-yellow-200 bg-yellow-50'
+                          : 'border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        {isOverdue ? (
+                          <AlertCircle className="w-5 h-5 text-red-500" />
+                        ) : isUrgent ? (
+                          <Calendar className="w-5 h-5 text-yellow-500" />
+                        ) : (
+                          <Clock className="w-5 h-5 text-blue-500" />
+                        )}
+                        <div>
+                          <p className="font-medium">{deadline.title}</p>
+                          <p className="text-sm text-gray-500">{deadline.category}</p>
+                        </div>
+                      </div>
+                      <Badge 
+                        variant={
+                          isOverdue 
+                            ? "destructive" 
+                            : isUrgent 
+                            ? "secondary"
+                            : "outline"
+                        }
+                        className={
+                          isUrgent && !isOverdue
+                            ? "bg-yellow-100 text-yellow-800"
+                            : ""
+                        }
+                      >
+                        {daysText}
+                      </Badge>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </CardContent>
         </Card>
@@ -286,23 +416,23 @@ const ComplianceDashboard = ({ userRole, data }: ComplianceDashboardProps) => {
                 <AlertTriangle className="w-5 h-5 text-red-500" />
                 <h3 className="font-medium text-red-800">Critical</h3>
               </div>
-              <p className="text-sm text-red-700">3 documents require immediate attention</p>
-            </div>
-            
-            <div className="p-4 border rounded-lg border-yellow-200 bg-yellow-50">
-              <div className="flex items-center space-x-2 mb-2">
-                <Clock className="w-5 h-5 text-yellow-500" />
-                <h3 className="font-medium text-yellow-800">Upcoming</h3>
-              </div>
-              <p className="text-sm text-yellow-700">5 documents due within 7 days</p>
-            </div>
-            
-            <div className="p-4 border rounded-lg border-green-200 bg-green-50">
-              <div className="flex items-center space-x-2 mb-2">
-                <CheckCircle className="w-5 h-5 text-green-500" />
-                <h3 className="font-medium text-green-800">On Track</h3>
-              </div>
-              <p className="text-sm text-green-700">12 documents completed this month</p>
+               <p className="text-sm text-red-700">{actionItems.critical} documents require immediate attention</p>
+             </div>
+             
+             <div className="p-4 border rounded-lg border-yellow-200 bg-yellow-50">
+               <div className="flex items-center space-x-2 mb-2">
+                 <Clock className="w-5 h-5 text-yellow-500" />
+                 <h3 className="font-medium text-yellow-800">Upcoming</h3>
+               </div>
+               <p className="text-sm text-yellow-700">{actionItems.upcoming} documents due within 7 days</p>
+             </div>
+             
+             <div className="p-4 border rounded-lg border-green-200 bg-green-50">
+               <div className="flex items-center space-x-2 mb-2">
+                 <CheckCircle className="w-5 h-5 text-green-500" />
+                 <h3 className="font-medium text-green-800">On Track</h3>
+               </div>
+               <p className="text-sm text-green-700">{actionItems.completed} documents completed this month</p>
             </div>
           </div>
         </CardContent>

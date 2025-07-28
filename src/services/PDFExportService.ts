@@ -64,7 +64,8 @@ export class PDFExportService {
     
     // Save the PDF with formatted filename
     const timestamp = new Date().toISOString().split('T')[0];
-    this.doc.save(`${data.supplier.company_name}_compliance_report_${timestamp}_${data.buyerId}.pdf`);
+    const companyName = this.safeText(data.supplier?.company_name).replace(/[^a-zA-Z0-9]/g, '_');
+    this.doc.save(`${companyName}_compliance_report_${timestamp}_${data.buyerId}.pdf`);
   }
 
   private async addExecutiveSummary(data: PDFExportData): Promise<void> {
@@ -80,7 +81,7 @@ export class PDFExportService {
     
     this.doc.setFontSize(14);
     this.doc.setFont('helvetica', 'normal');
-    this.doc.text(data.supplier.company_name.toUpperCase(), this.margin, 35);
+    this.doc.text(this.safeText(data.supplier?.company_name).toUpperCase(), this.margin, 35);
     
     const date = new Date().toLocaleDateString('en-US', { 
       year: 'numeric', 
@@ -109,11 +110,11 @@ export class PDFExportService {
     this.doc.setTextColor(0, 0, 0);
     
     const summary = [
-      `• Overall Compliance Score: ${data.complianceScore}% (${this.getPerformanceRating(data.complianceScore)})`,
-      `• Risk Assessment: ${data.riskLevel} Risk Level`,
-      `• Total Requests Processed: ${data.totalRequests}`,
-      `• Average Response Time: ${data.averageResponseTime} days`,
-      `• Outstanding Issues: ${data.pendingRequests + data.overdueRequests} pending/overdue requests`
+      `• Overall Compliance Score: ${this.safeNumber(data.complianceScore)}% (${this.getPerformanceRating(data.complianceScore)})`,
+      `• Risk Assessment: ${this.safeText(data.riskLevel)} Risk Level`,
+      `• Total Requests Processed: ${this.safeNumber(data.totalRequests)}`,
+      `• Average Response Time: ${this.safeNumber(data.averageResponseTime)} days`,
+      `• Outstanding Issues: ${this.safeNumber(data.pendingRequests + data.overdueRequests)} pending/overdue requests`
     ];
     
     summary.forEach((line, index) => {
@@ -147,11 +148,11 @@ export class PDFExportService {
     this.doc.setTextColor(0, 0, 0);
     
     const companyInfo = [
-      { label: 'Company Name:', value: data.supplier.company_name },
-      { label: 'Email:', value: data.supplier.email },
-      { label: 'Phone:', value: data.supplier.phone || 'Not provided' },
-      { label: 'Industry:', value: data.supplier.industry || 'Not specified' },
-      { label: 'Country:', value: data.supplier.country || 'Not specified' }
+      { label: 'Company Name:', value: this.safeText(data.supplier?.company_name) },
+      { label: 'Email:', value: this.safeText(data.supplier?.email) },
+      { label: 'Phone:', value: this.safeText(data.supplier?.phone) || 'Not provided' },
+      { label: 'Industry:', value: this.safeText(data.supplier?.industry) || 'Not specified' },
+      { label: 'Country:', value: this.safeText(data.supplier?.country) || 'Not specified' }
     ];
     
     companyInfo.forEach((item, index) => {
@@ -173,7 +174,7 @@ export class PDFExportService {
     this.doc.setTextColor(255, 255, 255);
     this.doc.setFontSize(10);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.text(`${data.riskLevel.toUpperCase()} RISK`, riskX + 30, riskY + 7, { align: 'center' });
+    this.doc.text(`${this.safeText(data.riskLevel).toUpperCase()} RISK`, riskX + 30, riskY + 7, { align: 'center' });
     
     this.doc.setTextColor(0, 0, 0);
   }
@@ -641,8 +642,24 @@ export class PDFExportService {
                  this.pageWidth / 2, footerY + 6, { align: 'center' });
   }
 
+  // Helper methods for safe text and number handling
+  private safeText(value: any): string {
+    if (value === null || value === undefined) {
+      return 'Not provided';
+    }
+    return String(value);
+  }
+
+  private safeNumber(value: any): number {
+    if (value === null || value === undefined || isNaN(Number(value))) {
+      return 0;
+    }
+    return Number(value);
+  }
+
   private getRiskColor(level: string): [number, number, number] {
-    switch (level.toLowerCase()) {
+    const safeLevel = this.safeText(level);
+    switch (safeLevel.toLowerCase()) {
       case 'high':
         return [239, 68, 68]; // red-500
       case 'medium':

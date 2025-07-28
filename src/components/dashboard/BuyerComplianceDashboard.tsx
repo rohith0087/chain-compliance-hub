@@ -16,9 +16,11 @@ import {
   Building2,
   FileCheck,
   Eye,
-  Download
+  Download,
+  MousePointer
 } from 'lucide-react';
 import ComplianceDashboard from './ComplianceDashboard';
+import SupplierInsightsModal from '../supplier/SupplierInsightsModal';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -26,6 +28,9 @@ const BuyerComplianceDashboard = () => {
   const [supplierStats, setSupplierStats] = useState<any[]>([]);
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
+  const [showInsightsModal, setShowInsightsModal] = useState(false);
+  const [buyerId, setBuyerId] = useState<string>('');
   const { user } = useAuth();
   const { t } = useTranslation(['dashboard', 'common']);
 
@@ -46,6 +51,8 @@ const BuyerComplianceDashboard = () => {
         .single();
 
       if (buyerProfile) {
+        setBuyerId(buyerProfile.id);
+        
         // Load document requests with supplier info
         const { data: requests } = await supabase
           .from('document_requests')
@@ -108,6 +115,11 @@ const BuyerComplianceDashboard = () => {
       : 0,
     pendingRequests: documentRequests.filter(r => r.status === 'pending').length,
     highRiskSuppliers: supplierStats.filter(s => s.complianceScore < 70).length
+  };
+
+  const handleSupplierClick = (supplier: any) => {
+    setSelectedSupplier(supplier);
+    setShowInsightsModal(true);
   };
 
   if (loading) {
@@ -240,13 +252,20 @@ const BuyerComplianceDashboard = () => {
             <CardContent>
               <div className="space-y-4">
                 {supplierStats.map((supplier) => (
-                  <div key={supplier.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div 
+                    key={supplier.id} 
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                    onClick={() => handleSupplierClick(supplier)}
+                  >
                     <div className="flex items-center space-x-4">
                       <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                         <Building2 className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
-                        <h3 className="font-medium">{supplier.company_name}</h3>
+                        <h3 className="font-medium flex items-center gap-2">
+                          {supplier.company_name}
+                          <MousePointer className="w-3 h-3 text-muted-foreground" />
+                        </h3>
                         <p className="text-sm text-gray-500">{supplier.industry}</p>
                         <p className="text-xs text-gray-400">
                           {supplier.totalRequests} requests • {supplier.approvedRequests} approved
@@ -273,6 +292,13 @@ const BuyerComplianceDashboard = () => {
           <ComplianceDashboard userRole="buyer" data={documentRequests} />
         </TabsContent>
       </Tabs>
+
+      <SupplierInsightsModal
+        isOpen={showInsightsModal}
+        onClose={() => setShowInsightsModal(false)}
+        supplier={selectedSupplier}
+        buyerId={buyerId}
+      />
     </div>
   );
 };

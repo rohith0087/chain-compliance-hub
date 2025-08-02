@@ -185,18 +185,39 @@ export class PDFExportService {
     this.doc.setTextColor(30, 58, 138);
     this.doc.text('VISUAL ANALYTICS DASHBOARD', this.margin, 30);
     this.doc.setTextColor(0, 0, 0);
-    
+
+    // --- FIX START ---
+    // The original code used a rigid two-column layout which caused components to overlap.
+    // This has been changed to a more robust layout that stacks components vertically after the first row.
+
+    // Row 1: Two columns for top-level stats
+    const topY = 50;
+    const leftX = this.margin;
+    const rightX = this.pageWidth / 2 + 5;
+
     // Left Column - Compliance Score Circle
-    await this.drawComplianceScoreCircle(data.complianceScore, 40, 50);
-    
-    // Right Column - Status Distribution Pie Chart
-    await this.drawStatusPieChart(data, 130, 50);
-    
-    // Left Column - Category Performance Bar Chart (positioned below compliance circle)
-    await this.drawCategoryBarChart(data.categoryStats, 40, 140);
-    
-    // Right Column - Risk Assessment Gauge (positioned below pie chart)
-    await this.drawRiskGauge(data.riskLevel, data.complianceScore, 130, 140);
+    await this.drawComplianceScoreCircle(data.complianceScore, leftX, topY);
+
+    // Right Column - Status Distribution Legend
+    await this.drawStatusPieChart(data, rightX, topY);
+
+    // --- NEW VERTICAL LAYOUT FOR THE REST TO PREVENT OVERLAP ---
+
+    // Calculate the Y position for the next section, starting below the components in the first row.
+    // This provides adequate spacing and prevents hardcoded values from causing issues.
+    let yPos = 140;
+
+    // Section: Category Performance (now takes full width)
+    await this.drawCategoryBarChart(data.categoryStats, leftX, yPos);
+
+    // Update yPos to be below the category chart, adding padding.
+    const categoryStatsCount = Math.min(data.categoryStats.length, 5);
+    const categoryChartHeight = 10 + (categoryStatsCount * 15); // Approximate height: title space + bar space
+    yPos += categoryChartHeight + 15; // Add vertical padding
+
+    // Section: Risk Assessment (now takes full width)
+    await this.drawRiskGauge(data.riskLevel, data.complianceScore, leftX, yPos);
+    // --- FIX END ---
   }
 
   private async drawComplianceScoreCircle(score: number, x: number, y: number): Promise<void> {
@@ -220,7 +241,10 @@ export class PDFExportService {
     
     // Draw the arc (simplified circle for now since jsPDF doesn't have native arc support)
     if (score > 0) {
-      this.doc.circle(centerX, centerY, radius - 2, 'S');
+      // This is a simplified representation. True arc drawing is more complex in jsPDF.
+      // For this example, we draw a full progress circle to represent the score's color.
+      this.doc.setLineWidth(8);
+      this.doc.circle(centerX, centerY, radius, 'S'); // Redrawing with color
     }
     
     // Add text
@@ -235,10 +259,6 @@ export class PDFExportService {
   }
 
   private async drawStatusPieChart(data: PDFExportData, x: number, y: number): Promise<void> {
-    const radius = 25;
-    const centerX = x + radius;
-    const centerY = y + radius;
-    
     const total = data.totalRequests;
     if (total === 0) return;
     
@@ -249,23 +269,26 @@ export class PDFExportService {
       { value: data.submittedRequests, color: [59, 130, 246], label: 'Submitted' }
     ];
     
+    this.doc.setFontSize(12);
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.text('Request Status Distribution', x, y - 5);
+    
     // Draw simplified pie chart as rectangles for legend
-    let legendY = y + 60;
-    slices.forEach((slice, index) => {
+    let legendY = y + 10;
+    let itemsDrawn = 0;
+    slices.forEach((slice) => {
       if (slice.value > 0) {
+        const itemY = legendY + (itemsDrawn * 12);
         this.doc.setFillColor(slice.color[0], slice.color[1], slice.color[2]);
-        this.doc.rect(x, legendY + (index * 12), 8, 8, 'F');
+        this.doc.rect(x, itemY, 8, 8, 'F');
         
         this.doc.setFontSize(9);
         this.doc.setFont('helvetica', 'normal');
         this.doc.setTextColor(0, 0, 0);
-        this.doc.text(`${slice.label}: ${slice.value} (${Math.round((slice.value / total) * 100)}%)`, x + 12, legendY + (index * 12) + 6);
+        this.doc.text(`${slice.label}: ${slice.value} (${Math.round((slice.value / total) * 100)}%)`, x + 12, itemY + 6);
+        itemsDrawn++;
       }
     });
-    
-    this.doc.setFontSize(12);
-    this.doc.setFont('helvetica', 'bold');
-    this.doc.text('Request Status Distribution', x, y - 5);
   }
 
   private async drawCategoryBarChart(categoryStats: any[], x: number, y: number): Promise<void> {
@@ -303,7 +326,10 @@ export class PDFExportService {
     this.doc.setFont('helvetica', 'bold');
     this.doc.text('Risk Assessment', x, y - 5);
     
-    const gaugeWidth = 80;
+    // --- FIX START ---
+    // Changed the gaugeWidth to be responsive to the available page width.
+    const gaugeWidth = this.pageWidth - 2 * x; // x is the margin, so this makes it full-width.
+    // --- FIX END ---
     const gaugeHeight = 20;
     
     // Background
@@ -318,16 +344,17 @@ export class PDFExportService {
     };
     
     const color = riskColors[riskLevel as keyof typeof riskColors] || [229, 231, 235];
-    const indicatorWidth = (score / 100) * gaugeWidth;
     
+    // The visual in the image shows a solid red bar for "HIGH RISK". 
+    // We'll make the entire bar the color of the risk level for a clearer visual indicator.
     this.doc.setFillColor(color[0], color[1], color[2]);
-    this.doc.rect(x, y, indicatorWidth, gaugeHeight, 'F');
+    this.doc.rect(x, y, gaugeWidth, gaugeHeight, 'F');
     
     // Text
     this.doc.setFontSize(10);
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(255, 255, 255);
-    this.doc.text(`${riskLevel.toUpperCase()} RISK`, x + gaugeWidth/2, y + gaugeHeight/2 + 2, { align: 'center' });
+    this.doc.text(`${riskLevel.toUpperCase()} RISK`, x + gaugeWidth/2, y + gaugeHeight/2 + 3, { align: 'center' });
     this.doc.setTextColor(0, 0, 0);
   }
 
@@ -347,7 +374,7 @@ export class PDFExportService {
     this.drawDetailedCategoryAnalysis(data.categoryStats, categoryY);
     
     // Performance Trends
-    const trendsY = 180;
+    const trendsY = (this.doc as any).lastAutoTable.finalY + 15;
     this.drawPerformanceTrends(data, trendsY);
   }
 
@@ -673,3 +700,7 @@ export class PDFExportService {
 }
 
 export type { PDFExportData };
+content_copy
+download
+Use code with caution.
+TypeScript

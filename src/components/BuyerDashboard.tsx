@@ -9,10 +9,11 @@ import RequestsList from '@/components/requests/RequestsList';
 import SupplierDiscovery from '@/components/buyer/SupplierDiscovery';
 import NewRequestModal from '@/components/NewRequestModal';
 import BuyerComplianceDashboard from '@/components/dashboard/BuyerComplianceDashboard';
-import { Building2, Users, ListChecks, Plus, BarChart3, FileCheck } from 'lucide-react';
+import { Building2, Users, ListChecks, Plus, BarChart3, FileCheck, UserCheck } from 'lucide-react';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import BuyerDocumentsDashboard from '@/components/documents/BuyerDocumentsDashboard';
 import { BuyerIdCard } from '@/components/buyer/BuyerIdCard';
+import BuyerConnectionRequests from '@/components/buyer/BuyerConnectionRequests';
 import { supabase } from '@/integrations/supabase/client';
 
 interface BuyerDashboardProps {
@@ -112,6 +113,10 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
             <ListChecks className="w-4 h-4 mr-2" />
             {t('common:navigation.requests')}
           </TabsTrigger>
+          <TabsTrigger value="connections">
+            <UserCheck className="w-4 h-4 mr-2" />
+            Connection Requests
+          </TabsTrigger>
           <TabsTrigger value="suppliers">
             <Users className="w-4 h-4 mr-2" />
             {t('common:navigation.suppliers')}
@@ -194,6 +199,10 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         
         <TabsContent value="requests" className="space-y-2">
           <RequestsList />
+        </TabsContent>
+        
+        <TabsContent value="connections" className="space-y-2">
+          <BuyerConnectionRequests />
         </TabsContent>
         
         <TabsContent value="suppliers" className="space-y-2">

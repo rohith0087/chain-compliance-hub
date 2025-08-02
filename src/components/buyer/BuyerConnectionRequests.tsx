@@ -1,0 +1,282 @@
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Building2, Calendar, Check, X, UserCheck } from 'lucide-react';
+import { format } from 'date-fns';
+
+interface ConnectionRequest {
+  id: string;
+  buyer_id: string;
+  supplier_id: string;
+  status: 'pending' | 'approved' | 'rejected';
+  notes: string | null;
+  requested_at: string;
+  supplier: {
+    company_name: string;
+    industry: string;
+    profile: {
+      full_name: string;
+    };
+  };
+}
+
+const BuyerConnectionRequests = () => {
+  const [connectionRequests, setConnectionRequests] = useState<ConnectionRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  const fetchConnectionRequests = async () => {
+    if (!user) return;
+
+    try {
+      // First get the buyer profile to get buyer_id
+      const { data: buyer, error: buyerError } = await supabase
+        .from('buyers')
+        .select('id')
+        .eq('profile_id', user.id)
+        .single();
+
+      if (buyerError || !buyer) {
+        console.error('Error fetching buyer profile:', buyerError);
+        return;
+      }
+
+      // Then fetch connection requests for this buyer
+      const { data, error } = await supabase
+        .from('buyer_supplier_connections')
+        .select(`
+          id,
+          buyer_id,
+          supplier_id,
+          status,
+          notes,
+          requested_at,
+          supplier:suppliers (
+            company_name,
+            industry,
+            profile:profiles (
+              full_name
+            )
+          )
+        `)
+        .eq('buyer_id', buyer.id)
+        .order('requested_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching connection requests:', error);
+        return;
+      }
+
+      setConnectionRequests((data || []) as ConnectionRequest[]);
+    } catch (error) {
+      console.error('Error in fetchConnectionRequests:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchConnectionRequests();
+
+    // Set up real-time subscription for new connection requests
+    const channel = supabase
+      .channel('buyer-connection-requests')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'buyer_supplier_connections'
+        },
+        () => {
+          fetchConnectionRequests();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  const handleConnectionResponse = async (connectionId: string, action: 'approved' | 'rejected') => {
+    try {
+      const { error } = await supabase
+        .from('buyer_supplier_connections')
+        .update({ status: action })
+        .eq('id', connectionId);
+
+      if (error) {
+        console.error('Error updating connection:', error);
+        toast({
+          title: "Error",
+          description: "Failed to update connection request",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Get the connection details to create notification for supplier
+      const connection = connectionRequests.find(req => req.id === connectionId);
+      if (connection) {
+        // Get supplier profile to send notification
+        const { data: supplier } = await supabase
+          .from('suppliers')
+          .select('profile_id')
+          .eq('id', connection.supplier_id)
+          .single();
+
+        if (supplier) {
+          // Create notification for supplier
+          await supabase.rpc('create_notification', {
+            p_user_id: supplier.profile_id,
+            p_title: `Connection Request ${action === 'approved' ? 'Approved' : 'Rejected'}`,
+            p_message: `Your connection request has been ${action} by the buyer.`,
+            p_type: 'connection_response',
+            p_reference_id: connectionId
+          });
+        }
+      }
+
+      toast({
+        title: "Success",
+        description: `Connection request ${action} successfully`,
+      });
+
+      // Refresh the data
+      fetchConnectionRequests();
+    } catch (error) {
+      console.error('Error handling connection response:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Pending</Badge>;
+      case 'approved':
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Approved</Badge>;
+      case 'rejected':
+        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Rejected</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {[...Array(3)].map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardContent className="p-6">
+              <div className="h-4 bg-muted rounded w-1/4 mb-2"></div>
+              <div className="h-3 bg-muted rounded w-1/2"></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold mb-2">Connection Requests</h2>
+          <p className="text-muted-foreground">
+            Manage incoming connection requests from suppliers
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <UserCheck className="w-5 h-5" />
+          <span className="text-sm text-muted-foreground">
+            {connectionRequests.filter(req => req.status === 'pending').length} pending
+          </span>
+        </div>
+      </div>
+
+      {connectionRequests.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <UserCheck className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">No Connection Requests</h3>
+            <p className="text-muted-foreground">
+              You haven't received any connection requests from suppliers yet.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {connectionRequests.map((request) => (
+            <Card key={request.id}>
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <Building2 className="w-8 h-8 text-primary mt-1" />
+                    <div>
+                      <CardTitle className="text-lg">{request.supplier.company_name}</CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {request.supplier.industry} • Contact: {request.supplier.profile.full_name}
+                      </p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          Requested {format(new Date(request.requested_at), 'MMM d, yyyy')}
+                        </span>
+                        {getStatusBadge(request.status)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              
+              {request.notes && (
+                <CardContent className="pt-0 pb-3">
+                  <div className="bg-muted/50 rounded-lg p-3">
+                    <p className="text-sm"><strong>Message:</strong> {request.notes}</p>
+                  </div>
+                </CardContent>
+              )}
+
+              {request.status === 'pending' && (
+                <CardContent className="pt-0">
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => handleConnectionResponse(request.id, 'approved')}
+                      className="flex items-center gap-2"
+                      size="sm"
+                    >
+                      <Check className="w-4 h-4" />
+                      Approve
+                    </Button>
+                    <Button
+                      onClick={() => handleConnectionResponse(request.id, 'rejected')}
+                      variant="outline"
+                      className="flex items-center gap-2"
+                      size="sm"
+                    >
+                      <X className="w-4 h-4" />
+                      Reject
+                    </Button>
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default BuyerConnectionRequests;

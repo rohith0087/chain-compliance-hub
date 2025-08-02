@@ -20,7 +20,7 @@ interface ConnectionRequest {
     industry: string;
     profile: {
       full_name: string;
-    };
+    } | null;
   };
 }
 
@@ -59,7 +59,7 @@ const BuyerConnectionRequests = () => {
           supplier:suppliers (
             company_name,
             industry,
-            profile:profiles (
+            profile:profiles!suppliers_profile_id_fkey (
               full_name
             )
           )
@@ -226,7 +226,7 @@ const BuyerConnectionRequests = () => {
                     <div>
                       <CardTitle className="text-lg">{request.supplier.company_name}</CardTitle>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {request.supplier.industry} • Contact: {request.supplier.profile.full_name}
+                        {request.supplier.industry} • Contact: {request.supplier.profile?.full_name || 'N/A'}
                       </p>
                       <div className="flex items-center gap-2 mt-2">
                         <Calendar className="w-4 h-4 text-muted-foreground" />

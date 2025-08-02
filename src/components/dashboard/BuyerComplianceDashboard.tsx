@@ -63,7 +63,8 @@ const BuyerComplianceDashboard = () => {
             suppliers (
               id,
               company_name,
-              industry
+              industry,
+              company_logo_url
             )
           `)
           .eq('buyer_id', buyerProfile.id)
@@ -263,8 +264,20 @@ const BuyerComplianceDashboard = () => {
                     onClick={() => handleSupplierClick(supplier)}
                   >
                     <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Building2 className="w-6 h-6 text-blue-600" />
+                      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center overflow-hidden">
+                        {supplier.company_logo_url ? (
+                          <img 
+                            src={supplier.company_logo_url} 
+                            alt={`${supplier.company_name} logo`}
+                            className="w-full h-full object-cover rounded-lg"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              target.nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                        ) : null}
+                        <Building2 className={`w-6 h-6 text-blue-600 ${supplier.company_logo_url ? 'hidden' : ''}`} />
                       </div>
                       <div>
                         <h3 className="font-medium flex items-center gap-2">

@@ -9,11 +9,12 @@ import RequestsList from '@/components/requests/RequestsList';
 import SupplierDiscovery from '@/components/buyer/SupplierDiscovery';
 import NewRequestModal from '@/components/NewRequestModal';
 import BuyerComplianceDashboard from '@/components/dashboard/BuyerComplianceDashboard';
-import { Building2, Users, ListChecks, Plus, BarChart3, FileCheck, UserCheck } from 'lucide-react';
+import { Building2, Users, ListChecks, Plus, BarChart3, FileCheck, UserCheck, Settings } from 'lucide-react';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import BuyerDocumentsDashboard from '@/components/documents/BuyerDocumentsDashboard';
 import { BuyerIdCard } from '@/components/buyer/BuyerIdCard';
 import BuyerConnectionRequests from '@/components/buyer/BuyerConnectionRequests';
+import { BuyerSettingsModal } from '@/components/settings/BuyerSettingsModal';
 import { supabase } from '@/integrations/supabase/client';
 
 interface BuyerDashboardProps {
@@ -29,6 +30,7 @@ interface BuyerDashboardProps {
 const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showRequestForm, setShowRequestForm] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
   const { user: authUser, profile } = useAuth();
   const { t } = useTranslation(['dashboard', 'common']);
@@ -84,6 +86,14 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         <h1 className="text-3xl font-semibold">{t('dashboard:buyer.title')}</h1>
         <div className="space-x-4 flex items-center">
           <NotificationCenter />
+          <Button 
+            onClick={() => setShowSettings(true)}
+            variant="outline"
+            size="sm"
+          >
+            <Settings className="mr-2 h-4 w-4" />
+            Settings
+          </Button>
           {profile?.roles?.includes('supplier') && (
             <Button variant="outline" size="sm" onClick={() => onRoleSwitch('supplier')}>
               {t('common:navigation.switchTo', { role: 'supplier' })}
@@ -120,6 +130,10 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
           <TabsTrigger value="suppliers">
             <Users className="w-4 h-4 mr-2" />
             {t('common:navigation.suppliers')}
+          </TabsTrigger>
+          <TabsTrigger value="settings">
+            <Settings className="w-4 h-4 mr-2" />
+            Settings
           </TabsTrigger>
         </TabsList>
         
@@ -212,6 +226,17 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         <TabsContent value="suppliers" className="space-y-2">
           <SupplierDiscovery />
         </TabsContent>
+        
+        <TabsContent value="settings" className="space-y-2">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold">Settings</h1>
+            </div>
+            <p className="text-muted-foreground">
+              Manage your company information, account settings, and preferences.
+            </p>
+          </div>
+        </TabsContent>
       </Tabs>
 
       <NewRequestModal 
@@ -219,6 +244,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         onClose={() => setShowRequestForm(false)}
         onCreateRequest={handleCreateRequest}
         userType={profile?.industry || 'General Business'}
+      />
+
+      <BuyerSettingsModal 
+        open={showSettings} 
+        onOpenChange={setShowSettings}
       />
     </div>
   );

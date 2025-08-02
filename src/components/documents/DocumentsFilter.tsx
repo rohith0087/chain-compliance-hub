@@ -13,14 +13,16 @@ interface DocumentsFilterProps {
     status: string;
     category: string;
     documentType: string;
+    supplier: string;
     expirationStatus: string;
     dateRange: string;
   };
   onFiltersChange: (filters: any) => void;
   showExpirationFilter?: boolean;
+  availableSuppliers?: { id: string; company_name: string; documentCount: number }[];
 }
 
-const DocumentsFilter = ({ filters, onFiltersChange, showExpirationFilter = false }: DocumentsFilterProps) => {
+const DocumentsFilter = ({ filters, onFiltersChange, showExpirationFilter = false, availableSuppliers = [] }: DocumentsFilterProps) => {
   const updateFilter = (key: string, value: string) => {
     // Convert "all" values back to empty strings for the filter logic
     const actualValue = value === 'all' ? '' : value;
@@ -33,6 +35,7 @@ const DocumentsFilter = ({ filters, onFiltersChange, showExpirationFilter = fals
       status: '',
       category: '',
       documentType: '',
+      supplier: '',
       expirationStatus: '',
       dateRange: ''
     });
@@ -119,6 +122,21 @@ const DocumentsFilter = ({ filters, onFiltersChange, showExpirationFilter = fals
               <SelectItem value="policy">Policy</SelectItem>
               <SelectItem value="report">Report</SelectItem>
               <SelectItem value="invoice">Invoice</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Supplier Filter */}
+          <Select value={getDisplayValue(filters.supplier)} onValueChange={(value) => updateFilter('supplier', value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="All Suppliers" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Suppliers</SelectItem>
+              {availableSuppliers.map((supplier) => (
+                <SelectItem key={supplier.id} value={supplier.id}>
+                  {supplier.company_name} ({supplier.documentCount})
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 

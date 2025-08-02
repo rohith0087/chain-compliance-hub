@@ -27,6 +27,7 @@ const SupplierDocumentsDashboard = () => {
     status: '',
     category: '',
     documentType: '',
+    supplier: '',
     expirationStatus: '',
     dateRange: ''
   });

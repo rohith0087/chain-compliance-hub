@@ -40,9 +40,11 @@ const BuyerDocumentsDashboard = () => {
     status: '',
     category: '',
     documentType: '',
+    supplier: '',
     expirationStatus: '',
     dateRange: ''
   });
+  const [availableSuppliers, setAvailableSuppliers] = useState<any[]>([]);
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -50,8 +52,58 @@ const BuyerDocumentsDashboard = () => {
   useEffect(() => {
     if (user) {
       loadDocuments();
+      loadConnectedSuppliers();
     }
   }, [user, filters]);
+
+  const loadConnectedSuppliers = async () => {
+    try {
+      // Get the buyer profile
+      const { data: buyerProfile } = await supabase
+        .from('buyers')
+        .select('id')
+        .eq('profile_id', user?.id)
+        .single();
+
+      if (!buyerProfile) return;
+
+      // Load connected suppliers with document counts
+      const { data: suppliersData } = await supabase
+        .from('buyer_supplier_connections')
+        .select(`
+          supplier_id,
+          suppliers!inner (
+            id,
+            company_name
+          )
+        `)
+        .eq('buyer_id', buyerProfile.id)
+        .eq('status', 'approved');
+
+      if (!suppliersData) return;
+
+      // Get document counts for each supplier
+      const suppliersWithCounts = await Promise.all(
+        suppliersData.map(async (connection) => {
+          const { count } = await supabase
+            .from('document_requests')
+            .select('*', { count: 'exact', head: true })
+            .eq('buyer_id', buyerProfile.id)
+            .eq('supplier_id', connection.supplier_id);
+
+          return {
+            id: connection.supplier_id,
+            company_name: connection.suppliers.company_name,
+            documentCount: count || 0
+          };
+        })
+      );
+
+      setAvailableSuppliers(suppliersWithCounts);
+    } catch (error) {
+      console.error('Error loading connected suppliers:', error);
+    }
+  };
 
   const loadDocuments = async () => {
     setLoading(true);
@@ -100,6 +152,9 @@ const BuyerDocumentsDashboard = () => {
       }
       if (filters.documentType) {
         query = query.eq('document_type', filters.documentType);
+      }
+      if (filters.supplier) {
+        query = query.eq('supplier_id', filters.supplier);
       }
 
       const { data, error } = await query;
@@ -491,6 +546,7 @@ const BuyerDocumentsDashboard = () => {
             filters={filters}
             onFiltersChange={setFilters}
             showExpirationFilter={false}
+            availableSuppliers={availableSuppliers}
           />
           
           <Card>

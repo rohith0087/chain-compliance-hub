@@ -33,6 +33,7 @@ const BuyerDocumentsManager = ({
     status: '',
     category: '',
     documentType: '',
+    supplier: '',
     expirationStatus: '',
     dateRange: ''
   });

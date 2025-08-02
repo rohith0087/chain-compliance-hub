@@ -168,8 +168,12 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
             </Card>
 
             {/* Show Buyer ID Card if available */}
-            {buyerProfile?.buyer_id_number && (
-              <BuyerIdCard buyerId={buyerProfile.buyer_id_number} />
+            {buyerProfile?.buyer_id_number && profile && (
+              <BuyerIdCard 
+                buyerId={buyerProfile.buyer_id_number}
+                buyerProfile={buyerProfile}
+                userProfile={{ full_name: profile.full_name }}
+              />
             )}
 
             {/* Show the connect with suppliers message if no connections */}

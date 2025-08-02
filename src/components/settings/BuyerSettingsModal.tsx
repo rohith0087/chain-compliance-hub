@@ -109,8 +109,31 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
     }
   };
 
-  const handleLogoUpdate = (url: string | null) => {
+  const handleLogoUpdate = async (url: string | null) => {
     setBuyerData(prev => ({ ...prev, company_logo_url: url || '' }));
+    
+    // Auto-save logo to database immediately
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('buyers')
+        .update({ company_logo_url: url || '' })
+        .eq('profile_id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Logo updated and saved successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save logo",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleIndustryChange = (value: string) => {

@@ -131,10 +131,6 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
             <Users className="w-4 h-4 mr-2" />
             {t('common:navigation.suppliers')}
           </TabsTrigger>
-          <TabsTrigger value="settings">
-            <Settings className="w-4 h-4 mr-2" />
-            Settings
-          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="dashboard" className="space-y-2">
@@ -225,17 +221,6 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         
         <TabsContent value="suppliers" className="space-y-2">
           <SupplierDiscovery />
-        </TabsContent>
-        
-        <TabsContent value="settings" className="space-y-2">
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold">Settings</h1>
-            </div>
-            <p className="text-muted-foreground">
-              Manage your company information, account settings, and preferences.
-            </p>
-          </div>
         </TabsContent>
       </Tabs>
 

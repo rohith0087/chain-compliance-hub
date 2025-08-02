@@ -22,7 +22,7 @@ import {
   BarChart3
 } from 'lucide-react';
 import RoleSwitcher from '@/components/RoleSwitcher';
-import SupplierProfileSetup from '@/components/supplier/SupplierProfileSetup';
+import { SupplierSettingsModal } from '@/components/settings/SupplierSettingsModal';
 import ConnectionRequests from '@/components/supplier/ConnectionRequests';
 import ConnectedBuyersTab from '@/components/supplier/ConnectedBuyersTab';
 import DocumentRequestCard from '@/components/supplier/DocumentRequestCard';
@@ -50,7 +50,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
   const [connectedBuyers, setConnectedBuyers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showSettings, setShowSettings] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   
   // Filter state for document requests
   const [filters, setFilters] = useState({
@@ -170,7 +170,6 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
 
   const handleProfileUpdated = () => {
     loadSupplierData();
-    setShowSettings(false);
   };
 
   // Filter document requests based on current filters
@@ -238,27 +237,6 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
     );
   }
 
-  if (showSettings) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center space-x-3">
-                <Button variant="ghost" onClick={() => setShowSettings(false)}>
-                  ← Back to Dashboard
-                </Button>
-                <h1 className="text-xl font-bold text-gray-900">Company Settings</h1>
-              </div>
-            </div>
-          </div>
-        </header>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <SupplierProfileSetup onProfileCreated={handleProfileUpdated} />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -280,9 +258,9 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
                   onRoleChange={onRoleSwitch}
                 />
               )}
-              <Button variant="ghost" size="sm" onClick={() => setShowSettings(true)}>
+              <Button variant="ghost" size="sm" onClick={() => setShowSettingsModal(true)}>
                 <Settings className="w-4 h-4 mr-2" />
-                Company Settings
+                Settings
               </Button>
               <NotificationCenter />
               <span className="text-sm text-gray-600">Welcome, {user.name}</span>
@@ -310,9 +288,9 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
                     <p className="text-sm text-gray-500">{supplierProfile.contact_email}</p>
                   </div>
                 </div>
-                <Button variant="outline" onClick={() => setShowSettings(true)}>
+                <Button variant="outline" onClick={() => setShowSettingsModal(true)}>
                   <Settings className="w-4 h-4 mr-2" />
-                  Edit Profile
+                  Settings
                 </Button>
               </div>
             </CardContent>
@@ -534,6 +512,12 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
           </TabsContent>
         </Tabs>
       </div>
+      
+      <SupplierSettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        onProfileUpdated={loadSupplierData}
+      />
     </div>
   );
 };

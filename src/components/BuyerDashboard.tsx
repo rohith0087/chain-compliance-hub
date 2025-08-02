@@ -140,56 +140,10 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-3 gap-4">
-                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={handleFindSuppliersClick}>
-                    <CardContent className="p-4 text-center">
-                      <Users className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-                      <h3 className="font-medium">{t('dashboard:buyer.findSuppliers')}</h3>
-                      <p className="text-sm text-gray-600">{t('dashboard:buyer.connectSuppliers')}</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('requests')}>
-                    <CardContent className="p-4 text-center">
-                      <ListChecks className="w-8 h-8 mx-auto mb-2 text-green-600" />
-                      <h3 className="font-medium">{t('dashboard:buyer.myRequests')}</h3>
-                      <p className="text-sm text-gray-600">{t('dashboard:buyer.trackRequests')}</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setShowRequestForm(true)}>
-                    <CardContent className="p-4 text-center">
-                      <Plus className="w-8 h-8 mx-auto mb-2 text-purple-600" />
-                      <h3 className="font-medium">{t('dashboard:buyer.newRequest')}</h3>
-                      <p className="text-sm text-gray-600">{t('dashboard:buyer.requestDocuments')}</p>
-                    </CardContent>
-                  </Card>
-                </div>
-              </CardContent>
             </Card>
 
-            {/* Show Buyer ID Card if available */}
-            {buyerProfile?.buyer_id_number && profile && (
-              <BuyerIdCard 
-                buyerId={buyerProfile.buyer_id_number}
-                buyerProfile={buyerProfile}
-                userProfile={{ full_name: profile.full_name }}
-              />
-            )}
-
-            {/* Show the connect with suppliers message if no connections */}
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Users className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">{t('dashboard:buyer.connectFirst.title')}</h3>
-                <p className="text-gray-600 mb-4">
-                  {t('dashboard:buyer.connectFirst.description')}
-                </p>
-                <Button onClick={handleFindSuppliersClick} className="flex items-center gap-2 mx-auto">
-                  <Users className="w-4 h-4" />
-                  {t('dashboard:buyer.findSuppliers')}
-                </Button>
-              </CardContent>
-            </Card>
+            {/* Compliance Dashboard as main content */}
+            <BuyerComplianceDashboard />
           </div>
         </TabsContent>
         

@@ -5,7 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Calendar, Check, X, UserCheck } from 'lucide-react';
+import { Building2, Calendar, Check, X, UserCheck, Users } from 'lucide-react';
+import { BuyerIdCard } from '@/components/buyer/BuyerIdCard';
+import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 
 interface ConnectionRequest {
@@ -28,8 +30,11 @@ const BuyerConnectionRequests = () => {
   const [connectionRequests, setConnectionRequests] = useState<ConnectionRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
-  const { user } = useAuth();
+  const [buyerProfile, setBuyerProfile] = useState<any>(null);
+  const [hasConnections, setHasConnections] = useState(false);
+  const { user, profile } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation(['dashboard', 'common']);
 
   const fetchConnectionRequests = async () => {
     if (!user) return;
@@ -38,7 +43,7 @@ const BuyerConnectionRequests = () => {
       // First get the buyer profile to get buyer_id
       const { data: buyer, error: buyerError } = await supabase
         .from('buyers')
-        .select('id')
+        .select('*')
         .eq('profile_id', user.id)
         .single();
 
@@ -46,6 +51,8 @@ const BuyerConnectionRequests = () => {
         console.error('Error fetching buyer profile:', buyerError);
         return;
       }
+
+      setBuyerProfile(buyer);
 
       // Then fetch connection requests for this buyer
       const { data, error } = await supabase
@@ -73,7 +80,11 @@ const BuyerConnectionRequests = () => {
         return;
       }
 
-      setConnectionRequests((data || []) as ConnectionRequest[]);
+      const requests = (data || []) as ConnectionRequest[];
+      setConnectionRequests(requests);
+      
+      // Check if there are any approved connections
+      setHasConnections(requests.some(req => req.status === 'approved'));
     } catch (error) {
       console.error('Error in fetchConnectionRequests:', error);
     } finally {
@@ -255,6 +266,32 @@ const BuyerConnectionRequests = () => {
 
   return (
     <div className="space-y-6">
+      {/* Show Buyer ID Card if available */}
+      {buyerProfile?.buyer_id_number && profile && (
+        <BuyerIdCard 
+          buyerId={buyerProfile.buyer_id_number}
+          buyerProfile={buyerProfile}
+          userProfile={{ full_name: profile.full_name }}
+        />
+      )}
+
+      {/* Show connect with suppliers message if no approved connections */}
+      {!loading && !hasConnections && (
+        <Card>
+          <CardContent className="p-6 text-center">
+            <Users className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">{t('dashboard:buyer.connectFirst.title')}</h3>
+            <p className="text-gray-600 mb-4">
+              {t('dashboard:buyer.connectFirst.description')}
+            </p>
+            <Button onClick={() => window.location.hash = '#suppliers'} className="flex items-center gap-2 mx-auto">
+              <Users className="w-4 h-4" />
+              {t('dashboard:buyer.findSuppliers')}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-semibold mb-2">Connection Requests</h2>

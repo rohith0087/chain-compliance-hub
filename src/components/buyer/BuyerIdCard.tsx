@@ -2,16 +2,26 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Check, Eye, EyeOff, Info } from 'lucide-react';
+import { Copy, Check, Eye, EyeOff, Info, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
+import { InviteSupplierModal } from './InviteSupplierModal';
 
 interface BuyerIdCardProps {
   buyerId: string;
+  buyerProfile?: {
+    company_name: string;
+    contact_email: string;
+    industry?: string;
+  };
+  userProfile?: {
+    full_name: string;
+  };
 }
 
-export const BuyerIdCard = ({ buyerId }: BuyerIdCardProps) => {
+export const BuyerIdCard = ({ buyerId, buyerProfile, userProfile }: BuyerIdCardProps) => {
   const [copied, setCopied] = useState(false);
   const [showId, setShowId] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   const handleCopy = async () => {
     try {
@@ -92,6 +102,24 @@ export const BuyerIdCard = ({ buyerId }: BuyerIdCardProps) => {
             </div>
           </div>
         </div>
+
+        <Button 
+          onClick={() => setShowInviteModal(true)} 
+          className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+        >
+          <UserPlus className="h-4 w-4 mr-2" />
+          Invite Suppliers
+        </Button>
+
+        {buyerProfile && userProfile && (
+          <InviteSupplierModal
+            isOpen={showInviteModal}
+            onClose={() => setShowInviteModal(false)}
+            buyerId={buyerId}
+            buyerProfile={buyerProfile}
+            userProfile={userProfile}
+          />
+        )}
       </CardContent>
     </Card>
   );

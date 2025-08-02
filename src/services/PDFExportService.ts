@@ -186,10 +186,6 @@ export class PDFExportService {
     this.doc.text('VISUAL ANALYTICS DASHBOARD', this.margin, 30);
     this.doc.setTextColor(0, 0, 0);
 
-    // --- FIX START ---
-    // The original code used a rigid two-column layout which caused components to overlap.
-    // This has been changed to a more robust layout that stacks components vertically after the first row.
-
     // Row 1: Two columns for top-level stats
     const topY = 50;
     const leftX = this.margin;
@@ -204,7 +200,6 @@ export class PDFExportService {
     // --- NEW VERTICAL LAYOUT FOR THE REST TO PREVENT OVERLAP ---
 
     // Calculate the Y position for the next section, starting below the components in the first row.
-    // This provides adequate spacing and prevents hardcoded values from causing issues.
     let yPos = 140;
 
     // Section: Category Performance (now takes full width)
@@ -217,7 +212,6 @@ export class PDFExportService {
 
     // Section: Risk Assessment (now takes full width)
     await this.drawRiskGauge(data.riskLevel, data.complianceScore, leftX, yPos);
-    // --- FIX END ---
   }
 
   private async drawComplianceScoreCircle(score: number, x: number, y: number): Promise<void> {
@@ -234,14 +228,8 @@ export class PDFExportService {
     const progressColor = score >= 80 ? [34, 197, 94] : score >= 60 ? [251, 191, 36] : [239, 68, 68];
     this.doc.setDrawColor(progressColor[0], progressColor[1], progressColor[2]);
     
-    // Calculate arc
-    const angle = (score / 100) * 360;
-    const startAngle = -90;
-    const endAngle = startAngle + angle;
-    
-    // Draw the arc (simplified circle for now since jsPDF doesn't have native arc support)
+    // Draw the arc (simplified for jsPDF)
     if (score > 0) {
-      // This is a simplified representation. True arc drawing is more complex in jsPDF.
       // For this example, we draw a full progress circle to represent the score's color.
       this.doc.setLineWidth(8);
       this.doc.circle(centerX, centerY, radius, 'S'); // Redrawing with color
@@ -273,7 +261,7 @@ export class PDFExportService {
     this.doc.setFont('helvetica', 'bold');
     this.doc.text('Request Status Distribution', x, y - 5);
     
-    // Draw simplified pie chart as rectangles for legend
+    // Draw legend
     let legendY = y + 10;
     let itemsDrawn = 0;
     slices.forEach((slice) => {
@@ -326,10 +314,7 @@ export class PDFExportService {
     this.doc.setFont('helvetica', 'bold');
     this.doc.text('Risk Assessment', x, y - 5);
     
-    // --- FIX START ---
-    // Changed the gaugeWidth to be responsive to the available page width.
-    const gaugeWidth = this.pageWidth - 2 * x; // x is the margin, so this makes it full-width.
-    // --- FIX END ---
+    const gaugeWidth = this.pageWidth - 2 * x; // Full width based on margin
     const gaugeHeight = 20;
     
     // Background
@@ -345,8 +330,7 @@ export class PDFExportService {
     
     const color = riskColors[riskLevel as keyof typeof riskColors] || [229, 231, 235];
     
-    // The visual in the image shows a solid red bar for "HIGH RISK". 
-    // We'll make the entire bar the color of the risk level for a clearer visual indicator.
+    // Make the entire bar the color of the risk level for a clearer visual.
     this.doc.setFillColor(color[0], color[1], color[2]);
     this.doc.rect(x, y, gaugeWidth, gaugeHeight, 'F');
     
@@ -499,7 +483,6 @@ export class PDFExportService {
       return;
     }
     
-    // Create enhanced table data
     const headers = ['Document Type', 'Status', 'Priority', 'Created Date', 'Deadline', 'Days Pending'];
     const rows = data.requests.slice(0, 15).map(request => {
       const createdDate = new Date(request.created_at);
@@ -517,7 +500,6 @@ export class PDFExportService {
       ];
     });
     
-    // Enhanced table with better styling
     autoTable(this.doc, {
       startY: 40,
       head: [headers],
@@ -545,7 +527,6 @@ export class PDFExportService {
         5: { cellWidth: 20, halign: 'center' }
       },
       didParseCell: function(data) {
-        // Color code status cells
         if (data.column.index === 1 && data.cell.section === 'body') {
           const status = data.cell.raw as string;
           if (status === 'approved') {
@@ -575,7 +556,6 @@ export class PDFExportService {
     
     yPos += 15;
     
-    // Generate recommendations based on data
     const recommendations = this.generateRecommendations(data);
     
     this.doc.setFontSize(10);
@@ -669,7 +649,6 @@ export class PDFExportService {
                  this.pageWidth / 2, footerY + 6, { align: 'center' });
   }
 
-  // Helper methods for safe text and number handling
   private safeText(value: any): string {
     if (value === null || value === undefined) {
       return 'Not provided';

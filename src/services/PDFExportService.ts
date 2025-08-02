@@ -186,17 +186,30 @@ export class PDFExportService {
     this.doc.text('VISUAL ANALYTICS DASHBOARD', this.margin, 30);
     this.doc.setTextColor(0, 0, 0);
 
+    // Row 1: Compliance Score and Status Distribution
+    const topY = 50;
+    const leftX = this.margin;
+    const rightX = this.pageWidth / 2 + 10;
+    
     // Left Column - Compliance Score Circle
-    await this.drawComplianceScoreCircle(data.complianceScore, 40, 50);
+    await this.drawComplianceScoreCircle(data.complianceScore, leftX, topY);
+    
+    // Right Column - Status Distribution Legend
+    await this.drawStatusPieChart(data, rightX, topY);
+    
+    // Define a starting Y position below the first row of visuals
+    let yPos = 140; 
 
-    // Right Column - Status Distribution Pie Chart
-    await this.drawStatusPieChart(data, 130, 50);
+    // Section 1: Category Performance (takes up the left side, labels can extend right)
+    await this.drawCategoryBarChart(data.categoryStats, leftX, yPos);
 
-    // Left Column - Category Performance Bar Chart (positioned below compliance circle)
-    await this.drawCategoryBarChart(data.categoryStats, 40, 140);
+    // Calculate the height of the category chart and add padding
+    const categoryStatsCount = Math.min(data.categoryStats.length, 5);
+    const categoryChartHeight = 10 + (categoryStatsCount * 15); // Approximate height: title + bars
+    yPos += categoryChartHeight + 15; // Move Y position down for the next component
 
-    // Right Column - Risk Assessment Gauge (positioned below pie chart)
-    await this.drawRiskGauge(data.riskLevel, data.complianceScore, 130, 140);
+    // Section 2: Risk Assessment (now full-width and positioned below the category chart)
+    await this.drawRiskGauge(data.riskLevel, data.complianceScore, leftX, yPos);
   }
 
   private async drawComplianceScoreCircle(score: number, x: number, y: number): Promise<void> {
@@ -302,33 +315,31 @@ export class PDFExportService {
     this.doc.setFontSize(12);
     this.doc.setFont('helvetica', 'bold');
     this.doc.text('Risk Assessment', x, y - 5);
-
-    const gaugeWidth = 80;
+    
+    // Make the gauge width responsive to the page margins
+    const gaugeWidth = this.pageWidth - (2 * this.margin);
     const gaugeHeight = 20;
-
-    // Background
-    this.doc.setFillColor(229, 231, 235);
-    this.doc.rect(x, y, gaugeWidth, gaugeHeight, 'F');
-
-    // Risk level indicator
+    
+    // Risk level indicator colors
     const riskColors = {
       'Low': [34, 197, 94],
       'Medium': [251, 191, 36],
       'High': [239, 68, 68]
     };
-
+    
     const color = riskColors[riskLevel as keyof typeof riskColors] || [229, 231, 235];
-    const indicatorWidth = (score / 100) * gaugeWidth;
-
+    
+    // To match the example image, the entire bar is filled with the risk color
+    // instead of showing a progress-style indicator.
     this.doc.setFillColor(color[0], color[1], color[2]);
-    this.doc.rect(x, y, indicatorWidth, gaugeHeight, 'F');
-
-    // Text
+    this.doc.rect(x, y, gaugeWidth, gaugeHeight, 'F');
+    
+    // Add centered text inside the colored bar
     this.doc.setFontSize(10);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setTextColor(255, 255, 255);
-    this.doc.text(`${riskLevel.toUpperCase()} RISK`, x + gaugeWidth/2, y + gaugeHeight/2 + 2, { align: 'center' });
-    this.doc.setTextColor(0, 0, 0);
+    this.doc.setTextColor(255, 255, 255); // White text for better contrast
+    this.doc.text(`${riskLevel.toUpperCase()} RISK`, x + gaugeWidth / 2, y + gaugeHeight / 2 + 3, { align: 'center' });
+    this.doc.setTextColor(0, 0, 0); // Reset text color
   }
 
   private async addPerformanceAnalysis(data: PDFExportData): Promise<void> {

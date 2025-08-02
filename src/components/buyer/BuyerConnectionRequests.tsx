@@ -27,6 +27,7 @@ interface ConnectionRequest {
 const BuyerConnectionRequests = () => {
   const [connectionRequests, setConnectionRequests] = useState<ConnectionRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -105,17 +106,63 @@ const BuyerConnectionRequests = () => {
   }, [user]);
 
   const handleConnectionResponse = async (connectionId: string, action: 'approved' | 'rejected') => {
+    console.log(`Starting ${action} action for connection ID: ${connectionId}`);
+    
+    // Prevent multiple clicks
+    if (processingIds.has(connectionId)) {
+      console.log(`Already processing connection ${connectionId}, ignoring duplicate request`);
+      return;
+    }
+
+    setProcessingIds(prev => new Set(prev).add(connectionId));
+
     try {
-      const { error } = await supabase
+      // Update both status and responded_at timestamp
+      const updateData = {
+        status: action,
+        responded_at: new Date().toISOString()
+      };
+
+      console.log(`Updating connection ${connectionId} with:`, updateData);
+
+      const { data: updateResult, error } = await supabase
         .from('buyer_supplier_connections')
-        .update({ status: action })
-        .eq('id', connectionId);
+        .update(updateData)
+        .eq('id', connectionId)
+        .select('id, status, responded_at');
 
       if (error) {
-        console.error('Error updating connection:', error);
+        console.error('Database update error:', error);
         toast({
           title: "Error",
-          description: "Failed to update connection request",
+          description: `Failed to update connection request: ${error.message}`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Verify the update was successful
+      if (!updateResult || updateResult.length === 0) {
+        console.error('No rows were updated for connection:', connectionId);
+        toast({
+          title: "Error",
+          description: "Failed to update connection request - no rows affected",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('Database update successful:', updateResult[0]);
+
+      // Verify the status was actually changed
+      if (updateResult[0].status !== action) {
+        console.error('Status mismatch after update:', {
+          expected: action,
+          actual: updateResult[0].status
+        });
+        toast({
+          title: "Error",
+          description: "Connection status update failed to persist",
           variant: "destructive"
         });
         return;
@@ -124,22 +171,32 @@ const BuyerConnectionRequests = () => {
       // Get the connection details to create notification for supplier
       const connection = connectionRequests.find(req => req.id === connectionId);
       if (connection) {
+        console.log(`Creating notification for supplier: ${connection.supplier_id}`);
+        
         // Get supplier profile to send notification
-        const { data: supplier } = await supabase
+        const { data: supplier, error: supplierError } = await supabase
           .from('suppliers')
           .select('profile_id')
           .eq('id', connection.supplier_id)
           .single();
 
-        if (supplier) {
+        if (supplierError) {
+          console.error('Error fetching supplier profile:', supplierError);
+        } else if (supplier) {
           // Create notification for supplier
-          await supabase.rpc('create_notification', {
+          const { error: notificationError } = await supabase.rpc('create_notification', {
             p_user_id: supplier.profile_id,
             p_title: `Connection Request ${action === 'approved' ? 'Approved' : 'Rejected'}`,
             p_message: `Your connection request has been ${action} by the buyer.`,
             p_type: 'connection_response',
             p_reference_id: connectionId
           });
+
+          if (notificationError) {
+            console.error('Error creating notification:', notificationError);
+          } else {
+            console.log('Notification created successfully');
+          }
         }
       }
 
@@ -148,14 +205,22 @@ const BuyerConnectionRequests = () => {
         description: `Connection request ${action} successfully`,
       });
 
-      // Refresh the data
-      fetchConnectionRequests();
+      // Refresh the data to confirm changes
+      console.log('Refreshing connection requests data');
+      await fetchConnectionRequests();
+
     } catch (error) {
-      console.error('Error handling connection response:', error);
+      console.error('Unexpected error in handleConnectionResponse:', error);
       toast({
         title: "Error",
         description: "An unexpected error occurred",
         variant: "destructive"
+      });
+    } finally {
+      setProcessingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(connectionId);
+        return newSet;
       });
     }
   };
@@ -255,18 +320,20 @@ const BuyerConnectionRequests = () => {
                       onClick={() => handleConnectionResponse(request.id, 'approved')}
                       className="flex items-center gap-2"
                       size="sm"
+                      disabled={processingIds.has(request.id)}
                     >
                       <Check className="w-4 h-4" />
-                      Approve
+                      {processingIds.has(request.id) ? 'Processing...' : 'Approve'}
                     </Button>
                     <Button
                       onClick={() => handleConnectionResponse(request.id, 'rejected')}
                       variant="outline"
                       className="flex items-center gap-2"
                       size="sm"
+                      disabled={processingIds.has(request.id)}
                     >
                       <X className="w-4 h-4" />
-                      Reject
+                      {processingIds.has(request.id) ? 'Processing...' : 'Reject'}
                     </Button>
                   </div>
                 </CardContent>

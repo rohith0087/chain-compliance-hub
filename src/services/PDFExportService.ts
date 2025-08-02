@@ -186,17 +186,17 @@ export class PDFExportService {
     this.doc.text('VISUAL ANALYTICS DASHBOARD', this.margin, 30);
     this.doc.setTextColor(0, 0, 0);
     
-    // Compliance Score Circle
+    // Left Column - Compliance Score Circle
     await this.drawComplianceScoreCircle(data.complianceScore, 40, 50);
     
-    // Status Distribution Pie Chart
+    // Right Column - Status Distribution Pie Chart
     await this.drawStatusPieChart(data, 130, 50);
     
-    // Category Performance Bar Chart
-    await this.drawCategoryBarChart(data.categoryStats, 40, 150);
+    // Left Column - Category Performance Bar Chart (positioned below compliance circle)
+    await this.drawCategoryBarChart(data.categoryStats, 40, 140);
     
-    // Risk Assessment Gauge
-    await this.drawRiskGauge(data.riskLevel, data.complianceScore, 130, 150);
+    // Right Column - Risk Assessment Gauge (positioned below pie chart)
+    await this.drawRiskGauge(data.riskLevel, data.complianceScore, 130, 140);
   }
 
   private async drawComplianceScoreCircle(score: number, x: number, y: number): Promise<void> {

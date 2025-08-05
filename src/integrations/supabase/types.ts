@@ -112,6 +112,93 @@ export type Database = {
           },
         ]
       }
+      company_branches: {
+        Row: {
+          address: string | null
+          branch_name: string
+          company_id: string
+          company_type: string
+          created_at: string
+          email: string | null
+          id: string
+          location: string | null
+          manager_id: string | null
+          phone: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          branch_name: string
+          company_id: string
+          company_type: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          location?: string | null
+          manager_id?: string | null
+          phone?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          branch_name?: string
+          company_id?: string
+          company_type?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          location?: string | null
+          manager_id?: string | null
+          phone?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      company_users: {
+        Row: {
+          branch_id: string | null
+          company_id: string
+          company_type: string
+          created_at: string
+          id: string
+          invited_by: string | null
+          joined_at: string | null
+          profile_id: string
+          role: Database["public"]["Enums"]["user_role"]
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          company_id: string
+          company_type: string
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          joined_at?: string | null
+          profile_id: string
+          role?: Database["public"]["Enums"]["user_role"]
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          company_id?: string
+          company_type?: string
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          joined_at?: string | null
+          profile_id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       document_requests: {
         Row: {
           buyer_id: string | null
@@ -374,6 +461,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_permissions: {
+        Row: {
+          branch_id: string | null
+          company_id: string
+          company_type: string
+          created_at: string
+          expires_at: string | null
+          granted_at: string | null
+          granted_by: string | null
+          id: string
+          permission_type: Database["public"]["Enums"]["permission_type"]
+          resource_access: string | null
+          user_id: string
+        }
+        Insert: {
+          branch_id?: string | null
+          company_id: string
+          company_type: string
+          created_at?: string
+          expires_at?: string | null
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          permission_type: Database["public"]["Enums"]["permission_type"]
+          resource_access?: string | null
+          user_id: string
+        }
+        Update: {
+          branch_id?: string | null
+          company_id?: string
+          company_type?: string
+          created_at?: string
+          expires_at?: string | null
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          permission_type?: Database["public"]["Enums"]["permission_type"]
+          resource_access?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {

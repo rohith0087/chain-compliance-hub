@@ -914,15 +914,7 @@ export type Database = {
       }
     }
     Views: {
-      user_company_access: {
-        Row: {
-          company_id: string | null
-          company_type: string | null
-          is_admin: boolean | null
-          user_id: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       can_manage_company_users: {

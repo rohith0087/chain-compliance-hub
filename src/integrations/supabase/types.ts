@@ -531,6 +531,27 @@ export type Database = {
         Args: { buyer_id: string }
         Returns: boolean
       }
+      user_has_branch_access: {
+        Args: { p_user_id: string; p_branch_id: string }
+        Returns: boolean
+      }
+      user_has_company_access: {
+        Args: {
+          p_user_id: string
+          p_company_id: string
+          p_company_type: string
+        }
+        Returns: boolean
+      }
+      user_has_permission: {
+        Args: {
+          p_user_id: string
+          p_company_id: string
+          p_company_type: string
+          p_permission: Database["public"]["Enums"]["permission_type"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       permission_type:

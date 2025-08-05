@@ -404,6 +404,14 @@ export type Database = {
       }
     }
     Enums: {
+      permission_type:
+        | "read"
+        | "write"
+        | "approve"
+        | "delete"
+        | "invite_users"
+        | "manage_branches"
+        | "export_data"
       request_priority: "low" | "medium" | "high" | "urgent"
       request_status:
         | "pending"
@@ -411,7 +419,16 @@ export type Database = {
         | "approved"
         | "rejected"
         | "expired"
-      user_role: "buyer" | "supplier" | "admin"
+      user_role:
+        | "buyer"
+        | "supplier"
+        | "admin"
+        | "company_admin"
+        | "branch_manager"
+        | "document_manager"
+        | "viewer"
+        | "approver"
+        | "auditor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -539,6 +556,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      permission_type: [
+        "read",
+        "write",
+        "approve",
+        "delete",
+        "invite_users",
+        "manage_branches",
+        "export_data",
+      ],
       request_priority: ["low", "medium", "high", "urgent"],
       request_status: [
         "pending",
@@ -547,7 +573,17 @@ export const Constants = {
         "rejected",
         "expired",
       ],
-      user_role: ["buyer", "supplier", "admin"],
+      user_role: [
+        "buyer",
+        "supplier",
+        "admin",
+        "company_admin",
+        "branch_manager",
+        "document_manager",
+        "viewer",
+        "approver",
+        "auditor",
+      ],
     },
   },
 } as const

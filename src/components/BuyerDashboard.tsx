@@ -15,6 +15,9 @@ import BuyerDocumentsDashboard from '@/components/documents/BuyerDocumentsDashbo
 import { BuyerIdCard } from '@/components/buyer/BuyerIdCard';
 import BuyerConnectionRequests from '@/components/buyer/BuyerConnectionRequests';
 import { BuyerSettingsModal } from '@/components/settings/BuyerSettingsModal';
+import { CompanyManagementDashboard } from '@/components/company/CompanyManagementDashboard';
+import { BranchSelector } from '@/components/company/BranchSelector';
+import { useCompanyBranches } from '@/hooks/useCompanyBranches';
 import { supabase } from '@/integrations/supabase/client';
 
 interface BuyerDashboardProps {
@@ -34,6 +37,14 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
   const { user: authUser, profile } = useAuth();
   const { t } = useTranslation(['dashboard', 'common']);
+
+  // Company branches management
+  const {
+    branches,
+    currentBranch,
+    switchBranch,
+    loading: branchesLoading
+  } = useCompanyBranches(buyerProfile?.id, 'buyer');
 
   // Fetch buyer profile data
   useEffect(() => {
@@ -83,7 +94,17 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
   return (
     <div className="container mx-auto py-10">
       <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-3xl font-semibold">{t('dashboard:buyer.title')}</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-3xl font-semibold">{t('dashboard:buyer.title')}</h1>
+          {branches.length > 1 && (
+            <BranchSelector
+              branches={branches}
+              currentBranch={currentBranch}
+              onBranchChange={switchBranch}
+              loading={branchesLoading}
+            />
+          )}
+        </div>
         <div className="space-x-4 flex items-center">
           <NotificationCenter />
           <Button 
@@ -130,6 +151,10 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
           <TabsTrigger value="suppliers">
             <Users className="w-4 h-4 mr-2" />
             {t('common:navigation.suppliers')}
+          </TabsTrigger>
+          <TabsTrigger value="company">
+            <Building2 className="w-4 h-4 mr-2" />
+            Company Management
           </TabsTrigger>
         </TabsList>
         
@@ -221,6 +246,16 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         
         <TabsContent value="suppliers" className="space-y-2">
           <SupplierDiscovery />
+        </TabsContent>
+        
+        <TabsContent value="company" className="space-y-2">
+          {buyerProfile && (
+            <CompanyManagementDashboard
+              companyId={buyerProfile.id}
+              companyType="buyer"
+              companyName={buyerProfile.company_name}
+            />
+          )}
         </TabsContent>
       </Tabs>
 

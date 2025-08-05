@@ -38,5 +38,21 @@
     "totalRequests": "Total Requests",
     "recentActivity": "Recent Document Requests",
     "supplierCompliance": "Supplier Compliance Scores"
+  },
+  "company": {
+    "title": "Company Management",
+    "branches": "Branches",
+    "users": "Users",
+    "permissions": "Permissions",
+    "overview": "Overview",
+    "manageBranches": "Manage Branches",
+    "inviteUsers": "Invite Team Members",
+    "managePermissions": "Manage Permissions",
+    "totalBranches": "Total Branches",
+    "teamMembers": "Team Members",
+    "currentBranch": "Current Branch",
+    "accessLevel": "Access Level",
+    "recentActivity": "Recent Activity",
+    "quickActions": "Quick Actions"
   }
 }

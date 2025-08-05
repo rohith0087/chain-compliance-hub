@@ -33,6 +33,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCompanySetup } from '@/hooks/useCompanySetup';
 import { supabase } from '@/integrations/supabase/client';
 import SupplierDocumentsDashboard from '@/components/documents/SupplierDocumentsDashboard';
+import { CompanyManagementDashboard } from '@/components/company/CompanyManagementDashboard';
+import { BranchSelector } from '@/components/company/BranchSelector';
+import { useCompanyBranches } from '@/hooks/useCompanyBranches';
 
 interface SupplierDashboardProps {
   user: { 
@@ -64,6 +67,14 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
   
   const { user: authUser } = useAuth();
   const { getSupplierProfile } = useCompanySetup();
+
+  // Company branches management
+  const {
+    branches,
+    currentBranch,
+    switchBranch,
+    loading: branchesLoading
+  } = useCompanyBranches(supplierProfile?.id, 'supplier');
 
   // Calculate stats from real data
   const stats = {
@@ -278,16 +289,26 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
           <Card className="mb-8">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center">
-                    <Building2 className="w-8 h-8 text-green-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">{supplierProfile.company_name}</h2>
-                    <p className="text-gray-600">{supplierProfile.industry}</p>
-                    <p className="text-sm text-gray-500">{supplierProfile.contact_email}</p>
-                  </div>
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Building2 className="w-8 h-8 text-green-600" />
                 </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-4 mb-2">
+                    <h2 className="text-2xl font-bold text-gray-900">{supplierProfile.company_name}</h2>
+                    {branches.length > 1 && (
+                      <BranchSelector
+                        branches={branches}
+                        currentBranch={currentBranch}
+                        onBranchChange={switchBranch}
+                        loading={branchesLoading}
+                      />
+                    )}
+                  </div>
+                  <p className="text-gray-600">{supplierProfile.industry}</p>
+                  <p className="text-sm text-gray-500">{supplierProfile.contact_email}</p>
+                </div>
+              </div>
                 <Button variant="outline" onClick={() => setShowSettingsModal(true)}>
                   <Settings className="w-4 h-4 mr-2" />
                   Settings
@@ -359,6 +380,10 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
             <TabsTrigger value="connections">Connection Requests</TabsTrigger>
             <TabsTrigger value="requests">Document Requests</TabsTrigger>
             <TabsTrigger value="buyers">Connected Buyers</TabsTrigger>
+            <TabsTrigger value="company">
+              <Building2 className="w-4 h-4 mr-2" />
+              Company Management
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -509,6 +534,16 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
               connectedBuyers={connectedBuyers} 
               onConnectionRequest={loadSupplierData}
             />
+          </TabsContent>
+
+          <TabsContent value="company" className="space-y-2">
+            {supplierProfile && (
+              <CompanyManagementDashboard
+                companyId={supplierProfile.id}
+                companyType="supplier"
+                companyName={supplierProfile.company_name}
+              />
+            )}
           </TabsContent>
         </Tabs>
       </div>

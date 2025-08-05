@@ -6,6 +6,7 @@ import { useCompanyBranches } from '@/hooks/useCompanyBranches';
 import { BranchSelector } from './BranchSelector';
 import { BranchManagement } from './BranchManagement';
 import { CompanyUserManagement } from './CompanyUserManagement';
+import { PermissionManagementInterface } from './PermissionManagementInterface';
 
 interface CompanyManagementDashboardProps {
   companyId: string;
@@ -27,7 +28,8 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
     createBranch,
     updateBranch,
     inviteUserToBranch,
-    switchBranch
+    switchBranch,
+    refetch
   } = useCompanyBranches(companyId, companyType);
 
   const [activeTab, setActiveTab] = useState('overview');
@@ -220,21 +222,12 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
         </TabsContent>
 
         <TabsContent value="permissions" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Permission Management</CardTitle>
-              <CardDescription>
-                Manage user permissions and access levels across branches
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">Permission Management</p>
-                <p className="text-sm">Advanced permission controls coming soon.</p>
-              </div>
-            </CardContent>
-          </Card>
+          <PermissionManagementInterface
+            companyId={companyId}
+            companyType={companyType}
+            companyUsers={companyUsers}
+            onPermissionUpdate={refetch}
+          />
         </TabsContent>
       </Tabs>
     </div>

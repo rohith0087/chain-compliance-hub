@@ -38,5 +38,21 @@
     "totalRequests": "Total de Solicitudes",
     "recentActivity": "Actividad Reciente de Solicitudes de Documentos",
     "supplierCompliance": "Puntuaciones de Cumplimiento de Proveedores"
+  },
+  "company": {
+    "title": "Gestión de Empresa",
+    "branches": "Sucursales",
+    "users": "Usuarios",
+    "permissions": "Permisos",
+    "overview": "Resumen",
+    "manageBranches": "Gestionar Sucursales",
+    "inviteUsers": "Invitar Miembros del Equipo",
+    "managePermissions": "Gestionar Permisos",
+    "totalBranches": "Total de Sucursales",
+    "teamMembers": "Miembros del Equipo",
+    "currentBranch": "Sucursal Actual",
+    "accessLevel": "Nivel de Acceso",
+    "recentActivity": "Actividad Reciente",
+    "quickActions": "Acciones Rápidas"
   }
 }

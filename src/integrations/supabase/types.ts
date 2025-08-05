@@ -914,9 +914,33 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_company_access: {
+        Row: {
+          company_id: string | null
+          company_type: string | null
+          is_admin: boolean | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      can_manage_company_users: {
+        Args: {
+          p_user_id: string
+          p_company_id: string
+          p_company_type: string
+        }
+        Returns: boolean
+      }
+      can_view_company_users: {
+        Args: {
+          p_user_id: string
+          p_company_id: string
+          p_company_type: string
+        }
+        Returns: boolean
+      }
       create_notification: {
         Args: {
           p_user_id: string

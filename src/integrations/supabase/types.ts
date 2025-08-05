@@ -14,6 +14,112 @@ export type Database = {
   }
   public: {
     Tables: {
+      approval_workflows: {
+        Row: {
+          branch_id: string | null
+          company_id: string
+          company_type: string
+          created_at: string
+          created_by: string
+          description: string | null
+          document_types: string[] | null
+          id: string
+          is_active: boolean | null
+          updated_at: string
+          workflow_name: string
+        }
+        Insert: {
+          branch_id?: string | null
+          company_id: string
+          company_type: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          document_types?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string
+          workflow_name: string
+        }
+        Update: {
+          branch_id?: string | null
+          company_id?: string
+          company_type?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          document_types?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string
+          workflow_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_workflows_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branch_compliance_metrics: {
+        Row: {
+          approved_documents: number | null
+          avg_approval_time_hours: number | null
+          branch_id: string
+          compliance_score: number | null
+          created_at: string
+          expired_documents: number | null
+          id: string
+          metric_date: string
+          overdue_count: number | null
+          pending_documents: number | null
+          rejected_documents: number | null
+          total_documents: number | null
+          updated_at: string
+        }
+        Insert: {
+          approved_documents?: number | null
+          avg_approval_time_hours?: number | null
+          branch_id: string
+          compliance_score?: number | null
+          created_at?: string
+          expired_documents?: number | null
+          id?: string
+          metric_date?: string
+          overdue_count?: number | null
+          pending_documents?: number | null
+          rejected_documents?: number | null
+          total_documents?: number | null
+          updated_at?: string
+        }
+        Update: {
+          approved_documents?: number | null
+          avg_approval_time_hours?: number | null
+          branch_id?: string
+          compliance_score?: number | null
+          created_at?: string
+          expired_documents?: number | null
+          id?: string
+          metric_date?: string
+          overdue_count?: number | null
+          pending_documents?: number | null
+          rejected_documents?: number | null
+          total_documents?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_compliance_metrics_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       buyer_supplier_connections: {
         Row: {
           buyer_id: string | null
@@ -199,8 +305,184 @@ export type Database = {
         }
         Relationships: []
       }
+      delegation_permissions: {
+        Row: {
+          branch_id: string | null
+          company_id: string
+          company_type: string
+          created_at: string
+          delegate_id: string
+          delegation_reason: string | null
+          delegator_id: string
+          expires_at: string
+          id: string
+          permission_type: Database["public"]["Enums"]["permission_type"]
+          revoked_at: string | null
+          revoked_by: string | null
+          starts_at: string
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          company_id: string
+          company_type: string
+          created_at?: string
+          delegate_id: string
+          delegation_reason?: string | null
+          delegator_id: string
+          expires_at: string
+          id?: string
+          permission_type: Database["public"]["Enums"]["permission_type"]
+          revoked_at?: string | null
+          revoked_by?: string | null
+          starts_at?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          company_id?: string
+          company_type?: string
+          created_at?: string
+          delegate_id?: string
+          delegation_reason?: string | null
+          delegator_id?: string
+          expires_at?: string
+          id?: string
+          permission_type?: Database["public"]["Enums"]["permission_type"]
+          revoked_at?: string | null
+          revoked_by?: string | null
+          starts_at?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delegation_permissions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_approvals: {
+        Row: {
+          approval_notes: string | null
+          approved_at: string | null
+          approver_id: string | null
+          created_at: string
+          current_step_id: string | null
+          document_id: string
+          escalated_at: string | null
+          escalated_to: string | null
+          id: string
+          status: string
+          updated_at: string
+          workflow_id: string | null
+        }
+        Insert: {
+          approval_notes?: string | null
+          approved_at?: string | null
+          approver_id?: string | null
+          created_at?: string
+          current_step_id?: string | null
+          document_id: string
+          escalated_at?: string | null
+          escalated_to?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+          workflow_id?: string | null
+        }
+        Update: {
+          approval_notes?: string | null
+          approved_at?: string | null
+          approver_id?: string | null
+          created_at?: string
+          current_step_id?: string | null
+          document_id?: string
+          escalated_at?: string | null
+          escalated_to?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+          workflow_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_approvals_current_step_id_fkey"
+            columns: ["current_step_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_approvals_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "approval_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_libraries: {
+        Row: {
+          access_level: string | null
+          branch_id: string | null
+          company_id: string
+          company_type: string
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_default: boolean | null
+          library_name: string
+          library_type: string
+          updated_at: string
+        }
+        Insert: {
+          access_level?: string | null
+          branch_id?: string | null
+          company_id: string
+          company_type: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          library_name: string
+          library_type?: string
+          updated_at?: string
+        }
+        Update: {
+          access_level?: string | null
+          branch_id?: string | null
+          company_id?: string
+          company_type?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          library_name?: string
+          library_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_libraries_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_requests: {
         Row: {
+          branch_id: string | null
           buyer_id: string | null
           category: string
           created_at: string | null
@@ -218,6 +500,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          branch_id?: string | null
           buyer_id?: string | null
           category: string
           created_at?: string | null
@@ -235,6 +518,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          branch_id?: string | null
           buyer_id?: string | null
           category?: string
           created_at?: string | null
@@ -252,6 +536,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "document_requests_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "document_requests_buyer_id_fkey"
             columns: ["buyer_id"]
@@ -277,6 +568,7 @@ export type Database = {
       }
       document_uploads: {
         Row: {
+          branch_id: string | null
           created_at: string | null
           expiration_date: string | null
           file_name: string
@@ -292,6 +584,7 @@ export type Database = {
           version: number | null
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string | null
           expiration_date?: string | null
           file_name: string
@@ -307,6 +600,7 @@ export type Database = {
           version?: number | null
         }
         Update: {
+          branch_id?: string | null
           created_at?: string | null
           expiration_date?: string | null
           file_name?: string
@@ -322,6 +616,13 @@ export type Database = {
           version?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "document_uploads_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "document_uploads_request_id_fkey"
             columns: ["request_id"]
@@ -408,6 +709,66 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      shared_documents: {
+        Row: {
+          created_at: string
+          document_id: string
+          document_type: string
+          expires_at: string | null
+          id: string
+          notes: string | null
+          permission_level: string
+          shared_by: string
+          shared_from_branch_id: string
+          shared_to_branch_id: string
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          document_type: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          permission_level?: string
+          shared_by: string
+          shared_from_branch_id: string
+          shared_to_branch_id: string
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          document_type?: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          permission_level?: string
+          shared_by?: string
+          shared_from_branch_id?: string
+          shared_to_branch_id?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_documents_shared_from_branch_id_fkey"
+            columns: ["shared_from_branch_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_documents_shared_to_branch_id_fkey"
+            columns: ["shared_to_branch_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       suppliers: {
         Row: {
@@ -503,6 +864,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      workflow_steps: {
+        Row: {
+          created_at: string
+          escalation_role: string | null
+          id: string
+          is_parallel: boolean | null
+          required_permissions: string[] | null
+          required_role: string
+          step_name: string
+          step_order: number
+          timeout_hours: number | null
+          workflow_id: string
+        }
+        Insert: {
+          created_at?: string
+          escalation_role?: string | null
+          id?: string
+          is_parallel?: boolean | null
+          required_permissions?: string[] | null
+          required_role: string
+          step_name: string
+          step_order: number
+          timeout_hours?: number | null
+          workflow_id: string
+        }
+        Update: {
+          created_at?: string
+          escalation_role?: string | null
+          id?: string
+          is_parallel?: boolean | null
+          required_permissions?: string[] | null
+          required_role?: string
+          step_name?: string
+          step_order?: number
+          timeout_hours?: number | null
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_steps_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "approval_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

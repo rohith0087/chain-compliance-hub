@@ -935,14 +935,6 @@ export type Database = {
         }
         Returns: Json
       }
-      is_company_admin: {
-        Args: {
-          p_user_id: string
-          p_company_id: string
-          p_company_type: string
-        }
-        Returns: boolean
-      }
       supplier_can_view_buyer: {
         Args: { buyer_id: string }
         Returns: boolean

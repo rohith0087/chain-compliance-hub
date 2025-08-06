@@ -104,23 +104,38 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
         version = (latestUpload.version || 1) + 1;
       }
 
-      // Create new upload record
-      const { error: insertError } = await supabase
-        .from('document_uploads')
-        .insert({
-          request_id: request.id,
-          uploader_id: user.id,
-          file_name: fileName,
-          file_path: filePath,
-          file_size: fileSize,
-          mime_type: mimeType,
-          status: 'pending_review',
-          reviewer_notes: notes || null,
-          expiration_date: expirationDate || null,
-          version: version
-        });
+      // Handle metadata-only updates vs new file uploads
+      if (updateMetadataOnly && latestUpload) {
+        // Update existing upload record for metadata-only changes
+        const { error: updateError } = await supabase
+          .from('document_uploads')
+          .update({
+            reviewer_notes: notes || null,
+            expiration_date: expirationDate || null,
+            status: 'pending_review'
+          })
+          .eq('id', latestUpload.id);
 
-      if (insertError) throw insertError;
+        if (updateError) throw updateError;
+      } else {
+        // Create new upload record for new file uploads
+        const { error: insertError } = await supabase
+          .from('document_uploads')
+          .insert({
+            request_id: request.id,
+            uploader_id: user.id,
+            file_name: fileName,
+            file_path: filePath,
+            file_size: fileSize,
+            mime_type: mimeType,
+            status: 'pending_review',
+            reviewer_notes: notes || null,
+            expiration_date: expirationDate || null,
+            version: version
+          });
+
+        if (insertError) throw insertError;
+      }
 
       // Update the request status back to submitted
       const { error: updateError } = await supabase

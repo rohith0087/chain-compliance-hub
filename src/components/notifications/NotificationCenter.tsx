@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Bell, Check, CheckCheck } from 'lucide-react';
+import { Bell, CheckCheck, FileText, Users, Upload, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -11,9 +11,58 @@ import {
 import { useNotifications } from '@/hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
 
-const NotificationCenter = () => {
+interface NotificationCenterProps {
+  onNavigate?: (tab: string, notificationId?: string) => void;
+}
+
+const NotificationCenter = ({ onNavigate }: NotificationCenterProps) => {
   const { notifications, unreadCount, markAsRead, markAllAsRead, loading } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'document_approved':
+      case 'document_submitted':
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'document_declined':
+      case 'document_rejected':
+        return <AlertTriangle className="w-5 h-5 text-red-500" />;
+      case 'connection_request':
+      case 'connection_response':
+        return <Users className="w-5 h-5 text-blue-500" />;
+      case 'new_document_request':
+        return <FileText className="w-5 h-5 text-purple-500" />;
+      case 'document_uploaded':
+        return <Upload className="w-5 h-5 text-orange-500" />;
+      default:
+        return <Bell className="w-5 h-5 text-muted-foreground" />;
+    }
+  };
+
+  const getNotificationTargetTab = (type: string) => {
+    switch (type) {
+      case 'document_approved':
+      case 'document_declined':
+      case 'document_rejected':
+      case 'document_submitted':
+      case 'new_document_request':
+        return 'requests';
+      case 'connection_request':
+      case 'connection_response':
+        return 'connections';
+      default:
+        return 'overview';
+    }
+  };
+
+  const handleNotificationClick = (notification: any) => {
+    markAsRead(notification.id);
+    
+    const targetTab = getNotificationTargetTab(notification.type);
+    onNavigate?.(targetTab, notification.id);
+    
+    setIsOpen(false);
+  };
 
   if (loading) {
     return (
@@ -26,64 +75,110 @@ const NotificationCenter = () => {
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="relative">
-          <Bell className="w-4 h-4" />
+        <Button variant="outline" size="sm" className="relative group hover:shadow-md transition-all duration-200">
+          <Bell className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
           {unreadCount > 0 && (
             <Badge 
               variant="destructive" 
-              className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+              className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs shadow-lg animate-pulse"
             >
               {unreadCount > 99 ? '99+' : unreadCount}
             </Badge>
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end">
-        <div className="p-4 border-b">
+      <PopoverContent className="w-96 p-0 border shadow-xl" align="end">
+        {/* Header */}
+        <div className="p-4 border-b bg-gradient-to-r from-background to-muted/20">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold">Notifications</h3>
+            <div className="flex items-center gap-2">
+              <Bell className="w-5 h-5 text-primary" />
+              <h3 className="font-semibold text-foreground">Notifications</h3>
+              {unreadCount > 0 && (
+                <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                  {unreadCount} new
+                </Badge>
+              )}
+            </div>
             {unreadCount > 0 && (
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={markAllAsRead}
-                className="h-auto p-1"
+                className="h-auto p-2 hover:bg-primary/10 text-primary"
               >
                 <CheckCheck className="w-4 h-4" />
               </Button>
             )}
           </div>
         </div>
-        <div className="max-h-96 overflow-y-auto">
+
+        {/* Notifications List */}
+        <div className="max-h-[32rem] overflow-y-auto">
           {notifications.length === 0 ? (
-            <div className="p-4 text-center text-gray-500">
-              No notifications yet
+            <div className="p-8 text-center">
+              <Bell className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
+              <p className="text-muted-foreground">No notifications yet</p>
+              <p className="text-sm text-muted-foreground/70 mt-1">We'll notify you when something happens</p>
             </div>
           ) : (
             notifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`p-4 border-b hover:bg-gray-50 cursor-pointer ${
-                  !notification.read ? 'bg-blue-50' : ''
+                className={`p-4 border-b transition-all duration-200 cursor-pointer group ${
+                  !notification.read 
+                    ? 'bg-gradient-to-r from-primary/5 to-transparent hover:from-primary/10 hover:to-primary/5' 
+                    : 'hover:bg-muted/30'
                 }`}
-                onClick={() => markAsRead(notification.id)}
+                onClick={() => handleNotificationClick(notification)}
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h4 className="text-sm font-medium">{notification.title}</h4>
-                    <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
-                    <p className="text-xs text-gray-400 mt-2">
-                      {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
-                    </p>
+                <div className="flex items-start gap-3">
+                  {/* Icon */}
+                  <div className="flex-shrink-0 mt-0.5">
+                    {getNotificationIcon(notification.type)}
                   </div>
-                  {!notification.read && (
-                    <div className="w-2 h-2 bg-blue-500 rounded-full ml-2 mt-1" />
-                  )}
+                  
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between">
+                      <h4 className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                        {notification.title}
+                      </h4>
+                      {!notification.read && (
+                        <div className="w-2 h-2 bg-primary rounded-full ml-2 mt-1.5 animate-pulse" />
+                      )}
+                    </div>
+                    
+                    <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                      {notification.message}
+                    </p>
+                    
+                    <div className="flex items-center justify-between mt-3">
+                      <p className="text-xs text-muted-foreground/70">
+                        {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                      </p>
+                      
+                      {!notification.read && (
+                        <Badge variant="outline" className="text-xs px-2 py-0.5 bg-primary/10 text-primary border-primary/20">
+                          New
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             ))
           )}
         </div>
+
+        {/* Footer */}
+        {notifications.length > 0 && (
+          <div className="p-3 border-t bg-muted/20">
+            <p className="text-xs text-center text-muted-foreground">
+              Click on notifications to navigate to relevant sections
+            </p>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );

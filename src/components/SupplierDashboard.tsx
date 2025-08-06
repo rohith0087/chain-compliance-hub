@@ -54,6 +54,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
   const [connectedBuyers, setConnectedBuyers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [highlightedTab, setHighlightedTab] = useState<string | null>(null);
   
   // Filter state for document requests
   const [filters, setFilters] = useState({
@@ -93,6 +94,46 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
       loadSupplierData();
     }
   }, [authUser]);
+
+  // Handle URL params for tab navigation
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tab = urlParams.get('tab');
+    const highlight = urlParams.get('highlight');
+    
+    if (tab) {
+      setActiveTab(tab);
+      if (highlight === 'true') {
+        setHighlightedTab(tab);
+        // Clear highlight after 3 seconds
+        setTimeout(() => setHighlightedTab(null), 3000);
+      }
+    }
+  }, []);
+
+  const handleNotificationNavigation = (tab: string, notificationId?: string) => {
+    setActiveTab(tab);
+    setHighlightedTab(tab);
+    
+    // Update URL with tab parameter
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    url.searchParams.set('highlight', 'true');
+    if (notificationId) {
+      url.searchParams.set('notificationId', notificationId);
+    }
+    window.history.pushState({}, '', url.toString());
+    
+    // Clear highlight after 3 seconds
+    setTimeout(() => {
+      setHighlightedTab(null);
+      // Clean up URL params
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('highlight');
+      cleanUrl.searchParams.delete('notificationId');
+      window.history.replaceState({}, '', cleanUrl.toString());
+    }, 3000);
+  };
 
   const loadSupplierData = async () => {
     setLoading(true);
@@ -273,7 +314,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
                 <Settings className="w-4 h-4 mr-2" />
                 Settings
               </Button>
-              <NotificationCenter />
+              <NotificationCenter onNavigate={handleNotificationNavigation} />
               <span className="text-sm text-gray-600">Welcome, {user.name}</span>
               <Button variant="outline" size="sm" onClick={onLogout}>
                 Logout
@@ -369,18 +410,42 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="compliance">
+            <TabsTrigger 
+              value="compliance"
+              className={highlightedTab === 'compliance' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
+            >
               <BarChart3 className="w-4 h-4 mr-2" />
               Compliance
             </TabsTrigger>
-            <TabsTrigger value="documents">
+            <TabsTrigger 
+              value="documents"
+              className={highlightedTab === 'documents' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
+            >
               <FileCheck className="w-4 h-4 mr-2" />
               Documents
             </TabsTrigger>
-            <TabsTrigger value="connections">Connection Requests</TabsTrigger>
-            <TabsTrigger value="requests">Document Requests</TabsTrigger>
-            <TabsTrigger value="buyers">Connected Buyers</TabsTrigger>
-            <TabsTrigger value="company">
+            <TabsTrigger 
+              value="connections"
+              className={highlightedTab === 'connections' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
+            >
+              Connection Requests
+            </TabsTrigger>
+            <TabsTrigger 
+              value="requests"
+              className={highlightedTab === 'requests' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
+            >
+              Document Requests
+            </TabsTrigger>
+            <TabsTrigger 
+              value="buyers"
+              className={highlightedTab === 'buyers' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
+            >
+              Connected Buyers
+            </TabsTrigger>
+            <TabsTrigger 
+              value="company"
+              className={highlightedTab === 'company' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
+            >
               <Building2 className="w-4 h-4 mr-2" />
               Company Management
             </TabsTrigger>

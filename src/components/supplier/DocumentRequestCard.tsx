@@ -193,6 +193,26 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                         </div>
                       </div>
                     )}
+
+                    {/* Rejection Feedback - Show for rejected status */}
+                    {request.status === 'rejected' && request.document_uploads && request.document_uploads.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold mb-3 text-red-900">Rejection Feedback</h4>
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5" />
+                            <div>
+                              <p className="text-sm font-medium text-red-800 mb-1">Document was rejected</p>
+                              {request.document_uploads[0]?.reviewer_notes ? (
+                                <p className="text-sm text-red-700">{request.document_uploads[0].reviewer_notes}</p>
+                              ) : (
+                                <p className="text-sm text-red-700">No specific feedback provided. Please review and resubmit with corrections.</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </DialogContent>
               </Dialog>
@@ -209,6 +229,7 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                 </Button>
               )}
               
+              {/* Show upload button for pending documents */}
               {request.status === 'pending' && (
                 <Button 
                   size="sm" 
@@ -217,6 +238,18 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                 >
                   <Upload className="w-4 h-4 mr-2" />
                   Upload
+                </Button>
+              )}
+              
+              {/* Show resubmit button for rejected documents */}
+              {request.status === 'rejected' && (
+                <Button 
+                  size="sm" 
+                  onClick={() => setShowUpload(true)}
+                  className="bg-orange-600 hover:bg-orange-700"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Resubmit
                 </Button>
               )}
             </div>

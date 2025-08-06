@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload, File, X, Calendar } from 'lucide-react';
+import { Upload, File, X, Calendar, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,8 +22,12 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
   const [notes, setNotes] = useState('');
   const [expirationDate, setExpirationDate] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [updateMetadataOnly, setUpdateMetadataOnly] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  const isResubmission = request.status === 'rejected';
+  const latestUpload = request.document_uploads?.[0]; // Get the latest upload for rejected documents
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -41,60 +45,84 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
     }
   };
 
-  const handleUpload = async () => {
-    if (!file || !user) return;
+  const handleSubmit = async () => {
+    if (!user) return;
+    
+    // For resubmission, either file or metadata update is required
+    if (isResubmission && !file && !updateMetadataOnly) {
+      toast({
+        title: "Action Required",
+        description: "Please either upload a new document or update the metadata (expiration date/notes).",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // For new uploads, file is required
+    if (!isResubmission && !file) {
+      toast({
+        title: "File Required",
+        description: "Please select a document to upload.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setUploading(true);
     try {
-      // Create a unique file path
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${request.id}_${Date.now()}.${fileExt}`;
-      const filePath = `documents/${fileName}`;
+      let uploadData = null;
+      let filePath = latestUpload?.file_path;
+      let fileName = latestUpload?.file_name;
+      let fileSize = latestUpload?.file_size;
+      let mimeType = latestUpload?.mime_type;
 
-      // Upload file to Supabase Storage (we'll need to create this bucket)
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(filePath, file);
+      // If uploading a new file
+      if (file) {
+        const fileExt = file.name.split('.').pop();
+        fileName = `${request.id}_${Date.now()}.${fileExt}`;
+        filePath = `compliance-documents/${fileName}`;
+        fileSize = file.size;
+        mimeType = file.type;
 
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        
-        // If bucket doesn't exist, create a simple record without file storage for now
-        const { error: insertError } = await supabase
-          .from('document_uploads')
-          .insert({
-            request_id: request.id,
-            uploader_id: user.id,
-            file_name: file.name,
-            file_path: filePath,
-            file_size: file.size,
-            mime_type: file.type,
-            status: 'pending_review',
-            reviewer_notes: notes || null,
-            expiration_date: expirationDate || null
-          });
+        // Upload file to Supabase Storage
+        const { data, error: uploadError } = await supabase.storage
+          .from('compliance-documents')
+          .upload(filePath, file);
 
-        if (insertError) throw insertError;
-      } else {
-        // Record the upload in the database
-        const { error: insertError } = await supabase
-          .from('document_uploads')
-          .insert({
-            request_id: request.id,
-            uploader_id: user.id,
-            file_name: file.name,
-            file_path: uploadData.path,
-            file_size: file.size,
-            mime_type: file.type,
-            status: 'pending_review',
-            reviewer_notes: notes || null,
-            expiration_date: expirationDate || null
-          });
-
-        if (insertError) throw insertError;
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          // Continue with database record even if storage fails
+        } else {
+          uploadData = data;
+          filePath = data.path;
+        }
       }
 
-      // Update the request status
+      // Determine version number for new upload
+      let version = 1;
+      if (isResubmission && latestUpload) {
+        version = (latestUpload.version || 1) + 1;
+      }
+
+      // Create new upload record
+      const { error: insertError } = await supabase
+        .from('document_uploads')
+        .insert({
+          request_id: request.id,
+          uploader_id: user.id,
+          file_name: fileName,
+          file_path: filePath,
+          file_size: fileSize,
+          mime_type: mimeType,
+          status: 'pending_review',
+          reviewer_notes: notes || null,
+          expiration_date: expirationDate || null,
+          version: version
+        });
+
+      if (insertError) throw insertError;
+
+      // Update the request status back to submitted
       const { error: updateError } = await supabase
         .from('document_requests')
         .update({ status: 'submitted' })
@@ -103,27 +131,34 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
       if (updateError) throw updateError;
 
       // Create notification for the buyer
+      const notificationTitle = isResubmission ? 'Document Resubmitted' : 'Document Submitted';
+      const notificationMessage = isResubmission 
+        ? `${request.title} has been resubmitted after corrections` 
+        : `${request.title} has been submitted for review`;
+
       if (request.buyer_id) {
         await supabase.rpc('create_notification', {
           p_user_id: request.buyers?.profile_id || request.requester_id,
-          p_title: 'Document Submitted',
-          p_message: `${request.title} has been submitted for review`,
-          p_type: 'document_submitted',
+          p_title: notificationTitle,
+          p_message: notificationMessage,
+          p_type: isResubmission ? 'document_resubmitted' : 'document_submitted',
           p_reference_id: request.id
         });
       }
 
       toast({
-        title: "Upload Successful",
-        description: "Your document has been submitted for review.",
+        title: isResubmission ? "Resubmission Successful" : "Upload Successful",
+        description: isResubmission 
+          ? "Your document has been resubmitted for review." 
+          : "Your document has been submitted for review.",
       });
 
       onUploadSuccess();
     } catch (error: any) {
-      console.error('Upload error:', error);
+      console.error('Submit error:', error);
       toast({
-        title: "Upload Failed",
-        description: error.message || "Failed to upload document. Please try again.",
+        title: isResubmission ? "Resubmission Failed" : "Upload Failed",
+        description: error.message || "Failed to process document. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -135,6 +170,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
     setFile(null);
     setNotes('');
     setExpirationDate('');
+    setUpdateMetadataOnly(false);
   };
 
   const handleClose = () => {
@@ -146,33 +182,100 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Upload Document</DialogTitle>
+          <DialogTitle>
+            {isResubmission ? 'Resubmit Document' : 'Upload Document'}
+          </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
           {/* Request Info */}
-          <div className="p-3 bg-gray-50 rounded-lg">
+          <div className={`p-3 rounded-lg ${isResubmission ? 'bg-orange-50 border border-orange-200' : 'bg-gray-50'}`}>
             <h4 className="font-medium text-sm mb-1">{request.title}</h4>
             <p className="text-xs text-gray-600">Type: {request.document_type}</p>
             <p className="text-xs text-gray-600">Category: {request.category}</p>
+            {isResubmission && (
+              <p className="text-xs text-orange-700 mt-2 font-medium">
+                Document was rejected - please review feedback and resubmit
+              </p>
+            )}
           </div>
 
+          {/* Rejection Feedback */}
+          {isResubmission && latestUpload?.reviewer_notes && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-red-800 mb-1">Rejection Feedback:</p>
+                  <p className="text-sm text-red-700">{latestUpload.reviewer_notes}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Resubmission Options */}
+          {isResubmission && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm font-medium text-blue-800 mb-2">Resubmission Options:</p>
+              <div className="space-y-2">
+                <label className="flex items-center space-x-2 text-sm">
+                  <input
+                    type="radio"
+                    name="resubmit-type"
+                    checked={!updateMetadataOnly}
+                    onChange={() => setUpdateMetadataOnly(false)}
+                    className="text-blue-600"
+                  />
+                  <span>Upload new document file</span>
+                </label>
+                <label className="flex items-center space-x-2 text-sm">
+                  <input
+                    type="radio"
+                    name="resubmit-type"
+                    checked={updateMetadataOnly}
+                    onChange={() => setUpdateMetadataOnly(true)}
+                    className="text-blue-600"
+                  />
+                  <span>Update expiration date and notes only</span>
+                </label>
+              </div>
+            </div>
+          )}
+
           {/* File Upload */}
-          <div>
-            <Label htmlFor="file-upload">Select Document *</Label>
-            <div className="mt-1">
-              <Input
-                id="file-upload"
-                type="file"
-                onChange={handleFileChange}
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
-                className="cursor-pointer"
-              />
+          {(!isResubmission || !updateMetadataOnly) && (
+            <div>
+              <Label htmlFor="file-upload">
+                {isResubmission ? 'Select New Document' : 'Select Document *'}
+              </Label>
+              <div className="mt-1">
+                <Input
+                  id="file-upload"
+                  type="file"
+                  onChange={handleFileChange}
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
+                  className="cursor-pointer"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Supported formats: PDF, DOC, DOCX, JPG, PNG, TXT (Max 10MB)
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Current Document Info for Resubmission */}
+          {isResubmission && updateMetadataOnly && latestUpload && (
+            <div className="p-3 bg-gray-50 border rounded-lg">
+              <p className="text-sm font-medium text-gray-700 mb-1">Current Document:</p>
+              <div className="flex items-center space-x-2">
+                <File className="w-4 h-4 text-gray-500" />
+                <span className="text-sm text-gray-600">{latestUpload.file_name}</span>
+              </div>
               <p className="text-xs text-gray-500 mt-1">
-                Supported formats: PDF, DOC, DOCX, JPG, PNG, TXT (Max 10MB)
+                You are updating metadata for this document without replacing the file
               </p>
             </div>
-          </div>
+          )}
 
           {/* Selected File Display */}
           {file && (
@@ -234,15 +337,15 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
               Cancel
             </Button>
             <Button 
-              onClick={handleUpload}
-              disabled={!file || uploading}
+              onClick={handleSubmit}
+              disabled={(!file && !isResubmission) || (isResubmission && !file && !updateMetadataOnly) || uploading}
             >
               {uploading ? (
-                <>Uploading...</>
+                <>{isResubmission ? 'Resubmitting...' : 'Uploading...'}</>
               ) : (
                 <>
                   <Upload className="w-4 h-4 mr-2" />
-                  Upload Document
+                  {isResubmission ? 'Resubmit Document' : 'Upload Document'}
                 </>
               )}
             </Button>

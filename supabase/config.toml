@@ -1,1 +1,53 @@
 project_id = "edwerzutsknhuplidhsj"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+
+[studio]
+enabled = true
+port = 54323
+
+[ingest]
+enabled = false
+port = 54324
+
+[storage]
+enabled = true
+port = 54325
+image_transformation = true
+max_file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+port = 54326
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://localhost:3000"]
+jwt_expiry = 3600
+enable_signup = true
+enable_email_confirmations = false
+enable_email_change_confirmations = true
+enable_phone_confirmations = false
+enable_phone_change_confirmations = true
+
+[edge_functions]
+enabled = true
+port = 54327
+
+[analytics]
+enabled = false
+port = 54328
+vector_port = 54329
+backend = "postgres"
+
+[functions.send-user-invitation]
+verify_jwt = false
+
+[functions.send-supplier-invitation]
+verify_jwt = false

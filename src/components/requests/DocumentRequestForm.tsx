@@ -27,7 +27,9 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [dueDate, setDueDate] = useState<Date>();
   const [selectedSupplier, setSelectedSupplier] = useState('');
+  const [selectedBranch, setSelectedBranch] = useState('');
   const [connectedSuppliers, setConnectedSuppliers] = useState<any[]>([]);
+  const [availableBranches, setAvailableBranches] = useState<any[]>([]);
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
@@ -64,6 +66,24 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
         if (connections) {
           setConnectedSuppliers(connections.map(conn => conn.suppliers));
         }
+
+        // Get available branches for this buyer company
+        const { data: branches } = await supabase
+          .from('company_branches')
+          .select('*')
+          .eq('company_id', buyer.id)
+          .eq('company_type', 'buyer')
+          .eq('status', 'active')
+          .order('branch_name');
+
+        if (branches) {
+          setAvailableBranches(branches);
+          // Set default branch if available
+          if (branches.length > 0) {
+            const mainBranch = branches.find(b => b.branch_name === 'Main Office') || branches[0];
+            setSelectedBranch(mainBranch.id);
+          }
+        }
       }
     } catch (error) {
       console.error('Error fetching buyer data:', error);
@@ -89,6 +109,7 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
           due_date: dueDate?.toISOString().split('T')[0],
           supplier_id: selectedSupplier,
           buyer_id: buyerProfile.id,
+          branch_id: selectedBranch,
           requester_id: user.id,
         })
         .select()
@@ -121,6 +142,7 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
       setPriority('medium');
       setDueDate(undefined);
       setSelectedSupplier('');
+      setSelectedBranch('');
       onClose();
     } catch (error: any) {
       toast({
@@ -202,6 +224,23 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
               </Select>
             </div>
           </div>
+
+          <div>
+            <Label htmlFor="branch">Branch *</Label>
+            <Select value={selectedBranch} onValueChange={setSelectedBranch} required>
+              <SelectTrigger>
+                <SelectValue placeholder="Select branch" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableBranches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id}>
+                    {branch.branch_name} {branch.location && `- ${branch.location}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
 
           <div>
             <Label htmlFor="description">Description</Label>

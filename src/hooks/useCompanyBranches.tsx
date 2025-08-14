@@ -174,11 +174,11 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
       // First, check if a profile exists for this email
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, full_name')
         .eq('email', email)
         .single();
 
-      // If profile exists, check if that specific user is already part of the company/branch
+      // If profile exists, check if that specific user is already part of the company
       if (profileData && !profileError) {
         const { data: existingUser } = await supabase
           .from('company_users')
@@ -194,20 +194,68 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
         }
       }
 
-      // For now, we'll create a placeholder entry that needs to be activated
-      // In a real implementation, you'd send an email invitation
+      // Get current user's profile and branch details for email
+      const { data: currentUserProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+
+      const { data: branchDetails } = await supabase
+        .from('company_branches')
+        .select('branch_name')
+        .eq('id', branchId)
+        .single();
+
+      const { data: companyDetails } = await supabase
+        .from(companyType === 'buyer' ? 'buyers' : 'suppliers')
+        .select('company_name')
+        .eq('id', companyId)
+        .single();
+
+      // Create database record first
       const invitationData = {
         company_id: companyId,
         company_type: companyType,
         branch_id: branchId,
-        role,
+        role: role as 'company_admin' | 'branch_manager' | 'document_manager' | 'viewer' | 'approver',
         status: 'pending' as const,
         invited_by: user.id,
-        // This would normally be filled when the invited user accepts
-        profile_id: profileData?.id || '00000000-0000-0000-0000-000000000000' // Use actual profile ID if exists
+        profile_id: profileData?.id || '00000000-0000-0000-0000-000000000000'
       };
 
-      toast.success(`Invitation sent to ${email} for ${role} role`);
+      const { error: insertError } = await supabase
+        .from('company_users')
+        .insert(invitationData);
+
+      if (insertError) {
+        console.error('Error creating invitation record:', insertError);
+        throw insertError;
+      }
+
+      // Send invitation email
+      try {
+        await supabase.functions.invoke('send-user-invitation', {
+          body: {
+            recipientEmail: email,
+            companyName: companyDetails?.company_name || 'Unknown Company',
+            companyType: companyType,
+            branchName: branchDetails?.branch_name || 'Unknown Branch',
+            role: role,
+            inviterName: currentUserProfile?.full_name || user.email || 'Team Administrator',
+            inviterEmail: user.email || '',
+            signupUrl: `${window.location.origin}/auth`
+          }
+        });
+        
+        toast.success(`Invitation sent to ${email} for ${role} role`);
+      } catch (emailError) {
+        console.error('Error sending invitation email:', emailError);
+        // Don't fail the whole process if email fails
+        toast.success(`Invitation created for ${email} (email delivery may be delayed)`);
+      }
+
+      await fetchCompanyUsers(); // Refresh the users list
       return { data: invitationData, error: null };
     } catch (err) {
       console.error('Error in inviteUserToBranch:', err);

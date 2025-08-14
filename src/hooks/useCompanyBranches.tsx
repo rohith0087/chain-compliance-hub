@@ -171,18 +171,27 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
     }
 
     try {
-      // First check if user already exists in the company
-      const { data: existingUser } = await supabase
-        .from('company_users')
-        .select('*')
-        .eq('company_id', companyId)
-        .eq('company_type', companyType)
-        .eq('branch_id', branchId)
+      // First, check if a profile exists for this email
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
         .single();
 
-      if (existingUser) {
-        toast.error('User is already part of this branch');
-        return { error: 'User already exists' };
+      // If profile exists, check if that specific user is already part of the company/branch
+      if (profileData && !profileError) {
+        const { data: existingUser } = await supabase
+          .from('company_users')
+          .select('*')
+          .eq('company_id', companyId)
+          .eq('company_type', companyType)
+          .eq('profile_id', profileData.id)
+          .single();
+
+        if (existingUser) {
+          toast.error('User is already part of this company');
+          return { error: 'User already exists in company' };
+        }
       }
 
       // For now, we'll create a placeholder entry that needs to be activated
@@ -195,7 +204,7 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
         status: 'pending' as const,
         invited_by: user.id,
         // This would normally be filled when the invited user accepts
-        profile_id: '00000000-0000-0000-0000-000000000000' // Placeholder
+        profile_id: profileData?.id || '00000000-0000-0000-0000-000000000000' // Use actual profile ID if exists
       };
 
       toast.success(`Invitation sent to ${email} for ${role} role`);

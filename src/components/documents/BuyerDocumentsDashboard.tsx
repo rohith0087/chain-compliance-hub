@@ -130,7 +130,9 @@ const BuyerDocumentsDashboard = () => {
           document_uploads (
             id,
             file_name,
+            file_path,
             file_size,
+            mime_type,
             status,
             created_at,
             expiration_date,

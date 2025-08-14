@@ -45,6 +45,7 @@ interface DocumentCardProps {
   userRole?: 'buyer' | 'supplier';
   approveLoading?: boolean;
   declineLoading?: boolean;
+  downloadLoading?: boolean;
 }
 
 const DocumentCard = ({ 
@@ -57,7 +58,8 @@ const DocumentCard = ({
   showActions = true,
   userRole = 'supplier',
   approveLoading = false,
-  declineLoading = false
+  declineLoading = false,
+  downloadLoading = false
 }: DocumentCardProps) => {
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -154,9 +156,18 @@ const DocumentCard = ({
                 </Button>
               )}
               {onDownload && document.file_name && (
-                <Button variant="outline" size="sm" onClick={onDownload}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Download
+                <Button variant="outline" size="sm" onClick={onDownload} disabled={downloadLoading}>
+                  {downloadLoading ? (
+                    <>
+                      <Clock className="w-4 h-4 mr-2 animate-spin" />
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 mr-2" />
+                      Download
+                    </>
+                  )}
                 </Button>
               )}
               {onUpload && document.status === 'pending' && userRole === 'supplier' && (

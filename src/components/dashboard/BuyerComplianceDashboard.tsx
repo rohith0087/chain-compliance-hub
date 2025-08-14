@@ -23,6 +23,7 @@ import ComplianceDashboard from './ComplianceDashboard';
 import SupplierInsightsModal from '../supplier/SupplierInsightsModal';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 const BuyerComplianceDashboard = () => {
   const [supplierStats, setSupplierStats] = useState<any[]>([]);
@@ -34,6 +35,7 @@ const BuyerComplianceDashboard = () => {
   const [buyerId, setBuyerId] = useState<string>('');
   const { user } = useAuth();
   const { t } = useTranslation(['dashboard', 'common']);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (user) {
@@ -118,6 +120,65 @@ const BuyerComplianceDashboard = () => {
       : 0,
     pendingRequests: documentRequests.filter(r => r.status === 'pending').length,
     highRiskSuppliers: supplierStats.filter(s => s.complianceScore < 70).length
+  };
+
+  const handleViewDocument = async (request: any) => {
+    try {
+      // Fetch document uploads for this request
+      const { data: uploads } = await supabase
+        .from('document_uploads')
+        .select('*')
+        .eq('request_id', request.id)
+        .limit(1);
+
+      const upload = uploads?.[0];
+      if (!upload?.file_path) {
+        toast({
+          title: "Error",
+          description: "No file available for viewing",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // For images, open in new tab, for others download
+      if (upload.mime_type?.startsWith('image/')) {
+        const { data, error } = await supabase.storage
+          .from('compliance-documents')
+          .createSignedUrl(upload.file_path, 60);
+
+        if (error) throw error;
+        window.open(data.signedUrl, '_blank');
+      } else {
+        // Download the file
+        const { data, error } = await supabase.storage
+          .from('compliance-documents')
+          .download(upload.file_path);
+
+        if (error) throw error;
+
+        const url = URL.createObjectURL(data);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = upload.file_name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        toast({
+          title: "Download Started",
+          description: `Downloading ${upload.file_name}`,
+        });
+      }
+    } catch (error) {
+      console.error('View/Download error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to access document",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSupplierClick = (supplier: any) => {
@@ -239,7 +300,11 @@ const BuyerComplianceDashboard = () => {
                       >
                         {t(`common:buttons.${request.status}`)}
                       </Badge>
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleViewDocument(request)}
+                      >
                         <Eye className="w-4 h-4" />
                       </Button>
                     </div>

@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import DocumentsFilter from './DocumentsFilter';
 import DocumentCard from './DocumentCard';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface BuyerDocumentsManagerProps {
   documents: any[];
@@ -37,6 +39,8 @@ const BuyerDocumentsManager = ({
     expirationStatus: '',
     dateRange: ''
   });
+  const [downloading, setDownloading] = useState<string | null>(null);
+  const { toast } = useToast();
 
   // Filter documents based on current filters
   const filteredDocuments = documents.filter(doc => {
@@ -51,6 +55,85 @@ const BuyerDocumentsManager = ({
 
     return matchesSearch && matchesStatus && matchesCategory && matchesDocumentType;
   });
+
+  const handleView = async (document: any) => {
+    const upload = document.document_uploads?.[0];
+    if (!upload?.file_path) {
+      toast({
+        title: "Error",
+        description: "No file available for viewing",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // For images, open in new tab
+      if (upload.mime_type?.startsWith('image/')) {
+        const { data, error } = await supabase.storage
+          .from('compliance-documents')
+          .createSignedUrl(upload.file_path, 60);
+
+        if (error) throw error;
+        window.open(data.signedUrl, '_blank');
+      } else {
+        // For other files, download them
+        handleDownload(document);
+      }
+    } catch (error) {
+      console.error('View error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to view document",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownload = async (document: any) => {
+    const upload = document.document_uploads?.[0];
+    if (!upload?.file_path) {
+      toast({
+        title: "Error",
+        description: "No file available for download",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDownloading(document.id);
+    try {
+      const { data, error } = await supabase.storage
+        .from('compliance-documents')
+        .download(upload.file_path);
+
+      if (error) throw error;
+
+      // Create download link
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = upload.file_name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download Started",
+        description: `Downloading ${upload.file_name}`,
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to download the document",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   const stats = {
     total: filteredDocuments.length,
@@ -146,8 +229,9 @@ const BuyerDocumentsManager = ({
                     })
                   }}
                   userRole="buyer"
-                  onView={() => console.log('View document:', doc.id)}
-                  onDownload={() => console.log('Download document:', doc.id)}
+                  onView={() => handleView(doc)}
+                  onDownload={() => handleDownload(doc)}
+                  downloadLoading={downloading === doc.id}
                   onApprove={() => onApprove(doc.id)}
                   onDecline={() => onDecline(doc.id)}
                   approveLoading={approveLoading === doc.id}

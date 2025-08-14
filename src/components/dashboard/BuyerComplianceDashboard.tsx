@@ -123,6 +123,7 @@ const BuyerComplianceDashboard = () => {
   };
 
   const handleViewDocument = async (request: any) => {
+    console.log('Viewing document for request:', request.id);
     try {
       // Fetch document uploads for this request
       const { data: uploads } = await supabase
@@ -131,8 +132,12 @@ const BuyerComplianceDashboard = () => {
         .eq('request_id', request.id)
         .limit(1);
 
+      console.log('Fetched uploads:', uploads);
       const upload = uploads?.[0];
+      console.log('Upload data:', upload);
+      
       if (!upload?.file_path) {
+        console.log('No file_path found:', upload);
         toast({
           title: "Error",
           description: "No file available for viewing",
@@ -141,13 +146,18 @@ const BuyerComplianceDashboard = () => {
         return;
       }
 
+      console.log('Attempting to access file_path:', upload.file_path);
       // For images, open in new tab, for others download
       if (upload.mime_type?.startsWith('image/')) {
         const { data, error } = await supabase.storage
           .from('compliance-documents')
           .createSignedUrl(upload.file_path, 60);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Signed URL error:', error);
+          throw error;
+        }
+        console.log('Opening signed URL:', data.signedUrl);
         window.open(data.signedUrl, '_blank');
       } else {
         // Download the file
@@ -155,8 +165,12 @@ const BuyerComplianceDashboard = () => {
           .from('compliance-documents')
           .download(upload.file_path);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Storage download error:', error);
+          throw error;
+        }
 
+        console.log('Download successful, creating blob URL');
         const url = URL.createObjectURL(data);
         const a = document.createElement('a');
         a.href = url;

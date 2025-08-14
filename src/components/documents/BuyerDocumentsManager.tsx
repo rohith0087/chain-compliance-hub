@@ -57,8 +57,13 @@ const BuyerDocumentsManager = ({
   });
 
   const handleView = async (document: any) => {
+    console.log('View document:', document.id);
+    console.log('Document uploads:', document.document_uploads);
     const upload = document.document_uploads?.[0];
+    console.log('Upload data:', upload);
+    
     if (!upload?.file_path) {
+      console.log('No file_path found:', upload);
       toast({
         title: "Error",
         description: "No file available for viewing",
@@ -91,8 +96,13 @@ const BuyerDocumentsManager = ({
   };
 
   const handleDownload = async (document: any) => {
+    console.log('Download document:', document.id);
+    console.log('Document uploads:', document.document_uploads);
     const upload = document.document_uploads?.[0];
+    console.log('Upload data:', upload);
+    
     if (!upload?.file_path) {
+      console.log('No file_path found:', upload);
       toast({
         title: "Error",
         description: "No file available for download",
@@ -103,12 +113,17 @@ const BuyerDocumentsManager = ({
 
     setDownloading(document.id);
     try {
+      console.log('Attempting to download file_path:', upload.file_path);
       const { data, error } = await supabase.storage
         .from('compliance-documents')
         .download(upload.file_path);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Storage download error:', error);
+        throw error;
+      }
 
+      console.log('Download successful, creating blob URL');
       // Create download link
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');

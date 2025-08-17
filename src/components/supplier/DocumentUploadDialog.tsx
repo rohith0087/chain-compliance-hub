@@ -163,6 +163,21 @@ if (file) {
         });
       }
 
+      // Trigger buyer agent to process newly uploaded documents
+      try {
+        console.info('Triggering buyer agent for supplier upload...');
+        const { data: agentData, error: agentError } = await supabase.functions.invoke('agent-coordinator', {
+          body: { action: 'trigger_buyer' }
+        });
+        if (agentError) {
+          console.error('Agent coordinator error:', agentError);
+        } else {
+          console.info('Agent coordinator response:', agentData);
+        }
+      } catch (err) {
+        console.error('Error invoking agent coordinator:', err);
+      }
+
       toast({
         title: isResubmission ? "Resubmission Successful" : "Upload Successful",
         description: isResubmission 

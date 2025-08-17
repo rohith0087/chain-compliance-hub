@@ -21,9 +21,13 @@ import {
 } from 'lucide-react';
 import ComplianceDashboard from './ComplianceDashboard';
 import SupplierInsightsModal from '../supplier/SupplierInsightsModal';
+import SupplierComplianceExportModal from '../exports/SupplierComplianceExportModal';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { ComplianceDataService } from '@/services/ComplianceDataService';
+import { AdvancedPDFExportService } from '@/services/AdvancedPDFExportService';
+import { AIInsightsService } from '@/services/AIInsightsService';
 
 const BuyerComplianceDashboard = () => {
   const [supplierStats, setSupplierStats] = useState<any[]>([]);
@@ -31,6 +35,7 @@ const BuyerComplianceDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [showInsightsModal, setShowInsightsModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const [buyerData, setBuyerData] = useState<any>(null);
   const [buyerId, setBuyerId] = useState<string>('');
   const { user } = useAuth();
@@ -234,6 +239,46 @@ const BuyerComplianceDashboard = () => {
     setShowInsightsModal(true);
   };
 
+  const handleExportReports = async (
+    selectedSupplierIds: string[],
+    reportType: string,
+    dateRange: { from: Date | undefined; to: Date | undefined },
+    options: any
+  ) => {
+    try {
+      const pdfService = new AdvancedPDFExportService();
+
+      if (selectedSupplierIds.length === 1) {
+        // Single supplier report
+        const supplierData = await ComplianceDataService.getSupplierComplianceData(
+          selectedSupplierIds[0],
+          buyerId,
+          dateRange.from && dateRange.to ? { from: dateRange.from, to: dateRange.to } : undefined
+        );
+
+        // Get AI insights (will fallback to static if no API key)
+        const aiInsights = await AIInsightsService.generateSupplierInsights(supplierData);
+
+        await pdfService.generateSingleSupplierReport(supplierData, aiInsights, options);
+      } else {
+        // Multi-supplier comparison report
+        const comparisonData = await ComplianceDataService.getMultiSupplierComparisonData(
+          selectedSupplierIds,
+          buyerId,
+          dateRange.from && dateRange.to ? { from: dateRange.from, to: dateRange.to } : undefined
+        );
+
+        // Get AI insights for comparison
+        const aiInsights = await AIInsightsService.generateComparisonInsights(comparisonData);
+
+        await pdfService.generateComparisonReport(comparisonData, aiInsights, options);
+      }
+    } catch (error) {
+      console.error('Export failed:', error);
+      throw error;
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center py-8">{t('common:messages.loading')}</div>;
   }
@@ -242,9 +287,19 @@ const BuyerComplianceDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">{t('dashboard:compliance.title')}</h2>
-        <Button variant="outline" onClick={loadDashboardData}>
-          {t('common:buttons.refresh')}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={loadDashboardData}>
+            {t('common:buttons.refresh')}
+          </Button>
+          <Button 
+            variant="default" 
+            onClick={() => setShowExportModal(true)}
+            className="flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Export Reports
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
@@ -426,6 +481,13 @@ const BuyerComplianceDashboard = () => {
         onClose={() => setShowInsightsModal(false)}
         supplier={selectedSupplier}
         buyerId={buyerData?.buyer_id_number || buyerId}
+      />
+
+      <SupplierComplianceExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        suppliers={supplierStats}
+        onExport={handleExportReports}
       />
     </div>
   );

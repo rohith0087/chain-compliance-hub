@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -61,26 +61,22 @@ const ChatDocumentViewer = ({ document, isOpen, onClose }: ChatDocumentViewerPro
 
     try {
       const pathInfo = resolveStoragePath(document.file_path);
-      if (!pathInfo) {
-        throw new Error('Invalid file path');
-      }
+      if (!pathInfo) throw new Error('Invalid file path');
 
-      const { data, error } = await supabase.storage
-        .from(pathInfo.bucket)
-        .createSignedUrl(pathInfo.key, 3600); // 1 hour expiry
+      const { data, error } = await supabase.functions.invoke('secure-document-url', {
+        body: { bucket: pathInfo.bucket, key: pathInfo.key, expiresIn: 3600 },
+      });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error as any;
 
-      if (data?.signedUrl) {
-        setDocumentUrl(data.signedUrl);
+      if (data?.url) {
+        setDocumentUrl(data.url);
       } else {
-        throw new Error('Failed to generate signed URL');
+        throw new Error('No URL returned');
       }
     } catch (err) {
       console.error('Error loading document:', err);
-      setError('Failed to load document. Please try again.');
+      setError("We couldn’t open this document. It may have moved or you might not have access.");
     } finally {
       setIsLoading(false);
     }
@@ -203,6 +199,9 @@ const ChatDocumentViewer = ({ document, isOpen, onClose }: ChatDocumentViewerPro
                 <FileText className="w-5 h-5 text-primary" />
                 {document.title}
               </DialogTitle>
+              <DialogDescription className="text-muted-foreground">
+                Inline document preview — press Esc to close and continue chatting.
+              </DialogDescription>
               
               <div className="flex items-center gap-4 flex-wrap text-sm text-muted-foreground">
                 {document.supplier_name && (

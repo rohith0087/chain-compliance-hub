@@ -6,13 +6,13 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { 
   MessageSquare, 
   Send, 
-  Bot, 
   User, 
   Loader2, 
   History,
@@ -26,7 +26,10 @@ import {
   XCircle,
   ExternalLink,
   Sparkles,
-  Menu
+  Menu,
+  ChevronDown,
+  Building,
+  Shield
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -76,8 +79,9 @@ const ChatPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [currentSession, setCurrentSession] = useState<string | null>(null);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
-  const [companyInfo, setCompanyInfo] = useState<{id: string, type: string} | null>(null);
+  const [companyInfo, setCompanyInfo] = useState<{id: string, type: string, industry?: string} | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [dynamicQuestions, setDynamicQuestions] = useState<string[]>([]);
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -95,6 +99,13 @@ const ChatPage = () => {
     loadChatSessions();
   }, [user]);
 
+  // Load dynamic questions when company info is available
+  useEffect(() => {
+    if (companyInfo) {
+      loadDynamicQuestions();
+    }
+  }, [companyInfo]);
+
   const getCompanyInfo = async () => {
     if (!user) return;
 
@@ -102,27 +113,82 @@ const ChatPage = () => {
       // Check if user is a buyer
       const { data: buyerData } = await supabase
         .from('buyers')
-        .select('id')
+        .select('id, industry')
         .eq('profile_id', user.id)
         .single();
 
       if (buyerData) {
-        setCompanyInfo({ id: buyerData.id, type: 'buyer' });
+        setCompanyInfo({ id: buyerData.id, type: 'buyer', industry: buyerData.industry });
         return;
       }
 
       // Check if user is a supplier
       const { data: supplierData } = await supabase
         .from('suppliers')
-        .select('id')
+        .select('id, industry')
         .eq('profile_id', user.id)
         .single();
 
       if (supplierData) {
-        setCompanyInfo({ id: supplierData.id, type: 'supplier' });
+        setCompanyInfo({ id: supplierData.id, type: 'supplier', industry: supplierData.industry });
       }
     } catch (error) {
       console.error('Error getting company info:', error);
+    }
+  };
+
+  const loadDynamicQuestions = async () => {
+    if (!companyInfo) return;
+
+    try {
+      // Get top suppliers
+      const { data: suppliers } = await supabase
+        .from('suppliers')
+        .select('company_name')
+        .limit(3);
+
+      // Get common document types
+      const { data: docTypes } = await supabase
+        .from('document_requests')
+        .select('document_type')
+        .limit(3);
+
+      // Get pending documents count
+      const { data: pendingDocs } = await supabase
+        .from('document_uploads')
+        .select('status')
+        .eq('status', 'pending_review');
+
+      const questions = [];
+      
+      if (suppliers && suppliers.length > 0) {
+        questions.push(`Show me documents from ${suppliers[0].company_name}`);
+      }
+      
+      if (docTypes && docTypes.length > 0) {
+        questions.push(`When do our ${docTypes[0].document_type} certificates expire?`);
+      }
+      
+      if (pendingDocs && pendingDocs.length > 0) {
+        questions.push(`Show me the ${pendingDocs.length} documents pending review`);
+      }
+      
+      questions.push("What documents need my attention today?");
+      questions.push("Show me compliance gaps and recommendations");
+      questions.push("Find documents expiring in the next 30 days");
+
+      setDynamicQuestions(questions);
+    } catch (error) {
+      console.error('Error loading dynamic questions:', error);
+      // Fallback to static questions
+      setDynamicQuestions([
+        "Show me documents from our suppliers",
+        "When do our certificates expire?",
+        "Which documents are pending review?",
+        "What documents need attention today?",
+        "Show me compliance status",
+        "Find expired documents"
+      ]);
     }
   };
 
@@ -239,6 +305,36 @@ const ChatPage = () => {
     }
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return 'border-l-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20';
+      case 'pending_review':
+        return 'border-l-amber-500 bg-amber-50/50 dark:bg-amber-950/20';
+      case 'rejected':
+        return 'border-l-red-500 bg-red-50/50 dark:bg-red-950/20';
+      case 'expired':
+        return 'border-l-red-600 bg-red-50/50 dark:bg-red-950/20';
+      default:
+        return 'border-l-primary/20 bg-card';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return <CheckCircle className="w-3 h-3 text-emerald-600" />;
+      case 'pending_review':
+        return <Clock className="w-3 h-3 text-amber-600" />;
+      case 'rejected':
+        return <XCircle className="w-3 h-3 text-red-600" />;
+      case 'expired':
+        return <AlertCircle className="w-3 h-3 text-red-600" />;
+      default:
+        return <FileText className="w-3 h-3 text-muted-foreground" />;
+    }
+  };
+
   const renderStructuredMessage = (content: string) => {
     try {
       const parsed: StructuredResponse = JSON.parse(content);
@@ -273,45 +369,59 @@ const ChatPage = () => {
 
           {parsed.documents && parsed.documents.length > 0 && (
             <div className="space-y-4">
-              <h4 className="font-semibold text-foreground">Related Documents</h4>
+              <h4 className="font-semibold text-foreground flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Related Documents ({parsed.documents.length})
+              </h4>
+              
+              {/* Show top 3 documents */}
               <div className="grid gap-3">
-                {parsed.documents.map((doc, index) => (
-                  <Card key={index} className="p-4 border-l-4 border-l-primary/20">
+                {parsed.documents.slice(0, 3).map((doc, index) => (
+                  <Card key={index} className={`p-4 border-l-4 transition-all hover:shadow-md ${getStatusColor(doc.status)}`}>
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-primary" />
+                          {getStatusIcon(doc.status)}
                           <span className="font-medium text-foreground">{doc.title}</span>
                         </div>
                         
                         {doc.supplier_name && (
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <span>Supplier: {doc.supplier_name}</span>
+                            <Building className="w-3 h-3" />
+                            <span>{doc.supplier_name}</span>
                           </div>
                         )}
                         
-                        <div className="flex items-center gap-4 text-sm">
-                          <Badge variant="outline">{doc.document_type}</Badge>
+                        <div className="flex items-center gap-4 text-sm flex-wrap">
+                          <Badge 
+                            variant="secondary" 
+                            className="bg-primary/10 text-primary hover:bg-primary/20"
+                          >
+                            {doc.document_type}
+                          </Badge>
                           
                           {doc.expiration_date && (
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 text-muted-foreground">
                               <Calendar className="w-3 h-3" />
                               <span>Expires: {format(new Date(doc.expiration_date), 'MMM dd, yyyy')}</span>
                             </div>
                           )}
                           
-                          <div className="flex items-center gap-1">
-                            {doc.status === 'approved' && <CheckCircle className="w-3 h-3 text-green-500" />}
-                            {doc.status === 'pending_review' && <Clock className="w-3 h-3 text-yellow-500" />}
-                            {doc.status === 'rejected' && <XCircle className="w-3 h-3 text-red-500" />}
-                            {doc.status === 'expired' && <AlertCircle className="w-3 h-3 text-red-500" />}
-                            <span className="capitalize">{doc.status.replace('_', ' ')}</span>
-                          </div>
+                          <Badge 
+                            variant="outline" 
+                            className={`capitalize ${
+                              doc.status === 'approved' ? 'border-emerald-500 text-emerald-700 dark:text-emerald-400' :
+                              doc.status === 'pending_review' ? 'border-amber-500 text-amber-700 dark:text-amber-400' :
+                              'border-red-500 text-red-700 dark:text-red-400'
+                            }`}
+                          >
+                            {doc.status.replace('_', ' ')}
+                          </Badge>
                         </div>
                       </div>
                       
                       {doc.file_path && (
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" className="hover:bg-primary/10">
                           <ExternalLink className="w-3 h-3 mr-1" />
                           View
                         </Button>
@@ -320,6 +430,75 @@ const ChatPage = () => {
                   </Card>
                 ))}
               </div>
+
+              {/* Collapsible section for remaining documents */}
+              {parsed.documents.length > 3 && (
+                <Collapsible>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" className="w-full justify-center gap-2 text-muted-foreground hover:text-foreground">
+                      <span>Show {parsed.documents.length - 3} more documents</span>
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-3">
+                    <div className="grid gap-3">
+                      {parsed.documents.slice(3).map((doc, index) => (
+                        <Card key={index + 3} className={`p-4 border-l-4 transition-all hover:shadow-md ${getStatusColor(doc.status)}`}>
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center gap-2">
+                                {getStatusIcon(doc.status)}
+                                <span className="font-medium text-foreground">{doc.title}</span>
+                              </div>
+                              
+                              {doc.supplier_name && (
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                  <Building className="w-3 h-3" />
+                                  <span>{doc.supplier_name}</span>
+                                </div>
+                              )}
+                              
+                              <div className="flex items-center gap-4 text-sm flex-wrap">
+                                <Badge 
+                                  variant="secondary" 
+                                  className="bg-primary/10 text-primary hover:bg-primary/20"
+                                >
+                                  {doc.document_type}
+                                </Badge>
+                                
+                                {doc.expiration_date && (
+                                  <div className="flex items-center gap-1 text-muted-foreground">
+                                    <Calendar className="w-3 h-3" />
+                                    <span>Expires: {format(new Date(doc.expiration_date), 'MMM dd, yyyy')}</span>
+                                  </div>
+                                )}
+                                
+                                <Badge 
+                                  variant="outline" 
+                                  className={`capitalize ${
+                                    doc.status === 'approved' ? 'border-emerald-500 text-emerald-700 dark:text-emerald-400' :
+                                    doc.status === 'pending_review' ? 'border-amber-500 text-amber-700 dark:text-amber-400' :
+                                    'border-red-500 text-red-700 dark:text-red-400'
+                                  }`}
+                                >
+                                  {doc.status.replace('_', ' ')}
+                                </Badge>
+                              </div>
+                            </div>
+                            
+                            {doc.file_path && (
+                              <Button size="sm" variant="outline" className="hover:bg-primary/10">
+                                <ExternalLink className="w-3 h-3 mr-1" />
+                                View
+                              </Button>
+                            )}
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
             </div>
           )}
 
@@ -333,7 +512,7 @@ const ChatPage = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => setInputMessage(action)}
-                    className="text-xs"
+                    className="text-xs hover:bg-primary/10 hover:border-primary/20"
                   >
                     {action}
                   </Button>
@@ -348,14 +527,6 @@ const ChatPage = () => {
     }
   };
 
-  const quickStarters = [
-    "Show me documents from Terry Foods",
-    "When does our ISO 9001 certification expire?",
-    "Which documents are pending review?",
-    "Find all expired compliance documents",
-    "Show me recent document uploads",
-    "What documents need attention today?"
-  ];
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -456,10 +627,13 @@ const ChatPage = () => {
                 <Menu className="w-4 h-4" />
               </Button>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-primary" />
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                  <Shield className="w-4 h-4 text-primary" />
                 </div>
-                <h1 className="font-semibold text-foreground">AI Assistant</h1>
+                <div>
+                  <h1 className="font-semibold text-foreground">Compliance Assistant</h1>
+                  <p className="text-xs text-muted-foreground capitalize">{companyInfo?.type} • {companyInfo?.industry || 'General'}</p>
+                </div>
               </div>
             </div>
             
@@ -475,82 +649,84 @@ const ChatPage = () => {
           {messages.length === 0 ? (
             <div className="max-w-2xl mx-auto text-center space-y-8 py-12">
               <div className="space-y-4">
-                <div className="w-16 h-16 rounded-full bg-primary/10 mx-auto flex items-center justify-center">
-                  <Bot className="w-8 h-8 text-primary" />
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 via-primary/10 to-transparent mx-auto flex items-center justify-center border border-primary/20">
+                  <Shield className="w-10 h-10 text-primary" />
                 </div>
-                <h2 className="text-2xl font-semibold text-foreground">
-                  Welcome to your AI Compliance Assistant
+                <h2 className="text-3xl font-bold text-foreground bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                  Welcome to your Compliance AI
                 </h2>
-                <p className="text-muted-foreground text-lg">
-                  Ask me about your documents, compliance status, or any questions about your business needs.
+                <p className="text-muted-foreground text-lg max-w-md mx-auto">
+                  Your intelligent assistant for document management, compliance tracking, and regulatory guidance.
                 </p>
               </div>
 
               <div className="space-y-4">
-                <h3 className="font-medium text-foreground">Try asking:</h3>
-                <div className="grid gap-2">
-                  {quickStarters.map((starter, index) => (
+                <h3 className="font-semibold text-foreground flex items-center justify-center gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  Try asking:
+                </h3>
+                <div className="grid gap-3 max-w-lg mx-auto">
+                  {dynamicQuestions.map((question, index) => (
                     <Button
                       key={index}
                       variant="outline"
-                      className="text-left justify-start h-auto p-4"
-                      onClick={() => setInputMessage(starter)}
+                      className="text-left justify-start h-auto p-4 hover:bg-primary/5 hover:border-primary/20 transition-all group"
+                      onClick={() => setInputMessage(question)}
                     >
-                      <Sparkles className="w-4 h-4 mr-2 text-primary" />
-                      {starter}
+                      <div className="flex items-start gap-3 w-full">
+                        <div className="w-2 h-2 rounded-full bg-primary/40 mt-2 group-hover:bg-primary flex-shrink-0" />
+                        <span className="text-muted-foreground group-hover:text-foreground transition-colors">
+                          {question}
+                        </span>
+                      </div>
                     </Button>
                   ))}
                 </div>
               </div>
             </div>
           ) : (
-            <div className="max-w-3xl mx-auto space-y-6">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex gap-4 ${
-                    message.role === 'user' ? 'justify-end' : 'justify-start'
-                  }`}
-                >
-                  {message.role === 'assistant' && (
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Bot className="w-4 h-4 text-primary" />
+            <div className="space-y-1">
+              {messages.map((message, index) => (
+                <div key={message.id} className="flex items-start gap-4 p-6 hover:bg-accent/30 transition-colors">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    message.role === 'user' 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20'
+                  }`}>
+                    {message.role === 'user' ? (
+                      <User className="w-4 h-4" />
+                    ) : (
+                      <Shield className="w-4 h-4 text-primary" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="font-medium text-sm text-foreground">
+                      {message.role === 'user' ? 'You' : 'Compliance AI'}
                     </div>
-                  )}
-                  
-                  <div className={`flex-1 space-y-2 ${message.role === 'user' ? 'max-w-lg' : 'max-w-full'}`}>
-                    <div
-                      className={`rounded-2xl px-4 py-3 ${
-                        message.role === 'user'
-                          ? 'bg-primary text-primary-foreground ml-auto'
-                          : 'bg-card border border-border'
-                      }`}
-                    >
-                      {message.role === 'user' ? (
-                        <p>{message.content}</p>
-                      ) : (
-                        renderStructuredMessage(message.content)
-                      )}
+                    <div className="prose prose-sm max-w-none">
+                      {message.role === 'assistant' 
+                        ? renderStructuredMessage(message.content)
+                        : <p className="text-foreground leading-relaxed">{message.content}</p>
+                      }
                     </div>
                   </div>
-                  
-                  {message.role === 'user' && (
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                      <User className="w-4 h-4" />
-                    </div>
-                  )}
                 </div>
               ))}
-              
+
               {isLoading && (
-                <div className="flex gap-4 justify-start">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-4 h-4 text-primary" />
+                <div className="flex items-start gap-4 p-6 bg-accent/20">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20 flex items-center justify-center">
+                    <Loader2 className="w-4 h-4 text-primary animate-spin" />
                   </div>
-                  <div className="bg-card border border-border rounded-2xl px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="text-muted-foreground">Thinking...</span>
+                  <div className="flex-1 space-y-2">
+                    <div className="font-medium text-sm text-foreground">Compliance AI</div>
+                    <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                      <div className="flex gap-1">
+                        <div className="w-1 h-1 bg-primary rounded-full animate-bounce" />
+                        <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                        <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                      </div>
+                      Analyzing your request...
                     </div>
                   </div>
                 </div>
@@ -561,32 +737,35 @@ const ChatPage = () => {
 
         {/* Input Area */}
         <div className="border-t border-border bg-card/50 backdrop-blur p-6">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-2xl mx-auto">
             <div className="flex gap-3">
-              <div className="flex-1 relative">
-                <Input
-                  ref={inputRef}
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Ask about documents, compliance, or anything else..."
-                  className="pr-12 min-h-[44px] rounded-full"
-                  disabled={isLoading}
-                />
-                <Button
-                  size="sm"
-                  onClick={sendMessage}
-                  disabled={!inputMessage.trim() || isLoading}
-                  className="absolute right-1 top-1 bottom-1 rounded-full w-10 h-auto p-0"
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
-              </div>
+              <Input
+                ref={inputRef}
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Ask about your compliance documents, suppliers, or regulatory requirements..."
+                className="flex-1 bg-background border-border focus:border-primary/40 focus:ring-primary/20"
+                disabled={isLoading}
+              />
+              <Button 
+                onClick={sendMessage} 
+                disabled={!inputMessage.trim() || isLoading}
+                size="sm"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
             </div>
             
-            <p className="text-xs text-muted-foreground text-center mt-3">
-              AI assistant can make mistakes. Please verify important information.
-            </p>
+            {messages.length > 0 && (
+              <div className="mt-4 text-center">
+                <p className="text-xs text-muted-foreground">
+                  Knowledge sources: {messages[messages.length - 1]?.metadata?.knowledge_entries_used || 0} • 
+                  Documents found: {messages[messages.length - 1]?.metadata?.documents_found || 0}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

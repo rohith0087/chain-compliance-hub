@@ -11,7 +11,8 @@ import {
   Eye,
   Upload,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  Link
 } from 'lucide-react';
 
 interface DocumentCardProps {
@@ -41,6 +42,7 @@ interface DocumentCardProps {
   onUpload?: () => void;
   onApprove?: () => void;
   onDecline?: () => void;
+  onCreateLink?: () => void;
   showActions?: boolean;
   userRole?: 'buyer' | 'supplier';
   approveLoading?: boolean;
@@ -55,6 +57,7 @@ const DocumentCard = ({
   onUpload, 
   onApprove,
   onDecline,
+  onCreateLink,
   showActions = true,
   userRole = 'supplier',
   approveLoading = false,
@@ -114,6 +117,12 @@ const DocumentCard = ({
   const canApproveOrDecline = userRole === 'buyer' && 
     document.status === 'submitted' && 
     document.file_name;
+
+  // Show create link button for buyers when document is approved
+  const canCreateLink = userRole === 'buyer' && 
+    document.status === 'approved' && 
+    document.file_name && 
+    onCreateLink;
 
   console.log('DocumentCard debug:', {
     documentId: document.id,
@@ -217,6 +226,12 @@ const DocumentCard = ({
                     )}
                   </Button>
                 </>
+              )}
+              {canCreateLink && (
+                <Button size="sm" variant="outline" onClick={onCreateLink}>
+                  <Link className="w-4 h-4 mr-2" />
+                  Create Link
+                </Button>
               )}
             </div>
           )}

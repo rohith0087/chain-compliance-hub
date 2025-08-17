@@ -301,6 +301,7 @@ const BuyerDocumentsManager = ({
                   downloadLoading={downloading === doc.id}
                   onApprove={() => onApprove(doc.id)}
                   onDecline={() => onDecline(doc.id)}
+                  onCreateLink={() => handleCreateLink(doc)}
                   approveLoading={approveLoading === doc.id}
                   declineLoading={declineLoading === doc.id}
                 />
@@ -319,6 +320,18 @@ const BuyerDocumentsManager = ({
           )}
         </CardContent>
       </Card>
+
+      {/* Document Link Modal */}
+      {selectedDocument && (
+        <DocumentLinkModal
+          isOpen={linkModalOpen}
+          onClose={() => {
+            setLinkModalOpen(false);
+            setSelectedDocument(null);
+          }}
+          documentUpload={selectedDocument.document_uploads?.[0]}
+        />
+      )}
     </div>
   );
 };

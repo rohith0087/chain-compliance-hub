@@ -12,6 +12,7 @@ import DocumentsFilter from './DocumentsFilter';
 import DocumentCard from './DocumentCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { DocumentLinkModal } from './DocumentLinkModal';
 import { resolveStoragePath } from '@/utils/storagePath';
 interface BuyerDocumentsManagerProps {
   documents: any[];
@@ -40,6 +41,8 @@ const BuyerDocumentsManager = ({
     dateRange: ''
   });
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const { toast } = useToast();
 
   // Filter documents based on current filters
@@ -193,6 +196,11 @@ const BuyerDocumentsManager = ({
     } finally {
       setDownloading(null);
     }
+  };
+
+  const handleCreateLink = (doc: any) => {
+    setSelectedDocument(doc);
+    setLinkModalOpen(true);
   };
   const stats = {
     total: filteredDocuments.length,

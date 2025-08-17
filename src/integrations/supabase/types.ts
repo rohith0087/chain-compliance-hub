@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -367,6 +367,51 @@ export type Database = {
           },
         ]
       }
+      document_activity_logs: {
+        Row: {
+          action_type: string
+          created_at: string
+          document_upload_id: string
+          id: string
+          metadata: Json | null
+          notes: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          document_upload_id: string
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          document_upload_id?: string
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_activity_logs_document_upload_id_fkey"
+            columns: ["document_upload_id"]
+            isOneToOne: false
+            referencedRelation: "document_uploads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_activity_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_approvals: {
         Row: {
           approval_notes: string | null
@@ -562,6 +607,60 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_shared_links: {
+        Row: {
+          access_token: string
+          created_at: string
+          created_by: string
+          document_upload_id: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          last_accessed_at: string | null
+          permission_level: string
+          view_count: number
+        }
+        Insert: {
+          access_token?: string
+          created_at?: string
+          created_by: string
+          document_upload_id: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          last_accessed_at?: string | null
+          permission_level?: string
+          view_count?: number
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          created_by?: string
+          document_upload_id?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          last_accessed_at?: string | null
+          permission_level?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_shared_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_shared_links_document_upload_id_fkey"
+            columns: ["document_upload_id"]
+            isOneToOne: false
+            referencedRelation: "document_uploads"
             referencedColumns: ["id"]
           },
         ]
@@ -919,60 +1018,70 @@ export type Database = {
     Functions: {
       can_manage_company_users: {
         Args: {
-          p_user_id: string
           p_company_id: string
           p_company_type: string
+          p_user_id: string
         }
         Returns: boolean
       }
       can_view_company_users: {
         Args: {
-          p_user_id: string
           p_company_id: string
           p_company_type: string
+          p_user_id: string
         }
         Returns: boolean
       }
       create_notification: {
         Args: {
-          p_user_id: string
-          p_title: string
           p_message: string
-          p_type: string
           p_reference_id?: string
+          p_title: string
+          p_type: string
+          p_user_id: string
         }
         Returns: string
       }
       create_supplier_to_buyer_connection: {
         Args: {
           p_buyer_id_number: string
-          p_supplier_profile_id: string
           p_notes?: string
+          p_supplier_profile_id: string
         }
         Returns: Json
+      }
+      log_document_activity: {
+        Args: {
+          p_action_type: string
+          p_document_upload_id: string
+          p_metadata?: Json
+          p_notes?: string
+          p_user_id: string
+        }
+        Returns: string
       }
       supplier_can_view_buyer: {
         Args: { buyer_id: string }
         Returns: boolean
       }
       user_has_branch_access: {
-        Args: { p_user_id: string; p_branch_id: string }
+        Args: { p_branch_id: string; p_user_id: string }
         Returns: boolean
       }
       user_has_company_access: {
         Args: {
-          p_user_id: string
           p_company_id: string
           p_company_type: string
+          p_user_id: string
         }
         Returns: boolean
       }
       user_has_permission: {
         Args: {
-          p_user_id: string
           p_company_id: string
           p_company_type: string
           p_permission: Database["public"]["Enums"]["permission_type"]
+          p_user_id: string
         }
         Returns: boolean
       }

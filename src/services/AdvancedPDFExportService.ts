@@ -16,46 +16,53 @@ export class AdvancedPDFExportService {
   private pageWidth: number;
   private pageHeight: number;
   private margin: number;
+  private currentY: number;
   private primaryColor: [number, number, number] = [30, 58, 138];
   private secondaryColor: [number, number, number] = [59, 130, 246];
   private successColor: [number, number, number] = [34, 197, 94];
   private warningColor: [number, number, number] = [251, 191, 36];
   private errorColor: [number, number, number] = [239, 68, 68];
+  private lightGray: [number, number, number] = [248, 250, 252];
+  private mediumGray: [number, number, number] = [156, 163, 175];
 
   constructor() {
     this.doc = new jsPDF();
     this.pageWidth = this.doc.internal.pageSize.getWidth();
     this.pageHeight = this.doc.internal.pageSize.getHeight();
     this.margin = 20;
+    this.currentY = this.margin;
   }
+
 
   async generateSingleSupplierReport(
     data: SupplierComplianceData,
     aiInsights: AIInsights,
     options: any
   ): Promise<void> {
+    this.resetDocument();
+    
     // Page 1: Executive Dashboard
     await this.addExecutiveDashboard(data, aiInsights);
 
     // Page 2: Detailed Analytics
-    this.doc.addPage();
+    this.addNewPage();
     await this.addDetailedAnalytics(data);
 
     // Page 3: AI Risk Assessment
     if (options.includeRiskAssessment) {
-      this.doc.addPage();
+      this.addNewPage();
       await this.addAIRiskAssessment(data, aiInsights);
     }
 
     // Page 4: Performance Timeline
     if (options.includeDocumentHistory) {
-      this.doc.addPage();
+      this.addNewPage();
       await this.addPerformanceTimeline(data);
     }
 
     // Page 5: AI Recommendations
     if (options.includeRecommendations) {
-      this.doc.addPage();
+      this.addNewPage();
       await this.addAIRecommendations(data, aiInsights);
     }
 
@@ -73,26 +80,28 @@ export class AdvancedPDFExportService {
     aiInsights: AIInsights,
     options: any
   ): Promise<void> {
+    this.resetDocument();
+    
     // Page 1: Executive Summary
     await this.addComparisonExecutiveSummary(comparisonData);
 
     // Page 2: Comparative Analytics
-    this.doc.addPage();
+    this.addNewPage();
     await this.addComparativeAnalytics(comparisonData);
 
     // Page 3: Benchmarking Analysis
-    this.doc.addPage();
+    this.addNewPage();
     await this.addBenchmarkingAnalysis(comparisonData);
 
     // Page 4: AI Insights & Recommendations
     if (options.includeRiskAssessment || options.includeRecommendations) {
-      this.doc.addPage();
+      this.addNewPage();
       await this.addComparisonAIInsights(comparisonData, aiInsights);
     }
 
     // Page 5: Detailed Supplier Profiles
     for (const supplier of comparisonData.suppliers) {
-      this.doc.addPage();
+      this.addNewPage();
       await this.addSupplierProfile(supplier);
     }
 
@@ -105,83 +114,108 @@ export class AdvancedPDFExportService {
     this.doc.save(fileName);
   }
 
+  private resetDocument(): void {
+    this.currentY = this.margin;
+  }
+
+  private addNewPage(): void {
+    this.doc.addPage();
+    this.currentY = this.margin;
+  }
+
+  private checkPageBreak(requiredHeight: number): boolean {
+    if (this.currentY + requiredHeight > this.pageHeight - 40) {
+      this.addNewPage();
+      return true;
+    }
+    return false;
+  }
+
   private async addExecutiveDashboard(data: SupplierComplianceData, aiInsights: AIInsights): Promise<void> {
-    // Professional header
-    this.addReportHeader('SUPPLIER COMPLIANCE DASHBOARD', data.supplier.company_name);
+    // Professional header with supply chain symbols
+    this.addReportHeader('📊 SUPPLIER COMPLIANCE DASHBOARD', `🏢 ${data.supplier.company_name}`);
+    this.currentY = 60;
 
-    // Key metrics cards layout
-    const metricsY = 60;
+    // Key metrics cards layout with proper spacing
+    const cardSpacing = 10;
+    const cardHeight = 45;
     const cardWidth = (this.pageWidth - 3 * this.margin) / 2;
-    const cardHeight = 40;
 
-    // Compliance Score Card
+    // First row - Main metrics
     this.addMetricCard(
       this.margin,
-      metricsY,
+      this.currentY,
       cardWidth,
       cardHeight,
-      'COMPLIANCE SCORE',
+      '🎯 COMPLIANCE SCORE',
       `${data.complianceScore}%`,
       this.getScoreColor(data.complianceScore),
-      `Target: 85%`
+      `Target: 85% • Risk: ${data.riskLevel}`
     );
 
-    // Risk Level Card
     this.addMetricCard(
-      this.margin + cardWidth + 10,
-      metricsY,
+      this.margin + cardWidth + cardSpacing,
+      this.currentY,
       cardWidth,
       cardHeight,
-      'RISK LEVEL',
+      '⚠️ RISK ASSESSMENT',
       data.riskLevel.toUpperCase(),
       this.getRiskLevelColor(data.riskLevel),
-      `${data.overdueRequests} overdue`
+      `${data.overdueRequests} overdue requests`
     );
 
-    // Performance metrics row
-    const secondRowY = metricsY + cardHeight + 15;
+    this.currentY += cardHeight + 15;
+
+    // Second row - Performance metrics
     const smallCardWidth = (this.pageWidth - 4 * this.margin) / 3;
 
     this.addMetricCard(
       this.margin,
-      secondRowY,
+      this.currentY,
       smallCardWidth,
       cardHeight,
-      'TOTAL REQUESTS',
+      '📋 TOTAL REQUESTS',
       data.totalRequests.toString(),
       this.primaryColor,
-      `${data.approvedRequests} approved`
+      `${data.approvedRequests} approved • ${data.pendingRequests} pending`
     );
 
     this.addMetricCard(
-      this.margin + smallCardWidth + 10,
-      secondRowY,
+      this.margin + smallCardWidth + cardSpacing,
+      this.currentY,
       smallCardWidth,
       cardHeight,
-      'AVG RESPONSE',
+      '⏱️ AVG RESPONSE',
       `${data.averageResponseTime} days`,
       data.averageResponseTime <= 5 ? this.successColor : this.warningColor,
       'Target: ≤5 days'
     );
 
     this.addMetricCard(
-      this.margin + 2 * (smallCardWidth + 10),
-      secondRowY,
+      this.margin + 2 * (smallCardWidth + cardSpacing),
+      this.currentY,
       smallCardWidth,
       cardHeight,
-      'PENDING ITEMS',
+      '🔄 PENDING ITEMS',
       data.pendingRequests.toString(),
       data.pendingRequests === 0 ? this.successColor : this.warningColor,
-      'Needs attention'
+      'Requires attention'
     );
 
-    // AI Quick Insights Box
-    const insightsY = secondRowY + cardHeight + 20;
-    this.addAIInsightsBox(insightsY, aiInsights);
+    this.currentY += cardHeight + 20;
 
-    // Category Performance Chart
-    const chartY = insightsY + 80;
-    this.addCategoryPerformanceChart(chartY, data.categoryStats);
+    // AI Quick Insights Box with proper height calculation
+    const insightsHeight = 85;
+    this.checkPageBreak(insightsHeight);
+    this.addAIInsightsBox(this.currentY, aiInsights);
+    this.currentY += insightsHeight + 15;
+
+    // Category Performance Chart with dynamic height
+    const categoryCount = Math.min(data.categoryStats.length, 6);
+    const chartHeight = 40 + (categoryCount * 20);
+    this.checkPageBreak(chartHeight);
+    this.addCategoryPerformanceChart(this.currentY, data.categoryStats);
+    this.currentY += chartHeight;
   }
 
   private addMetricCard(
@@ -194,139 +228,194 @@ export class AdvancedPDFExportService {
     color: [number, number, number],
     subtitle: string
   ): void {
-    // Card background
-    this.doc.setFillColor(248, 250, 252);
+    // Card shadow effect
+    this.doc.setFillColor(200, 200, 200);
+    this.doc.roundedRect(x + 1, y + 1, width, height, 4, 4, 'F');
+
+    // Card background with gradient effect
+    this.doc.setFillColor(this.lightGray[0], this.lightGray[1], this.lightGray[2]);
     this.doc.roundedRect(x, y, width, height, 4, 4, 'F');
 
     // Card border
     this.doc.setDrawColor(226, 232, 240);
-    this.doc.setLineWidth(0.5);
+    this.doc.setLineWidth(1);
     this.doc.roundedRect(x, y, width, height, 4, 4, 'S');
 
-    // Title
-    this.doc.setTextColor(100, 116, 139);
+    // Left accent bar
+    this.doc.setFillColor(color[0], color[1], color[2]);
+    this.doc.roundedRect(x + 2, y + 2, 4, height - 4, 2, 2, 'F');
+
+    // Title with icon
+    this.doc.setTextColor(this.mediumGray[0], this.mediumGray[1], this.mediumGray[2]);
     this.doc.setFontSize(9);
-    this.doc.setFont('helvetica', 'normal');
-    this.doc.text(title, x + 8, y + 12);
-
-    // Value
-    this.doc.setTextColor(color[0], color[1], color[2]);
-    this.doc.setFontSize(18);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.text(value, x + 8, y + 26);
+    this.doc.text(title, x + 12, y + 15);
 
-    // Subtitle
-    this.doc.setTextColor(100, 116, 139);
+    // Value with proper font sizing
+    this.doc.setTextColor(color[0], color[1], color[2]);
+    this.doc.setFontSize(height > 40 ? 20 : 16);
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.text(value, x + 12, y + 28);
+
+    // Subtitle with proper wrapping
+    this.doc.setTextColor(this.mediumGray[0], this.mediumGray[1], this.mediumGray[2]);
     this.doc.setFontSize(8);
     this.doc.setFont('helvetica', 'normal');
-    this.doc.text(subtitle, x + 8, y + 35);
+    const subtitleLines = this.splitText(subtitle, width - 20);
+    subtitleLines.slice(0, 2).forEach((line, index) => {
+      this.doc.text(line, x + 12, y + 38 + (index * 8));
+    });
   }
 
   private addAIInsightsBox(y: number, aiInsights: AIInsights): void {
-    const boxHeight = 70;
+    const boxHeight = 75;
     
-    // Background
+    // AI icon background circle
+    this.doc.setFillColor(59, 130, 246);
+    this.doc.circle(this.margin + 15, y + 15, 8, 'F');
+    
+    // Background with gradient effect
     this.doc.setFillColor(239, 246, 255);
-    this.doc.roundedRect(this.margin, y, this.pageWidth - 2 * this.margin, boxHeight, 6, 6, 'F');
+    this.doc.roundedRect(this.margin, y, this.pageWidth - 2 * this.margin, boxHeight, 8, 8, 'F');
     
-    // Border
+    // Border with AI accent
     this.doc.setDrawColor(59, 130, 246);
-    this.doc.setLineWidth(1);
-    this.doc.roundedRect(this.margin, y, this.pageWidth - 2 * this.margin, boxHeight, 6, 6, 'S');
+    this.doc.setLineWidth(2);
+    this.doc.roundedRect(this.margin, y, this.pageWidth - 2 * this.margin, boxHeight, 8, 8, 'S');
 
-    // AI Icon and Title
+    // AI Icon (🤖 symbol)
+    this.doc.setTextColor(255, 255, 255);
+    this.doc.setFontSize(12);
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.text('AI', this.margin + 12, y + 18, { align: 'center' });
+
+    // Title
     this.doc.setTextColor(30, 58, 138);
     this.doc.setFontSize(14);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.text('🤖 AI RISK ASSESSMENT', this.margin + 10, y + 15);
+    this.doc.text('🚨 AI RISK ASSESSMENT', this.margin + 30, y + 18);
 
-    // Assessment text
+    // Assessment text with proper line height
     this.doc.setTextColor(0, 0, 0);
     this.doc.setFontSize(10);
     this.doc.setFont('helvetica', 'normal');
     
-    const assessmentLines = this.splitText(aiInsights.riskAssessment, this.pageWidth - 2 * this.margin - 20);
+    const assessmentLines = this.splitText(aiInsights.riskAssessment, this.pageWidth - 2 * this.margin - 40);
     assessmentLines.slice(0, 4).forEach((line, index) => {
-      this.doc.text(line, this.margin + 10, y + 30 + (index * 8));
+      this.doc.text(line, this.margin + 15, y + 35 + (index * 9));
     });
   }
 
   private addCategoryPerformanceChart(y: number, categoryStats: any[]): void {
+    // Section header with supply chain icon
     this.doc.setTextColor(30, 58, 138);
     this.doc.setFontSize(14);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.text('CATEGORY PERFORMANCE ANALYSIS', this.margin, y);
+    this.doc.text('📈 CATEGORY PERFORMANCE ANALYSIS', this.margin, y);
 
-    const chartY = y + 20;
-    const barHeight = 12;
-    const maxBarWidth = 120;
+    const chartStartY = y + 25;
+    const barHeight = 15;
+    const barSpacing = 5;
+    const maxBarWidth = 110;
+    const labelWidth = 60;
+
+    // Chart background
+    const chartHeight = categoryStats.slice(0, 6).length * (barHeight + barSpacing) + 10;
+    this.doc.setFillColor(this.lightGray[0], this.lightGray[1], this.lightGray[2]);
+    this.doc.roundedRect(this.margin, chartStartY - 5, this.pageWidth - 2 * this.margin, chartHeight, 4, 4, 'F');
 
     categoryStats.slice(0, 6).forEach((category, index) => {
-      const barY = chartY + (index * (barHeight + 8));
+      const barY = chartStartY + (index * (barHeight + barSpacing));
       const percentage = category.total > 0 ? Math.round((category.approved / category.total) * 100) : 0;
       const barWidth = (percentage / 100) * maxBarWidth;
 
-      // Category label
-      this.doc.setTextColor(0, 0, 0);
-      this.doc.setFontSize(9);
-      this.doc.setFont('helvetica', 'normal');
-      this.doc.text(category.category, this.margin, barY + 8);
-
-      // Background bar
-      this.doc.setFillColor(226, 232, 240);
-      this.doc.roundedRect(this.margin + 80, barY, maxBarWidth, barHeight, 2, 2, 'F');
-
-      // Progress bar
-      const color = this.getScoreColor(percentage);
-      this.doc.setFillColor(color[0], color[1], color[2]);
-      this.doc.roundedRect(this.margin + 80, barY, barWidth, barHeight, 2, 2, 'F');
-
-      // Percentage label
+      // Category label with truncation
       this.doc.setTextColor(0, 0, 0);
       this.doc.setFontSize(9);
       this.doc.setFont('helvetica', 'bold');
-      this.doc.text(`${percentage}%`, this.margin + 80 + maxBarWidth + 10, barY + 8);
+      const categoryName = category.category.length > 15 
+        ? category.category.substring(0, 12) + '...' 
+        : category.category;
+      this.doc.text(categoryName, this.margin + 5, barY + 10);
+
+      // Background bar with border
+      this.doc.setFillColor(226, 232, 240);
+      this.doc.roundedRect(this.margin + labelWidth, barY, maxBarWidth, barHeight, 3, 3, 'F');
+      this.doc.setDrawColor(200, 200, 200);
+      this.doc.setLineWidth(0.5);
+      this.doc.roundedRect(this.margin + labelWidth, barY, maxBarWidth, barHeight, 3, 3, 'S');
+
+      // Progress bar with gradient effect
+      const color = this.getScoreColor(percentage);
+      this.doc.setFillColor(color[0], color[1], color[2]);
+      this.doc.roundedRect(this.margin + labelWidth, barY, barWidth, barHeight, 3, 3, 'F');
+
+      // Percentage label with background
+      this.doc.setFillColor(255, 255, 255);
+      this.doc.roundedRect(this.margin + labelWidth + maxBarWidth + 5, barY + 2, 25, 11, 2, 2, 'F');
+      this.doc.setTextColor(0, 0, 0);
+      this.doc.setFontSize(8);
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.text(`${percentage}%`, this.margin + labelWidth + maxBarWidth + 8, barY + 9);
 
       // Request count
-      this.doc.setFontSize(8);
+      this.doc.setFontSize(7);
       this.doc.setFont('helvetica', 'normal');
-      this.doc.text(`(${category.approved}/${category.total})`, this.margin + 80 + maxBarWidth + 35, barY + 8);
+      this.doc.setTextColor(this.mediumGray[0], this.mediumGray[1], this.mediumGray[2]);
+      this.doc.text(`(${category.approved}/${category.total})`, this.margin + labelWidth + maxBarWidth + 35, barY + 9);
     });
   }
 
   private async addDetailedAnalytics(data: SupplierComplianceData): Promise<void> {
+    // Section header with analytics icon
+    this.addSectionHeader('📊 DETAILED ANALYTICS & TRENDS');
+    this.currentY += 30;
+
+    // Performance metrics table with proper spacing
+    this.checkPageBreak(80);
+    this.addPerformanceMetricsTable(this.currentY, data.performanceMetrics);
+    this.currentY += 80;
+
+    // Response time distribution with spacing
+    this.checkPageBreak(100);
+    this.addResponseTimeDistribution(this.currentY, data.responseTimeDistribution);
+    this.currentY += 100;
+
+    // Monthly trends chart with spacing
+    this.checkPageBreak(80);
+    this.addMonthlyTrendsChart(this.currentY, data.monthlyTrends);
+    this.currentY += 80;
+  }
+
+  private addSectionHeader(title: string): void {
     this.doc.setTextColor(30, 58, 138);
-    this.doc.setFontSize(20);
+    this.doc.setFontSize(18);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.text('DETAILED ANALYTICS & TRENDS', this.margin, 30);
-
-    // Performance metrics table
-    this.addPerformanceMetricsTable(50, data.performanceMetrics);
-
-    // Response time distribution
-    this.addResponseTimeDistribution(120, data.responseTimeDistribution);
-
-    // Monthly trends
-    this.addMonthlyTrendsChart(180, data.monthlyTrends);
+    this.doc.text(title, this.margin, this.currentY);
+    
+    // Underline
+    this.doc.setDrawColor(59, 130, 246);
+    this.doc.setLineWidth(2);
+    this.doc.line(this.margin, this.currentY + 3, this.pageWidth - this.margin, this.currentY + 3);
   }
 
   private addPerformanceMetricsTable(y: number, metrics: any[]): void {
     this.doc.setTextColor(30, 58, 138);
     this.doc.setFontSize(14);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.text('PERFORMANCE METRICS', this.margin, y);
+    this.doc.text('⚡ PERFORMANCE METRICS', this.margin, y);
 
     const headers = ['Metric', 'Current', 'Target', 'Status', 'Trend'];
     const rows = metrics.map(metric => [
       metric.metric,
       `${metric.value}${metric.unit}`,
       `${metric.target}${metric.unit}`,
-      metric.value >= metric.target ? '✓ On Target' : '⚠ Below Target',
-      metric.trend === 'up' ? '↗ Improving' : metric.trend === 'down' ? '↘ Declining' : '→ Stable'
+      metric.value >= metric.target ? '✅ On Target' : '⚠️ Below Target',
+      metric.trend === 'up' ? '📈 Improving' : metric.trend === 'down' ? '📉 Declining' : '➡️ Stable'
     ]);
 
     autoTable(this.doc, {
-      startY: y + 10,
+      startY: y + 15,
       head: [headers],
       body: rows,
       theme: 'grid',
@@ -334,15 +423,25 @@ export class AdvancedPDFExportService {
         fillColor: this.primaryColor,
         textColor: [255, 255, 255],
         fontSize: 10,
-        fontStyle: 'bold'
+        fontStyle: 'bold',
+        halign: 'center'
       },
       bodyStyles: {
         fontSize: 9,
-        textColor: [0, 0, 0]
+        textColor: [0, 0, 0],
+        halign: 'center'
       },
       alternateRowStyles: {
-        fillColor: [248, 250, 252]
-      }
+        fillColor: this.lightGray
+      },
+      columnStyles: {
+        0: { halign: 'left', cellWidth: 40 },
+        1: { halign: 'center', cellWidth: 25 },
+        2: { halign: 'center', cellWidth: 25 },
+        3: { halign: 'center', cellWidth: 35 },
+        4: { halign: 'center', cellWidth: 35 }
+      },
+      margin: { left: this.margin, right: this.margin }
     });
   }
 
@@ -383,47 +482,70 @@ export class AdvancedPDFExportService {
     this.doc.setTextColor(30, 58, 138);
     this.doc.setFontSize(14);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.text('MONTHLY TRENDS', this.margin, y);
+    this.doc.text('📅 MONTHLY PERFORMANCE TRENDS', this.margin, y);
 
-    // Simple line chart representation
-    const chartY = y + 20;
-    const chartHeight = 40;
-    const chartWidth = this.pageWidth - 2 * this.margin;
-    const maxRequests = Math.max(...trends.map(t => t.requests));
+    if (trends.length === 0) {
+      this.doc.setTextColor(this.mediumGray[0], this.mediumGray[1], this.mediumGray[2]);
+      this.doc.setFontSize(10);
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.text('No trend data available', this.margin, y + 20);
+      return;
+    }
+
+    // Chart background
+    const chartStartY = y + 25;
+    const chartHeight = 50;
+    const chartWidth = this.pageWidth - 2 * this.margin - 20;
+    const maxRequests = Math.max(...trends.map(t => t.requests), 1);
+
+    this.doc.setFillColor(this.lightGray[0], this.lightGray[1], this.lightGray[2]);
+    this.doc.roundedRect(this.margin + 10, chartStartY - 5, chartWidth, chartHeight + 20, 4, 4, 'F');
+
+    // Chart title
+    this.doc.setTextColor(0, 0, 0);
+    this.doc.setFontSize(10);
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.text('Requests per Month', this.margin + 15, chartStartY + 5);
 
     trends.forEach((trend, index) => {
-      const x = this.margin + (index * (chartWidth / trends.length));
-      const height = (trend.requests / maxRequests) * chartHeight;
+      const x = this.margin + 15 + (index * (chartWidth / trends.length));
+      const height = (trend.requests / maxRequests) * chartHeight * 0.8;
       
-      // Bar
+      // Bar with gradient effect
       this.doc.setFillColor(59, 130, 246);
-      this.doc.rect(x, chartY + chartHeight - height, 15, height, 'F');
+      this.doc.roundedRect(x, chartStartY + chartHeight - height, 20, height, 2, 2, 'F');
       
       // Month label
       this.doc.setTextColor(0, 0, 0);
       this.doc.setFontSize(8);
       this.doc.setFont('helvetica', 'normal');
-      this.doc.text(trend.month, x, chartY + chartHeight + 10);
+      this.doc.text(trend.month, x + 2, chartStartY + chartHeight + 10);
       
       // Value label
-      this.doc.text(trend.requests.toString(), x + 2, chartY + chartHeight - height - 2);
+      this.doc.setFontSize(7);
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.text(trend.requests.toString(), x + 8, chartStartY + chartHeight - height - 2);
     });
   }
 
   private async addAIRiskAssessment(data: SupplierComplianceData, aiInsights: AIInsights): Promise<void> {
-    this.doc.setTextColor(30, 58, 138);
-    this.doc.setFontSize(20);
-    this.doc.setFont('helvetica', 'bold');
-    this.doc.text('AI-POWERED RISK ASSESSMENT', this.margin, 30);
+    this.addSectionHeader('🤖 AI-POWERED RISK ASSESSMENT');
+    this.currentY += 35;
 
-    // Risk factors section
-    this.addRiskFactorsSection(50, data.riskFactors);
+    // Risk factors section with proper spacing
+    this.checkPageBreak(100);
+    this.addRiskFactorsSection(this.currentY, data.riskFactors);
+    this.currentY += Math.max(100, data.riskFactors.length * 30 + 20);
 
-    // AI strengths and concerns
-    this.addStrengthsAndConcerns(140, aiInsights);
+    // AI strengths and concerns with spacing
+    this.checkPageBreak(80);
+    this.addStrengthsAndConcerns(this.currentY, aiInsights);
+    this.currentY += 80;
 
-    // Industry comparison
-    this.addIndustryComparison(200, aiInsights);
+    // Industry comparison with spacing
+    this.checkPageBreak(60);
+    this.addIndustryComparison(this.currentY, aiInsights);
+    this.currentY += 60;
   }
 
   private addRiskFactorsSection(y: number, riskFactors: any[]): void {
@@ -935,29 +1057,42 @@ export class AdvancedPDFExportService {
   }
 
   private addReportHeader(title: string, subtitle: string): void {
-    // Gradient header background
+    // Professional gradient header
     this.doc.setFillColor(30, 58, 138);
-    this.doc.rect(0, 0, this.pageWidth, 45, 'F');
+    this.doc.rect(0, 0, this.pageWidth, 50, 'F');
+    
+    // Secondary gradient layer
+    this.doc.setFillColor(59, 130, 246);
+    this.doc.rect(0, 40, this.pageWidth, 10, 'F');
 
-    // Title
+    // Company logo placeholder (supply chain icon)
     this.doc.setTextColor(255, 255, 255);
-    this.doc.setFontSize(22);
+    this.doc.setFontSize(20);
+    this.doc.text('🔗', this.margin, 25);
+
+    // Title with professional styling
+    this.doc.setTextColor(255, 255, 255);
+    this.doc.setFontSize(20);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.text(title, this.margin, 20);
+    this.doc.text(title, this.margin + 30, 22);
 
     // Subtitle
     this.doc.setFontSize(12);
     this.doc.setFont('helvetica', 'normal');
-    this.doc.text(subtitle, this.margin, 30);
+    this.doc.text(subtitle, this.margin + 30, 32);
 
-    // Date
+    // Date with professional formatting
     const date = new Date().toLocaleDateString('en-US', { 
+      weekday: 'long',
       year: 'numeric', 
       month: 'long', 
-      day: 'numeric' 
+      day: 'numeric',
+      timeZone: 'UTC'
     });
-    this.doc.text(`Generated: ${date}`, this.margin, 38);
+    this.doc.setFontSize(9);
+    this.doc.text(`Generated: ${date}`, this.margin + 30, 42);
 
+    // Reset text color
     this.doc.setTextColor(0, 0, 0);
   }
 

@@ -9,8 +9,11 @@ export class AIInsightsService {
     apiKey?: string
   ): Promise<AIInsights> {
     try {
-      if (!apiKey) {
-        // Fallback to static insights if no API key
+      // Try to get API key from environment or use provided key
+      const openaiKey = apiKey || await this.getOpenAIKey();
+      
+      if (!openaiKey) {
+        console.log('No OpenAI API key available, using static insights');
         return this.generateStaticInsights(data);
       }
 
@@ -19,7 +22,7 @@ export class AIInsightsService {
       const response = await fetch(this.OPENAI_API_URL, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${openaiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -40,13 +43,15 @@ export class AIInsightsService {
       });
 
       if (!response.ok) {
-        throw new Error(`API request failed: ${response.status}`);
+        console.error(`OpenAI API error: ${response.status} ${response.statusText}`);
+        return this.generateStaticInsights(data);
       }
 
       const result = await response.json();
       const aiResponse = result.choices[0]?.message?.content;
       
-      return this.parseAIResponse(aiResponse) || this.generateStaticInsights(data);
+      const parsedInsights = this.parseAIResponse(aiResponse);
+      return parsedInsights || this.generateStaticInsights(data);
 
     } catch (error) {
       console.error('Error generating AI insights:', error);
@@ -59,7 +64,10 @@ export class AIInsightsService {
     apiKey?: string
   ): Promise<AIInsights> {
     try {
-      if (!apiKey) {
+      const openaiKey = apiKey || await this.getOpenAIKey();
+      
+      if (!openaiKey) {
+        console.log('No OpenAI API key available, using static comparison insights');
         return this.generateStaticComparisonInsights(comparisonData);
       }
 
@@ -95,12 +103,27 @@ export class AIInsightsService {
       const result = await response.json();
       const aiResponse = result.choices[0]?.message?.content;
       
-      return this.parseAIResponse(aiResponse) || this.generateStaticComparisonInsights(comparisonData);
+      const parsedInsights = this.parseAIResponse(aiResponse);
+      return parsedInsights || this.generateStaticComparisonInsights(comparisonData);
 
     } catch (error) {
       console.error('Error generating AI comparison insights:', error);
       return this.generateStaticComparisonInsights(comparisonData);
     }
+  }
+
+  private static async getOpenAIKey(): Promise<string | null> {
+    try {
+      // Try to get from Supabase edge function environment
+      const response = await fetch('/api/get-openai-key');
+      if (response.ok) {
+        const data = await response.json();
+        return data.apiKey;
+      }
+    } catch (error) {
+      console.log('Could not retrieve OpenAI API key from environment');
+    }
+    return null;
   }
 
   private static buildSupplierAnalysisPrompt(data: SupplierComplianceData): string {

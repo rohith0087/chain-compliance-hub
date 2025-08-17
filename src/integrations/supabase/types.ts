@@ -25,6 +25,10 @@ export type Database = {
           entity_type: string
           error_message: string | null
           id: string
+          intermediate_results: Json | null
+          operation_duration_ms: number | null
+          processing_steps: Json | null
+          reasoning: string | null
           success: boolean | null
         }
         Insert: {
@@ -37,6 +41,10 @@ export type Database = {
           entity_type: string
           error_message?: string | null
           id?: string
+          intermediate_results?: Json | null
+          operation_duration_ms?: number | null
+          processing_steps?: Json | null
+          reasoning?: string | null
           success?: boolean | null
         }
         Update: {
@@ -49,6 +57,10 @@ export type Database = {
           entity_type?: string
           error_message?: string | null
           id?: string
+          intermediate_results?: Json | null
+          operation_duration_ms?: number | null
+          processing_steps?: Json | null
+          reasoning?: string | null
           success?: boolean | null
         }
         Relationships: []
@@ -60,8 +72,13 @@ export type Database = {
           company_type: string
           created_at: string
           created_by: string | null
+          current_operation: string | null
+          current_status: string | null
           enabled: boolean | null
+          estimated_completion: string | null
           id: string
+          last_active: string | null
+          processing_details: Json | null
           settings: Json
           updated_at: string
         }
@@ -71,8 +88,13 @@ export type Database = {
           company_type: string
           created_at?: string
           created_by?: string | null
+          current_operation?: string | null
+          current_status?: string | null
           enabled?: boolean | null
+          estimated_completion?: string | null
           id?: string
+          last_active?: string | null
+          processing_details?: Json | null
           settings?: Json
           updated_at?: string
         }
@@ -82,8 +104,13 @@ export type Database = {
           company_type?: string
           created_at?: string
           created_by?: string | null
+          current_operation?: string | null
+          current_status?: string | null
           enabled?: boolean | null
+          estimated_completion?: string | null
           id?: string
+          last_active?: string | null
+          processing_details?: Json | null
           settings?: Json
           updated_at?: string
         }

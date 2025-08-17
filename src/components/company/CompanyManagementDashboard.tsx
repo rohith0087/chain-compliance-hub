@@ -7,6 +7,7 @@ import { BranchSelector } from './BranchSelector';
 import { BranchManagement } from './BranchManagement';
 import { CompanyUserManagement } from './CompanyUserManagement';
 import { PermissionManagementInterface } from './PermissionManagementInterface';
+import { AgentTimeline } from '../agents/AgentTimeline';
 
 interface CompanyManagementDashboardProps {
   companyId: string;
@@ -134,10 +135,11 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="branches">Branches</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="permissions">Permissions</TabsTrigger>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="branches">Branches</TabsTrigger>
+            <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="permissions">Permissions</TabsTrigger>
+            <TabsTrigger value="agent-timeline">Agent Timeline</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -227,6 +229,13 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
             companyType={companyType}
             companyUsers={companyUsers}
             onPermissionUpdate={refetch}
+          />
+        </TabsContent>
+
+        <TabsContent value="agent-timeline" className="space-y-6">
+          <AgentTimeline 
+            companyId={companyId}
+            companyType={companyType}
           />
         </TabsContent>
       </Tabs>

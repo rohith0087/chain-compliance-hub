@@ -552,11 +552,12 @@ const ChatPage = () => {
 
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="h-screen bg-background flex overflow-hidden">
       {/* History Sidebar for Desktop */}
       <div className="hidden lg:flex w-80 border-r border-border bg-card flex-col">
-        <div className="p-6 border-b border-border">
-          <div className="flex items-center justify-between mb-4">
+        {/* Sticky Header */}
+        <div className="sticky top-0 z-10 p-6 border-b border-border bg-card">
+          <div className="flex items-center justify-between">
             <h2 className="font-semibold text-foreground">Chat History</h2>
             <Button size="sm" variant="outline" onClick={startNewChat}>
               <Plus className="w-4 h-4 mr-1" />
@@ -565,8 +566,9 @@ const ChatPage = () => {
           </div>
         </div>
         
-        <ScrollArea className="flex-1 p-4">
-          <div className="space-y-2">
+        {/* Scrollable History List */}
+        <div className="flex-1 overflow-y-auto scrollbar-hide">
+          <div className="p-4 space-y-2">
             {chatSessions.map((session) => (
               <Card
                 key={session.id}
@@ -596,7 +598,7 @@ const ChatPage = () => {
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
       </div>
 
       {/* Mobile History Sheet */}
@@ -606,8 +608,8 @@ const ChatPage = () => {
             <div className="p-6 border-b border-border">
               <h2 className="font-semibold text-foreground">Chat History</h2>
             </div>
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-2">
+            <div className="flex-1 overflow-y-auto scrollbar-hide">
+              <div className="p-4 space-y-2">
                 {chatSessions.map((session) => (
                   <Card
                     key={session.id}
@@ -630,15 +632,15 @@ const ChatPage = () => {
                   </Card>
                 ))}
               </div>
-            </ScrollArea>
+            </div>
           </div>
         </SheetContent>
       </Sheet>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full">
-        {/* Header */}
-        <div className="border-b border-border bg-card/50 backdrop-blur">
+      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full min-h-0">
+        {/* Sticky Header */}
+        <div className="sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur-sm">
           <div className="px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Button
@@ -667,10 +669,10 @@ const ChatPage = () => {
           </div>
         </div>
 
-        {/* Chat Messages */}
-        <ScrollArea className="flex-1 p-6" ref={scrollAreaRef}>
+        {/* Chat Messages - Scrollable Area */}
+        <div className="flex-1 overflow-y-auto scrollbar-hide px-6 py-6" ref={scrollAreaRef}>
           {messages.length === 0 ? (
-            <div className="max-w-2xl mx-auto text-center space-y-8 py-12">
+            <div className="max-w-2xl mx-auto text-center space-y-8">
               <div className="space-y-4">
                 <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 via-primary/10 to-transparent mx-auto flex items-center justify-center border border-primary/20">
                   <Shield className="w-10 h-10 text-primary" />
@@ -756,10 +758,10 @@ const ChatPage = () => {
               )}
             </div>
           )}
-        </ScrollArea>
+        </div>
 
-        {/* Input Area */}
-        <div className="border-t border-border bg-card/50 backdrop-blur p-6">
+        {/* Sticky Input Area */}
+        <div className="sticky bottom-0 z-10 border-t border-border bg-card/95 backdrop-blur-sm p-6">
           <div className="max-w-2xl mx-auto">
             <div className="flex gap-3">
               <Input

@@ -9,7 +9,7 @@ import RequestsList from '@/components/requests/RequestsList';
 import SupplierDiscovery from '@/components/buyer/SupplierDiscovery';
 import NewRequestModal from '@/components/NewRequestModal';
 import BuyerComplianceDashboard from '@/components/dashboard/BuyerComplianceDashboard';
-import { Building2, Users, ListChecks, Plus, BarChart3, FileCheck, UserCheck, Settings, Calendar, AlertTriangle, Clock } from 'lucide-react';
+import { Building2, Users, ListChecks, Plus, BarChart3, FileCheck, UserCheck, Settings, Calendar, AlertTriangle, Clock, MessageSquare } from 'lucide-react';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import BuyerDocumentsDashboard from '@/components/documents/BuyerDocumentsDashboard';
 import { BuyerIdCard } from '@/components/buyer/BuyerIdCard';
@@ -18,6 +18,7 @@ import { BuyerSettingsModal } from '@/components/settings/BuyerSettingsModal';
 import { CompanyManagementDashboard } from '@/components/company/CompanyManagementDashboard';
 import { BranchSelector } from '@/components/company/BranchSelector';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
+import ChatAgentPanel from '@/components/chat/ChatAgentPanel';
 import { supabase } from '@/integrations/supabase/client';
 
 interface BuyerDashboardProps {
@@ -225,6 +226,10 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
             <Users className="w-4 h-4 mr-2" />
             {t('common:navigation.suppliers')}
           </TabsTrigger>
+          <TabsTrigger value="chat">
+            <MessageSquare className="w-4 h-4 mr-2" />
+            AI Chat
+          </TabsTrigger>
           <TabsTrigger value="company">
             <Building2 className="w-4 h-4 mr-2" />
             Company Management
@@ -429,6 +434,14 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         
         <TabsContent value="suppliers" className="space-y-2">
           <SupplierDiscovery />
+        </TabsContent>
+        
+        <TabsContent value="chat" className="space-y-2">
+          {buyerProfile && (
+            <div className="h-[600px]">
+              <ChatAgentPanel companyType="buyer" companyId={buyerProfile.id} />
+            </div>
+          )}
         </TabsContent>
         
         <TabsContent value="company" className="space-y-2">

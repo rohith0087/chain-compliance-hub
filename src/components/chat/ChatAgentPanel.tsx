@@ -1,0 +1,358 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  MessageSquare, 
+  Send, 
+  Bot, 
+  User, 
+  Loader2, 
+  Lightbulb,
+  FileText,
+  AlertCircle
+} from "lucide-react";
+import { format } from "date-fns";
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  metadata?: any;
+  created_at: string;
+}
+
+interface ChatSource {
+  title: string;
+  type: string;
+  similarity: number;
+}
+
+interface ChatAgentPanelProps {
+  companyType: 'buyer' | 'supplier';
+  companyId: string;
+  className?: string;
+}
+
+const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({ 
+  companyType, 
+  companyId, 
+  className = "" 
+}) => {
+  const { toast } = useToast();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [lastSources, setLastSources] = useState<ChatSource[]>([]);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // Focus input on mount
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  // Load chat history
+  useEffect(() => {
+    loadChatHistory();
+  }, [companyId]);
+
+  const loadChatHistory = async () => {
+    try {
+      const { data: sessions } = await supabase
+        .from('chat_sessions')
+        .select('id')
+        .eq('company_id', companyId)
+        .eq('company_type', companyType)
+        .order('updated_at', { ascending: false })
+        .limit(1);
+
+      if (sessions && sessions.length > 0) {
+        const currentSessionId = sessions[0].id;
+        setSessionId(currentSessionId);
+
+        const { data: chatMessages } = await supabase
+          .from('chat_messages')
+          .select('*')
+          .eq('session_id', currentSessionId)
+          .order('created_at', { ascending: true })
+          .limit(50);
+
+        if (chatMessages) {
+          const typedMessages: Message[] = chatMessages.map(msg => ({
+            id: msg.id,
+            role: msg.role as 'user' | 'assistant' | 'system',
+            content: msg.content,
+            metadata: msg.metadata,
+            created_at: msg.created_at
+          }));
+          setMessages(typedMessages);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading chat history:', error);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!inputMessage.trim() || isLoading) return;
+
+    const userMessage = inputMessage.trim();
+    setInputMessage('');
+    setIsLoading(true);
+
+    // Add user message to UI immediately
+    const tempUserMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: userMessage,
+      created_at: new Date().toISOString()
+    };
+    setMessages(prev => [...prev, tempUserMessage]);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('rag-chat', {
+        body: {
+          message: userMessage,
+          session_id: sessionId,
+          context_tags: [companyType, 'compliance', 'documents']
+        }
+      });
+
+      if (error) throw error;
+
+      // Add AI response to messages
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: data.response,
+        metadata: {
+          knowledge_entries_used: data.knowledge_entries_used,
+          sources: data.sources
+        },
+        created_at: new Date().toISOString()
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+      setSessionId(data.session_id);
+      setLastSources(data.sources || []);
+
+      // Show success toast if knowledge was used
+      if (data.knowledge_entries_used > 0) {
+        toast({
+          title: "AI Response Generated",
+          description: `Used ${data.knowledge_entries_used} knowledge entries to provide contextual answer`,
+        });
+      }
+
+    } catch (error) {
+      console.error('Chat error:', error);
+      
+      // Remove the temp user message and show error
+      setMessages(prev => prev.slice(0, -1));
+      
+      toast({
+        title: "Chat Error",
+        description: "Failed to get AI response. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      inputRef.current?.focus();
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  const getMessageIcon = (role: string) => {
+    switch (role) {
+      case 'user':
+        return <User className="h-4 w-4" />;
+      case 'assistant':
+        return <Bot className="h-4 w-4" />;
+      default:
+        return <MessageSquare className="h-4 w-4" />;
+    }
+  };
+
+  const getQuickActions = () => {
+    const actions = companyType === 'buyer' ? [
+      "What documents do I need from suppliers?",
+      "How can I improve compliance rates?",
+      "Show me recent document analysis results",
+      "What are the main compliance risks?"
+    ] : [
+      "What documents are required for compliance?",
+      "How can I improve my document approval rates?",
+      "What are common rejection reasons?",
+      "Show me industry-specific requirements"
+    ];
+
+    return actions;
+  };
+
+  return (
+    <Card className={`h-full flex flex-col ${className}`}>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2">
+          <Bot className="h-5 w-5 text-primary" />
+          Compliance AI Assistant
+          <Badge variant="secondary" className="ml-auto">
+            {companyType === 'buyer' ? 'Buyer' : 'Supplier'}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      
+      <CardContent className="flex-1 flex flex-col gap-4 p-4">
+        {/* Messages Area */}
+        <ScrollArea 
+          ref={scrollAreaRef}
+          className="flex-1 pr-4"
+        >
+          <div className="space-y-4">
+            {messages.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Bot className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-lg font-medium mb-2">Welcome to your AI Assistant!</p>
+                <p className="text-sm">I can help you with compliance questions, document requirements, and industry-specific guidance.</p>
+                
+                {/* Quick Actions */}
+                <div className="mt-6 space-y-2">
+                  <p className="text-xs font-medium text-left">Quick questions:</p>
+                  {getQuickActions().map((action, index) => (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-left justify-start h-auto p-2 text-xs"
+                      onClick={() => setInputMessage(action)}
+                    >
+                      <Lightbulb className="h-3 w-3 mr-2 flex-shrink-0" />
+                      {action}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {messages.map((message) => (
+              <div key={message.id} className="space-y-2">
+                <div className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                  <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                    message.role === 'user' 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'bg-muted text-muted-foreground'
+                  }`}>
+                    {getMessageIcon(message.role)}
+                  </div>
+                  
+                  <div className={`flex-1 max-w-[80%] ${message.role === 'user' ? 'text-right' : ''}`}>
+                    <div className={`rounded-lg p-3 ${
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground ml-auto'
+                        : 'bg-muted'
+                    }`}>
+                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      
+                      {/* Show sources for AI responses */}
+                      {message.role === 'assistant' && message.metadata?.sources?.length > 0 && (
+                        <div className="mt-3 pt-2 border-t border-muted-foreground/20">
+                          <p className="text-xs text-muted-foreground mb-2">Sources used:</p>
+                          <div className="space-y-1">
+                            {message.metadata.sources.map((source: ChatSource, idx: number) => (
+                              <div key={idx} className="flex items-center gap-2 text-xs">
+                                <FileText className="h-3 w-3" />
+                                <span className="flex-1">{source.title}</span>
+                                <Badge variant="outline" className="text-xs">
+                                  {source.type}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {format(new Date(message.created_at), 'HH:mm')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {isLoading && (
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                  <Bot className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="flex-1">
+                  <div className="bg-muted rounded-lg p-3">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="text-sm text-muted-foreground">AI is thinking...</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+
+        {/* Input Area */}
+        <div className="space-y-2">
+          <Separator />
+          <div className="flex gap-2">
+            <Input
+              ref={inputRef}
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Ask about compliance, documents, or requirements..."
+              disabled={isLoading}
+              className="flex-1"
+            />
+            <Button 
+              onClick={sendMessage} 
+              disabled={!inputMessage.trim() || isLoading}
+              size="icon"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          
+          {lastSources.length > 0 && (
+            <div className="text-xs text-muted-foreground">
+              <AlertCircle className="h-3 w-3 inline mr-1" />
+              Last response used {lastSources.length} knowledge source{lastSources.length !== 1 ? 's' : ''}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default ChatAgentPanel;

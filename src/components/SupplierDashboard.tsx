@@ -19,7 +19,8 @@ import {
   Settings,
   Users,
   Building2,
-  BarChart3
+  BarChart3,
+  MessageSquare
 } from 'lucide-react';
 import RoleSwitcher from '@/components/RoleSwitcher';
 import { SupplierSettingsModal } from '@/components/settings/SupplierSettingsModal';

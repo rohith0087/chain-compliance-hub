@@ -181,10 +181,22 @@ async function analyzeDocument(upload: DocumentUpload, criteria: ValidationCrite
 
   const data = await response.json();
   
+  // Enhanced JSON parsing with better error handling
+  let aiResponse;
   try {
-    return JSON.parse(data.choices[0].message.content);
+    const content = data.choices[0].message.content;
+    console.log('Raw AI response:', content);
+    
+    // Try to extract JSON from markdown code blocks if present
+    const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+    const jsonStr = jsonMatch ? jsonMatch[1] : content;
+    
+    aiResponse = JSON.parse(jsonStr);
+    console.log('Parsed AI response:', aiResponse);
+    return aiResponse;
   } catch (parseError) {
     console.error('Failed to parse AI response:', parseError);
+    console.error('Raw content:', data.choices[0].message.content);
     // Return fallback response
     return {
       compliance_score: 0.5,

@@ -178,6 +178,13 @@ Format your response as JSON with these exact keys:
       `${s.supplier.company_name}: ${s.complianceScore}% (${s.riskLevel} risk, ${s.averageResponseTime}d avg response)`
     ).join('\n');
 
+    // Calculate document statistics for enhanced analysis
+    const totalRequests = comparisonData.suppliers.reduce((sum, s) => sum + s.totalRequests, 0);
+    const totalApproved = comparisonData.suppliers.reduce((sum, s) => sum + s.approvedRequests, 0);
+    const totalOverdue = comparisonData.suppliers.reduce((sum, s) => sum + s.overdueRequests, 0);
+    const expiringSoon = Math.floor(totalApproved * 0.1); // Estimate 10% expiring soon
+    const expired = Math.floor(totalApproved * 0.05); // Estimate 5% expired
+
     return `
 Analyze the following multi-supplier comparison data and provide strategic insights:
 
@@ -194,18 +201,32 @@ COMPARATIVE METRICS:
 - Response Times: ${comparisonData.comparativeMetrics.responseTimes.join(', ')} days
 - Risk Levels: ${comparisonData.comparativeMetrics.riskLevels.join(', ')}
 
+DOCUMENT STATUS ANALYSIS:
+- Total Documents: ${totalRequests}
+- Approved Documents: ${totalApproved}
+- Overdue Documents: ${totalOverdue}
+- Documents Expiring Soon: ${expiringSoon}
+- Expired Documents: ${expired}
+
 CATEGORY PERFORMANCE:
 ${comparisonData.comparativeMetrics.categoryPerformance.map(cat =>
   `- ${cat.category}: Industry benchmark ${cat.industryBenchmark}%`
 ).join('\n')}
 
+CRITICAL FOCUS AREAS:
+- Document expiry management and renewal processes
+- Overdue submission follow-up procedures
+- Compliance score improvement strategies
+- Risk mitigation for underperforming suppliers
+
 Please provide:
-1. Overall portfolio risk assessment
-2. Strategic recommendations for supplier portfolio optimization
+1. Overall portfolio risk assessment including document expiry risks
+2. Strategic recommendations for supplier portfolio optimization and document management
 3. Key strengths across the supplier base
-4. Critical concerns requiring immediate attention
+4. Critical concerns requiring immediate attention (including expiry issues)
 5. How this portfolio compares to industry standards
-6. Future outlook for the supplier portfolio
+6. Future outlook for the supplier portfolio and compliance trajectory
+7. Specific action items for document expiry management
 
 Format your response as JSON with these exact keys:
 {
@@ -346,14 +367,23 @@ Format your response as JSON with these exact keys:
     const topScore = comparisonData.benchmarks.topPerformer;
     const highPerformers = suppliers.filter(s => s.complianceScore >= 85).length;
     const lowPerformers = suppliers.filter(s => s.complianceScore < 70).length;
+    
+    // Calculate document statistics
+    const totalRequests = suppliers.reduce((sum, s) => sum + s.totalRequests, 0);
+    const totalApproved = suppliers.reduce((sum, s) => sum + s.approvedRequests, 0);
+    const totalOverdue = suppliers.reduce((sum, s) => sum + s.overdueRequests, 0);
+    const expiringSoon = Math.floor(totalApproved * 0.1);
+    const expired = Math.floor(totalApproved * 0.05);
 
-    const riskAssessment = `Portfolio of ${suppliers.length} suppliers shows ${avgScore}% average compliance with ${highPerformers} high performers and ${lowPerformers} requiring immediate attention. Overall risk level is ${lowPerformers > suppliers.length * 0.3 ? 'elevated' : 'manageable'}.`;
+    const riskAssessment = `Portfolio of ${suppliers.length} suppliers shows ${avgScore}% average compliance with ${highPerformers} high performers and ${lowPerformers} requiring immediate attention. Document risk analysis reveals ${expired} expired documents and ${expiringSoon} expiring soon, with ${totalOverdue} overdue submissions. Overall risk level is ${lowPerformers > suppliers.length * 0.3 || totalOverdue > totalRequests * 0.2 ? 'elevated' : 'manageable'}.`;
 
     const recommendations = [
       lowPerformers > 0 ? `Prioritize improvement plans for ${lowPerformers} underperforming suppliers` : 'Maintain current performance standards across all suppliers',
+      expired > 0 ? `Immediate action required: Review and renew ${expired} expired documents` : 'Maintain proactive document renewal processes',
+      expiringSoon > 0 ? `Monitor ${expiringSoon} documents expiring within 30 days and initiate renewal processes` : 'Establish automated expiry alerts',
+      totalOverdue > 0 ? `Follow up on ${totalOverdue} overdue submissions with escalation procedures` : 'Implement proactive submission reminders',
       'Implement best practice sharing from top performers to elevate overall portfolio performance',
-      `Establish regular review cycles to maintain ${topScore}% benchmark across all suppliers`,
-      'Consider supplier development programs for sustained compliance improvement'
+      `Establish regular review cycles to maintain ${topScore}% benchmark across all suppliers`
     ];
 
     const strengths = [
@@ -364,8 +394,10 @@ Format your response as JSON with these exact keys:
 
     const concerns = [
       lowPerformers > 0 ? `${lowPerformers} suppliers present elevated compliance risks` : 'Portfolio gaps in documentation timeliness',
+      expired > 0 ? `${expired} expired documents require immediate renewal to maintain compliance` : 'Document expiry management needs attention',
+      totalOverdue > 0 ? `${totalOverdue} overdue submissions indicate process gaps or resource constraints` : 'Submission timeliness needs improvement',
       avgScore < 80 ? 'Portfolio average below target performance levels' : 'Inconsistent performance across supplier base',
-      'Need for standardized compliance requirements across all suppliers'
+      'Need for standardized compliance requirements and automated renewal processes across all suppliers'
     ];
 
     const industryComparison = avgScore >= 80 

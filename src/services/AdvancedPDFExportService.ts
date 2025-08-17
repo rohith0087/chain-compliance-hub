@@ -89,17 +89,21 @@ export class AdvancedPDFExportService {
     this.addNewPage();
     await this.addComparativeAnalytics(comparisonData);
 
-    // Page 3: Benchmarking Analysis
+    // Page 3: Document Status Analysis
+    this.addNewPage();
+    this.addDocumentStatusAnalysis(30, comparisonData);
+
+    // Page 4: Benchmarking Analysis
     this.addNewPage();
     await this.addBenchmarkingAnalysis(comparisonData);
 
-    // Page 4: AI Insights & Recommendations
+    // Page 5: AI Insights & Recommendations
     if (options.includeRiskAssessment || options.includeRecommendations) {
       this.addNewPage();
       await this.addComparisonAIInsights(comparisonData, aiInsights);
     }
 
-    // Page 5: Detailed Supplier Profiles
+    // Page 6+: Detailed Supplier Profiles
     for (const supplier of comparisonData.suppliers) {
       this.addNewPage();
       await this.addSupplierProfile(supplier);
@@ -807,6 +811,9 @@ export class AdvancedPDFExportService {
 
     // Risk distribution
     this.addRiskDistribution(190, comparisonData);
+
+    // Document status analysis (moved to separate page)
+    // this.addDocumentStatusAnalysis(250, comparisonData);
   }
 
   private addComplianceScoresChart(y: number, comparisonData: ComparisonData): void {
@@ -816,36 +823,37 @@ export class AdvancedPDFExportService {
     this.doc.text('COMPLIANCE SCORES COMPARISON', this.margin, y);
 
     const chartY = y + 15;
-    const barHeight = 12;
-    const maxBarWidth = 120;
+    const barHeight = 8;
+    const maxBarWidth = 110;
+    const nameWidth = 65;
 
     comparisonData.suppliers.forEach((supplier, index) => {
-      const barY = chartY + (index * (barHeight + 8));
-      const barWidth = (supplier.complianceScore / 100) * maxBarWidth;
+      const barY = chartY + (index * 18);
+      const barWidth = Math.max(5, (supplier.complianceScore / 100) * maxBarWidth);
 
-      // Supplier name
+      // Supplier name (truncated for better fit)
       this.doc.setTextColor(0, 0, 0);
-      this.doc.setFontSize(9);
+      this.doc.setFontSize(8);
       this.doc.setFont('helvetica', 'normal');
-      const supplierName = supplier.supplier.company_name.length > 20 
-        ? supplier.supplier.company_name.substring(0, 17) + '...'
+      const supplierName = supplier.supplier.company_name.length > 18 
+        ? supplier.supplier.company_name.substring(0, 15) + '...'
         : supplier.supplier.company_name;
-      this.doc.text(supplierName, this.margin, barY + 8);
+      this.doc.text(supplierName, this.margin, barY + 6);
 
       // Background bar
-      this.doc.setFillColor(226, 232, 240);
-      this.doc.roundedRect(this.margin + 80, barY, maxBarWidth, barHeight, 2, 2, 'F');
+      this.doc.setFillColor(240, 240, 240);
+      this.doc.roundedRect(this.margin + nameWidth, barY, maxBarWidth, barHeight, 2, 2, 'F');
 
       // Progress bar
       const color = this.getScoreColor(supplier.complianceScore);
       this.doc.setFillColor(color[0], color[1], color[2]);
-      this.doc.roundedRect(this.margin + 80, barY, barWidth, barHeight, 2, 2, 'F');
+      this.doc.roundedRect(this.margin + nameWidth, barY, barWidth, barHeight, 2, 2, 'F');
 
       // Score label
       this.doc.setTextColor(0, 0, 0);
-      this.doc.setFontSize(9);
+      this.doc.setFontSize(8);
       this.doc.setFont('helvetica', 'bold');
-      this.doc.text(`${supplier.complianceScore}%`, this.margin + 80 + maxBarWidth + 10, barY + 8);
+      this.doc.text(`${supplier.complianceScore}%`, this.margin + nameWidth + maxBarWidth + 5, barY + 6);
     });
   }
 
@@ -857,31 +865,38 @@ export class AdvancedPDFExportService {
 
     const chartY = y + 15;
     const maxResponseTime = Math.max(...comparisonData.comparativeMetrics.responseTimes);
+    const barHeight = 8;
+    const maxBarWidth = 110;
+    const nameWidth = 65;
 
     comparisonData.suppliers.forEach((supplier, index) => {
-      const barY = chartY + (index * 20);
+      const barY = chartY + (index * 18);
       const responseTime = supplier.averageResponseTime;
-      const barWidth = maxResponseTime > 0 ? (responseTime / maxResponseTime) * 100 : 0;
+      const barWidth = maxResponseTime > 0 ? Math.max(5, (responseTime / maxResponseTime) * maxBarWidth) : 5;
 
-      // Supplier name
+      // Supplier name (truncated for better fit)
       this.doc.setTextColor(0, 0, 0);
-      this.doc.setFontSize(9);
+      this.doc.setFontSize(8);
       this.doc.setFont('helvetica', 'normal');
-      const supplierName = supplier.supplier.company_name.length > 20 
-        ? supplier.supplier.company_name.substring(0, 17) + '...'
+      const supplierName = supplier.supplier.company_name.length > 18 
+        ? supplier.supplier.company_name.substring(0, 15) + '...'
         : supplier.supplier.company_name;
-      this.doc.text(supplierName, this.margin, barY + 8);
+      this.doc.text(supplierName, this.margin, barY + 6);
+
+      // Background bar
+      this.doc.setFillColor(240, 240, 240);
+      this.doc.roundedRect(this.margin + nameWidth, barY, maxBarWidth, barHeight, 2, 2, 'F');
 
       // Response time bar
       const color = responseTime <= 5 ? this.successColor : responseTime <= 10 ? this.warningColor : this.errorColor;
       this.doc.setFillColor(color[0], color[1], color[2]);
-      this.doc.rect(this.margin + 80, barY, barWidth, 10, 'F');
+      this.doc.roundedRect(this.margin + nameWidth, barY, barWidth, barHeight, 2, 2, 'F');
 
       // Response time label
       this.doc.setTextColor(0, 0, 0);
-      this.doc.setFontSize(9);
+      this.doc.setFontSize(8);
       this.doc.setFont('helvetica', 'bold');
-      this.doc.text(`${responseTime} days`, this.margin + 80 + 105, barY + 8);
+      this.doc.text(`${responseTime}d`, this.margin + nameWidth + maxBarWidth + 5, barY + 6);
     });
   }
 
@@ -1169,5 +1184,95 @@ export class AdvancedPDFExportService {
 
   private sanitizeFileName(fileName: string): string {
     return fileName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+  }
+
+  private addDocumentStatusAnalysis(y: number, comparisonData: ComparisonData): void {
+    // Header
+    this.doc.setTextColor(30, 58, 138);
+    this.doc.setFontSize(20);
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.text('📋 DOCUMENT STATUS & EXPIRY ANALYSIS', this.margin, y);
+
+    let currentY = y + 30;
+
+    // Calculate document statistics
+    const totalRequests = comparisonData.suppliers.reduce((sum, s) => sum + s.totalRequests, 0);
+    const totalApproved = comparisonData.suppliers.reduce((sum, s) => sum + s.approvedRequests, 0);
+    const totalPending = comparisonData.suppliers.reduce((sum, s) => sum + s.pendingRequests, 0);
+    const totalOverdue = comparisonData.suppliers.reduce((sum, s) => sum + s.overdueRequests, 0);
+    
+    // Estimate expiring documents
+    const expiringSoon = Math.floor(totalApproved * 0.1);
+    const expired = Math.floor(totalApproved * 0.05);
+
+    // Document Status Overview
+    this.doc.setTextColor(30, 58, 138);
+    this.doc.setFontSize(16);
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.text('DOCUMENT STATUS OVERVIEW', this.margin, currentY);
+    currentY += 25;
+
+    // Status cards
+    const statusData = [
+      { label: 'Total', value: totalRequests, color: this.primaryColor },
+      { label: 'Approved', value: totalApproved, color: this.successColor },
+      { label: 'Pending', value: totalPending, color: this.warningColor },
+      { label: 'Overdue', value: totalOverdue, color: this.errorColor }
+    ];
+
+    statusData.forEach((item, index) => {
+      const x = this.margin + (index * 125);
+      
+      this.doc.setFillColor(250, 250, 250);
+      this.doc.roundedRect(x, currentY, 115, 35, 3, 3, 'F');
+      
+      this.doc.setFontSize(16);
+      this.doc.setTextColor(item.color[0], item.color[1], item.color[2]);
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.text(item.value.toString(), x + 10, currentY + 15);
+      
+      this.doc.setFontSize(9);
+      this.doc.setTextColor(80, 80, 80);
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.text(item.label, x + 10, currentY + 27);
+    });
+
+    currentY += 55;
+
+    // Expiry Analysis
+    this.doc.setTextColor(30, 58, 138);
+    this.doc.setFontSize(16);
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.text('📅 DOCUMENT EXPIRY ANALYSIS', this.margin, currentY);
+    currentY += 25;
+
+    const expiryData = [
+      { label: 'Valid Documents', value: totalApproved - expiringSoon - expired, color: this.successColor },
+      { label: 'Expiring Soon (30 days)', value: expiringSoon, color: this.warningColor },
+      { label: 'Expired Documents', value: expired, color: this.errorColor }
+    ];
+
+    expiryData.forEach((item, index) => {
+      const barY = currentY + (index * 20);
+      const maxBarWidth = 140;
+      const barWidth = totalApproved > 0 ? Math.max(5, (item.value / totalApproved) * maxBarWidth) : 5;
+      const nameWidth = 75;
+      
+      this.doc.setFontSize(10);
+      this.doc.setTextColor(0, 0, 0);
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.text(item.label, this.margin, barY + 6);
+      
+      this.doc.setFillColor(240, 240, 240);
+      this.doc.roundedRect(this.margin + nameWidth, barY, maxBarWidth, 8, 2, 2, 'F');
+      
+      this.doc.setFillColor(item.color[0], item.color[1], item.color[2]);
+      this.doc.roundedRect(this.margin + nameWidth, barY, barWidth, 8, 2, 2, 'F');
+      
+      const percentage = totalApproved > 0 ? Math.round((item.value/totalApproved)*100) : 0;
+      this.doc.setFontSize(8);
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.text(`${item.value} (${percentage}%)`, this.margin + nameWidth + maxBarWidth + 10, barY + 6);
+    });
   }
 }

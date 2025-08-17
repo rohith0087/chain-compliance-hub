@@ -132,7 +132,9 @@ export const DocumentLinkModal: React.FC<DocumentLinkModalProps> = ({
   };
 
   const copyToClipboard = async (token: string) => {
-    const link = `${window.location.origin}/shared-document/${token}`;
+    // URL encode the token to handle special characters like / and +
+    const encodedToken = encodeURIComponent(token);
+    const link = `${window.location.origin}/shared-document/${encodedToken}`;
     try {
       await navigator.clipboard.writeText(link);
       toast({
@@ -327,7 +329,10 @@ export const DocumentLinkModal: React.FC<DocumentLinkModalProps> = ({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => window.open(`/shared-document/${link.access_token}`, '_blank')}
+                          onClick={() => {
+                            const encodedToken = encodeURIComponent(link.access_token);
+                            window.open(`/shared-document/${encodedToken}`, '_blank');
+                          }}
                         >
                           <ExternalLink className="h-4 w-4" />
                         </Button>

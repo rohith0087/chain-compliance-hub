@@ -36,9 +36,16 @@ const SharedDocumentViewer: React.FC = () => {
       setLoading(true);
       setError(null);
 
+      if (!token) {
+        throw new Error('No access token provided');
+      }
+
+      // URL decode the token to handle special characters
+      const decodedToken = decodeURIComponent(token);
+
       // Call the edge function to access the shared document
       const { data, error: functionError } = await supabase.functions.invoke('document-link-handler', {
-        body: { access_token: token }
+        body: { access_token: decodedToken }
       });
 
       if (functionError) {

@@ -58,13 +58,13 @@ async function logAgentActivity(
   }
 }
 
-async function analyzeDocument(upload: DocumentUpload, criteria: ValidationCriteria) {
+async function analyzeDocument(upload: DocumentUpload, criteria: ValidationCriteria): Promise<any> {
   const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
   if (!openaiApiKey) {
     throw new Error('OpenAI API key not configured');
   }
 
-  // Get buyer details for validation
+  // Get buyer details and historical data for validation
   const { data: request, error: requestError } = await supabase
     .from('document_requests')
     .select(`
@@ -78,17 +78,33 @@ async function analyzeDocument(upload: DocumentUpload, criteria: ValidationCrite
     throw new Error('Failed to fetch request details');
   }
 
+  // Get supplier historical compliance data
+  const { data: supplierHistory, error: historyError } = await supabase
+    .from('document_uploads')
+    .select('status, expiration_date, created_at, reviewer_notes')
+    .eq('uploader_id', upload.uploader_id)
+    .order('created_at', { ascending: false })
+    .limit(10);
+
   const buyer = request.buyers;
+  const supplierStats = supplierHistory ? {
+    total_submissions: supplierHistory.length,
+    approval_rate: supplierHistory.filter(d => d.status === 'approved').length / supplierHistory.length,
+    rejection_rate: supplierHistory.filter(d => d.status === 'rejected').length / supplierHistory.length,
+    recent_issues: supplierHistory.slice(0, 3).filter(d => d.status === 'rejected').map(d => d.reviewer_notes)
+  } : null;
 
   const prompt = `
-  Analyze this document submission for compliance validation:
+  As an advanced AI compliance specialist, perform multi-layered document validation with predictive risk assessment:
   
-  Document: ${upload.file_name}
-  Document Type: ${request.document_type}
-  Expiration Date: ${upload.expiration_date}
+  Document Analysis:
+  - Document: ${upload.file_name}
+  - Document Type: ${request.document_type}
+  - Expiration Date: ${upload.expiration_date}
+  - Upload Date: ${upload.created_at || 'Not available'}
   
   Buyer Requirements:
-  - Company Name: ${buyer.company_name}
+  - Company: ${buyer.company_name}
   - Email: ${buyer.contact_email}
   - Address: ${buyer.address || 'Not specified'}
   
@@ -100,24 +116,50 @@ async function analyzeDocument(upload: DocumentUpload, criteria: ValidationCrite
   Validation Rules:
   ${JSON.stringify(criteria.validation_rules, null, 2)}
   
-  Based on the filename and provided information, analyze:
-  1. Does the document type match the request?
-  2. Is the expiration date acceptable (future date)?
-  3. Does it likely contain the required fields?
-  4. Any compliance concerns?
+  Supplier Historical Performance:
+  ${supplierStats ? JSON.stringify(supplierStats, null, 2) : 'No historical data available'}
   
-  Return JSON:
+  Perform comprehensive analysis including:
+  1. Document type semantic matching and compatibility
+  2. Expiration date validity and risk assessment
+  3. Required fields likelihood and completeness
+  4. Compliance scoring with confidence intervals
+  5. Risk prediction based on historical patterns
+  6. Automation recommendation with reasoning
+  7. Workflow triggers for follow-up actions
+  
+  Return comprehensive JSON analysis:
   {
     "compliance_score": 0.0-1.0,
+    "confidence_level": 0.0-1.0,
     "validation_results": {
       "document_type_match": boolean,
       "expiration_valid": boolean,
       "required_fields_likely": boolean,
-      "company_match_likely": boolean
+      "company_match_likely": boolean,
+      "format_compliance": boolean,
+      "content_quality_score": 0.0-1.0
     },
-    "recommendation": "approve" | "reject" | "manual_review",
-    "issues": ["array of issues found"],
-    "rejection_reason": "specific reason if recommend reject"
+    "risk_assessment": {
+      "level": "low|medium|high|critical",
+      "factors": ["list of risk factors identified"],
+      "supplier_risk_profile": "reliable|moderate|concerning|high_risk",
+      "probability_of_issues": 0.0-1.0
+    },
+    "predictive_insights": {
+      "likely_expiry_issues": boolean,
+      "resubmission_probability": 0.0-1.0,
+      "compliance_trend": "improving|stable|declining",
+      "future_risk_indicators": ["potential future issues"]
+    },
+    "recommendation": "approve|reject|manual_review|conditional_approve",
+    "automation_confidence": 0.0-1.0,
+    "issues": ["array of specific issues found"],
+    "strengths": ["array of document strengths"],
+    "rejection_reason": "specific reason if recommend reject",
+    "improvement_suggestions": ["specific improvement recommendations"],
+    "workflow_triggers": ["workflow_ids to trigger based on analysis"],
+    "next_actions": ["recommended follow-up actions"]
   }
   `;
 
@@ -128,18 +170,55 @@ async function analyzeDocument(upload: DocumentUpload, criteria: ValidationCrite
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4.1-2025-04-14',
+      model: 'gpt-5-2025-08-07',
       messages: [
-        { role: 'system', content: 'You are a document compliance expert. Always respond with valid JSON.' },
+        { role: 'system', content: 'You are an advanced AI compliance specialist with predictive analytics capabilities. Provide comprehensive document validation with risk assessment, historical analysis, and automation recommendations. Always respond with valid JSON.' },
         { role: 'user', content: prompt }
       ],
-      max_tokens: 800,
-      temperature: 0.2
+      max_completion_tokens: 1200,
     }),
   });
 
   const data = await response.json();
-  return JSON.parse(data.choices[0].message.content);
+  
+  try {
+    return JSON.parse(data.choices[0].message.content);
+  } catch (parseError) {
+    console.error('Failed to parse AI response:', parseError);
+    // Return fallback response
+    return {
+      compliance_score: 0.5,
+      confidence_level: 0.3,
+      validation_results: {
+        document_type_match: true,
+        expiration_valid: true,
+        required_fields_likely: true,
+        company_match_likely: true,
+        format_compliance: true,
+        content_quality_score: 0.5
+      },
+      risk_assessment: {
+        level: 'medium',
+        factors: ['AI analysis failed'],
+        supplier_risk_profile: 'moderate',
+        probability_of_issues: 0.5
+      },
+      predictive_insights: {
+        likely_expiry_issues: false,
+        resubmission_probability: 0.3,
+        compliance_trend: 'stable',
+        future_risk_indicators: []
+      },
+      recommendation: 'manual_review',
+      automation_confidence: 0.0,
+      issues: ['AI analysis failed - manual review required'],
+      strengths: [],
+      rejection_reason: '',
+      improvement_suggestions: ['Ensure all required fields are present'],
+      workflow_triggers: [],
+      next_actions: ['Manual review required']
+    };
+  }
 }
 
 async function processDocumentUpload(upload: DocumentUpload) {

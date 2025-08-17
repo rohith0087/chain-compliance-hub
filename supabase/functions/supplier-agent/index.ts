@@ -56,27 +56,49 @@ async function logAgentActivity(
   }
 }
 
-async function analyzeDocumentMatch(requestType: string, existingDocs: ExistingDocument[]) {
+async function analyzeDocumentMatch(requestType: string, existingDocs: ExistingDocument[]): Promise<any> {
   const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
   if (!openaiApiKey) {
     throw new Error('OpenAI API key not configured');
   }
 
   const prompt = `
-  Analyze if any of these existing documents match the requested document type: "${requestType}"
+  As an advanced AI compliance agent, perform sophisticated document analysis with predictive capabilities:
   
-  Existing documents:
-  ${existingDocs.map(doc => `- ${doc.file_name} (expires: ${doc.expiration_date})`).join('\n')}
+  Requested Document Type: "${requestType}"
   
-  Return a JSON response with:
+  Existing Documents:
+  ${existingDocs.map(doc => `- ${doc.file_name} (ID: ${doc.id}, expires: ${doc.expiration_date}, status: ${doc.status})`).join('\n')}
+  
+  Provide comprehensive analysis including:
+  1. Semantic document matching with confidence scoring
+  2. Risk assessment and compliance evaluation
+  3. Predictive insights on document lifecycle
+  4. Intelligent automation recommendations
+  5. Future document needs prediction
+  
+  Return JSON with advanced insights:
   {
     "bestMatch": {
       "documentId": "id of best matching document or null",
       "confidence": 0.0-1.0,
-      "reasoning": "explanation"
+      "reasoning": "detailed explanation with risk factors"
     },
     "isExpired": boolean,
-    "recommendations": ["array of recommendations"]
+    "riskAssessment": {
+      "level": "low|medium|high",
+      "factors": ["list of risk factors"],
+      "mitigationActions": ["recommended actions"]
+    },
+    "predictiveInsights": {
+      "expiryProbability": 0.0-1.0,
+      "complianceScore": 0.0-1.0,
+      "futureDocumentNeeds": ["predicted future requirements"],
+      "automationOpportunities": ["areas for workflow automation"]
+    },
+    "recommendations": ["strategic recommendations"],
+    "nextAction": "auto_submit|manual_review|request_new|escalate",
+    "workflowTriggers": ["workflow_ids to trigger based on analysis"]
   }
   `;
 
@@ -87,18 +109,32 @@ async function analyzeDocumentMatch(requestType: string, existingDocs: ExistingD
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4.1-2025-04-14',
+      model: 'gpt-5-2025-08-07',
       messages: [
-        { role: 'system', content: 'You are a document matching expert. Always respond with valid JSON.' },
+        { role: 'system', content: 'You are an advanced AI compliance agent with predictive analytics capabilities. Provide comprehensive document analysis with strategic insights and automation recommendations. Always respond with valid JSON.' },
         { role: 'user', content: prompt }
       ],
-      max_tokens: 500,
-      temperature: 0.3
+      max_completion_tokens: 1000,
     }),
   });
 
   const data = await response.json();
-  return JSON.parse(data.choices[0].message.content);
+  
+  try {
+    return JSON.parse(data.choices[0].message.content);
+  } catch (parseError) {
+    console.error('Failed to parse AI response:', parseError);
+    // Return fallback response
+    return {
+      bestMatch: { documentId: null, confidence: 0, reasoning: 'AI analysis failed' },
+      isExpired: false,
+      riskAssessment: { level: 'medium', factors: [], mitigationActions: [] },
+      predictiveInsights: { expiryProbability: 0, complianceScore: 0.5, futureDocumentNeeds: [], automationOpportunities: [] },
+      recommendations: ['Manual review required'],
+      nextAction: 'manual_review',
+      workflowTriggers: []
+    };
+  }
 }
 
 async function calculateAverageResponseTime(supplierId: string, buyerId: string) {
@@ -147,11 +183,11 @@ async function processDocumentRequest(request: DocumentRequest) {
       return;
     }
 
-    // Use AI to analyze document matches
+    // Use AI to analyze document matches with advanced workflow integration
     const analysis = await analyzeDocumentMatch(request.document_type, existingDocs);
     
     await logAgentActivity(
-      'document_analysis',
+      'advanced_document_analysis',
       request.id,
       'document_request',
       analysis,
@@ -159,46 +195,119 @@ async function processDocumentRequest(request: DocumentRequest) {
       analysis.bestMatch.confidence
     );
 
-    if (analysis.bestMatch.confidence > 0.7 && !analysis.isExpired) {
-      // Auto-submit the matching document
-      const matchingDoc = existingDocs.find(doc => doc.id === analysis.bestMatch.documentId);
-      
-      if (matchingDoc) {
-        // Copy the existing document for this request
-        const { error: uploadError } = await supabase
-          .from('document_uploads')
-          .insert({
-            request_id: request.id,
-            file_name: matchingDoc.file_name,
-            file_path: matchingDoc.file_path,
-            uploader_id: request.supplier_id,
-            status: 'pending_review',
-            expiration_date: matchingDoc.expiration_date
-          });
-
-        if (!uploadError) {
-          await logAgentActivity(
-            'auto_submit',
-            request.id,
-            'document_request',
-            { 
-              submitted_document: matchingDoc.id, 
-              confidence: analysis.bestMatch.confidence,
-              reasoning: analysis.bestMatch.reasoning
-            },
-            true,
-            analysis.bestMatch.confidence
-          );
-
-          // Update request status
-          await supabase
-            .from('document_requests')
-            .update({ status: 'submitted' })
-            .eq('id', request.id);
-
-          console.log(`Auto-submitted document for request ${request.id}`);
-        }
+    // Trigger workflows based on AI analysis
+    if (analysis.workflowTriggers && analysis.workflowTriggers.length > 0) {
+      for (const workflowTemplateId of analysis.workflowTriggers) {
+        await supabase.functions.invoke('workflow-engine', {
+          body: {
+            action: 'start_workflow',
+            template_id: workflowTemplateId,
+            context: {
+              document_request_id: request.id,
+              supplier_id: request.supplier_id,
+              buyer_id: request.buyer_id,
+              document_type: request.document_type,
+              analysis_results: analysis,
+              user_id: request.supplier_id
+            }
+          }
+        });
       }
+    }
+
+    // Execute action based on AI recommendation
+    switch (analysis.nextAction) {
+      case 'auto_submit':
+        if (analysis.bestMatch.confidence > 0.8 && !analysis.isExpired) {
+          const matchingDoc = existingDocs.find(doc => doc.id === analysis.bestMatch.documentId);
+          
+          if (matchingDoc) {
+            // Copy the existing document for this request
+            const { error: uploadError } = await supabase
+              .from('document_uploads')
+              .insert({
+                request_id: request.id,
+                file_name: matchingDoc.file_name,
+                file_path: matchingDoc.file_path,
+                uploader_id: request.supplier_id,
+                status: 'pending_review',
+                expiration_date: matchingDoc.expiration_date
+              });
+
+            if (!uploadError) {
+              await logAgentActivity(
+                'ai_auto_submit',
+                request.id,
+                'document_request',
+                { 
+                  submitted_document: matchingDoc.id, 
+                  confidence: analysis.bestMatch.confidence,
+                  reasoning: analysis.bestMatch.reasoning,
+                  risk_level: analysis.riskAssessment.level,
+                  predictive_insights: analysis.predictiveInsights
+                },
+                true,
+                analysis.bestMatch.confidence
+              );
+
+              // Update request status
+              await supabase
+                .from('document_requests')
+                .update({ status: 'submitted' })
+                .eq('id', request.id);
+
+              console.log(`AI auto-submitted document for request ${request.id} with confidence ${analysis.bestMatch.confidence}`);
+            }
+          }
+        }
+        break;
+
+      case 'request_new':
+        // Trigger document generation workflow
+        await supabase.functions.invoke('workflow-engine', {
+          body: {
+            action: 'start_workflow',
+            template_id: 'intelligent-document-generation',
+            context: {
+              document_request_id: request.id,
+              supplier_id: request.supplier_id,
+              document_type: request.document_type,
+              requirements: analysis.predictiveInsights?.futureDocumentNeeds || [],
+              user_id: request.supplier_id
+            }
+          }
+        });
+        break;
+
+      case 'escalate':
+        // Create escalation notification
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: request.buyer_id,
+            title: 'Document Request Escalation',
+            message: `Document request ${request.id} requires immediate attention. Risk level: ${analysis.riskAssessment.level}`,
+            type: 'escalation',
+            reference_id: request.id
+          });
+        break;
+
+      case 'manual_review':
+      default:
+        // Log for manual intervention
+        await logAgentActivity(
+          'requires_manual_review',
+          request.id,
+          'document_request',
+          { 
+            reasoning: analysis.bestMatch.reasoning,
+            risk_factors: analysis.riskAssessment.factors,
+            recommendations: analysis.recommendations
+          },
+          true,
+          analysis.bestMatch.confidence
+        );
+        break;
     }
 
   } catch (error) {

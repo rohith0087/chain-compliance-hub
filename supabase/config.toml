@@ -55,3 +55,6 @@ verify_jwt = false
 # Make the shared document handler public so unauthenticated users can access public links
 [functions.document-link-handler]
 verify_jwt = false
+
+[functions.workflow-engine]
+verify_jwt = false

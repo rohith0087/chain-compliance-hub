@@ -89,6 +89,57 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_generated_documents: {
+        Row: {
+          content: string
+          created_at: string
+          document_type: string
+          id: string
+          metadata: Json | null
+          status: string
+          supplier_id: string | null
+          updated_at: string
+          workflow_id: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          document_type: string
+          id?: string
+          metadata?: Json | null
+          status?: string
+          supplier_id?: string | null
+          updated_at?: string
+          workflow_id?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          document_type?: string
+          id?: string
+          metadata?: Json | null
+          status?: string
+          supplier_id?: string | null
+          updated_at?: string
+          workflow_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_generated_documents_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_generated_documents_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_states"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       approval_workflows: {
         Row: {
           branch_id: string | null
@@ -1117,6 +1168,91 @@ export type Database = {
         }
         Relationships: []
       }
+      workflow_execution_logs: {
+        Row: {
+          ai_response: Json | null
+          created_at: string
+          error_message: string | null
+          execution_time_ms: number | null
+          id: string
+          status: string
+          step_id: string
+          step_type: string
+          workflow_id: string
+        }
+        Insert: {
+          ai_response?: Json | null
+          created_at?: string
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          status: string
+          step_id: string
+          step_type: string
+          workflow_id: string
+        }
+        Update: {
+          ai_response?: Json | null
+          created_at?: string
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          status?: string
+          step_id?: string
+          step_type?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_execution_logs_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_states"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_states: {
+        Row: {
+          ai_responses: Json
+          context: Json
+          created_at: string
+          current_step: string
+          id: string
+          status: string
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          ai_responses?: Json
+          context?: Json
+          created_at?: string
+          current_step: string
+          id?: string
+          status?: string
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          ai_responses?: Json
+          context?: Json
+          created_at?: string
+          current_step?: string
+          id?: string
+          status?: string
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_states_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_steps: {
         Row: {
           created_at: string
@@ -1163,6 +1299,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      workflow_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          steps: Json
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          steps: Json
+          trigger_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          steps?: Json
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {

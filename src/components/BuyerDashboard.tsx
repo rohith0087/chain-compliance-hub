@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -9,7 +10,7 @@ import RequestsList from '@/components/requests/RequestsList';
 import SupplierDiscovery from '@/components/buyer/SupplierDiscovery';
 import NewRequestModal from '@/components/NewRequestModal';
 import BuyerComplianceDashboard from '@/components/dashboard/BuyerComplianceDashboard';
-import { Building2, Users, ListChecks, Plus, BarChart3, FileCheck, UserCheck, Settings, Calendar, AlertTriangle, Clock, MessageSquare } from 'lucide-react';
+import { Building2, Users, ListChecks, Plus, BarChart3, FileCheck, UserCheck, Settings, Calendar, AlertTriangle, Clock, MessageSquare, Compass } from 'lucide-react';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import BuyerDocumentsDashboard from '@/components/documents/BuyerDocumentsDashboard';
 import { BuyerIdCard } from '@/components/buyer/BuyerIdCard';
@@ -32,6 +33,7 @@ interface BuyerDashboardProps {
 }
 
 const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -261,11 +263,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                       <p className="text-sm text-gray-600">{t('dashboard:buyer.trackRequests')}</p>
                     </CardContent>
                   </Card>
-                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setShowRequestForm(true)}>
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/chat')}>
                     <CardContent className="p-4 text-center">
-                      <Plus className="w-8 h-8 mx-auto mb-2 text-purple-600" />
-                      <h3 className="font-medium">{t('dashboard:buyer.newRequest')}</h3>
-                      <p className="text-sm text-gray-600">{t('dashboard:buyer.requestDocuments')}</p>
+                      <Compass className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+                      <h3 className="font-medium">Compliance Compass</h3>
+                      <p className="text-sm text-gray-600">AI-powered compliance guidance</p>
                     </CardContent>
                   </Card>
                 </div>

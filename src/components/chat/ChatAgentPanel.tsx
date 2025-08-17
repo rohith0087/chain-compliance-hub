@@ -15,7 +15,13 @@ import {
   Loader2, 
   Lightbulb,
   FileText,
-  AlertCircle
+  AlertCircle,
+  Download,
+  Calendar,
+  CheckCircle,
+  Clock,
+  XCircle,
+  ExternalLink
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -31,6 +37,29 @@ interface ChatSource {
   title: string;
   type: string;
   similarity: number;
+}
+
+interface StructuredResponse {
+  type: 'structured' | 'simple';
+  content: string;
+  sections?: {
+    title: string;
+    content: string;
+    type: 'text' | 'list' | 'document_card';
+  }[];
+  documents?: DocumentReference[];
+  quick_actions?: string[];
+}
+
+interface DocumentReference {
+  id: string;
+  title: string;
+  supplier_name?: string;
+  document_type: string;
+  expiration_date?: string;
+  status: string;
+  file_path?: string;
+  metadata?: any;
 }
 
 interface ChatAgentPanelProps {
@@ -138,10 +167,12 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.response,
+        content: typeof data.response === 'string' ? data.response : JSON.stringify(data.response),
         metadata: {
           knowledge_entries_used: data.knowledge_entries_used,
-          sources: data.sources
+          documents_found: data.documents_found,
+          sources: data.sources,
+          structured_response: typeof data.response === 'object' ? data.response : null
         },
         created_at: new Date().toISOString()
       };
@@ -150,11 +181,12 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
       setSessionId(data.session_id);
       setLastSources(data.sources || []);
 
-      // Show success toast if knowledge was used
-      if (data.knowledge_entries_used > 0) {
+      // Show success toast
+      const docInfo = data.documents_found > 0 ? ` and ${data.documents_found} documents` : '';
+      if (data.knowledge_entries_used > 0 || data.documents_found > 0) {
         toast({
           title: "AI Response Generated",
-          description: `Used ${data.knowledge_entries_used} knowledge entries to provide contextual answer`,
+          description: `Used ${data.knowledge_entries_used} knowledge sources${docInfo}`,
         });
       }
 
@@ -209,6 +241,122 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
     return actions;
   };
 
+  const getDocumentStatusIcon = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'approved':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'pending':
+      case 'pending_review':
+        return <Clock className="h-4 w-4 text-yellow-500" />;
+      case 'expired':
+      case 'rejected':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      default:
+        return <FileText className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
+  const isExpiringSoon = (expirationDate: string) => {
+    if (!expirationDate) return false;
+    const expiry = new Date(expirationDate);
+    const today = new Date();
+    const diffTime = expiry.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 30 && diffDays > 0;
+  };
+
+  const isExpired = (expirationDate: string) => {
+    if (!expirationDate) return false;
+    return new Date(expirationDate) < new Date();
+  };
+
+  const renderStructuredMessage = (message: Message) => {
+    if (!message.metadata?.structured_response) {
+      return <p className="text-sm whitespace-pre-wrap">{message.content}</p>;
+    }
+
+    const response: StructuredResponse = message.metadata.structured_response;
+
+    return (
+      <div className="space-y-3">
+        {/* Main content */}
+        <p className="text-sm">{response.content}</p>
+
+        {/* Sections */}
+        {response.sections?.map((section, idx) => (
+          <div key={idx} className="border-l-2 border-primary/20 pl-3">
+            <h4 className="font-medium text-sm mb-1">{section.title}</h4>
+            {section.type === 'list' ? (
+              <ul className="text-sm space-y-1 list-disc list-inside text-muted-foreground">
+                {section.content.split('\n').filter(line => line.trim()).map((item, i) => (
+                  <li key={i}>{item.replace(/^[•\-\*]\s*/, '')}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">{section.content}</p>
+            )}
+          </div>
+        ))}
+
+        {/* Document cards */}
+        {response.documents && response.documents.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="font-medium text-sm">Related Documents</h4>
+            {response.documents.map((doc, idx) => (
+              <div key={idx} className="bg-muted/50 rounded-lg p-3 border">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      {getDocumentStatusIcon(doc.status)}
+                      <span className="font-medium text-sm truncate">{doc.title}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      {doc.supplier_name && (
+                        <div>From: {doc.supplier_name}</div>
+                      )}
+                      <div>Type: {doc.document_type}</div>
+                      {doc.expiration_date && (
+                        <div className={`flex items-center gap-1 ${
+                          isExpired(doc.expiration_date) ? 'text-red-500' : 
+                          isExpiringSoon(doc.expiration_date) ? 'text-yellow-500' : ''
+                        }`}>
+                          <Calendar className="h-3 w-3" />
+                          Expires: {format(new Date(doc.expiration_date), 'MMM dd, yyyy')}
+                          {isExpired(doc.expiration_date) && ' (EXPIRED)'}
+                          {isExpiringSoon(doc.expiration_date) && ' (Expiring Soon)'}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <ExternalLink className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Quick actions */}
+        {response.quick_actions && response.quick_actions.length > 0 && (
+          <div className="flex flex-wrap gap-2 pt-2">
+            {response.quick_actions.map((action, idx) => (
+              <Button
+                key={idx}
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setInputMessage(action)}
+              >
+                {action}
+              </Button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <Card className={`h-full flex flex-col ${className}`}>
       <CardHeader className="pb-3">
@@ -225,7 +373,11 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
         {/* Messages Area */}
         <ScrollArea 
           ref={scrollAreaRef}
-          className="flex-1 pr-4"
+          className="flex-1 pr-4 scrollbar-hide"
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
+          }}
         >
           <div className="space-y-4">
             {messages.length === 0 && (
@@ -270,12 +422,15 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
                         ? 'bg-primary text-primary-foreground ml-auto'
                         : 'bg-muted'
                     }`}>
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      {message.role === 'assistant' ? 
+                        renderStructuredMessage(message) : 
+                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      }
                       
                       {/* Show sources for AI responses */}
                       {message.role === 'assistant' && message.metadata?.sources?.length > 0 && (
                         <div className="mt-3 pt-2 border-t border-muted-foreground/20">
-                          <p className="text-xs text-muted-foreground mb-2">Sources used:</p>
+                          <p className="text-xs text-muted-foreground mb-2">Knowledge sources:</p>
                           <div className="space-y-1">
                             {message.metadata.sources.map((source: ChatSource, idx: number) => (
                               <div key={idx} className="flex items-center gap-2 text-xs">
@@ -344,9 +499,12 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
           </div>
           
           {lastSources.length > 0 && (
-            <div className="text-xs text-muted-foreground">
-              <AlertCircle className="h-3 w-3 inline mr-1" />
-              Last response used {lastSources.length} knowledge source{lastSources.length !== 1 ? 's' : ''}
+            <div className="text-xs text-muted-foreground flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              Response used {lastSources.length} knowledge source{lastSources.length !== 1 ? 's' : ''}
+              {messages[messages.length - 1]?.metadata?.documents_found > 0 && 
+                ` and ${messages[messages.length - 1].metadata.documents_found} document${messages[messages.length - 1].metadata.documents_found !== 1 ? 's' : ''}`
+              }
             </div>
           )}
         </div>

@@ -32,39 +32,66 @@ async function createEmbedding(text: string): Promise<number[]> {
   return data.data[0].embedding;
 }
 
-// Populate knowledge base with document analysis insights
+// Populate knowledge base with document metadata and analysis
 async function populateDocumentInsights(companyId: string, companyType: string): Promise<void> {
   try {
-    // Get recent document analyses from agent activities
-    const { data: activities } = await supabase
-      .from('agent_activities')
-      .select('*')
-      .eq('entity_id', companyId)
-      .eq('entity_type', companyType)
-      .eq('agent_type', 'buyer')
-      .eq('success', true)
-      .neq('details', null)
-      .order('created_at', { ascending: false })
-      .limit(20);
+    // Get document uploads with detailed metadata
+    let documentsQuery = supabase
+      .from('document_uploads')
+      .select(`
+        id,
+        file_name,
+        status,
+        expiration_date,
+        file_path,
+        created_at,
+        request_id,
+        document_requests!inner(
+          title,
+          document_type,
+          supplier_id,
+          buyer_id,
+          suppliers(company_name, industry),
+          buyers(company_name, industry)
+        )
+      `);
 
-    if (!activities) return;
+    if (companyType === 'buyer') {
+      documentsQuery = documentsQuery.eq('document_requests.buyer_id', companyId);
+    } else {
+      documentsQuery = documentsQuery.eq('document_requests.supplier_id', companyId);
+    }
 
-    for (const activity of activities) {
-      const details = activity.details || {};
+    const { data: documents } = await documentsQuery.limit(50);
+    if (!documents) return;
+
+    for (const doc of documents) {
+      const request = doc.document_requests;
+      const supplier = request?.suppliers;
+      const buyer = request?.buyers;
       
-      // Create knowledge entry for document analysis
+      // Create comprehensive document knowledge entry
       const content = `
-Document Analysis Insight:
-- Analysis Type: ${activity.action_type}
-- Confidence Score: ${activity.confidence_score || 'N/A'}
-- Processing Steps: ${JSON.stringify(activity.processing_steps || [])}
-- Reasoning: ${activity.reasoning || 'No reasoning provided'}
-- Details: ${JSON.stringify(details)}
-- Success: ${activity.success ? 'Yes' : 'No'}
-- Date: ${activity.created_at}
+Document Information:
+- Document Name: ${doc.file_name}
+- Document Type: ${request?.document_type || 'Unknown'}
+- Status: ${doc.status}
+- Supplier: ${supplier?.company_name || 'Unknown'}
+- Buyer: ${buyer?.company_name || 'Unknown'}
+- Industry: ${supplier?.industry || buyer?.industry || 'General'}
+- Upload Date: ${new Date(doc.created_at).toLocaleDateString()}
+- Expiration Date: ${doc.expiration_date ? new Date(doc.expiration_date).toLocaleDateString() : 'No expiration set'}
+- Request Title: ${request?.title || 'N/A'}
+- Current Status: ${doc.status}
+- File Path: ${doc.file_path}
+
+Key Compliance Points:
+- Document is ${doc.status === 'approved' ? 'APPROVED and compliant' : doc.status === 'pending_review' ? 'UNDER REVIEW' : 'NEEDS ATTENTION'}
+- ${doc.expiration_date ? `Expires on ${new Date(doc.expiration_date).toLocaleDateString()}` : 'No expiration tracking'}
+- Related to ${request?.document_type} compliance for ${supplier?.company_name || 'supplier'}
       `.trim();
 
-      const title = `${activity.action_type} - ${new Date(activity.created_at).toLocaleDateString()}`;
+      const title = `${doc.file_name} - ${supplier?.company_name || 'Document'}`;
       const embedding = await createEmbedding(content);
 
       await supabase
@@ -72,21 +99,82 @@ Document Analysis Insight:
         .upsert({
           company_id: companyId,
           company_type: companyType,
-          entry_type: 'agent_insights',
+          entry_type: 'document_metadata',
           title,
           content,
           embedding: `[${embedding.join(',')}]`,
           metadata: {
-            activity_id: activity.id,
-            agent_type: activity.agent_type,
-            confidence_score: activity.confidence_score
+            document_id: doc.id,
+            document_type: request?.document_type,
+            supplier_name: supplier?.company_name,
+            buyer_name: buyer?.company_name,
+            status: doc.status,
+            expiration_date: doc.expiration_date,
+            file_path: doc.file_path
           },
-          source_reference: `agent_activity:${activity.id}`,
-          relevance_tags: ['document_analysis', 'ai_insights', activity.action_type]
+          source_reference: `document:${doc.id}`,
+          relevance_tags: [
+            'documents', 
+            'compliance', 
+            request?.document_type?.toLowerCase() || 'general',
+            supplier?.company_name?.toLowerCase().replace(/\s+/g, '_') || 'unknown',
+            doc.status
+          ]
         });
     }
 
-    console.log(`Populated ${activities.length} document insights for ${companyType} ${companyId}`);
+    // Also get recent agent activities for analysis insights
+    const { data: activities } = await supabase
+      .from('agent_activities')
+      .select('*')
+      .eq('entity_id', companyId)
+      .eq('entity_type', companyType)
+      .eq('success', true)
+      .neq('details', null)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (activities) {
+      for (const activity of activities) {
+        const details = activity.details || {};
+        
+        const content = `
+AI Analysis Insight:
+- Analysis Type: ${activity.action_type}
+- Agent: ${activity.agent_type}
+- Confidence Score: ${activity.confidence_score || 'N/A'}
+- Success: ${activity.success ? 'Yes' : 'No'}
+- Reasoning: ${activity.reasoning || 'No reasoning provided'}
+- Processing Details: ${JSON.stringify(details)}
+- Analysis Date: ${new Date(activity.created_at).toLocaleDateString()}
+
+This analysis provides insights into document processing and compliance patterns.
+        `.trim();
+
+        const title = `AI Analysis: ${activity.action_type} - ${new Date(activity.created_at).toLocaleDateString()}`;
+        const embedding = await createEmbedding(content);
+
+        await supabase
+          .from('ai_knowledge_entries')
+          .upsert({
+            company_id: companyId,
+            company_type: companyType,
+            entry_type: 'agent_insights',
+            title,
+            content,
+            embedding: `[${embedding.join(',')}]`,
+            metadata: {
+              activity_id: activity.id,
+              agent_type: activity.agent_type,
+              confidence_score: activity.confidence_score
+            },
+            source_reference: `agent_activity:${activity.id}`,
+            relevance_tags: ['ai_analysis', 'document_processing', activity.action_type]
+          });
+      }
+    }
+
+    console.log(`Populated ${documents.length} document entries and ${activities?.length || 0} AI insights for ${companyType} ${companyId}`);
   } catch (error) {
     console.error('Error populating document insights:', error);
   }

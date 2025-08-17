@@ -30,6 +30,29 @@ interface KnowledgeEntry {
   similarity: number;
 }
 
+interface StructuredResponse {
+  type: 'structured' | 'simple';
+  content: string;
+  sections?: {
+    title: string;
+    content: string;
+    type: 'text' | 'list' | 'document_card';
+  }[];
+  documents?: DocumentReference[];
+  quick_actions?: string[];
+}
+
+interface DocumentReference {
+  id: string;
+  title: string;
+  supplier_name?: string;
+  document_type: string;
+  expiration_date?: string;
+  status: string;
+  file_path?: string;
+  metadata?: any;
+}
+
 // Create embeddings for user query
 async function createEmbedding(text: string): Promise<number[]> {
   const response = await fetch('https://api.openai.com/v1/embeddings', {
@@ -72,6 +95,62 @@ async function searchKnowledge(
   return data || [];
 }
 
+// Search for specific documents mentioned in the query
+async function searchDocuments(query: string, companyId: string, companyType: string): Promise<DocumentReference[]> {
+  try {
+    // Extract potential supplier names and document types from query
+    const supplierKeywords = ['terry foods', 'supplier', 'company'];
+    const docTypeKeywords = ['iso', 'certificate', 'certification', 'compliance', 'audit'];
+    
+    let documentsQuery = supabase
+      .from('document_uploads')
+      .select(`
+        id,
+        file_name,
+        status,
+        expiration_date,
+        file_path,
+        request_id,
+        document_requests!inner(
+          title,
+          document_type,
+          supplier_id,
+          suppliers(company_name)
+        )
+      `);
+
+    // If user is a buyer, get documents from their suppliers
+    if (companyType === 'buyer') {
+      documentsQuery = documentsQuery.eq('document_requests.buyer_id', companyId);
+    } else {
+      documentsQuery = documentsQuery.eq('document_requests.supplier_id', companyId);
+    }
+
+    const { data: documents, error } = await documentsQuery.limit(10);
+
+    if (error) {
+      console.error('Document search error:', error);
+      return [];
+    }
+
+    return (documents || []).map(doc => ({
+      id: doc.id,
+      title: doc.file_name,
+      supplier_name: doc.document_requests?.suppliers?.company_name,
+      document_type: doc.document_requests?.document_type || 'Unknown',
+      expiration_date: doc.expiration_date,
+      status: doc.status,
+      file_path: doc.file_path,
+      metadata: {
+        request_title: doc.document_requests?.title
+      }
+    }));
+  } catch (error) {
+    console.error('Error searching documents:', error);
+    return [];
+  }
+}
+
 // Get user company information
 async function getUserCompany(userId: string): Promise<{companyId: string, companyType: string, industry?: string} | null> {
   // Check if user is a buyer
@@ -99,45 +178,73 @@ async function getUserCompany(userId: string): Promise<{companyId: string, compa
   return null;
 }
 
-// Generate AI response with RAG context
-async function generateResponse(
+// Generate structured AI response with RAG context
+async function generateStructuredResponse(
   userMessage: string, 
   knowledgeEntries: KnowledgeEntry[], 
+  documents: DocumentReference[],
   userInfo: any,
   conversationHistory: any[]
-): Promise<string> {
+): Promise<StructuredResponse> {
   
   const contextBlocks = knowledgeEntries.map(entry => 
     `[${entry.entry_type}] ${entry.title}\n${entry.content}`
   ).join('\n\n---\n\n');
 
+  const documentContext = documents.length > 0 ? 
+    `\n\nRELEVANT DOCUMENTS:\n${documents.map(doc => 
+      `- ${doc.title} (${doc.document_type}) from ${doc.supplier_name || 'Unknown'} - Status: ${doc.status}${doc.expiration_date ? `, Expires: ${doc.expiration_date}` : ''}`
+    ).join('\n')}` : '';
+
   const systemPrompt = `You are a helpful AI compliance assistant for ${userInfo.companyType}s in the ${userInfo.industry || 'general'} industry. 
 
 Your role is to help with:
-- Document compliance and requirements
+- Document compliance and requirements  
 - Industry-specific regulations and standards
-- Supplier-buyer relationship management
+- Document expiration tracking and analysis
+- Supplier document management
 - Compliance best practices
-- Document analysis insights
 
-Use the following knowledge base to provide accurate, contextual answers:
+IMPORTANT: Always respond with structured JSON in this exact format:
+{
+  "type": "structured",
+  "content": "Main response text here",
+  "sections": [
+    {
+      "title": "Section Title",
+      "content": "Section content here",
+      "type": "text|list|document_card"
+    }
+  ],
+  "documents": [
+    {
+      "id": "doc_id",
+      "title": "Document Title", 
+      "supplier_name": "Supplier Name",
+      "document_type": "Document Type",
+      "expiration_date": "YYYY-MM-DD or null",
+      "status": "approved|pending|expired"
+    }
+  ],
+  "quick_actions": ["Follow-up question 1", "Follow-up question 2"]
+}
 
-KNOWLEDGE BASE:
-${contextBlocks}
+Use the following knowledge base:
+${contextBlocks}${documentContext}
 
 Guidelines:
-- Always ground your responses in the provided knowledge base
-- If information isn't in the knowledge base, clearly state this
-- Provide practical, actionable advice
-- Reference specific documents or analyses when relevant
+- Structure your response with clear sections
+- Include document references when available
+- Provide expiration dates and status information
+- Add relevant quick action buttons
 - Be concise but thorough
-- For compliance matters, emphasize the importance of professional legal/regulatory review
+- Reference specific documents when mentioned
 
 Current user context: ${userInfo.companyType} in ${userInfo.industry || 'general'} industry.`;
 
   const messages = [
     { role: 'system', content: systemPrompt },
-    ...conversationHistory.slice(-10), // Last 10 messages for context
+    ...conversationHistory.slice(-8), // Last 8 messages for context
     { role: 'user', content: userMessage }
   ];
 
@@ -150,13 +257,37 @@ Current user context: ${userInfo.companyType} in ${userInfo.industry || 'general
     body: JSON.stringify({
       model: 'gpt-4o-mini',
       messages,
-      max_tokens: 1000,
+      max_tokens: 1200,
       temperature: 0.7,
     }),
   });
 
   const data = await response.json();
-  return data.choices[0].message.content;
+  const rawResponse = data.choices[0].message.content;
+  
+  try {
+    // Try to parse structured response
+    const structuredResponse = JSON.parse(rawResponse);
+    
+    // Enhance with actual document data
+    if (documents.length > 0) {
+      structuredResponse.documents = documents;
+    }
+    
+    return structuredResponse;
+  } catch (parseError) {
+    console.error('Failed to parse structured response, falling back to simple:', parseError);
+    
+    // Fallback to simple response
+    return {
+      type: 'simple',
+      content: rawResponse,
+      documents: documents.length > 0 ? documents : undefined,
+      quick_actions: userInfo.companyType === 'buyer' ? 
+        ["Show me compliance status", "What documents are missing?"] :
+        ["Check my document status", "What's required next?"]
+    };
+  }
 }
 
 // Save or update chat session
@@ -281,12 +412,11 @@ serve(async (req) => {
     // Create embedding for user message
     const embedding = await createEmbedding(message);
 
-    // Search relevant knowledge
-    const knowledgeEntries = await searchKnowledge(
-      embedding, 
-      userInfo.companyId, 
-      userInfo.companyType
-    );
+    // Search relevant knowledge and documents in parallel
+    const [knowledgeEntries, documents] = await Promise.all([
+      searchKnowledge(embedding, userInfo.companyId, userInfo.companyType),
+      searchDocuments(message, userInfo.companyId, userInfo.companyType)
+    ]);
 
     // Get conversation history if session exists
     let conversationHistory: any[] = [];
@@ -301,10 +431,11 @@ serve(async (req) => {
       conversationHistory = historyData || [];
     }
 
-    // Generate AI response
-    const aiResponse = await generateResponse(
+    // Generate structured AI response
+    const structuredResponse = await generateStructuredResponse(
       message, 
-      knowledgeEntries, 
+      knowledgeEntries,
+      documents,
       userInfo, 
       conversationHistory
     );
@@ -320,8 +451,10 @@ serve(async (req) => {
 
     // Save messages
     await saveMessage(finalSessionId, 'user', message);
-    await saveMessage(finalSessionId, 'assistant', aiResponse, {
+    await saveMessage(finalSessionId, 'assistant', JSON.stringify(structuredResponse), {
       knowledge_entries_used: knowledgeEntries.length,
+      documents_found: documents.length,
+      response_type: structuredResponse.type,
       context_tags
     });
 
@@ -330,23 +463,26 @@ serve(async (req) => {
       .from('agent_activities')
       .insert({
         agent_type: 'chat',
-        action_type: 'chat_response',
+        action_type: 'structured_chat_response',
         entity_type: userInfo.companyType,
         entity_id: userInfo.companyId,
         success: true,
         confidence_score: knowledgeEntries.length > 0 ? 0.9 : 0.5,
         details: {
           message_length: message.length,
-          response_length: aiResponse.length,
-          knowledge_entries_found: knowledgeEntries.length
+          response_type: structuredResponse.type,
+          knowledge_entries_found: knowledgeEntries.length,
+          documents_found: documents.length,
+          sections_count: structuredResponse.sections?.length || 0
         },
-        reasoning: `Generated response using ${knowledgeEntries.length} knowledge entries`
+        reasoning: `Generated structured response using ${knowledgeEntries.length} knowledge entries and ${documents.length} documents`
       });
 
     return new Response(JSON.stringify({
-      response: aiResponse,
+      response: structuredResponse,
       session_id: finalSessionId,
       knowledge_entries_used: knowledgeEntries.length,
+      documents_found: documents.length,
       sources: knowledgeEntries.map(entry => ({
         title: entry.title,
         type: entry.entry_type,

@@ -10,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import ChatDocumentViewer from "@/components/chat/ChatDocumentViewer";
 import { 
   MessageSquare, 
   Send, 
@@ -82,6 +83,8 @@ const ChatPage = () => {
   const [companyInfo, setCompanyInfo] = useState<{id: string, type: string, industry?: string} | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [dynamicQuestions, setDynamicQuestions] = useState<string[]>([]);
+  const [selectedDocument, setSelectedDocument] = useState<DocumentReference | null>(null);
+  const [isDocumentViewerOpen, setIsDocumentViewerOpen] = useState(false);
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -305,6 +308,16 @@ const ChatPage = () => {
     }
   };
 
+  const handleViewDocument = (document: DocumentReference) => {
+    setSelectedDocument(document);
+    setIsDocumentViewerOpen(true);
+  };
+
+  const closeDocumentViewer = () => {
+    setIsDocumentViewerOpen(false);
+    setSelectedDocument(null);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved':
@@ -421,7 +434,12 @@ const ChatPage = () => {
                       </div>
                       
                       {doc.file_path && (
-                        <Button size="sm" variant="outline" className="hover:bg-primary/10">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="hover:bg-primary/10"
+                          onClick={() => handleViewDocument(doc)}
+                        >
                           <ExternalLink className="w-3 h-3 mr-1" />
                           View
                         </Button>
@@ -486,12 +504,17 @@ const ChatPage = () => {
                               </div>
                             </div>
                             
-                            {doc.file_path && (
-                              <Button size="sm" variant="outline" className="hover:bg-primary/10">
-                                <ExternalLink className="w-3 h-3 mr-1" />
-                                View
-                              </Button>
-                            )}
+                             {doc.file_path && (
+                               <Button 
+                                 size="sm" 
+                                 variant="outline" 
+                                 className="hover:bg-primary/10"
+                                 onClick={() => handleViewDocument(doc)}
+                               >
+                                 <ExternalLink className="w-3 h-3 mr-1" />
+                                 View
+                               </Button>
+                             )}
                           </div>
                         </Card>
                       ))}
@@ -769,6 +792,13 @@ const ChatPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Document Viewer Modal */}
+      <ChatDocumentViewer
+        document={selectedDocument}
+        isOpen={isDocumentViewerOpen}
+        onClose={closeDocumentViewer}
+      />
     </div>
   );
 };

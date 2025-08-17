@@ -10,6 +10,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import Index from "./pages/Index";
 import AuthPage from "./components/auth/AuthPage";
 import DynamicDashboard from "./components/dashboard/DynamicDashboard";
+import ChatPage from "./pages/ChatPage";
 import SharedDocumentViewer from "./components/shared/SharedDocumentViewer";
 import NotFound from "./pages/NotFound";
 import "./i18n";
@@ -63,6 +64,11 @@ const AppRoutes = () => {
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <DynamicDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/chat" element={
+              <ProtectedRoute>
+                <ChatPage />
               </ProtectedRoute>
             } />
             <Route path="/shared-document/:token" element={<SharedDocumentViewer />} />

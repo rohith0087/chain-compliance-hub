@@ -290,11 +290,17 @@ Current user context: ${userInfo.companyType} in ${userInfo.industry || 'general
   }
 }
 
-// Save or update chat session
-async function saveSession(userId: string, companyId: string, companyType: string, sessionId?: string, contextTags?: string[]): Promise<string> {
+// Save or update chat session with intelligent title
+async function saveSession(userId: string, companyId: string, companyType: string, userMessage: string, sessionId?: string, contextTags?: string[]): Promise<string> {
   if (sessionId) {
     return sessionId;
   }
+
+  // Generate session title from first message
+  const generateTitle = (message: string): string => {
+    const words = message.trim().split(' ').slice(0, 6);
+    return words.join(' ').substring(0, 50);
+  };
 
   const { data, error } = await supabase
     .from('chat_sessions')
@@ -302,7 +308,7 @@ async function saveSession(userId: string, companyId: string, companyType: strin
       user_id: userId,
       company_id: companyId,
       company_type: companyType,
-      session_title: 'Compliance Chat',
+      session_title: generateTitle(userMessage),
       context_tags: contextTags || []
     })
     .select('id')
@@ -445,6 +451,7 @@ serve(async (req) => {
       user.id, 
       userInfo.companyId, 
       userInfo.companyType, 
+      message,
       session_id, 
       context_tags
     );
@@ -479,15 +486,17 @@ serve(async (req) => {
       });
 
     return new Response(JSON.stringify({
-      response: structuredResponse,
+      response: JSON.stringify(structuredResponse),
       session_id: finalSessionId,
-      knowledge_entries_used: knowledgeEntries.length,
-      documents_found: documents.length,
-      sources: knowledgeEntries.map(entry => ({
-        title: entry.title,
-        type: entry.entry_type,
-        similarity: entry.similarity
-      }))
+      metadata: {
+        knowledge_entries_used: knowledgeEntries.length,
+        documents_found: documents.length,
+        sources: knowledgeEntries.map(entry => ({
+          title: entry.title,
+          type: entry.entry_type,
+          similarity: entry.similarity
+        }))
+      }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

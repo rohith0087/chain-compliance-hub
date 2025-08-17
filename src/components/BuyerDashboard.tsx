@@ -210,25 +210,17 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
             <BarChart3 className="w-4 h-4 mr-2" />
             {t('common:navigation.compliance')}
           </TabsTrigger>
-          <TabsTrigger value="documents">
-            <FileCheck className="w-4 h-4 mr-2" />
-            {t('common:navigation.documents')}
-          </TabsTrigger>
           <TabsTrigger value="requests">
             <ListChecks className="w-4 h-4 mr-2" />
             {t('common:navigation.requests')}
           </TabsTrigger>
-          <TabsTrigger value="connections">
-            <UserCheck className="w-4 h-4 mr-2" />
-            Connection Requests
+          <TabsTrigger value="documents">
+            <FileCheck className="w-4 h-4 mr-2" />
+            {t('common:navigation.documents')}
           </TabsTrigger>
           <TabsTrigger value="suppliers">
             <Users className="w-4 h-4 mr-2" />
             {t('common:navigation.suppliers')}
-          </TabsTrigger>
-          <TabsTrigger value="chat">
-            <MessageSquare className="w-4 h-4 mr-2" />
-            AI Chat
           </TabsTrigger>
           <TabsTrigger value="company">
             <Building2 className="w-4 h-4 mr-2" />
@@ -428,20 +420,25 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
           <RequestsList />
         </TabsContent>
         
+        <TabsContent value="suppliers" className="space-y-2">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-semibold">Suppliers</h2>
+              <Button 
+                onClick={() => setActiveTab('connections')}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <UserCheck className="w-4 h-4" />
+                Connection Requests
+              </Button>
+            </div>
+            <SupplierDiscovery />
+          </div>
+        </TabsContent>
+        
         <TabsContent value="connections" className="space-y-2">
           <BuyerConnectionRequests />
-        </TabsContent>
-        
-        <TabsContent value="suppliers" className="space-y-2">
-          <SupplierDiscovery />
-        </TabsContent>
-        
-        <TabsContent value="chat" className="space-y-2">
-          {buyerProfile && (
-            <div className="h-[600px]">
-              <ChatAgentPanel companyType="buyer" companyId={buyerProfile.id} />
-            </div>
-          )}
         </TabsContent>
         
         <TabsContent value="company" className="space-y-2">

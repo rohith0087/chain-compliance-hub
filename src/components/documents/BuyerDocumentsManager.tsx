@@ -75,14 +75,23 @@ const BuyerDocumentsManager = ({
       return;
     }
 
+    let newTab: Window | null = null;
     try {
-      // For images, open in new tab (pre-open to avoid popup blockers)
-      if (upload.mime_type?.startsWith('image/')) {
-        const newTab = window.open('', '_blank');
+      // Determine if we can preview in a new tab (images and PDFs)
+      const isPreviewable =
+        upload?.mime_type?.startsWith('image/') ||
+        upload?.mime_type === 'application/pdf' ||
+        upload?.file_name?.toLowerCase?.().endsWith('.pdf');
+
+      if (isPreviewable) {
+        newTab = window.open('', '_blank');
         if (newTab) newTab.document.write('Loading document...');
+
+        const resolved = resolveStoragePath(upload.file_path);
+        if (!resolved) throw new Error('Invalid file path');
         const { data, error } = await supabase.storage
-          .from('compliance-documents')
-          .createSignedUrl(upload.file_path, 60);
+          .from(resolved.bucket)
+          .createSignedUrl(resolved.key, 60);
 
         if (error) throw error;
         if (newTab) {
@@ -96,6 +105,10 @@ const BuyerDocumentsManager = ({
       }
     } catch (error) {
       console.error('View error:', error);
+      // Close any pre-opened tab left on "Loading"
+      try {
+        if (newTab && !newTab.closed) newTab.close();
+      } catch {}
       toast({
         title: "Error",
         description: "Failed to view document",
@@ -125,9 +138,13 @@ const BuyerDocumentsManager = ({
     setDownloading(doc.id);
     try {
       // Prefer a signed URL download so we avoid loading large blobs into memory
+      const resolved = resolveStoragePath(upload.file_path);
+      if (!resolved) {
+        throw new Error('Invalid file path');
+      }
       const { data: signed, error: signedErr } = await supabase.storage
-        .from('compliance-documents')
-        .createSignedUrl(upload.file_path, 60, { download: upload.file_name });
+        .from(resolved.bucket)
+        .createSignedUrl(resolved.key, 60, { download: upload.file_name });
 
       if (!signedErr && signed?.signedUrl) {
         const a = window.document.createElement('a');
@@ -145,8 +162,8 @@ const BuyerDocumentsManager = ({
 
       // Fallback: fetch the blob and download
       const { data: blob, error } = await supabase.storage
-        .from('compliance-documents')
-        .download(upload.file_path);
+        .from(resolved.bucket)
+        .download(resolved.key);
 
       if (error) {
         console.error('Storage download error:', error);

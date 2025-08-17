@@ -108,6 +108,21 @@ const FileUploadZone = ({ requestId, onUploadComplete }: FileUploadZoneProps) =>
         }
       }
 
+      // Trigger buyer agent to process newly uploaded documents
+      try {
+        console.info('Triggering buyer agent for new uploads...');
+        const { data: agentData, error: agentError } = await supabase.functions.invoke('agent-coordinator', {
+          body: { action: 'trigger_buyer' }
+        });
+        if (agentError) {
+          console.error('Agent coordinator error:', agentError);
+        } else {
+          console.info('Agent coordinator response:', agentData);
+        }
+      } catch (err) {
+        console.error('Error invoking agent coordinator:', err);
+      }
+
       toast({
         title: "Upload Successful",
         description: `${selectedFiles.length} file(s) uploaded successfully.`,

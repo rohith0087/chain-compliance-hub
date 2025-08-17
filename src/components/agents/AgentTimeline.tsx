@@ -67,7 +67,8 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({ companyType, compa
 
   useEffect(() => {
     loadAgentData();
-    setupRealtimeSubscriptions();
+    const cleanup = setupRealtimeSubscriptions();
+    return cleanup;
   }, [companyId, companyType]);
 
   const loadAgentData = async () => {
@@ -109,7 +110,7 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({ companyType, compa
   const setupRealtimeSubscriptions = () => {
     // Subscribe to agent configuration changes
     const configChannel = supabase
-      .channel('agent-configs')
+      .channel(`agent-configs-${companyId}-${companyType}`)
       .on(
         'postgres_changes',
         {
@@ -127,7 +128,7 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({ companyType, compa
 
     // Subscribe to agent activity changes
     const activityChannel = supabase
-      .channel('agent-activities')
+      .channel(`agent-activities-${companyId}-${companyType}`)
       .on(
         'postgres_changes',
         {
@@ -144,6 +145,7 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({ companyType, compa
       .subscribe();
 
     return () => {
+      console.log('Cleaning up agent timeline subscriptions');
       supabase.removeChannel(configChannel);
       supabase.removeChannel(activityChannel);
     };

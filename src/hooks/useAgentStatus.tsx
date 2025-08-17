@@ -17,9 +17,9 @@ export const useAgentStatus = (companyId: string, companyType: 'buyer' | 'suppli
   useEffect(() => {
     loadAgentStatuses();
     
-    // Set up real-time subscription
+    // Set up real-time subscription with unique channel name
     const channel = supabase
-      .channel('agent-status-updates')
+      .channel(`agent-status-${companyId}-${companyType}`)
       .on(
         'postgres_changes',
         {
@@ -29,12 +29,14 @@ export const useAgentStatus = (companyId: string, companyType: 'buyer' | 'suppli
           filter: `company_id=eq.${companyId}`
         },
         () => {
+          console.log('Agent status updated, reloading...');
           loadAgentStatuses();
         }
       )
       .subscribe();
 
     return () => {
+      console.log('Cleaning up agent status subscription');
       supabase.removeChannel(channel);
     };
   }, [companyId, companyType]);

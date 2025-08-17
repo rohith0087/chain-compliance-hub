@@ -10,6 +10,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import Index from "./pages/Index";
 import AuthPage from "./components/auth/AuthPage";
 import DynamicDashboard from "./components/dashboard/DynamicDashboard";
+import SharedDocumentViewer from "./components/shared/SharedDocumentViewer";
 import NotFound from "./pages/NotFound";
 import "./i18n";
 
@@ -64,6 +65,7 @@ const AppRoutes = () => {
                 <DynamicDashboard />
               </ProtectedRoute>
             } />
+            <Route path="/shared-document/:token" element={<SharedDocumentViewer />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

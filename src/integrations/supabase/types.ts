@@ -1587,6 +1587,25 @@ export type Database = {
         }
         Returns: string
       }
+      search_relevant_documents: {
+        Args: {
+          match_limit?: number
+          query_text: string
+          user_company_id: string
+          user_company_type: string
+        }
+        Returns: {
+          document_type: string
+          expiration_date: string
+          file_path: string
+          id: string
+          metadata: Json
+          relevance_score: number
+          status: string
+          supplier_name: string
+          title: string
+        }[]
+      }
       sparsevec_out: {
         Args: { "": unknown }
         Returns: unknown

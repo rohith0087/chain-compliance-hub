@@ -12,7 +12,7 @@ import DocumentsFilter from './DocumentsFilter';
 import DocumentCard from './DocumentCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
+import { resolveStoragePath } from '@/utils/storagePath';
 interface BuyerDocumentsManagerProps {
   documents: any[];
   onApprove: (documentId: string) => Promise<void>;

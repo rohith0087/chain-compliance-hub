@@ -76,27 +76,29 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
       let fileSize = latestUpload?.file_size;
       let mimeType = latestUpload?.mime_type;
 
-      // If uploading a new file
-      if (file) {
-        const fileExt = file.name.split('.').pop();
-        fileName = `${request.id}_${Date.now()}.${fileExt}`;
-        filePath = `compliance-documents/${fileName}`;
-        fileSize = file.size;
-        mimeType = file.type;
+// If uploading a new file
+if (file) {
+  const fileExt = file.name.split('.').pop();
+  const generatedName = `${request.id}_${Date.now()}.${fileExt}`;
+  fileName = generatedName;
+  // Store key without bucket prefix
+  const fileKey = `${user?.id || 'uploads'}/${generatedName}`;
+  filePath = fileKey;
+  fileSize = file.size;
+  mimeType = file.type;
 
-        // Upload file to Supabase Storage
-        const { data, error: uploadError } = await supabase.storage
-          .from('compliance-documents')
-          .upload(filePath, file);
+  // Upload file to Supabase Storage
+  const { data, error: uploadError } = await supabase.storage
+    .from('compliance-documents')
+    .upload(fileKey, file);
 
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
-          // Continue with database record even if storage fails
-        } else {
-          uploadData = data;
-          filePath = data.path;
-        }
-      }
+  if (uploadError) {
+    console.error('Upload error:', uploadError);
+    throw uploadError; // Do not create DB record if storage upload failed
+  } else {
+    uploadData = data;
+  }
+}
 
       // Determine version number for new upload
       let version = 1;

@@ -114,15 +114,23 @@ export class AIInsightsService {
 
   private static async getOpenAIKey(): Promise<string | null> {
     try {
-      // Try to get from Supabase edge function environment
-      const response = await fetch('/api/get-openai-key');
-      if (response.ok) {
-        const data = await response.json();
+      // Try to get from Supabase environment variables
+      const { data, error } = await import('@/integrations/supabase/client').then(module => 
+        module.supabase.functions.invoke('get-openai-key')
+      );
+      
+      if (!error && data?.apiKey) {
         return data.apiKey;
       }
     } catch (error) {
-      console.log('Could not retrieve OpenAI API key from environment');
+      console.log('Could not retrieve OpenAI API key from Supabase');
     }
+    
+    // Check if available in local environment (fallback)
+    if (typeof window !== 'undefined' && localStorage.getItem('openai_api_key')) {
+      return localStorage.getItem('openai_api_key');
+    }
+    
     return null;
   }
 

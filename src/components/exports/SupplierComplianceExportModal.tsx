@@ -113,11 +113,40 @@ const SupplierComplianceExportModal: React.FC<SupplierComplianceExportModalProps
     }
 
     setIsExporting(true);
+    
+    // Show progress toast
+    const progressToast = toast({
+      title: "Generating Report",
+      description: "Collecting compliance data...",
+      duration: 10000
+    });
+
     try {
+      // Update progress
+      setTimeout(() => {
+        toast({
+          title: "Generating Report",
+          description: selectedSuppliers.length > 1 
+            ? "Generating AI comparison insights..." 
+            : "Generating AI risk assessment...",
+          duration: 15000
+        });
+      }, 2000);
+
+      // Update progress again
+      setTimeout(() => {
+        toast({
+          title: "Generating Report",
+          description: "Creating PDF document with charts and analytics...",
+          duration: 10000
+        });
+      }, 8000);
+
       await onExport(selectedSuppliers, reportType, dateRange, exportOptions);
+      
       toast({
         title: "Export Successful",
-        description: `Generated ${selectedSuppliers.length > 1 ? 'comparison' : 'detailed'} report for ${selectedSuppliers.length} supplier(s).`
+        description: `Generated professional ${selectedSuppliers.length > 1 ? 'comparison' : 'detailed'} report for ${selectedSuppliers.length} supplier(s).`
       });
       onClose();
     } catch (error) {

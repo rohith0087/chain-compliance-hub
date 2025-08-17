@@ -56,11 +56,14 @@ const BuyerDocumentsManager = ({
     return matchesSearch && matchesStatus && matchesCategory && matchesDocumentType;
   });
 
-  const handleView = async (document: any) => {
-    console.log('View document:', document.id);
-    console.log('Document uploads:', document.document_uploads);
-    const upload = document.document_uploads?.[0];
-    console.log('Upload data:', upload);
+  const handleView = async (doc: any) => {
+    console.log('View document:', doc.id);
+    console.log('Document uploads:', doc.document_uploads);
+    const uploads = doc.document_uploads || [];
+    const upload = uploads.length > 1
+      ? uploads.slice().sort((a: any, b: any) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())[0]
+      : uploads[0];
+    console.log('Selected upload data:', upload);
     
     if (!upload?.file_path) {
       console.log('No file_path found:', upload);
@@ -73,17 +76,23 @@ const BuyerDocumentsManager = ({
     }
 
     try {
-      // For images, open in new tab
+      // For images, open in new tab (pre-open to avoid popup blockers)
       if (upload.mime_type?.startsWith('image/')) {
+        const newTab = window.open('', '_blank');
+        if (newTab) newTab.document.write('Loading document...');
         const { data, error } = await supabase.storage
           .from('compliance-documents')
           .createSignedUrl(upload.file_path, 60);
 
         if (error) throw error;
-        window.open(data.signedUrl, '_blank');
+        if (newTab) {
+          newTab.location.href = data.signedUrl;
+        } else {
+          window.open(data.signedUrl, '_blank');
+        }
       } else {
-        // For other files, download them
-        handleDownload(document);
+        // For other files, trigger a download
+        await handleDownload(doc);
       }
     } catch (error) {
       console.error('View error:', error);
@@ -94,12 +103,14 @@ const BuyerDocumentsManager = ({
       });
     }
   };
-
-  const handleDownload = async (document: any) => {
-    console.log('Download document:', document.id);
-    console.log('Document uploads:', document.document_uploads);
-    const upload = document.document_uploads?.[0];
-    console.log('Upload data:', upload);
+  const handleDownload = async (doc: any) => {
+    console.log('Download document:', doc.id);
+    console.log('Document uploads:', doc.document_uploads);
+    const uploads = doc.document_uploads || [];
+    const upload = uploads.length > 1
+      ? uploads.slice().sort((a: any, b: any) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())[0]
+      : uploads[0];
+    console.log('Selected upload data:', upload);
     
     if (!upload?.file_path) {
       console.log('No file_path found:', upload);
@@ -111,10 +122,29 @@ const BuyerDocumentsManager = ({
       return;
     }
 
-    setDownloading(document.id);
+    setDownloading(doc.id);
     try {
-      console.log('Attempting to download file_path:', upload.file_path);
-      const { data, error } = await supabase.storage
+      // Prefer a signed URL download so we avoid loading large blobs into memory
+      const { data: signed, error: signedErr } = await supabase.storage
+        .from('compliance-documents')
+        .createSignedUrl(upload.file_path, 60, { download: upload.file_name });
+
+      if (!signedErr && signed?.signedUrl) {
+        const a = window.document.createElement('a');
+        a.href = signed.signedUrl;
+        a.download = upload.file_name || 'download';
+        window.document.body.appendChild(a);
+        a.click();
+        window.document.body.removeChild(a);
+        toast({
+          title: "Download Started",
+          description: `Downloading ${upload.file_name}`,
+        });
+        return;
+      }
+
+      // Fallback: fetch the blob and download
+      const { data: blob, error } = await supabase.storage
         .from('compliance-documents')
         .download(upload.file_path);
 
@@ -123,15 +153,13 @@ const BuyerDocumentsManager = ({
         throw error;
       }
 
-      console.log('Download successful, creating blob URL');
-      // Create download link
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = upload.file_name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const url = URL.createObjectURL(blob);
+      const a2 = window.document.createElement('a');
+      a2.href = url;
+      a2.download = upload.file_name || 'download';
+      window.document.body.appendChild(a2);
+      a2.click();
+      window.document.body.removeChild(a2);
       URL.revokeObjectURL(url);
 
       toast({
@@ -149,7 +177,6 @@ const BuyerDocumentsManager = ({
       setDownloading(null);
     }
   };
-
   const stats = {
     total: filteredDocuments.length,
     pending: filteredDocuments.filter(doc => doc.status === 'pending').length,

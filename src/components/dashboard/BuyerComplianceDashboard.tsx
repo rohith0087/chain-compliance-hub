@@ -125,12 +125,17 @@ const BuyerComplianceDashboard = () => {
   const handleViewDocument = async (request: any) => {
     console.log('Viewing document for request:', request.id);
     try {
-      // Fetch document uploads for this request
-      const { data: uploads } = await supabase
+      // Fetch latest document upload for this request
+      const { data: uploads, error: uploadsError } = await supabase
         .from('document_uploads')
         .select('*')
         .eq('request_id', request.id)
+        .order('created_at', { ascending: false })
         .limit(1);
+
+      if (uploadsError) {
+        console.error('Error fetching uploads:', uploadsError);
+      }
 
       console.log('Fetched uploads:', uploads);
       const upload = uploads?.[0];
@@ -147,8 +152,12 @@ const BuyerComplianceDashboard = () => {
       }
 
       console.log('Attempting to access file_path:', upload.file_path);
-      // For images, open in new tab, for others download
-      if (upload.mime_type?.startsWith('image/')) {
+      const isViewable = upload.mime_type?.startsWith('image/') || upload.mime_type === 'application/pdf';
+
+      if (isViewable) {
+        // Pre-open a new tab to avoid popup blockers
+        const newTab = window.open('', '_blank');
+        if (newTab) newTab.document.write('Loading document...');
         const { data, error } = await supabase.storage
           .from('compliance-documents')
           .createSignedUrl(upload.file_path, 60);
@@ -158,10 +167,33 @@ const BuyerComplianceDashboard = () => {
           throw error;
         }
         console.log('Opening signed URL:', data.signedUrl);
-        window.open(data.signedUrl, '_blank');
+        if (newTab) {
+          newTab.location.href = data.signedUrl;
+        } else {
+          window.open(data.signedUrl, '_blank');
+        }
       } else {
-        // Download the file
-        const { data, error } = await supabase.storage
+        // Prefer signed URL download
+        const { data: signed, error: signedErr } = await supabase.storage
+          .from('compliance-documents')
+          .createSignedUrl(upload.file_path, 60, { download: upload.file_name });
+
+        if (!signedErr && signed?.signedUrl) {
+          const a = window.document.createElement('a');
+          a.href = signed.signedUrl;
+          a.download = upload.file_name || 'download';
+          window.document.body.appendChild(a);
+          a.click();
+          window.document.body.removeChild(a);
+          toast({
+            title: "Download Started",
+            description: `Downloading ${upload.file_name}`,
+          });
+          return;
+        }
+
+        // Fallback to blob download
+        const { data: blob, error } = await supabase.storage
           .from('compliance-documents')
           .download(upload.file_path);
 
@@ -171,13 +203,13 @@ const BuyerComplianceDashboard = () => {
         }
 
         console.log('Download successful, creating blob URL');
-        const url = URL.createObjectURL(data);
-        const a = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        const a = window.document.createElement('a');
         a.href = url;
-        a.download = upload.file_name;
-        document.body.appendChild(a);
+        a.download = upload.file_name || 'download';
+        window.document.body.appendChild(a);
         a.click();
-        document.body.removeChild(a);
+        window.document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
         toast({
@@ -194,7 +226,6 @@ const BuyerComplianceDashboard = () => {
       });
     }
   };
-
   const handleSupplierClick = (supplier: any) => {
     setSelectedSupplier({
       ...supplier,

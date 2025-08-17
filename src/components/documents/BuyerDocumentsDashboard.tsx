@@ -414,6 +414,114 @@ const BuyerDocumentsDashboard = () => {
     });
   };
 
+  // Robust view logic using signed URLs and popup-safe flow
+  const handleViewDocumentFile = async (doc: any) => {
+    try {
+      const uploads = doc.document_uploads || [];
+      const latest = uploads.length > 1
+        ? uploads.slice().sort((a: any, b: any) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())[0]
+        : uploads[0];
+
+      if (!latest?.file_path) {
+        toast({
+          title: 'No File',
+          description: 'No file available for viewing',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Image/PDF handling: pre-open tab to avoid popup blockers
+      const isImage = latest.mime_type?.startsWith('image/');
+      const isPdf = latest.mime_type === 'application/pdf' || latest.file_name?.toLowerCase().endsWith('.pdf');
+      const newTab = window.open('', '_blank');
+      if (newTab) newTab.document.write('Loading document...');
+
+      const { data, error } = await supabase.storage
+        .from('compliance-documents')
+        .createSignedUrl(latest.file_path, 60);
+
+      if (error || !data?.signedUrl) {
+        throw error || new Error('Could not generate a signed URL');
+      }
+
+      if (newTab) {
+        newTab.location.href = data.signedUrl;
+      } else {
+        // Fallback if tab wasn't allowed
+        if (isImage || isPdf) {
+          window.open(data.signedUrl, '_blank');
+        } else {
+          // Non-previewable types: trigger download instead
+          await handleDownloadDocumentFile(doc);
+        }
+      }
+    } catch (err) {
+      console.error('View error:', err);
+      toast({
+        title: 'View Failed',
+        description: 'Failed to open the document',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Robust download logic with signed URL first, blob fallback
+  const handleDownloadDocumentFile = async (doc: any) => {
+    try {
+      const uploads = doc.document_uploads || [];
+      const latest = uploads.length > 1
+        ? uploads.slice().sort((a: any, b: any) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())[0]
+        : uploads[0];
+
+      if (!latest?.file_path) {
+        toast({
+          title: 'No File',
+          description: 'No file available for download',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Try signed URL with download param
+      const { data: signed, error: signedErr } = await supabase.storage
+        .from('compliance-documents')
+        .createSignedUrl(latest.file_path, 60, { download: latest.file_name });
+
+      if (!signedErr && signed?.signedUrl) {
+        const a = window.document.createElement('a');
+        a.href = signed.signedUrl;
+        a.download = latest.file_name || 'download';
+        window.document.body.appendChild(a);
+        a.click();
+        window.document.body.removeChild(a);
+        return;
+      }
+
+      // Fallback: download blob
+      const { data: blob, error } = await supabase.storage
+        .from('compliance-documents')
+        .download(latest.file_path);
+      if (error) throw error;
+
+      const url = URL.createObjectURL(blob);
+      const a2 = window.document.createElement('a');
+      a2.href = url;
+      a2.download = latest.file_name || 'download';
+      window.document.body.appendChild(a2);
+      a2.click();
+      window.document.body.removeChild(a2);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Download error:', err);
+      toast({
+        title: 'Download Failed',
+        description: 'Failed to download the document',
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Calculate stats using effective status
   const stats = {
     total: documents.length,
@@ -572,8 +680,8 @@ const BuyerDocumentsDashboard = () => {
                         })
                       }}
                       userRole="buyer"
-                      onView={() => console.log('View document:', doc.id)}
-                      onDownload={() => console.log('Download document:', doc.id)}
+                      onView={() => handleViewDocumentFile(doc)}
+                      onDownload={() => handleDownloadDocumentFile(doc)}
                       onApprove={() => handleApproveDocument(doc.id)}
                       onDecline={() => openDeclineDialog(doc.id, doc.document_type)}
                       approveLoading={approveLoading === doc.id}

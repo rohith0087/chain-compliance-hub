@@ -95,44 +95,56 @@ async function searchKnowledge(
   return data || [];
 }
 
-// Search for documents with enhanced relevance filtering
+// Search for specific documents mentioned in the query
 async function searchDocuments(query: string, companyId: string, companyType: string): Promise<DocumentReference[]> {
   try {
-    console.log('Searching documents with query:', query, 'for company:', companyId, 'type:', companyType);
+    // Extract potential supplier names and document types from query
+    const supplierKeywords = ['terry foods', 'supplier', 'company'];
+    const docTypeKeywords = ['iso', 'certificate', 'certification', 'compliance', 'audit'];
     
-    // Use the new relevance-based search function
-    const { data: documents, error } = await supabase.rpc('search_relevant_documents', {
-      query_text: query.toLowerCase().trim(),
-      user_company_id: companyId,
-      user_company_type: companyType,
-      match_limit: query.trim() === '' ? 3 : 5 // Show fewer documents for empty queries
-    });
+    let documentsQuery = supabase
+      .from('document_uploads')
+      .select(`
+        id,
+        file_name,
+        status,
+        expiration_date,
+        file_path,
+        request_id,
+        document_requests!inner(
+          title,
+          document_type,
+          supplier_id,
+          suppliers(company_name)
+        )
+      `);
+
+    // If user is a buyer, get documents from their suppliers
+    if (companyType === 'buyer') {
+      documentsQuery = documentsQuery.eq('document_requests.buyer_id', companyId);
+    } else {
+      documentsQuery = documentsQuery.eq('document_requests.supplier_id', companyId);
+    }
+
+    const { data: documents, error } = await documentsQuery.limit(10);
 
     if (error) {
       console.error('Document search error:', error);
       return [];
     }
 
-    console.log('Found documents:', documents?.length || 0);
-
-    return (documents || [])
-      .filter(doc => {
-        // For specific queries, only show documents with relevance > 0
-        if (query.trim() !== '' && doc.relevance_score <= 0) {
-          return false;
-        }
-        return true;
-      })
-      .map(doc => ({
-        id: doc.id,
-        title: doc.title || 'Untitled Document',
-        supplier_name: doc.supplier_name || 'Unknown Supplier',
-        document_type: doc.document_type || 'Unknown',
-        expiration_date: doc.expiration_date,
-        status: doc.status || 'pending', // Use the corrected status from document_requests
-        file_path: doc.file_path,
-        metadata: doc.metadata || {}
-      }));
+    return (documents || []).map(doc => ({
+      id: doc.id,
+      title: doc.file_name,
+      supplier_name: doc.document_requests?.suppliers?.company_name,
+      document_type: doc.document_requests?.document_type || 'Unknown',
+      expiration_date: doc.expiration_date,
+      status: doc.status,
+      file_path: doc.file_path,
+      metadata: {
+        request_title: doc.document_requests?.title
+      }
+    }));
   } catch (error) {
     console.error('Error searching documents:', error);
     return [];
@@ -180,7 +192,7 @@ async function generateStructuredResponse(
   ).join('\n\n---\n\n');
 
   const documentContext = documents.length > 0 ? 
-    `\n\nRELEVANT DOCUMENTS (only show if specifically relevant to the query):\n${documents.map(doc => 
+    `\n\nRELEVANT DOCUMENTS:\n${documents.map(doc => 
       `- ${doc.title} (${doc.document_type}) from ${doc.supplier_name || 'Unknown'} - Status: ${doc.status}${doc.expiration_date ? `, Expires: ${doc.expiration_date}` : ''}`
     ).join('\n')}` : '';
 
@@ -221,15 +233,12 @@ Use the following knowledge base:
 ${contextBlocks}${documentContext}
 
 Guidelines:
-- ONLY show documents in your response if they are specifically relevant to the user's query
-- For general questions, provide guidance without showing documents unless directly asked
-- Use the correct document status from the database (approved/completed, pending, rejected)
 - Structure your response with clear sections
-- Include document references only when they match the query context
+- Include document references when available
 - Provide expiration dates and status information
 - Add relevant quick action buttons
 - Be concise but thorough
-- If user asks about a specific document/supplier, show those; otherwise, keep document lists minimal
+- Reference specific documents when mentioned
 
 Current user context: ${userInfo.companyType} in ${userInfo.industry || 'general'} industry.`;
 

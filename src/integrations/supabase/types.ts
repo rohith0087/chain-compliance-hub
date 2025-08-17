@@ -14,6 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_activities: {
+        Row: {
+          action_type: string
+          agent_type: string
+          confidence_score: number | null
+          created_at: string
+          details: Json | null
+          entity_id: string
+          entity_type: string
+          error_message: string | null
+          id: string
+          success: boolean | null
+        }
+        Insert: {
+          action_type: string
+          agent_type: string
+          confidence_score?: number | null
+          created_at?: string
+          details?: Json | null
+          entity_id: string
+          entity_type: string
+          error_message?: string | null
+          id?: string
+          success?: boolean | null
+        }
+        Update: {
+          action_type?: string
+          agent_type?: string
+          confidence_score?: number | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string
+          entity_type?: string
+          error_message?: string | null
+          id?: string
+          success?: boolean | null
+        }
+        Relationships: []
+      }
+      agent_configurations: {
+        Row: {
+          agent_type: string
+          company_id: string
+          company_type: string
+          created_at: string
+          created_by: string | null
+          enabled: boolean | null
+          id: string
+          settings: Json
+          updated_at: string
+        }
+        Insert: {
+          agent_type: string
+          company_id: string
+          company_type: string
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean | null
+          id?: string
+          settings?: Json
+          updated_at?: string
+        }
+        Update: {
+          agent_type?: string
+          company_id?: string
+          company_type?: string
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean | null
+          id?: string
+          settings?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       approval_workflows: {
         Row: {
           branch_id: string | null
@@ -738,6 +813,45 @@ export type Database = {
           },
         ]
       }
+      document_validation_criteria: {
+        Row: {
+          auto_approve_threshold: number | null
+          buyer_id: string
+          created_at: string
+          created_by: string | null
+          criteria: Json
+          document_type: string
+          id: string
+          required_fields: Json | null
+          updated_at: string
+          validation_rules: Json | null
+        }
+        Insert: {
+          auto_approve_threshold?: number | null
+          buyer_id: string
+          created_at?: string
+          created_by?: string | null
+          criteria: Json
+          document_type: string
+          id?: string
+          required_fields?: Json | null
+          updated_at?: string
+          validation_rules?: Json | null
+        }
+        Update: {
+          auto_approve_threshold?: number | null
+          buyer_id?: string
+          created_at?: string
+          created_by?: string | null
+          criteria?: Json
+          document_type?: string
+          id?: string
+          required_fields?: Json | null
+          updated_at?: string
+          validation_rules?: Json | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string | null
@@ -868,6 +982,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      supplier_response_metrics: {
+        Row: {
+          buyer_id: string
+          created_at: string
+          document_type: string
+          id: string
+          request_date: string
+          response_date: string | null
+          response_time_hours: number | null
+          status: string
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string
+          document_type: string
+          id?: string
+          request_date: string
+          response_date?: string | null
+          response_time_hours?: number | null
+          status?: string
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string
+          document_type?: string
+          id?: string
+          request_date?: string
+          response_date?: string | null
+          response_time_hours?: number | null
+          status?: string
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       suppliers: {
         Row: {

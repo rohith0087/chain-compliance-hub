@@ -14,7 +14,7 @@ import { format } from 'date-fns';
 interface DocumentLink {
   id: string;
   access_token: string;
-  permission_level: 'public' | 'organization' | 'admin_only';
+  permission_level: string; // Changed from union type to string to match DB
   created_at: string;
   expires_at?: string;
   is_active: boolean;
@@ -64,7 +64,7 @@ export const DocumentLinkModal: React.FC<DocumentLinkModalProps> = ({
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setExistingLinks(data || []);
+      setExistingLinks((data || []) as DocumentLink[]);
     } catch (error) {
       console.error('Error fetching links:', error);
       toast({
@@ -80,12 +80,16 @@ export const DocumentLinkModal: React.FC<DocumentLinkModalProps> = ({
   const createLink = async () => {
     setLoading(true);
     try {
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) throw new Error('User not authenticated');
+
       const { data, error } = await supabase
         .from('document_shared_links')
         .insert([{
           document_upload_id: documentUpload.id,
           permission_level: permissionLevel,
           expires_at: expiresAt || null,
+          created_by: user.data.user.id,
         }])
         .select(`
           *,
@@ -98,7 +102,7 @@ export const DocumentLinkModal: React.FC<DocumentLinkModalProps> = ({
       // Log the activity
       await supabase.rpc('log_document_activity', {
         p_document_upload_id: documentUpload.id,
-        p_user_id: (await supabase.auth.getUser()).data.user?.id,
+        p_user_id: user.data.user.id,
         p_action_type: 'link_created',
         p_metadata: {
           permission_level: permissionLevel,
@@ -107,7 +111,7 @@ export const DocumentLinkModal: React.FC<DocumentLinkModalProps> = ({
         p_notes: `Created ${permissionLevel} link for document`,
       });
 
-      setExistingLinks([data, ...existingLinks]);
+      setExistingLinks([data as DocumentLink, ...existingLinks]);
       setPermissionLevel('organization');
       setExpiresAt('');
       

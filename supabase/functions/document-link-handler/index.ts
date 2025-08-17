@@ -6,6 +6,51 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Resolve various forms of stored file paths into a bucket + key pair
+function resolveStoragePath(input?: string | null): { bucket: string; key: string } | null {
+  if (!input) return null;
+  let value = input.trim();
+
+  // If it's a full URL, try to parse bucket and key
+  try {
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      const url = new URL(value);
+      const parts = url.pathname.split('/').filter(Boolean);
+      // Patterns we may see:
+      // /storage/v1/object/public/<bucket>/<key>
+      // /storage/v1/object/sign/<bucket>/<key>
+      const idx = parts.findIndex((p) => p === 'object');
+      if (idx !== -1 && parts[idx + 1]) {
+        // object/<visibility>/<bucket>/<...key>
+        const visibilityOrBucket = parts[idx + 1];
+        if (visibilityOrBucket === 'public' || visibilityOrBucket === 'sign' || visibilityOrBucket === 'auth') {
+          const bucket = parts[idx + 2];
+          const key = parts.slice(idx + 3).join('/');
+          if (bucket && key) return { bucket, key };
+        } else {
+          // object/<bucket>/<...key>
+          const bucket = visibilityOrBucket;
+          const key = parts.slice(idx + 2).join('/');
+          if (bucket && key) return { bucket, key };
+        }
+      }
+    }
+  } catch {
+    // fallthrough to key normalization
+  }
+
+  // Normalize leading slashes
+  value = value.replace(/^\/+/, '');
+
+  // If the value includes the bucket name as a prefix, strip it
+  if (value.startsWith('compliance-documents/')) {
+    return { bucket: 'compliance-documents', key: value.replace(/^compliance-documents\//, '') };
+  }
+
+  // Default to compliance-documents bucket
+  return { bucket: 'compliance-documents', key: value };
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -247,16 +292,32 @@ serve(async (req) => {
     });
 
     // Get signed URL for the document
-    const { data: signedUrl, error: urlError } = await supabase.storage
-      .from('compliance-documents')
-      .createSignedUrl(linkData.document_uploads.file_path, 3600);
+    const filePathRaw = linkData.document_uploads.file_path as string;
+    const resolved = resolveStoragePath(filePathRaw);
 
-    if (urlError) {
-      console.error('Error creating signed URL:', urlError);
+    if (!resolved) {
+      console.error('Invalid storage path', { filePathRaw });
+      return new Response(
+        JSON.stringify({ error: 'Invalid file path' }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    console.log('Generating signed URL', { filePathRaw, bucket: resolved.bucket, key: resolved.key });
+
+    const { data: signedUrl, error: urlError } = await supabase.storage
+      .from(resolved.bucket)
+      .createSignedUrl(resolved.key, 3600);
+
+    if (urlError || !signedUrl) {
+      console.error('Error creating signed URL', { error: urlError, bucket: resolved.bucket, key: resolved.key });
       return new Response(
         JSON.stringify({ error: 'Failed to generate document access URL' }),
-        { 
-          status: 500, 
+        {
+          status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );

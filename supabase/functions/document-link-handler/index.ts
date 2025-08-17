@@ -19,7 +19,23 @@ serve(async (req) => {
     );
 
     const url = new URL(req.url);
-    const token = url.pathname.split('/').pop();
+    // Try to extract token from URL path, query params, or request body
+    let token = url.pathname.split('/').pop();
+
+    if (!token || token === 'document-link-handler') {
+      token = url.searchParams.get('access_token') || url.searchParams.get('token') || undefined as unknown as string;
+    }
+
+    if (!token) {
+      try {
+        const body = await req.json();
+        if (body && typeof body.access_token === 'string') {
+          token = body.access_token;
+        }
+      } catch (_) {
+        // ignore JSON parse errors
+      }
+    }
 
     if (!token) {
       return new Response(
@@ -40,6 +56,7 @@ serve(async (req) => {
           id,
           file_name,
           file_path,
+          file_size,
           mime_type,
           created_at,
           document_requests (
@@ -252,6 +269,7 @@ serve(async (req) => {
         document: {
           id: linkData.document_uploads.id,
           file_name: linkData.document_uploads.file_name,
+          file_size: linkData.document_uploads.file_size,
           mime_type: linkData.document_uploads.mime_type,
           created_at: linkData.document_uploads.created_at,
           request_title: documentRequest.title,

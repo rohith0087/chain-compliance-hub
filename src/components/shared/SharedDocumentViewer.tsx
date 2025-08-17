@@ -56,7 +56,19 @@ const SharedDocumentViewer: React.FC = () => {
         throw new Error(data.error || 'Document access denied');
       }
 
-      setDocumentData(data);
+      const mapped: DocumentMetadata = {
+        documentTitle: data.document?.request_title ?? 'Document',
+        originalFileName: data.document?.file_name ?? 'file',
+        fileSize: data.document?.file_size ?? 0,
+        documentType: data.document?.mime_type ?? 'unknown',
+        uploadedDate: data.document?.created_at ?? new Date().toISOString(),
+        companyName: data.document?.buyer_company ?? 'Buyer',
+        supplierName: data.document?.supplier_company ?? 'Supplier',
+        permissionLevel: data.permission_level ?? 'public',
+        signedUrl: data.access_url,
+      };
+
+      setDocumentData(mapped);
     } catch (err) {
       console.error('Error fetching shared document:', err);
       setError(err instanceof Error ? err.message : 'Failed to load document');

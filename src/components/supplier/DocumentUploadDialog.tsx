@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,8 +30,13 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
   const latestUpload = request.document_uploads?.[0]; // Get the latest upload for rejected documents
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.info('[UploadDialog] File input change', {
+      filesLength: e.target.files?.length,
+      fromMobile: /Mobi|Android/i.test(navigator.userAgent)
+    });
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
+      console.info('[UploadDialog] Selected file', { name: selectedFile.name, size: selectedFile.size, type: selectedFile.type });
       // Check file size (10MB limit)
       if (selectedFile.size > 10 * 1024 * 1024) {
         toast({
@@ -212,12 +217,15 @@ if (file) {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
             {isResubmission ? 'Resubmit Document' : 'Upload Document'}
           </DialogTitle>
+          <DialogDescription id="upload-dialog-desc">
+            Provide or update the requested document and optional metadata.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">
@@ -285,8 +293,10 @@ if (file) {
                 <Input
                   id="file-upload"
                   type="file"
+                  onClick={(e) => e.stopPropagation()}
                   onChange={handleFileChange}
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
+                  accept="image/*,application/pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
+                  multiple={false}
                   className="cursor-pointer"
                 />
                 <p className="text-xs text-gray-500 mt-1">

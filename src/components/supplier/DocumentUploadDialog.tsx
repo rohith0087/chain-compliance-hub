@@ -45,7 +45,8 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!user) return;
     
     // For resubmission, either file or metadata update is required
@@ -369,7 +370,11 @@ if (file) {
               Cancel
             </Button>
             <Button 
-              onClick={handleSubmit}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                handleSubmit(e);
+              }}
               disabled={(!file && !isResubmission) || (isResubmission && !file && !updateMetadataOnly) || uploading}
             >
               {uploading ? (

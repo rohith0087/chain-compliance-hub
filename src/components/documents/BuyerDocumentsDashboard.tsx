@@ -254,56 +254,25 @@ const BuyerDocumentsDashboard = () => {
     try {
       console.log('Approving document:', documentId);
       
-      // Find the document and its upload
+      // Find the document for display purposes
       const document = documents.find(doc => doc.id === documentId);
       if (!document) {
         throw new Error('Document not found');
       }
-      
-      console.log('Document found:', document);
 
-      if (!document.document_uploads || document.document_uploads.length === 0) {
-        throw new Error('No file uploaded for this document');
+      // Use the secure approval function
+      const { data, error } = await supabase.rpc('approve_document_request', {
+        p_request_id: documentId,
+        p_notes: null
+      });
+
+      if (error) {
+        throw new Error(`Failed to approve document: ${error.message}`);
       }
 
-      const uploadId = document.document_uploads[0].id;
-      console.log('Upload ID:', uploadId);
-
-      // Update both document_requests and document_uploads in a transaction-like manner
-      const [requestUpdate, uploadUpdate] = await Promise.all([
-        supabase
-          .from('document_requests')
-          .update({ 
-            status: 'approved',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', documentId),
-        supabase
-          .from('document_uploads')
-          .update({ 
-            status: 'approved',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', uploadId)
-      ]);
-
-      if (requestUpdate.error) {
-        throw new Error(`Failed to update document request: ${requestUpdate.error.message}`);
-      }
-
-      if (uploadUpdate.error) {
-        throw new Error(`Failed to update document upload: ${uploadUpdate.error.message}`);
-      }
-
-      // Send notification to supplier
-      if (document.suppliers?.profile_id) {
-        await supabase.rpc('create_notification', {
-          p_user_id: document.suppliers.profile_id,
-          p_title: 'Document Approved',
-          p_message: `Your document "${document.document_type}" has been approved and meets all requirements.`,
-          p_type: 'document_approved',
-          p_reference_id: documentId
-        });
+      const result = data as { success: boolean; error?: string; message?: string };
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to approve document');
       }
 
       toast({
@@ -330,60 +299,25 @@ const BuyerDocumentsDashboard = () => {
     try {
       console.log('Declining document:', documentId);
       
-      // Find the document and its upload
+      // Find the document for display purposes
       const document = documents.find(doc => doc.id === documentId);
       if (!document) {
         throw new Error('Document not found');
       }
 
-      console.log('Document found:', document);
+      // Use the secure rejection function
+      const { data, error } = await supabase.rpc('reject_document_request', {
+        p_request_id: documentId,
+        p_reason: reason
+      });
 
-      if (!document.document_uploads || document.document_uploads.length === 0) {
-        throw new Error('No file uploaded for this document');
+      if (error) {
+        throw new Error(`Failed to reject document: ${error.message}`);
       }
 
-      const uploadId = document.document_uploads[0].id;
-      console.log('Upload ID:', uploadId);
-
-      // Update both document_requests and document_uploads in a transaction-like manner
-      const [requestUpdate, uploadUpdate] = await Promise.all([
-        supabase
-          .from('document_requests')
-          .update({ 
-            status: 'rejected',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', documentId),
-        supabase
-          .from('document_uploads')
-          .update({ 
-            status: 'rejected',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', uploadId)
-      ]);
-
-      if (requestUpdate.error) {
-        throw new Error(`Failed to update document request: ${requestUpdate.error.message}`);
-      }
-
-      if (uploadUpdate.error) {
-        throw new Error(`Failed to update document upload: ${uploadUpdate.error.message}`);
-      }
-
-      // Send notification to supplier with reason
-      if (document.suppliers?.profile_id) {
-        const message = reason 
-          ? `Your document "${document.document_type}" has been declined. Reason: ${reason}`
-          : `Your document "${document.document_type}" has been declined. Please contact the buyer for more details.`;
-
-        await supabase.rpc('create_notification', {
-          p_user_id: document.suppliers.profile_id,
-          p_title: 'Document Declined',
-          p_message: message,
-          p_type: 'document_declined',
-          p_reference_id: documentId
-        });
+      const result = data as { success: boolean; error?: string; message?: string };
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to reject document');
       }
 
       toast({

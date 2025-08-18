@@ -229,7 +229,7 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                 </Button>
               )}
               
-              {/* Show upload button for pending documents */}
+              {/* Show upload button for pending documents only */}
               {request.status === 'pending' && (
                 <Button 
                   size="sm" 
@@ -241,7 +241,7 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                 </Button>
               )}
               
-              {/* Show resubmit button for rejected documents */}
+              {/* Show resubmit button only for rejected documents */}
               {request.status === 'rejected' && (
                 <Button 
                   size="sm" 

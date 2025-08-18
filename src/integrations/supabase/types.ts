@@ -1487,6 +1487,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_document_request: {
+        Args: { p_notes?: string; p_request_id: string }
+        Returns: Json
+      }
       binary_quantize: {
         Args: { "": string } | { "": unknown }
         Returns: unknown
@@ -1586,6 +1590,29 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      reject_document_request: {
+        Args: { p_reason: string; p_request_id: string }
+        Returns: Json
+      }
+      search_relevant_documents: {
+        Args: {
+          match_limit?: number
+          query_text: string
+          user_company_id: string
+          user_company_type: string
+        }
+        Returns: {
+          document_type: string
+          expiration_date: string
+          file_path: string
+          id: string
+          metadata: Json
+          relevance_score: number
+          status: string
+          supplier_name: string
+          title: string
+        }[]
       }
       sparsevec_out: {
         Args: { "": unknown }

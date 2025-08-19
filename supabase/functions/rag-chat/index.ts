@@ -399,7 +399,7 @@ async function searchKnowledge(
 ): Promise<KnowledgeEntry[]> {
   
   const { data, error } = await supabase.rpc('search_knowledge_entries', {
-    query_embedding: JSON.stringify(embedding),
+    query_embedding: `[${embedding.join(',')}]`,
     company_id_param: companyId,
     company_type_param: companyType,
     similarity_threshold: 0.7,

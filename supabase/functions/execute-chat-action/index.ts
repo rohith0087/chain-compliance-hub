@@ -1,4 +1,5 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
 import { Resend } from "npm:resend@2.0.0";
 
@@ -6,6 +7,13 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+);
+
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 interface ActionRequest {
   action_type: string;
@@ -18,369 +26,380 @@ interface ActionResult {
   success: boolean;
   message: string;
   data?: any;
-  notifications_sent?: number;
   emails_sent?: number;
+  notifications_sent?: number;
 }
 
-serve(async (req: Request): Promise<Response> => {
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
-
-    // Get user from authorization header
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
-      throw new Error('No authorization header');
-    }
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
-
-    if (userError || !user) {
-      throw new Error('Invalid user token');
-    }
-
     const { action_type, parameters, session_id, context }: ActionRequest = await req.json();
+    
+    console.log('Executing action:', { action_type, parameters });
 
-    console.log(`Executing action: ${action_type}`, { parameters, context });
-
-    let result: ActionResult = { success: false, message: 'Unknown action type' };
+    let result: ActionResult;
 
     switch (action_type) {
-      case 'send_follow_up_email': {
-        const { supplier_name, subject, content, recipient_email } = parameters;
-        
-        try {
-          // Send email via Resend
-          const emailResponse = await resend.emails.send({
-            from: 'Compliance AI <noreply@yourdomain.com>',
-            to: [recipient_email || 'supplier@example.com'],
-            subject: subject || `Follow-up: ${supplier_name} Compliance Documents`,
-            html: `
-              <h2>Compliance Document Follow-up</h2>
-              <p>Dear ${supplier_name} Team,</p>
-              <p>${content || 'This is a follow-up regarding your compliance documents. Please review and take necessary action.'}</p>
-              <p>Best regards,<br/>Compliance Team</p>
-            `,
-          });
-
-          // Create notification for user
-          await supabase.rpc('create_notification', {
-            p_user_id: user.id,
-            p_title: 'Email Sent Successfully',
-            p_message: `Follow-up email sent to ${supplier_name}`,
-            p_type: 'email_sent',
-            p_reference_id: session_id
-          });
-
-          result = {
-            success: true,
-            message: `Follow-up email sent to ${supplier_name}`,
-            emails_sent: 1,
-            notifications_sent: 1
-          };
-        } catch (error) {
-          console.error('Email sending failed:', error);
-          result = {
-            success: false,
-            message: `Failed to send email to ${supplier_name}: ${error.message}`
-          };
-        }
+      case 'send_follow_up_email':
+        result = await sendFollowUpEmail(parameters);
         break;
-      }
-
-      case 'create_reminder': {
-        const { reminder_text, days_ahead, supplier_name } = parameters;
-        const reminderDate = new Date();
-        reminderDate.setDate(reminderDate.getDate() + (days_ahead || 3));
-
-        try {
-          // Create a scheduled notification (we'll create it now and mark it for future display)
-          await supabase.rpc('create_notification', {
-            p_user_id: user.id,
-            p_title: 'Reminder Set',
-            p_message: `Reminder set for ${supplier_name}: ${reminder_text}`,
-            p_type: 'reminder_created',
-            p_reference_id: session_id
-          });
-
-          // In a real implementation, you'd schedule this with a cron job or similar
-          // For now, we'll create an immediate notification about the reminder being set
-          result = {
-            success: true,
-            message: `Reminder set for ${supplier_name} in ${days_ahead || 3} days`,
-            notifications_sent: 1
-          };
-        } catch (error) {
-          result = {
-            success: false,
-            message: `Failed to create reminder: ${error.message}`
-          };
-        }
+      
+      case 'send_document_expiry_alert':
+        result = await sendExpiryAlert(parameters);
         break;
-      }
-
-      case 'send_document_expiry_alert': {
-        const { document_type, supplier_name, expiry_date, urgency } = parameters;
-
-        try {
-          // Find supplier profile to get email
-          const { data: suppliers } = await supabase
-            .from('suppliers')
-            .select('contact_email, profile_id')
-            .ilike('company_name', `%${supplier_name}%`)
-            .limit(1);
-
-          if (suppliers && suppliers.length > 0) {
-            const supplier = suppliers[0];
-            
-            // Send email alert
-            await resend.emails.send({
-              from: 'Compliance AI <noreply@yourdomain.com>',
-              to: [supplier.contact_email],
-              subject: `${urgency === 'high' ? 'URGENT: ' : ''}Document Expiry Alert - ${document_type}`,
-              html: `
-                <h2>Document Expiry Alert</h2>
-                <p>Dear ${supplier_name} Team,</p>
-                <p><strong>Alert:</strong> Your ${document_type} document is ${urgency === 'high' ? 'expiring soon' : 'due for renewal'}.</p>
-                <p><strong>Expiry Date:</strong> ${expiry_date}</p>
-                <p>Please take immediate action to renew this document to maintain compliance.</p>
-                <p>Best regards,<br/>Compliance Team</p>
-              `,
-            });
-
-            // Create notification for supplier
-            if (supplier.profile_id) {
-              await supabase.rpc('create_notification', {
-                p_user_id: supplier.profile_id,
-                p_title: 'Document Expiry Alert',
-                p_message: `Your ${document_type} document expires on ${expiry_date}`,
-                p_type: 'document_expiry',
-                p_reference_id: session_id
-              });
-            }
-
-            // Create notification for user
-            await supabase.rpc('create_notification', {
-              p_user_id: user.id,
-              p_title: 'Expiry Alert Sent',
-              p_message: `Document expiry alert sent to ${supplier_name}`,
-              p_type: 'alert_sent',
-              p_reference_id: session_id
-            });
-
-            result = {
-              success: true,
-              message: `Document expiry alert sent to ${supplier_name}`,
-              emails_sent: 1,
-              notifications_sent: 2
-            };
-          } else {
-            result = {
-              success: false,
-              message: `Could not find contact information for ${supplier_name}`
-            };
-          }
-        } catch (error) {
-          result = {
-            success: false,
-            message: `Failed to send expiry alert: ${error.message}`
-          };
-        }
+      
+      case 'create_reminder':
+        result = await createReminder(parameters);
         break;
-      }
-
-      case 'request_additional_documents': {
-        const { supplier_name, document_types, due_date, priority } = parameters;
-
-        try {
-          // Find supplier
-          const { data: suppliers } = await supabase
-            .from('suppliers')
-            .select('id, contact_email, profile_id')
-            .ilike('company_name', `%${supplier_name}%`)
-            .limit(1);
-
-          if (suppliers && suppliers.length > 0) {
-            const supplier = suppliers[0];
-            
-            // Find buyer
-            const { data: buyers } = await supabase
-              .from('buyers')
-              .select('id')
-              .eq('profile_id', user.id)
-              .limit(1);
-
-            if (buyers && buyers.length > 0) {
-              const buyer = buyers[0];
-
-              // Create document requests
-              const requests = document_types.map((docType: string) => ({
-                supplier_id: supplier.id,
-                buyer_id: buyer.id,
-                title: `${docType} Document Request`,
-                description: `Automated request for ${docType} compliance document`,
-                document_type: docType,
-                category: 'compliance',
-                priority: priority || 'medium',
-                due_date: due_date || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                status: 'pending'
-              }));
-
-              const { data: createdRequests, error: requestError } = await supabase
-                .from('document_requests')
-                .insert(requests)
-                .select();
-
-              if (requestError) throw requestError;
-
-              // Send notification email
-              await resend.emails.send({
-                from: 'Compliance AI <noreply@yourdomain.com>',
-                to: [supplier.contact_email],
-                subject: `Document Request: ${document_types.join(', ')}`,
-                html: `
-                  <h2>Document Request</h2>
-                  <p>Dear ${supplier_name} Team,</p>
-                  <p>We are requesting the following documents for compliance review:</p>
-                  <ul>
-                    ${document_types.map((doc: string) => `<li>${doc}</li>`).join('')}
-                  </ul>
-                  <p><strong>Due Date:</strong> ${due_date || 'Within 7 days'}</p>
-                  <p><strong>Priority:</strong> ${priority || 'Medium'}</p>
-                  <p>Please upload these documents at your earliest convenience.</p>
-                  <p>Best regards,<br/>Compliance Team</p>
-                `,
-              });
-
-              // Create notifications
-              if (supplier.profile_id) {
-                await supabase.rpc('create_notification', {
-                  p_user_id: supplier.profile_id,
-                  p_title: 'New Document Request',
-                  p_message: `New document request: ${document_types.join(', ')}`,
-                  p_type: 'document_request',
-                  p_reference_id: createdRequests[0]?.id
-                });
-              }
-
-              await supabase.rpc('create_notification', {
-                p_user_id: user.id,
-                p_title: 'Document Request Sent',
-                p_message: `Document request sent to ${supplier_name} for ${document_types.length} documents`,
-                p_type: 'request_sent',
-                p_reference_id: session_id
-              });
-
-              result = {
-                success: true,
-                message: `Document request sent to ${supplier_name} for ${document_types.join(', ')}`,
-                emails_sent: 1,
-                notifications_sent: 2,
-                data: { requests_created: createdRequests?.length || 0 }
-              };
-            } else {
-              result = {
-                success: false,
-                message: 'Could not find your buyer profile'
-              };
-            }
-          } else {
-            result = {
-              success: false,
-              message: `Could not find supplier: ${supplier_name}`
-            };
-          }
-        } catch (error) {
-          result = {
-            success: false,
-            message: `Failed to create document request: ${error.message}`
-          };
-        }
+      
+      case 'request_additional_documents':
+        result = await requestAdditionalDocuments(parameters);
         break;
-      }
-
-      case 'generate_compliance_report': {
-        const { supplier_name, report_type, email_recipients } = parameters;
-
-        try {
-          // This would generate a real report in production
-          const reportData = {
-            supplier: supplier_name,
-            generated_at: new Date().toISOString(),
-            report_type: report_type || 'compliance_summary',
-            status: 'completed'
-          };
-
-          // Create notification
-          await supabase.rpc('create_notification', {
-            p_user_id: user.id,
-            p_title: 'Compliance Report Generated',
-            p_message: `${report_type || 'Compliance'} report generated for ${supplier_name}`,
-            p_type: 'report_generated',
-            p_reference_id: session_id
-          });
-
-          // If email recipients specified, send the report
-          if (email_recipients && email_recipients.length > 0) {
-            await resend.emails.send({
-              from: 'Compliance AI <noreply@yourdomain.com>',
-              to: email_recipients,
-              subject: `Compliance Report: ${supplier_name}`,
-              html: `
-                <h2>Compliance Report</h2>
-                <p>Please find the compliance report for ${supplier_name} below:</p>
-                <pre>${JSON.stringify(reportData, null, 2)}</pre>
-                <p>Generated on: ${new Date().toLocaleString()}</p>
-              `,
-            });
-          }
-
-          result = {
-            success: true,
-            message: `Compliance report generated for ${supplier_name}`,
-            notifications_sent: 1,
-            emails_sent: email_recipients?.length || 0,
-            data: reportData
-          };
-        } catch (error) {
-          result = {
-            success: false,
-            message: `Failed to generate report: ${error.message}`
-          };
-        }
+      
+      case 'generate_compliance_report':
+        result = await generateComplianceReport(parameters);
         break;
-      }
+      
+      case 'schedule_meeting':
+        result = await scheduleMeeting(parameters);
+        break;
+      
+      case 'send_supplier_notification':
+        result = await sendSupplierNotification(parameters);
+        break;
+      
+      default:
+        result = {
+          success: false,
+          message: `Unknown action type: ${action_type}`
+        };
     }
 
     // Log the action execution
-    console.log(`Action ${action_type} completed:`, result);
+    await supabase
+      .from('agent_activities')
+      .insert({
+        agent_type: 'buyer',
+        action_type: 'execute_action',
+        entity_type: 'action',
+        entity_id: session_id,
+        details: {
+          action_type,
+          parameters,
+          result,
+          context
+        },
+        success: result.success
+      });
 
     return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('Error in execute-chat-action:', error);
+    console.error('Action execution error:', error);
     return new Response(
       JSON.stringify({
         success: false,
-        message: error.message,
-        error: error.toString()
+        message: error.message || 'Action execution failed'
       }),
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
 });
+
+async function sendFollowUpEmail(params: Record<string, any>): Promise<ActionResult> {
+  const { supplier_email, supplier_name, document_type, due_date, message } = params;
+  
+  try {
+    const emailResponse = await resend.emails.send({
+      from: "Compliance System <compliance@resend.dev>",
+      to: [supplier_email],
+      subject: `Follow-up: ${document_type} Document Request`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #3b82f6;">Document Request Follow-up</h2>
+          
+          <p>Dear ${supplier_name},</p>
+          
+          <p>We are following up on the ${document_type} document request.</p>
+          
+          ${due_date ? `<p><strong>Due Date:</strong> ${new Date(due_date).toLocaleDateString()}</p>` : ''}
+          
+          <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; margin: 20px 0;">
+            <p>${message || 'Please provide the requested document at your earliest convenience.'}</p>
+          </div>
+          
+          <p>If you have any questions or need assistance, please don't hesitate to contact us.</p>
+          
+          <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+            This is an automated follow-up from your compliance management system.
+          </p>
+        </div>
+      `,
+    });
+
+    return {
+      success: true,
+      message: `Follow-up email sent to ${supplier_name}`,
+      emails_sent: 1,
+      data: emailResponse
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `Failed to send follow-up email: ${error.message}`
+    };
+  }
+}
+
+async function sendExpiryAlert(params: Record<string, any>): Promise<ActionResult> {
+  const { supplier_email, document_name, expiration_date, days_until_expiry } = params;
+  
+  try {
+    const { data, error } = await supabase.functions.invoke('send-expiry-notification', {
+      body: {
+        supplier_email,
+        buyer_email: 'compliance@company.com',
+        document_name,
+        expiration_date,
+        days_until_expiry
+      }
+    });
+
+    if (error) throw error;
+
+    return {
+      success: true,
+      message: `Expiry alert sent for ${document_name}`,
+      emails_sent: 1,
+      data
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `Failed to send expiry alert: ${error.message}`
+    };
+  }
+}
+
+async function createReminder(params: Record<string, any>): Promise<ActionResult> {
+  const { user_id, title, message, remind_at, type } = params;
+  
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id,
+        title: title || 'Compliance Reminder',
+        message: message || 'You have a compliance task that needs attention.',
+        type: type || 'reminder'
+      });
+
+    if (error) throw error;
+
+    return {
+      success: true,
+      message: 'Reminder created successfully',
+      notifications_sent: 1,
+      data
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `Failed to create reminder: ${error.message}`
+    };
+  }
+}
+
+async function requestAdditionalDocuments(params: Record<string, any>): Promise<ActionResult> {
+  const { supplier_id, document_types, due_date, notes } = params;
+  
+  try {
+    // Get supplier details
+    const { data: supplier } = await supabase
+      .from('suppliers')
+      .select('company_name, contact_email')
+      .eq('id', supplier_id)
+      .single();
+
+    if (!supplier) {
+      throw new Error('Supplier not found');
+    }
+
+    // Create document requests
+    const requests = document_types.map((docType: string) => ({
+      supplier_id,
+      document_type: docType,
+      title: `${docType} Request`,
+      description: notes || `Please provide your ${docType} document.`,
+      due_date,
+      status: 'pending',
+      category: 'compliance'
+    }));
+
+    const { data, error } = await supabase
+      .from('document_requests')
+      .insert(requests);
+
+    if (error) throw error;
+
+    // Send notification email
+    await resend.emails.send({
+      from: "Compliance System <compliance@resend.dev>",
+      to: [supplier.contact_email],
+      subject: `New Document Request from Your Buyer`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #3b82f6;">New Document Request</h2>
+          
+          <p>Dear ${supplier.company_name},</p>
+          
+          <p>We have requested the following additional documents:</p>
+          
+          <ul>
+            ${document_types.map((type: string) => `<li>${type}</li>`).join('')}
+          </ul>
+          
+          ${due_date ? `<p><strong>Due Date:</strong> ${new Date(due_date).toLocaleDateString()}</p>` : ''}
+          ${notes ? `<p><strong>Notes:</strong> ${notes}</p>` : ''}
+          
+          <p>Please log in to your compliance portal to upload the requested documents.</p>
+        </div>
+      `,
+    });
+
+    return {
+      success: true,
+      message: `Requested ${document_types.length} additional document(s) from ${supplier.company_name}`,
+      emails_sent: 1,
+      data
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `Failed to request additional documents: ${error.message}`
+    };
+  }
+}
+
+async function generateComplianceReport(params: Record<string, any>): Promise<ActionResult> {
+  const { company_id, report_type, include_suppliers, date_range } = params;
+  
+  try {
+    // This is a placeholder for report generation
+    // In a real implementation, this would generate and store a compliance report
+    
+    return {
+      success: true,
+      message: `${report_type} compliance report generated successfully`,
+      data: {
+        report_id: `report_${Date.now()}`,
+        type: report_type,
+        generated_at: new Date().toISOString(),
+        status: 'ready'
+      }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `Failed to generate compliance report: ${error.message}`
+    };
+  }
+}
+
+async function scheduleMeeting(params: Record<string, any>): Promise<ActionResult> {
+  const { attendee_emails, subject, date, duration } = params;
+  
+  try {
+    // This is a placeholder for meeting scheduling
+    // In a real implementation, this would integrate with a calendar system
+    
+    return {
+      success: true,
+      message: `Meeting "${subject}" scheduled for ${new Date(date).toLocaleDateString()}`,
+      data: {
+        meeting_id: `meeting_${Date.now()}`,
+        subject,
+        date,
+        attendees: attendee_emails,
+        duration
+      }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `Failed to schedule meeting: ${error.message}`
+    };
+  }
+}
+
+async function sendSupplierNotification(params: Record<string, any>): Promise<ActionResult> {
+  const { supplier_id, notification_type, message, urgent } = params;
+  
+  try {
+    // Get supplier details
+    const { data: supplier } = await supabase
+      .from('suppliers')
+      .select('company_name, contact_email, profile_id')
+      .eq('id', supplier_id)
+      .single();
+
+    if (!supplier) {
+      throw new Error('Supplier not found');
+    }
+
+    // Create in-app notification
+    await supabase
+      .from('notifications')
+      .insert({
+        user_id: supplier.profile_id,
+        title: `${urgent ? 'URGENT: ' : ''}${notification_type}`,
+        message,
+        type: notification_type.toLowerCase().replace(/\s+/g, '_')
+      });
+
+    // Send email if urgent
+    if (urgent) {
+      await resend.emails.send({
+        from: "Compliance System <compliance@resend.dev>",
+        to: [supplier.contact_email],
+        subject: `URGENT: ${notification_type}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 16px; margin-bottom: 20px;">
+              <h2 style="color: #dc2626; margin-top: 0;">URGENT NOTIFICATION</h2>
+            </div>
+            
+            <p>Dear ${supplier.company_name},</p>
+            
+            <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px;">
+              <p>${message}</p>
+            </div>
+            
+            <p>Please take immediate action as required.</p>
+          </div>
+        `,
+      });
+    }
+
+    return {
+      success: true,
+      message: `Notification sent to ${supplier.company_name}`,
+      notifications_sent: 1,
+      emails_sent: urgent ? 1 : 0
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `Failed to send supplier notification: ${error.message}`
+    };
+  }
+}

@@ -10,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { supabase } from "@/integrations/supabase/client";
 import ChatDocumentViewer from "@/components/chat/ChatDocumentViewer";
 import ComplianceVisualizer from "@/components/chat/ComplianceVisualizer";
+import ComplianceInsightsDashboard from "@/components/chat/ComplianceInsightsDashboard";
 import DailyInsightsPanel from "@/components/chat/DailyInsightsPanel";
 import ActionExecutor from "@/components/chat/ActionExecutor";
 import { useToast } from "@/hooks/use-toast";
@@ -391,11 +392,13 @@ const ChatPage = () => {
       return (
 
         <div className="space-y-6">
-{(typeof parsed.response === 'string' || typeof parsed.content === 'string') && (
+{(parsed.response || parsed.content) && (
             <p className="text-muted-foreground leading-relaxed">
-              {typeof parsed.response === 'string'
-                ? parsed.response
-                : (typeof parsed.content === 'string' ? parsed.content : '')}
+              {typeof parsed.response === 'string' 
+                ? parsed.response 
+                : typeof parsed.content === 'string' 
+                ? parsed.content 
+                : JSON.stringify(parsed.response || parsed.content)}
             </p>
           )}
           
@@ -645,10 +648,26 @@ const ChatPage = () => {
       
       return (
         <div>
-          <p className="text-muted-foreground leading-relaxed">{typeof parsed.response === 'string' ? parsed.response : (typeof parsed.content === 'string' ? parsed.content : JSON.stringify(parsed))}</p>
+          <p className="text-muted-foreground leading-relaxed">
+            {typeof parsed.response === 'string' 
+              ? parsed.response 
+              : typeof parsed.content === 'string' 
+              ? parsed.content 
+              : 'AI provided a structured response with visual data'}
+          </p>
           {parsed.visual_data && (
             <div className="mt-4">
               <ComplianceVisualizer visualData={parsed.visual_data} />
+            </div>
+          )}
+          
+          {/* Add comprehensive dashboard for buyer insights */}
+          {companyInfo?.type === 'buyer' && (parsed.daily_insights || messages.length === 1) && (
+            <div className="mt-6">
+              <ComplianceInsightsDashboard 
+                companyId={companyInfo.id}
+                companyType={companyInfo.type}
+              />
             </div>
           )}
           {parsed.daily_insights && (

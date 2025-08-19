@@ -1595,6 +1595,24 @@ export type Database = {
         Args: { p_reason: string; p_request_id: string }
         Returns: Json
       }
+      search_knowledge_entries: {
+        Args: {
+          company_id_param: string
+          company_type_param: string
+          match_count?: number
+          query_embedding: string
+          similarity_threshold?: number
+        }
+        Returns: {
+          content: string
+          entry_type: string
+          id: string
+          metadata: Json
+          similarity: number
+          source_reference: string
+          title: string
+        }[]
+      }
       search_relevant_documents: {
         Args: {
           match_limit?: number

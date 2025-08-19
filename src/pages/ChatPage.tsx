@@ -277,8 +277,11 @@ const ChatPage = () => {
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
-        content: data.response,
-        metadata: data.metadata,
+        content: typeof data.response === 'string' ? data.response : JSON.stringify(data.response),
+        metadata: {
+          ...data.metadata,
+          structured_response: typeof data.response === 'object' ? data.response : null
+        },
         created_at: new Date().toISOString(),
       };
 
@@ -348,9 +351,10 @@ const ChatPage = () => {
     }
   };
 
-  const renderStructuredMessage = (content: string) => {
-    try {
-      const parsed: StructuredResponse = JSON.parse(content);
+  const renderStructuredMessage = (message: Message) => {
+    // Check if we have a structured response in metadata first
+    if (message.metadata?.structured_response) {
+      const parsed: StructuredResponse = message.metadata.structured_response;
       
       if (parsed.type === 'simple') {
         return <p className="text-muted-foreground leading-relaxed">{parsed.content}</p>;
@@ -545,8 +549,27 @@ const ChatPage = () => {
           )}
         </div>
       );
-    } catch {
-      return <p className="text-muted-foreground leading-relaxed">{content}</p>;
+    }
+
+    // Fallback: try to parse content as JSON if no structured response in metadata
+    try {
+      const parsed: StructuredResponse = JSON.parse(message.content);
+      
+      if (parsed.type === 'simple') {
+        return <p className="text-muted-foreground leading-relaxed">{parsed.content}</p>;
+      }
+
+      // Re-render with the parsed structured response
+      return renderStructuredMessage({
+        ...message,
+        metadata: {
+          ...message.metadata,
+          structured_response: parsed
+        }
+      });
+    } catch (error) {
+      // Final fallback to plain text
+      return <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{message.content}</p>;
     }
   };
 
@@ -729,9 +752,9 @@ const ChatPage = () => {
                       {message.role === 'user' ? 'You' : 'Compliance AI'}
                     </div>
                     <div className="prose prose-sm max-w-none">
-                      {message.role === 'assistant' 
-                        ? renderStructuredMessage(message.content)
-                        : <p className="text-foreground leading-relaxed">{message.content}</p>
+                      {message.role === 'assistant' ? 
+                        renderStructuredMessage(message) : 
+                        <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{message.content}</p>
                       }
                     </div>
                   </div>

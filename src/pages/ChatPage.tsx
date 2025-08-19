@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import ChatDocumentViewer from "@/components/chat/ChatDocumentViewer";
 import ComplianceVisualizer from "@/components/chat/ComplianceVisualizer";
 import DailyInsightsPanel from "@/components/chat/DailyInsightsPanel";
+import ActionExecutor from "@/components/chat/ActionExecutor";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { 
@@ -52,26 +53,37 @@ interface ChatSession {
 }
 
 interface StructuredResponse {
-  type: 'structured' | 'simple';
-  content: string;
-  sections?: {
+  response: string;
+  sections?: Array<{
     title: string;
     content: string;
-    type: 'text' | 'list' | 'document_card' | 'chart' | 'metric_card' | 'alert';
-    data?: any;
-  }[];
+    type?: string;
+  }>;
   documents?: DocumentReference[];
-  quick_actions?: string[];
-  visual_data?: {
-    type: 'compliance_dashboard' | 'document_status_chart' | 'expiration_timeline' | 'supplier_comparison';
-    data: any;
-    config?: any;
-  };
-  daily_insights?: {
-    priority_score: number;
-    key_actions: string[];
-    urgent_items: string[];
-  };
+  quick_actions?: Array<{
+    label: string;
+    action: string;
+    action_type?: string;
+    parameters?: Record<string, any>;
+    data?: any;
+  }>;
+  visual_data?: any;
+  daily_insights?: any;
+  actionable_items?: Array<{
+    type: string;
+    description: string;
+    priority: 'low' | 'medium' | 'high';
+    estimated_time: string;
+    action_type: string;
+    parameters: Record<string, any>;
+  }>;
+  suggested_actions?: Array<{
+    label: string;
+    description: string;
+    action_type: string;
+    parameters: Record<string, any>;
+    urgency: 'low' | 'medium' | 'high';
+  }>;
 }
 
 interface DocumentReference {
@@ -292,8 +304,8 @@ const ChatPage = () => {
         role: 'assistant',
         content: typeof data.response === 'string' ? data.response : JSON.stringify(data.response),
         metadata: {
-          ...data.metadata,
-          structured_response: typeof data.response === 'object' ? data.response : null
+          ...data,
+          structured_response: data
         },
         created_at: new Date().toISOString(),
       };
@@ -369,14 +381,29 @@ const ChatPage = () => {
     if (message.metadata?.structured_response) {
       const parsed: StructuredResponse = message.metadata.structured_response;
       
-      if (parsed.type === 'simple') {
-        return <p className="text-muted-foreground leading-relaxed">{parsed.content}</p>;
-      }
-
       return (
+
         <div className="space-y-6">
-          {parsed.content && (
-            <p className="text-muted-foreground leading-relaxed">{parsed.content}</p>
+          {parsed.response && (
+            <p className="text-muted-foreground leading-relaxed">{parsed.response}</p>
+          )}
+          
+          {/* Action Executor */}
+          {(parsed.actionable_items || parsed.suggested_actions || parsed.quick_actions?.filter(qa => qa.action_type && qa.action_type !== 'navigate').length > 0) && (
+            <div className="border-l-4 border-primary/20 pl-4">
+              <ActionExecutor
+                actionItems={parsed.actionable_items}
+                suggestedActions={parsed.suggested_actions}
+                quickActions={parsed.quick_actions}
+                sessionId={currentSession || 'temp-session'}
+                onActionComplete={(result) => {
+                  toast({
+                    title: "Action Completed",
+                    description: result.message,
+                  });
+                }}
+              />
+            </div>
           )}
           
           {parsed.sections?.map((section, index) => (
@@ -551,10 +578,10 @@ const ChatPage = () => {
                     key={index}
                     variant="outline"
                     size="sm"
-                    onClick={() => setInputMessage(action)}
+                    onClick={() => setInputMessage(action.action || action.label)}
                     className="text-xs hover:bg-primary/10 hover:border-primary/20"
                   >
-                    {action}
+                    {action.label}
                   </Button>
                 ))}
               </div>
@@ -574,6 +601,29 @@ const ChatPage = () => {
               <DailyInsightsPanel insights={parsed.daily_insights} />
             </div>
           )}
+
+          {/* Render Navigation Quick Actions */}
+          {parsed.quick_actions && parsed.quick_actions.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-4 border-t border-border">
+              {parsed.quick_actions.map((action, index) => (
+                <Button
+                  key={index}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (typeof action === 'string') {
+                      setInputMessage(action);
+                    } else {
+                      setInputMessage(action.action || action.label);
+                    }
+                  }}
+                  className="text-xs hover:bg-primary/10 hover:border-primary/20"
+                >
+                  {typeof action === 'string' ? action : action.label}
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
       );
     }
@@ -582,23 +632,21 @@ const ChatPage = () => {
     try {
       const parsed: StructuredResponse = JSON.parse(message.content);
       
-      if (parsed.type === 'simple') {
-        return (
-          <div>
-            <p className="text-muted-foreground leading-relaxed">{parsed.content}</p>
-            {parsed.visual_data && (
-              <div className="mt-4">
-                <ComplianceVisualizer visualData={parsed.visual_data} />
-              </div>
-            )}
-            {parsed.daily_insights && (
-              <div className="mt-4">
-                <DailyInsightsPanel insights={parsed.daily_insights} />
-              </div>
-            )}
-          </div>
-        );
-      }
+      return (
+        <div>
+          <p className="text-muted-foreground leading-relaxed">{parsed.response}</p>
+          {parsed.visual_data && (
+            <div className="mt-4">
+              <ComplianceVisualizer visualData={parsed.visual_data} />
+            </div>
+          )}
+          {parsed.daily_insights && (
+            <div className="mt-4">
+              <DailyInsightsPanel insights={parsed.daily_insights} />
+            </div>
+          )}
+        </div>
+      );
 
       // Re-render with the parsed structured response
       return renderStructuredMessage({

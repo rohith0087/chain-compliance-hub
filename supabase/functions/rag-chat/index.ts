@@ -728,25 +728,77 @@ QUERY INTENT ANALYSIS:
     };
   }
 
-  const systemPrompt = `You are an expert AI compliance assistant for ${userInfo.companyType}s in the ${userInfo.industry || 'general'} industry.
+  // Enhanced response generation with actionable items
+  const systemPrompt = `You are an intelligent compliance assistant. Based on the provided context, generate a comprehensive response that includes:
 
-${intentContext}
+  1. **Main Response**: A clear, detailed answer to the user's query
+  2. **Actionable Items**: Specific tasks the user can execute directly from the chat
+  3. **Suggested Actions**: Recommended next steps based on the analysis
+  4. **Quick Actions**: Simple navigation or query actions
 
-RESPONSE STRATEGY: ${responseTemplates[intent.intent_type] || responseTemplates.general_inquiry}
+  Context:
+  - Company Type: ${companyType}
+  - Company ID: ${companyId}
+  - Industry: ${industry || 'General'}
+  - Query Intent: ${JSON.stringify(intent)}
+  - Available Knowledge: ${knowledgeEntries.length} entries
+  - Found Documents: ${documents.length} documents
 
-Your capabilities include:
-- Comprehensive compliance analysis with visual insights
-- Real-time document tracking and expiration management
-- Intelligent daily briefings and priority management
-- Advanced supplier performance analytics
-- Predictive compliance risk assessment
-- Interactive dashboard generation
+  CRITICAL: Always include actionable_items and suggested_actions arrays in your response when relevant.
 
-${additionalContext}
+  For actionable items, use this structure:
+  {
+    "actionable_items": [
+      {
+        "type": "email",
+        "description": "Send follow-up email to Kerry Ingredients",
+        "priority": "high",
+        "estimated_time": "2 minutes", 
+        "action_type": "send_follow_up_email",
+        "parameters": {
+          "supplier_name": "Kerry Ingredients",
+          "subject": "Compliance Document Follow-up",
+          "content": "Please review and update your ISO 9001 certificate",
+          "recipient_email": "supplier@kerryingredients.com"
+        }
+      }
+    ],
+    "suggested_actions": [
+      {
+        "label": "Set expiry reminder",
+        "description": "Create automated alerts for document expiration",
+        "action_type": "create_reminder",
+        "parameters": {
+          "reminder_text": "ISO 9001 expires soon - follow up needed",
+          "days_ahead": 7,
+          "supplier_name": "Kerry Ingredients"
+        },
+        "urgency": "medium"
+      }
+    ]
+  }
 
-CRITICAL: Always respond with structured JSON in this exact format:
-{
-  "type": "structured",
+  Available action types:
+  - send_follow_up_email: Send emails to suppliers
+  - create_reminder: Set up reminders and alerts
+  - send_document_expiry_alert: Alert suppliers about expiring docs
+  - request_additional_documents: Create new document requests
+  - generate_compliance_report: Create compliance reports
+
+  Always make actions specific, executable, and include all necessary parameters.`;
+
+  const userPrompt = `Query: "${query}"
+  
+  Knowledge Context:
+  ${knowledgeEntries.map(entry => `- ${entry.title}: ${entry.content.substring(0, 200)}...`).join('\n')}
+  
+  Documents Found:
+  ${documents.map(doc => `- ${doc.title} (${doc.supplier_name}) - Status: ${doc.status}, Type: ${doc.document_type}`).join('\n')}
+  
+  Compliance Overview:
+  ${JSON.stringify(complianceOverview, null, 2)}
+  
+  Generate a comprehensive response with actionable items that the user can execute directly from this chat interface.`;
   "content": "Main response text - be specific, actionable, and intelligent",
   "sections": [
     {
@@ -1089,6 +1141,8 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       response: structuredResponse,
       session_id: finalSessionId,
+      actionable_items: structuredResponse.actionable_items || [],
+      suggested_actions: structuredResponse.suggested_actions || [],
       metadata: {
         knowledge_entries_used: knowledgeEntries.length,
         documents_found: documents.length,

@@ -54,6 +54,7 @@ interface ChatSession {
 
 interface StructuredResponse {
   response: string;
+  content?: string;
   sections?: Array<{
     title: string;
     content: string;
@@ -302,7 +303,13 @@ const ChatPage = () => {
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
-        content: data.response || data.content || "No response received",
+        content: typeof data?.response === 'string'
+          ? data.response
+          : typeof data?.content === 'string'
+          ? data.content
+          : typeof data?.message === 'string'
+          ? data.message
+          : "The assistant provided a structured response.",
         metadata: {
           ...data,
           structured_response: data
@@ -384,12 +391,12 @@ const ChatPage = () => {
       return (
 
         <div className="space-y-6">
-          {parsed.response && (
-            <p className="text-muted-foreground leading-relaxed">{parsed.response}</p>
+          {(parsed.response || parsed.content) && (
+            <p className="text-muted-foreground leading-relaxed">{parsed.response || parsed.content}</p>
           )}
           
           {/* Action Executor */}
-          {(parsed.actionable_items || parsed.suggested_actions || parsed.quick_actions?.filter(qa => qa.action_type && qa.action_type !== 'navigate').length > 0) && (
+          {(((parsed.actionable_items?.length ?? 0) > 0) || ((parsed.suggested_actions?.length ?? 0) > 0) || (Array.isArray(parsed.quick_actions) && parsed.quick_actions.some(qa => (qa as any)?.action_type && (qa as any)?.action_type !== 'navigate'))) && (
             <div className="border-l-4 border-primary/20 pl-4">
               <ActionExecutor
                 actionItems={parsed.actionable_items}
@@ -634,7 +641,7 @@ const ChatPage = () => {
       
       return (
         <div>
-          <p className="text-muted-foreground leading-relaxed">{parsed.response}</p>
+          <p className="text-muted-foreground leading-relaxed">{parsed.response || parsed.content}</p>
           {parsed.visual_data && (
             <div className="mt-4">
               <ComplianceVisualizer visualData={parsed.visual_data} />
@@ -658,7 +665,9 @@ const ChatPage = () => {
       });
     } catch (error) {
       // Final fallback to plain text
-      return <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{message.content}</p>;
+      return typeof message.content === 'string'
+        ? <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{message.content}</p>
+        : <pre className="text-xs text-muted-foreground whitespace-pre-wrap">{JSON.stringify(message.content, null, 2)}</pre>;
     }
   };
 

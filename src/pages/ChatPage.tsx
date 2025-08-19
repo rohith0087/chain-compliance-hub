@@ -302,7 +302,7 @@ const ChatPage = () => {
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
-        content: typeof data.response === 'string' ? data.response : JSON.stringify(data.response),
+        content: data.response || data.content || "No response received",
         metadata: {
           ...data,
           structured_response: data

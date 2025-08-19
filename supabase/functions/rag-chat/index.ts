@@ -790,25 +790,25 @@ QUERY INTENT ANALYSIS:
   const userPrompt = `Query: "${userMessage}"
   
   Knowledge Context:
-  ${knowledgeEntries.map(entry => `- ${entry.title}: ${entry.content.substring(0, 200)}...`).join('\n')}
+  ${knowledgeEntries.map(entry => `${entry.title}: ${entry.content.substring(0, 200)}...`).join('\n')}
   
-  Documents Found:
-  ${documents.map(doc => `- ${doc.title} (${doc.supplier_name}) - Status: ${doc.status}, Type: ${doc.document_type}`).join('\n')}
+  Document Information:
+  ${documents.map(doc => `Document: ${doc.title} | Supplier: ${doc.supplier_name || 'Unknown'} | Status: ${doc.status} | Type: ${doc.document_type}${doc.expiration_date ? ` | Expires: ${doc.expiration_date}` : ''}`).join('\n')}
   
-  Compliance Overview:
-  ${contextualData.complianceMetrics ? JSON.stringify(contextualData.complianceMetrics, null, 2) : 'No metrics available'}
+  Compliance Data:
+  ${contextualData.complianceMetrics ? `Total: ${contextualData.complianceMetrics.total_documents}, Score: ${Math.round(contextualData.complianceMetrics.compliance_score)}%, Pending: ${contextualData.complianceMetrics.pending_documents}, Expired: ${contextualData.complianceMetrics.expired_documents}` : 'No metrics available'}
   
-  Generate a comprehensive response with actionable items that the user can execute directly from this chat interface.
+  Generate a comprehensive response with actionable items. Use clean, professional language without asterisks or excessive formatting.
 
 Respond in this JSON format:
 {
-  "content": "Main response text - be specific, actionable, and intelligent",
+  "content": "Main response text - be specific, actionable, and professional without asterisks or bullet points",
   "sections": [
     {
       "title": "Section Title",
-      "content": "Section content with specific data and insights",
-      "type": "text|list|document_card|metric_card|alert|chart",
-      "data": "Optional: chart data, metrics, etc."
+      "content": "Clean section content without asterisks or bullets - use clear sentences",
+      "type": "text|list|document_overview|metric_summary|alert|status_update",
+      "data": "Optional structured data"
     }
   ],
   ${intent.requires_visual ? '"visual_data": { "type": "compliance_dashboard|supplier_comparison|expiration_timeline", "data": {} },' : ''}
@@ -826,14 +826,15 @@ RELEVANT DOCUMENTS:
 ${documentContext}
 
 ENHANCED RESPONSE GUIDELINES:
-- Be highly intelligent and contextually aware of the user's specific situation
+- Use clean, professional language without asterisks, bullets, or excessive formatting
 - Provide specific insights based on actual data (compliance scores, expiration dates, etc.)
-- For daily overview queries: prioritize urgent items, provide actionable daily tasks
-- For visual requests: describe the visual data that should be generated
+- For expiring documents: create structured document_overview sections instead of bullet lists
+- For daily overview queries: prioritize urgent items in clear, readable format
 - Include specific numbers, dates, and percentages from the contextual data
 - Generate smart, contextual follow-up actions that anticipate user needs
-- Use natural, professional language while being precise and helpful
+- Write in complete sentences and paragraphs, not bullet points
 - Highlight critical issues with urgency levels and suggested timeframes for action
+- When listing documents, use the document_overview section type for clean formatting
 
 Current context: ${userInfo.companyType} in ${userInfo.industry || 'general'} industry. 
 Data available: ${documents.length} documents, ${contextualData.complianceMetrics ? 'compliance metrics' : 'no metrics'}, ${contextualData.dailyOverview ? 'daily overview' : 'no overview'}.`;

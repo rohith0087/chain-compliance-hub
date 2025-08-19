@@ -45,7 +45,7 @@ interface StructuredResponse {
   sections?: {
     title: string;
     content: string;
-    type: 'text' | 'list' | 'document_card';
+    type: 'text' | 'list' | 'document_card' | 'document_overview' | 'metric_summary' | 'alert' | 'status_update';
   }[];
   documents?: DocumentReference[];
   quick_actions?: string[];
@@ -293,14 +293,41 @@ if (!message.metadata?.structured_response) {
         {response.sections?.map((section, idx) => (
           <div key={idx} className="border-l-2 border-primary/20 pl-3">
             <h4 className="font-medium text-sm mb-1">{section.title}</h4>
-            {section.type === 'list' ? (
+            {section.type === 'document_overview' ? (
+              <div className="space-y-2">
+                {section.content.split('\n').filter(line => line.trim()).map((line, i) => {
+                  // Parse document information from clean format
+                  const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
+                  if (cleanLine.includes('Document:') || cleanLine.includes('expires') || cleanLine.includes('Expires')) {
+                    return (
+                      <div key={i} className="bg-card/50 rounded-md p-2 border text-xs">
+                        <p className="text-muted-foreground">{cleanLine}</p>
+                      </div>
+                    );
+                  }
+                  return (
+                    <p key={i} className="text-sm text-muted-foreground">{cleanLine}</p>
+                  );
+                })}
+              </div>
+            ) : section.type === 'list' ? (
               <ul className="text-sm space-y-1 list-disc list-inside text-muted-foreground">
                 {section.content.split('\n').filter(line => line.trim()).map((item, i) => (
                   <li key={i}>{item.replace(/^[•\-\*]\s*/, '')}</li>
                 ))}
               </ul>
+            ) : section.type === 'alert' ? (
+              <div className="bg-destructive/10 border border-destructive/20 rounded-md p-2">
+                <p className="text-sm text-destructive">{section.content}</p>
+              </div>
+            ) : section.type === 'status_update' ? (
+              <div className="bg-primary/10 border border-primary/20 rounded-md p-2">
+                <p className="text-sm text-primary">{section.content}</p>
+              </div>
             ) : (
-              <p className="text-sm text-muted-foreground">{section.content}</p>
+              <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {section.content.replace(/\*\s*/g, '• ')}
+              </div>
             )}
           </div>
         ))}

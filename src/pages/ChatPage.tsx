@@ -391,8 +391,12 @@ const ChatPage = () => {
       return (
 
         <div className="space-y-6">
-          {(parsed.response || parsed.content) && (
-            <p className="text-muted-foreground leading-relaxed">{parsed.response || parsed.content}</p>
+{(typeof parsed.response === 'string' || typeof parsed.content === 'string') && (
+            <p className="text-muted-foreground leading-relaxed">
+              {typeof parsed.response === 'string'
+                ? parsed.response
+                : (typeof parsed.content === 'string' ? parsed.content : '')}
+            </p>
           )}
           
           {/* Action Executor */}
@@ -641,7 +645,7 @@ const ChatPage = () => {
       
       return (
         <div>
-          <p className="text-muted-foreground leading-relaxed">{parsed.response || parsed.content}</p>
+          <p className="text-muted-foreground leading-relaxed">{typeof parsed.response === 'string' ? parsed.response : (typeof parsed.content === 'string' ? parsed.content : JSON.stringify(parsed))}</p>
           {parsed.visual_data && (
             <div className="mt-4">
               <ComplianceVisualizer visualData={parsed.visual_data} />

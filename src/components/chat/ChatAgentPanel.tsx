@@ -282,7 +282,9 @@ if (!message.metadata?.structured_response) {
     return (
       <div className="space-y-3">
         {/* Main content */}
-        <p className="text-sm">{response.content}</p>
+{typeof response.content === 'string'
+          ? <p className="text-sm">{response.content}</p>
+          : (typeof (response as any).response === 'string' ? <p className="text-sm">{(response as any).response}</p> : null)}
 
         {/* Sections */}
         {response.sections?.map((section, idx) => (

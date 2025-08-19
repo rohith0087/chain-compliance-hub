@@ -294,20 +294,53 @@ if (!message.metadata?.structured_response) {
           <div key={idx} className="border-l-2 border-primary/20 pl-3">
             <h4 className="font-medium text-sm mb-1">{section.title}</h4>
             {section.type === 'document_overview' ? (
-              <div className="space-y-2">
-                {section.content.split('\n').filter(line => line.trim()).map((line, i) => {
-                  // Parse document information from clean format
+              <div className="space-y-3">
+                {section.content.split(/\.\s+(?=[A-Z])|\n/).filter(line => line.trim()).map((line, i) => {
                   const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
-                  if (cleanLine.includes('Document:') || cleanLine.includes('expires') || cleanLine.includes('Expires')) {
+                  
+                  // Check if this line contains document information
+                  const isDocumentLine = cleanLine.match(/(expires|expiring|expired|from\s+\w+|document type|status:|pending|approved|rejected)/i);
+                  
+                  if (isDocumentLine) {
+                    // Extract document info for better formatting
+                    const parts = cleanLine.split(/,|\s-\s/);
                     return (
-                      <div key={i} className="bg-card/50 rounded-md p-2 border text-xs">
-                        <p className="text-muted-foreground">{cleanLine}</p>
+                      <div key={i} className="bg-muted/30 rounded-lg p-3 border-l-3 border-l-primary/40">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            {parts.map((part, idx) => {
+                              const trimmedPart = part.trim();
+                              if (trimmedPart.match(/expires|expiring|expired/i)) {
+                                const isExpired = trimmedPart.match(/expired/i);
+                                const isExpiringSoon = trimmedPart.match(/expiring|expires.*(\d{1,2}\s+days?)/i);
+                                return (
+                                  <div key={idx} className={`text-xs flex items-center gap-1 ${
+                                    isExpired ? 'text-red-600 font-medium' : 
+                                    isExpiringSoon ? 'text-amber-600 font-medium' : 'text-muted-foreground'
+                                  }`}>
+                                    <Calendar className="h-3 w-3" />
+                                    {trimmedPart}
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div key={idx} className="text-sm font-medium text-foreground">
+                                  {trimmedPart}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <FileText className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
+                        </div>
                       </div>
                     );
                   }
-                  return (
-                    <p key={i} className="text-sm text-muted-foreground">{cleanLine}</p>
-                  );
+                  
+                  return cleanLine ? (
+                    <p key={i} className="text-sm text-muted-foreground leading-relaxed">
+                      {cleanLine}
+                    </p>
+                  ) : null;
                 })}
               </div>
             ) : section.type === 'list' ? (

@@ -623,6 +623,16 @@ async function generateStructuredResponse(
       `- ${doc.title} (${doc.document_type}) from ${doc.supplier_name || 'Unknown'} - Status: ${doc.status}${doc.expiration_date ? `, Expires: ${doc.expiration_date}` : ''}`
     ).join('\n')}` : '';
 
+  // Filter expiring documents for special handling
+  const expiringDocs = documents.filter(doc => {
+    if (!doc.expiration_date) return false;
+    const expiry = new Date(doc.expiration_date);
+    const today = new Date();
+    const diffTime = expiry.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 30; // Expiring within 30 days or expired
+  });
+
   // Create intent-aware system prompt
   const intentContext = `
 QUERY INTENT ANALYSIS:
@@ -630,6 +640,7 @@ QUERY INTENT ANALYSIS:
 - Confidence: ${intent.confidence}
 - Document Limit: ${intent.limit_documents}
 - Entities Found: ${JSON.stringify(intent.entities)}
+- Expiring Documents Found: ${expiringDocs.length}
   `;
 
   const responseTemplates = {
@@ -800,12 +811,18 @@ QUERY INTENT ANALYSIS:
   
   Generate a comprehensive response with actionable items. Use clean, professional language without asterisks or excessive formatting.
 
+  ${intent.intent_type === 'expired_documents' || expiringDocs.length > 0 ? 
+    `CRITICAL: When discussing expiring documents, structure your response as follows:
+    - Create a "document_overview" section that lists each expiring document with: Company name, Document type, Expiration date, Current status
+    - The documents array should contain the SAME expiring documents mentioned in the overview
+    - Use clear, readable sentences without asterisks or bullets in the overview section` : ''}
+
 Respond in this JSON format:
 {
   "content": "Main response text - be specific, actionable, and professional without asterisks or bullet points",
   "sections": [
     {
-      "title": "Section Title",
+      "title": "Section Title", 
       "content": "Clean section content without asterisks or bullets - use clear sentences",
       "type": "text|list|document_overview|metric_summary|alert|status_update",
       "data": "Optional structured data"
@@ -866,8 +883,10 @@ Data available: ${documents.length} documents, ${contextualData.complianceMetric
     // Try to parse structured response
     const structuredResponse = JSON.parse(rawResponse);
     
-    // Enhance with actual data
-    if (documents.length > 0) {
+    // Enhance with actual data - prioritize expiring docs for consistency
+    if (intent.intent_type === 'expired_documents' || expiringDocs.length > 0) {
+      structuredResponse.documents = expiringDocs.length > 0 ? expiringDocs : documents;
+    } else if (documents.length > 0) {
       structuredResponse.documents = documents;
     }
 

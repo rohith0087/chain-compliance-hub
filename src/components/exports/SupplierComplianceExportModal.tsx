@@ -175,15 +175,16 @@ const SupplierComplianceExportModal: React.FC<SupplierComplianceExportModalProps
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
             Export Supplier Compliance Reports
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
+        <ScrollArea className="flex-1 overflow-y-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4 pb-4">
           {/* Left Column - Supplier Selection */}
           <div className="lg:col-span-2 space-y-4">
             <Card>
@@ -213,7 +214,7 @@ const SupplierComplianceExportModal: React.FC<SupplierComplianceExportModalProps
                   />
                 </div>
 
-                <ScrollArea className="h-80">
+                <ScrollArea className="h-64">
                   <div className="space-y-2">
                     {filteredSuppliers.map((supplier) => (
                       <div
@@ -399,7 +400,7 @@ const SupplierComplianceExportModal: React.FC<SupplierComplianceExportModalProps
               </Card>
             )}
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 mt-4">
               <Button
                 variant="outline"
                 onClick={onClose}
@@ -428,6 +429,7 @@ const SupplierComplianceExportModal: React.FC<SupplierComplianceExportModalProps
             </div>
           </div>
         </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

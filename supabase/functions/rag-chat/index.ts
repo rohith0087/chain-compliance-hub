@@ -36,10 +36,21 @@ interface StructuredResponse {
   sections?: {
     title: string;
     content: string;
-    type: 'text' | 'list' | 'document_card';
+    type: 'text' | 'list' | 'document_card' | 'chart' | 'metric_card' | 'alert';
+    data?: any; // For chart data, metrics, etc.
   }[];
   documents?: DocumentReference[];
   quick_actions?: string[];
+  visual_data?: {
+    type: 'compliance_dashboard' | 'document_status_chart' | 'expiration_timeline' | 'supplier_comparison';
+    data: any;
+    config?: any;
+  };
+  daily_insights?: {
+    priority_score: number;
+    key_actions: string[];
+    urgent_items: string[];
+  };
 }
 
 interface DocumentReference {
@@ -53,20 +64,234 @@ interface DocumentReference {
   metadata?: any;
 }
 
-// Query intent analysis for better results
+// Enhanced query intent analysis for intelligent responses
 interface QueryIntent {
-  intent_type: 'latest_document' | 'specific_document' | 'document_status' | 'compliance_summary' | 'expired_documents' | 'supplier_specific' | 'general_inquiry';
+  intent_type: 'latest_document' | 'specific_document' | 'document_status' | 'compliance_summary' | 'expired_documents' | 'supplier_specific' | 'daily_overview' | 'visual_analysis' | 'general_inquiry';
   entities: {
     supplier_names?: string[];
     document_types?: string[];
     time_references?: string[];
     status_types?: string[];
+    visualization_type?: string;
   };
   limit_documents: number;
   confidence: number;
+  requires_visual?: boolean;
+  context_scope?: 'today' | 'week' | 'month' | 'all';
 }
 
-// Analyze query intent using GPT-4o-mini for fast classification
+// Enhanced compliance data interfaces
+interface ComplianceMetrics {
+  total_documents: number;
+  pending_documents: number;
+  approved_documents: number;
+  rejected_documents: number;
+  expired_documents: number;
+  expiring_soon: number;
+  compliance_score: number;
+  avg_approval_time_hours: number;
+}
+
+interface SupplierComplianceData {
+  supplier_id: string;
+  supplier_name: string;
+  compliance_metrics: ComplianceMetrics;
+  recent_documents: DocumentReference[];
+  risk_level: 'low' | 'medium' | 'high';
+}
+
+interface DailyOverview {
+  pending_tasks: string[];
+  expiring_documents: DocumentReference[];
+  overdue_items: string[];
+  compliance_alerts: string[];
+  productivity_insights: string[];
+}
+
+// Get comprehensive compliance metrics for a company
+async function getComplianceMetrics(companyId: string, companyType: string): Promise<ComplianceMetrics> {
+  const { data: docs, error } = await supabase
+    .from('document_uploads')
+    .select(`
+      id,
+      status,
+      expiration_date,
+      created_at,
+      document_requests!inner(
+        buyer_id,
+        supplier_id,
+        ${companyType === 'buyer' ? 'buyer_id' : 'supplier_id'}
+      )
+    `)
+    .eq(`document_requests.${companyType}_id`, companyId);
+
+  if (error) {
+    console.error('Compliance metrics error:', error);
+    return {
+      total_documents: 0,
+      pending_documents: 0,
+      approved_documents: 0,
+      rejected_documents: 0,
+      expired_documents: 0,
+      expiring_soon: 0,
+      compliance_score: 0,
+      avg_approval_time_hours: 0
+    };
+  }
+
+  const now = new Date();
+  const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  const metrics = docs.reduce((acc, doc) => {
+    acc.total_documents++;
+    
+    if (doc.status === 'pending_review') acc.pending_documents++;
+    else if (doc.status === 'approved') acc.approved_documents++;
+    else if (doc.status === 'rejected') acc.rejected_documents++;
+    
+    if (doc.expiration_date) {
+      const expDate = new Date(doc.expiration_date);
+      if (expDate < now) acc.expired_documents++;
+      else if (expDate < thirtyDaysFromNow) acc.expiring_soon++;
+    }
+    
+    return acc;
+  }, {
+    total_documents: 0,
+    pending_documents: 0,
+    approved_documents: 0,
+    rejected_documents: 0,
+    expired_documents: 0,
+    expiring_soon: 0,
+    compliance_score: 0,
+    avg_approval_time_hours: 24
+  });
+
+  // Calculate compliance score (0-100)
+  const activeDocuments = metrics.total_documents - metrics.expired_documents;
+  const approvedPercentage = activeDocuments > 0 ? (metrics.approved_documents / activeDocuments) * 100 : 0;
+  const urgentIssues = metrics.expired_documents + metrics.expiring_soon;
+  metrics.compliance_score = Math.max(0, approvedPercentage - (urgentIssues * 10));
+
+  return metrics;
+}
+
+// Get supplier-specific compliance data
+async function getSupplierComplianceData(supplierId: string, buyerId?: string): Promise<SupplierComplianceData> {
+  const { data: supplier } = await supabase
+    .from('suppliers')
+    .select('id, company_name')
+    .eq('id', supplierId)
+    .single();
+
+  if (!supplier) {
+    throw new Error('Supplier not found');
+  }
+
+  const metrics = await getComplianceMetrics(supplierId, 'supplier');
+  
+  const { data: recentDocs } = await supabase
+    .from('document_uploads')
+    .select(`
+      id,
+      file_name,
+      status,
+      expiration_date,
+      document_requests!inner(
+        title,
+        document_type,
+        supplier_id
+      )
+    `)
+    .eq('document_requests.supplier_id', supplierId)
+    .order('created_at', { ascending: false })
+    .limit(5);
+
+  const recentDocuments: DocumentReference[] = (recentDocs || []).map(doc => ({
+    id: doc.id,
+    title: doc.file_name,
+    document_type: doc.document_requests?.document_type || 'Unknown',
+    supplier_name: supplier.company_name,
+    status: doc.status,
+    expiration_date: doc.expiration_date,
+    metadata: { request_title: doc.document_requests?.title }
+  }));
+
+  // Calculate risk level
+  let riskLevel: 'low' | 'medium' | 'high' = 'low';
+  if (metrics.expired_documents > 2 || metrics.compliance_score < 60) riskLevel = 'high';
+  else if (metrics.expiring_soon > 1 || metrics.compliance_score < 80) riskLevel = 'medium';
+
+  return {
+    supplier_id: supplierId,
+    supplier_name: supplier.company_name,
+    compliance_metrics: metrics,
+    recent_documents: recentDocuments,
+    risk_level: riskLevel
+  };
+}
+
+// Get daily overview for user's dashboard
+async function getDailyOverview(companyId: string, companyType: string): Promise<DailyOverview> {
+  const metrics = await getComplianceMetrics(companyId, companyType);
+  
+  const { data: expiringDocs } = await supabase
+    .from('document_uploads')
+    .select(`
+      id,
+      file_name,
+      expiration_date,
+      document_requests!inner(
+        title,
+        document_type,
+        ${companyType}_id,
+        suppliers(company_name)
+      )
+    `)
+    .eq(`document_requests.${companyType}_id`, companyId)
+    .gte('expiration_date', new Date().toISOString().split('T')[0])
+    .lte('expiration_date', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+    .order('expiration_date', { ascending: true })
+    .limit(10);
+
+  const expiringDocuments: DocumentReference[] = (expiringDocs || []).map(doc => ({
+    id: doc.id,
+    title: doc.file_name,
+    document_type: doc.document_requests?.document_type || 'Unknown',
+    supplier_name: doc.document_requests?.suppliers?.company_name,
+    status: 'approved',
+    expiration_date: doc.expiration_date
+  }));
+
+  const pendingTasks = [];
+  if (metrics.pending_documents > 0) {
+    pendingTasks.push(`Review ${metrics.pending_documents} pending document${metrics.pending_documents > 1 ? 's' : ''}`);
+  }
+  if (metrics.expired_documents > 0) {
+    pendingTasks.push(`Address ${metrics.expired_documents} expired document${metrics.expired_documents > 1 ? 's' : ''}`);
+  }
+
+  const complianceAlerts = [];
+  if (metrics.compliance_score < 70) {
+    complianceAlerts.push(`Compliance score is ${Math.round(metrics.compliance_score)}% - needs attention`);
+  }
+  if (metrics.expiring_soon > 0) {
+    complianceAlerts.push(`${metrics.expiring_soon} document${metrics.expiring_soon > 1 ? 's' : ''} expiring within 30 days`);
+  }
+
+  return {
+    pending_tasks: pendingTasks,
+    expiring_documents: expiringDocuments,
+    overdue_items: metrics.expired_documents > 0 ? [`${metrics.expired_documents} expired documents`] : [],
+    compliance_alerts: complianceAlerts,
+    productivity_insights: [
+      metrics.compliance_score > 85 ? 'Excellent compliance performance!' : 'Focus on improving compliance score',
+      metrics.avg_approval_time_hours < 48 ? 'Fast document processing' : 'Consider streamlining approval process'
+    ]
+  };
+}
+
+// Enhanced query intent analysis with visual and contextual capabilities
 async function analyzeQueryIntent(query: string, companyType: string): Promise<QueryIntent> {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -88,23 +313,36 @@ Analyze the user query and classify it into one of these intent types:
 - compliance_summary: User wants an overview/summary of compliance status
 - expired_documents: User specifically asks about expired or expiring documents
 - supplier_specific: User asks about a specific supplier's documents/compliance
+- daily_overview: User asks "what does my day look like", "today's priorities", "my dashboard"
+- visual_analysis: User requests charts, graphs, visual representation of data
 - general_inquiry: General questions about compliance, processes, requirements
 
-Extract entities like supplier names, document types (ISO, certification, audit, etc.), time references (latest, recent, last week, expiring), and status types (pending, approved, expired).
+Extract entities including:
+- supplier names, document types (ISO, certification, audit, etc.)
+- time references (latest, recent, today, this week, expiring)
+- status types (pending, approved, expired, overdue)
+- visualization requests (chart, graph, visual, dashboard)
 
-Determine appropriate document limit: 1 for "latest", 2-3 for "specific", 5-10 for "summary".
+Determine context scope: "today" for daily queries, "week" for weekly summaries, "month" for trends, "all" for comprehensive analysis.
+
+Set requires_visual: true if user wants charts, graphs, visual representation, compliance dashboard, or visual analysis.
+
+Determine appropriate document limit: 1 for "latest", 2-3 for "specific", 5-10 for "summary", 15+ for comprehensive analysis.
 
 Respond in JSON format:
 {
-  "intent_type": "latest_document",
+  "intent_type": "daily_overview",
   "entities": {
     "supplier_names": ["Company Name"],
     "document_types": ["ISO Certificate"],
-    "time_references": ["latest"],
-    "status_types": ["approved"]
+    "time_references": ["today"],
+    "status_types": ["pending"],
+    "visualization_type": "dashboard"
   },
-  "limit_documents": 1,
-  "confidence": 0.95
+  "limit_documents": 5,
+  "confidence": 0.95,
+  "requires_visual": true,
+  "context_scope": "today"
 }`
         },
         {
@@ -127,7 +365,9 @@ Respond in JSON format:
       intent_type: 'general_inquiry',
       entities: {},
       limit_documents: 5,
-      confidence: 0.3
+      confidence: 0.3,
+      requires_visual: false,
+      context_scope: 'all'
     };
   }
 }
@@ -359,14 +599,19 @@ async function getUserCompany(userId: string): Promise<{companyId: string, compa
   return null;
 }
 
-// Generate structured AI response with RAG context and intent awareness
+// Generate comprehensive intelligent response with contextual data and visual capabilities
 async function generateStructuredResponse(
   userMessage: string, 
   knowledgeEntries: KnowledgeEntry[], 
   documents: DocumentReference[],
   userInfo: any,
   conversationHistory: any[],
-  intent: QueryIntent
+  intent: QueryIntent,
+  contextualData: {
+    complianceMetrics?: ComplianceMetrics | null;
+    dailyOverview?: DailyOverview | null;
+    supplierData?: SupplierComplianceData | null;
+  } = {}
 ): Promise<StructuredResponse> {
   
   const contextBlocks = knowledgeEntries.map(entry => 
@@ -391,38 +636,130 @@ QUERY INTENT ANALYSIS:
     latest_document: "Focus on the most recent document(s). Highlight recency and current status.",
     specific_document: "Provide detailed information about the requested document type. Include requirements and compliance notes.", 
     document_status: "Summarize document statuses clearly. Group by status type and highlight any issues.",
-    compliance_summary: "Provide a comprehensive compliance overview. Include metrics, trends, and recommendations.",
+    compliance_summary: "Provide a comprehensive compliance overview. Include metrics, trends, and recommendations with visual elements.",
     expired_documents: "Focus on expiration dates and urgent actions needed. Prioritize by risk level.",
-    supplier_specific: "Provide supplier-focused analysis. Include performance metrics and relationship insights.",
+    supplier_specific: "Provide supplier-focused analysis. Include performance metrics and relationship insights with visual compliance data.",
+    daily_overview: "Provide a comprehensive daily briefing. Include pending tasks, urgent items, and prioritized actions for today.",
+    visual_analysis: "Create visual representations of compliance data. Generate charts and metrics with clear actionable insights.",
     general_inquiry: "Provide helpful general information with relevant examples and actionable advice."
   };
+
+  // Enhanced contextual information
+  const contextualInfo = [];
+  if (contextualData.complianceMetrics) {
+    contextualInfo.push(`COMPLIANCE METRICS:
+- Total Documents: ${contextualData.complianceMetrics.total_documents}
+- Compliance Score: ${Math.round(contextualData.complianceMetrics.compliance_score)}%
+- Pending Review: ${contextualData.complianceMetrics.pending_documents}
+- Approved: ${contextualData.complianceMetrics.approved_documents}
+- Expired: ${contextualData.complianceMetrics.expired_documents}
+- Expiring Soon: ${contextualData.complianceMetrics.expiring_soon}`);
+  }
+
+  if (contextualData.dailyOverview) {
+    contextualInfo.push(`DAILY OVERVIEW:
+- Pending Tasks: ${contextualData.dailyOverview.pending_tasks.join(', ')}
+- Expiring Documents: ${contextualData.dailyOverview.expiring_documents.length}
+- Compliance Alerts: ${contextualData.dailyOverview.compliance_alerts.join(', ')}
+- Key Insights: ${contextualData.dailyOverview.productivity_insights.join(', ')}`);
+  }
+
+  if (contextualData.supplierData) {
+    contextualInfo.push(`SUPPLIER DATA (${contextualData.supplierData.supplier_name}):
+- Risk Level: ${contextualData.supplierData.risk_level.toUpperCase()}
+- Compliance Score: ${Math.round(contextualData.supplierData.compliance_metrics.compliance_score)}%
+- Recent Documents: ${contextualData.supplierData.recent_documents.length}
+- Documents Status: ${contextualData.supplierData.compliance_metrics.approved_documents} approved, ${contextualData.supplierData.compliance_metrics.pending_documents} pending`);
+  }
+
+  const additionalContext = contextualInfo.length > 0 ? `\n\nCONTEXTUAL DATA:\n${contextualInfo.join('\n\n')}` : '';
+
+  // Generate visual data if required
+  let visualData = undefined;
+  if (intent.requires_visual && contextualData.complianceMetrics) {
+    const metrics = contextualData.complianceMetrics;
+    
+    if (intent.entities.visualization_type === 'dashboard' || intent.intent_type === 'compliance_summary') {
+      visualData = {
+        type: 'compliance_dashboard' as const,
+        data: {
+          compliance_score: Math.round(metrics.compliance_score),
+          document_status: {
+            approved: metrics.approved_documents,
+            pending: metrics.pending_documents,
+            rejected: metrics.rejected_documents,
+            expired: metrics.expired_documents
+          },
+          urgent_items: metrics.expiring_soon + metrics.expired_documents,
+          trend: metrics.compliance_score > 80 ? 'positive' : metrics.compliance_score > 60 ? 'neutral' : 'negative'
+        }
+      };
+    } else if (intent.intent_type === 'supplier_specific' && contextualData.supplierData) {
+      visualData = {
+        type: 'supplier_comparison' as const,
+        data: {
+          supplier_name: contextualData.supplierData.supplier_name,
+          risk_level: contextualData.supplierData.risk_level,
+          compliance_score: contextualData.supplierData.compliance_metrics.compliance_score,
+          document_breakdown: {
+            total: contextualData.supplierData.compliance_metrics.total_documents,
+            approved: contextualData.supplierData.compliance_metrics.approved_documents,
+            pending: contextualData.supplierData.compliance_metrics.pending_documents,
+            expired: contextualData.supplierData.compliance_metrics.expired_documents
+          }
+        }
+      };
+    }
+  }
+
+  // Daily insights for overview queries
+  let dailyInsights = undefined;
+  if (intent.intent_type === 'daily_overview' && contextualData.dailyOverview && contextualData.complianceMetrics) {
+    const urgentCount = contextualData.complianceMetrics.expired_documents + contextualData.complianceMetrics.expiring_soon;
+    const priorityScore = Math.max(0, 100 - (urgentCount * 20) - (contextualData.complianceMetrics.pending_documents * 5));
+    
+    dailyInsights = {
+      priority_score: priorityScore,
+      key_actions: contextualData.dailyOverview.pending_tasks.slice(0, 3),
+      urgent_items: [
+        ...contextualData.dailyOverview.compliance_alerts,
+        ...contextualData.dailyOverview.overdue_items
+      ]
+    };
+  }
 
   const systemPrompt = `You are an expert AI compliance assistant for ${userInfo.companyType}s in the ${userInfo.industry || 'general'} industry.
 
 ${intentContext}
 
-RESPONSE STRATEGY: ${responseTemplates[intent.intent_type]}
+RESPONSE STRATEGY: ${responseTemplates[intent.intent_type] || responseTemplates.general_inquiry}
 
 Your capabilities include:
-- Document compliance and regulatory requirements
-- Industry-specific standards and certifications  
-- Document expiration tracking and risk analysis
-- Supplier performance and document management
-- Compliance best practices and recommendations
+- Comprehensive compliance analysis with visual insights
+- Real-time document tracking and expiration management
+- Intelligent daily briefings and priority management
+- Advanced supplier performance analytics
+- Predictive compliance risk assessment
+- Interactive dashboard generation
+
+${additionalContext}
 
 CRITICAL: Always respond with structured JSON in this exact format:
 {
   "type": "structured",
-  "content": "Main response text here - keep concise and directly address the user's intent",
+  "content": "Main response text - be specific, actionable, and intelligent",
   "sections": [
     {
       "title": "Section Title",
-      "content": "Section content here",
-      "type": "text|list|document_card"
+      "content": "Section content with specific data and insights",
+      "type": "text|list|document_card|metric_card|alert|chart",
+      "data": {Optional: chart data, metrics, etc.}
     }
   ],
-  "documents": [Only include if documents are found and relevant],
-  "quick_actions": ["Contextual follow-up question 1", "Related query 2"]
+  ${intent.requires_visual ? '"visual_data": { "type": "compliance_dashboard|supplier_comparison|expiration_timeline", "data": {...} },' : ''}
+  ${intent.intent_type === 'daily_overview' ? '"daily_insights": { "priority_score": 85, "key_actions": [...], "urgent_items": [...] },' : ''}
+  "documents": [Include relevant documents with context],
+  "quick_actions": ["Intelligent follow-up 1", "Contextual action 2", "Next best step 3"]
 }
 
 KNOWLEDGE BASE:
@@ -431,16 +768,18 @@ ${contextBlocks}
 RELEVANT DOCUMENTS:
 ${documentContext}
 
-RESPONSE GUIDELINES:
-- Be precise and directly address the query intent (${intent.intent_type})
-- If showing documents, limit to ${intent.limit_documents} most relevant ones
-- Provide actionable insights, not just information
-- Include specific dates, statuses, and risk levels when available
-- Generate contextually relevant quick actions
-- Use professional but conversational tone
-- Highlight urgent issues (expirations, compliance gaps, pending actions)
+ENHANCED RESPONSE GUIDELINES:
+- Be highly intelligent and contextually aware of the user's specific situation
+- Provide specific insights based on actual data (compliance scores, expiration dates, etc.)
+- For daily overview queries: prioritize urgent items, provide actionable daily tasks
+- For visual requests: describe the visual data that should be generated
+- Include specific numbers, dates, and percentages from the contextual data
+- Generate smart, contextual follow-up actions that anticipate user needs
+- Use natural, professional language while being precise and helpful
+- Highlight critical issues with urgency levels and suggested timeframes for action
 
-Current context: ${userInfo.companyType} in ${userInfo.industry || 'general'} industry with ${documents.length} relevant documents found.`;
+Current context: ${userInfo.companyType} in ${userInfo.industry || 'general'} industry. 
+Data available: ${documents.length} documents, ${contextualData.complianceMetrics ? 'compliance metrics' : 'no metrics'}, ${contextualData.dailyOverview ? 'daily overview' : 'no overview'}.`;
 
   const messages = [
     { role: 'system', content: systemPrompt },
@@ -469,23 +808,42 @@ Current context: ${userInfo.companyType} in ${userInfo.industry || 'general'} in
     // Try to parse structured response
     const structuredResponse = JSON.parse(rawResponse);
     
-    // Enhance with actual document data
+    // Enhance with actual data
     if (documents.length > 0) {
       structuredResponse.documents = documents;
+    }
+
+    // Add visual data if generated
+    if (visualData) {
+      structuredResponse.visual_data = visualData;
+    }
+
+    // Add daily insights if available
+    if (dailyInsights) {
+      structuredResponse.daily_insights = dailyInsights;
     }
     
     return structuredResponse;
   } catch (parseError) {
-    console.error('Failed to parse structured response, falling back to simple:', parseError);
+    console.error('Failed to parse structured response, falling back to enhanced simple:', parseError);
     
-    // Fallback to simple response
+    // Enhanced fallback response with contextual intelligence
+    const baseContent = rawResponse;
+    const enhancedContent = contextualData.dailyOverview 
+      ? `${baseContent}\n\nToday's Priorities:\n${contextualData.dailyOverview.pending_tasks.join('\n')}`
+      : baseContent;
+
     return {
       type: 'simple',
-      content: rawResponse,
+      content: enhancedContent,
       documents: documents.length > 0 ? documents : undefined,
-      quick_actions: userInfo.companyType === 'buyer' ? 
-        ["Show me compliance status", "What documents are missing?"] :
-        ["Check my document status", "What's required next?"]
+      visual_data: visualData,
+      daily_insights: dailyInsights,
+      quick_actions: intent.intent_type === 'daily_overview' ? 
+        ["Show my compliance dashboard", "What's expiring this week?", "Review pending documents"] :
+        userInfo.companyType === 'buyer' ? 
+          ["Show compliance overview", "Check supplier performance", "Review expiring documents"] :
+          ["Check my document status", "View compliance score", "What's required next?"]
     };
   }
 }
@@ -622,7 +980,32 @@ serve(async (req) => {
     // Step 2: Create embedding for semantic search
     const embedding = await createEmbedding(message);
 
-    // Step 3: Search relevant knowledge and documents with intent-aware filtering
+    // Step 3: Get comprehensive contextual data based on intent
+    let complianceMetrics: ComplianceMetrics | null = null;
+    let dailyOverview: DailyOverview | null = null;
+    let supplierData: SupplierComplianceData | null = null;
+
+    // Gather contextual data based on query intent
+    if (queryIntent.intent_type === 'daily_overview' || queryIntent.context_scope === 'today') {
+      dailyOverview = await getDailyOverview(userInfo.companyId, userInfo.companyType);
+      complianceMetrics = await getComplianceMetrics(userInfo.companyId, userInfo.companyType);
+    } else if (queryIntent.intent_type === 'compliance_summary' || queryIntent.requires_visual) {
+      complianceMetrics = await getComplianceMetrics(userInfo.companyId, userInfo.companyType);
+    } else if (queryIntent.intent_type === 'supplier_specific' && queryIntent.entities.supplier_names?.length) {
+      // Find supplier ID by name
+      const supplierName = queryIntent.entities.supplier_names[0];
+      const { data: suppliers } = await supabase
+        .from('suppliers')
+        .select('id')
+        .ilike('company_name', `%${supplierName}%`)
+        .limit(1);
+      
+      if (suppliers && suppliers.length > 0) {
+        supplierData = await getSupplierComplianceData(suppliers[0].id);
+      }
+    }
+
+    // Step 4: Search relevant knowledge and documents with intent-aware filtering
     const [knowledgeEntries, documents] = await Promise.all([
       searchKnowledge(embedding, userInfo.companyId, userInfo.companyType, queryIntent.limit_documents > 5 ? 8 : 3),
       searchDocumentsAdvanced(message, userInfo.companyId, userInfo.companyType, queryIntent)
@@ -643,14 +1026,19 @@ serve(async (req) => {
       conversationHistory = historyData || [];
     }
 
-    // Step 4: Generate intent-aware structured AI response
+    // Step 5: Generate comprehensive intelligent response with contextual data
     const structuredResponse = await generateStructuredResponse(
       message, 
       knowledgeEntries,
       documents,
       userInfo, 
       conversationHistory,
-      queryIntent
+      queryIntent,
+      {
+        complianceMetrics,
+        dailyOverview,
+        supplierData
+      }
     );
 
     // Save or create session
@@ -665,7 +1053,8 @@ serve(async (req) => {
 
     // Step 5: Save conversation with enhanced metadata
     await saveMessage(finalSessionId, 'user', message);
-    await saveMessage(finalSessionId, 'assistant', JSON.stringify(structuredResponse), {
+    await saveMessage(finalSessionId, 'assistant', structuredResponse.content, {
+      structured_response: structuredResponse,
       knowledge_entries_used: knowledgeEntries.length,
       documents_found: documents.length,
       response_type: structuredResponse.type,
@@ -698,7 +1087,7 @@ serve(async (req) => {
       });
 
     return new Response(JSON.stringify({
-      response: JSON.stringify(structuredResponse),
+      response: structuredResponse,
       session_id: finalSessionId,
       metadata: {
         knowledge_entries_used: knowledgeEntries.length,

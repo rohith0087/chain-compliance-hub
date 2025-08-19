@@ -8,9 +8,11 @@ import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
+import { ChatDocumentViewer } from "@/components/chat/ChatDocumentViewer";
+import ComplianceVisualizer from "@/components/chat/ComplianceVisualizer";
+import DailyInsightsPanel from "@/components/chat/DailyInsightsPanel";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import ChatDocumentViewer from "@/components/chat/ChatDocumentViewer";
 import { 
   MessageSquare, 
   Send, 
@@ -55,10 +57,21 @@ interface StructuredResponse {
   sections?: {
     title: string;
     content: string;
-    type: 'text' | 'list' | 'document_card';
+    type: 'text' | 'list' | 'document_card' | 'chart' | 'metric_card' | 'alert';
+    data?: any;
   }[];
   documents?: DocumentReference[];
   quick_actions?: string[];
+  visual_data?: {
+    type: 'compliance_dashboard' | 'document_status_chart' | 'expiration_timeline' | 'supplier_comparison';
+    data: any;
+    config?: any;
+  };
+  daily_insights?: {
+    priority_score: number;
+    key_actions: string[];
+    urgent_items: string[];
+  };
 }
 
 interface DocumentReference {
@@ -548,6 +561,21 @@ const ChatPage = () => {
             </div>
           )}
         </div>
+
+        {/* Render Visual Data */}
+        {parsed.visual_data && (
+          <div className="mt-4">
+            <ComplianceVisualizer visualData={parsed.visual_data} />
+          </div>
+        )}
+
+        {/* Render Daily Insights */}
+        {parsed.daily_insights && (
+          <div className="mt-4">
+            <DailyInsightsPanel insights={parsed.daily_insights} />
+          </div>
+        )}
+      </div>
       );
     }
 
@@ -556,7 +584,21 @@ const ChatPage = () => {
       const parsed: StructuredResponse = JSON.parse(message.content);
       
       if (parsed.type === 'simple') {
-        return <p className="text-muted-foreground leading-relaxed">{parsed.content}</p>;
+        return (
+          <div>
+            <p className="text-muted-foreground leading-relaxed">{parsed.content}</p>
+            {parsed.visual_data && (
+              <div className="mt-4">
+                <ComplianceVisualizer visualData={parsed.visual_data} />
+              </div>
+            )}
+            {parsed.daily_insights && (
+              <div className="mt-4">
+                <DailyInsightsPanel insights={parsed.daily_insights} />
+              </div>
+            )}
+          </div>
+        );
       }
 
       // Re-render with the parsed structured response

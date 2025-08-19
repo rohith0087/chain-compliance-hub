@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
-import { ChatDocumentViewer } from "@/components/chat/ChatDocumentViewer";
+import ChatDocumentViewer from "@/components/chat/ChatDocumentViewer";
 import ComplianceVisualizer from "@/components/chat/ComplianceVisualizer";
 import DailyInsightsPanel from "@/components/chat/DailyInsightsPanel";
 import { useToast } from "@/hooks/use-toast";
@@ -560,22 +560,21 @@ const ChatPage = () => {
               </div>
             </div>
           )}
+
+          {/* Render Visual Data */}
+          {parsed.visual_data && (
+            <div className="mt-4">
+              <ComplianceVisualizer visualData={parsed.visual_data} />
+            </div>
+          )}
+
+          {/* Render Daily Insights */}
+          {parsed.daily_insights && (
+            <div className="mt-4">
+              <DailyInsightsPanel insights={parsed.daily_insights} />
+            </div>
+          )}
         </div>
-
-        {/* Render Visual Data */}
-        {parsed.visual_data && (
-          <div className="mt-4">
-            <ComplianceVisualizer visualData={parsed.visual_data} />
-          </div>
-        )}
-
-        {/* Render Daily Insights */}
-        {parsed.daily_insights && (
-          <div className="mt-4">
-            <DailyInsightsPanel insights={parsed.daily_insights} />
-          </div>
-        )}
-      </div>
       );
     }
 

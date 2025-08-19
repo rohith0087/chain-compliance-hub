@@ -271,8 +271,10 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
   };
 
   const renderStructuredMessage = (message: Message) => {
-    if (!message.metadata?.structured_response) {
-      return <p className="text-sm whitespace-pre-wrap">{message.content}</p>;
+if (!message.metadata?.structured_response) {
+      return typeof message.content === 'string'
+        ? <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+        : <pre className="text-xs text-muted-foreground whitespace-pre-wrap">{JSON.stringify(message.content, null, 2)}</pre>;
     }
 
     const response: StructuredResponse = message.metadata.structured_response;
@@ -422,9 +424,13 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
                         ? 'bg-primary text-primary-foreground ml-auto'
                         : 'bg-muted'
                     }`}>
-                      {message.role === 'assistant' ? 
+{message.role === 'assistant' ? 
                         renderStructuredMessage(message) : 
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                        (typeof message.content === 'string' ? (
+                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                        ) : (
+                          <pre className="text-xs text-muted-foreground whitespace-pre-wrap">{JSON.stringify(message.content, null, 2)}</pre>
+                        ))
                       }
                       
                       {/* Show sources for AI responses */}

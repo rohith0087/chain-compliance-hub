@@ -850,9 +850,13 @@ const ChatPage = () => {
                       {message.role === 'user' ? 'You' : 'Compliance AI'}
                     </div>
                     <div className="prose prose-sm max-w-none">
-                      {message.role === 'assistant' ? 
+{message.role === 'assistant' ? 
                         renderStructuredMessage(message) : 
-                        <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                        (typeof message.content === 'string' ? (
+                          <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                        ) : (
+                          <pre className="text-xs text-muted-foreground whitespace-pre-wrap">{JSON.stringify(message.content, null, 2)}</pre>
+                        ))
                       }
                     </div>
                   </div>

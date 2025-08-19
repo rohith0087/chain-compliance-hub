@@ -737,9 +737,9 @@ QUERY INTENT ANALYSIS:
   4. **Quick Actions**: Simple navigation or query actions
 
   Context:
-  - Company Type: ${companyType}
-  - Company ID: ${companyId}
-  - Industry: ${industry || 'General'}
+  - Company Type: ${userInfo.companyType}
+  - Company ID: ${userInfo.companyId}
+  - Industry: ${userInfo.industry || 'General'}
   - Query Intent: ${JSON.stringify(intent)}
   - Available Knowledge: ${knowledgeEntries.length} entries
   - Found Documents: ${documents.length} documents
@@ -787,7 +787,7 @@ QUERY INTENT ANALYSIS:
 
   Always make actions specific, executable, and include all necessary parameters.`;
 
-  const userPrompt = `Query: "${query}"
+  const userPrompt = `Query: "${userMessage}"
   
   Knowledge Context:
   ${knowledgeEntries.map(entry => `- ${entry.title}: ${entry.content.substring(0, 200)}...`).join('\n')}
@@ -796,22 +796,27 @@ QUERY INTENT ANALYSIS:
   ${documents.map(doc => `- ${doc.title} (${doc.supplier_name}) - Status: ${doc.status}, Type: ${doc.document_type}`).join('\n')}
   
   Compliance Overview:
-  ${JSON.stringify(complianceOverview, null, 2)}
+  ${contextualData.complianceMetrics ? JSON.stringify(contextualData.complianceMetrics, null, 2) : 'No metrics available'}
   
-  Generate a comprehensive response with actionable items that the user can execute directly from this chat interface.`;
+  Generate a comprehensive response with actionable items that the user can execute directly from this chat interface.
+
+Respond in this JSON format:
+{
   "content": "Main response text - be specific, actionable, and intelligent",
   "sections": [
     {
       "title": "Section Title",
       "content": "Section content with specific data and insights",
       "type": "text|list|document_card|metric_card|alert|chart",
-      "data": {Optional: chart data, metrics, etc.}
+      "data": "Optional: chart data, metrics, etc."
     }
   ],
-  ${intent.requires_visual ? '"visual_data": { "type": "compliance_dashboard|supplier_comparison|expiration_timeline", "data": {...} },' : ''}
-  ${intent.intent_type === 'daily_overview' ? '"daily_insights": { "priority_score": 85, "key_actions": [...], "urgent_items": [...] },' : ''}
-  "documents": [Include relevant documents with context],
-  "quick_actions": ["Intelligent follow-up 1", "Contextual action 2", "Next best step 3"]
+  ${intent.requires_visual ? '"visual_data": { "type": "compliance_dashboard|supplier_comparison|expiration_timeline", "data": {} },' : ''}
+  ${intent.intent_type === 'daily_overview' ? '"daily_insights": { "priority_score": 85, "key_actions": [], "urgent_items": [] },' : ''}
+  "documents": [],
+  "quick_actions": [],
+  "actionable_items": [],
+  "suggested_actions": []
 }
 
 KNOWLEDGE BASE:
@@ -836,7 +841,7 @@ Data available: ${documents.length} documents, ${contextualData.complianceMetric
   const messages = [
     { role: 'system', content: systemPrompt },
     ...conversationHistory.slice(-8), // Last 8 messages for context
-    { role: 'user', content: userMessage }
+    { role: 'user', content: message }
   ];
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {

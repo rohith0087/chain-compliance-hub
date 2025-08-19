@@ -809,23 +809,28 @@ QUERY INTENT ANALYSIS:
   Compliance Data:
   ${contextualData.complianceMetrics ? `Total: ${contextualData.complianceMetrics.total_documents}, Score: ${Math.round(contextualData.complianceMetrics.compliance_score)}%, Pending: ${contextualData.complianceMetrics.pending_documents}, Expired: ${contextualData.complianceMetrics.expired_documents}` : 'No metrics available'}
   
-  Generate a comprehensive response with actionable items. Use clean, professional language without asterisks or excessive formatting.
+  Generate a comprehensive, well-structured response with clear headings, bullet points, and actionable insights. Use proper formatting to make information scannable and digestible.
 
   ${intent.intent_type === 'expired_documents' || expiringDocs.length > 0 ? 
-    `CRITICAL: When discussing expiring documents, structure your response as follows:
-    - Create a "document_overview" section that lists each expiring document with: Company name, Document type, Expiration date, Current status
-    - The documents array should contain the SAME expiring documents mentioned in the overview
-    - Use clear, readable sentences without asterisks or bullets in the overview section` : ''}
+    `CRITICAL: Structure expiring documents responses with:
+    - An "Executive Summary" section with key insights
+    - A "Critical Documents" section listing each expiring document
+    - An "Action Items" section with prioritized next steps
+    - Use structured formatting with clear headings and bullet points` : ''}
 
 Respond in this JSON format:
 {
-  "content": "Main response text - be specific, actionable, and professional without asterisks or bullet points",
+  "content": "Brief executive summary - 1-2 sentences highlighting the key finding",
   "sections": [
     {
-      "title": "Section Title", 
-      "content": "Clean section content without asterisks or bullets - use clear sentences",
-      "type": "text|list|document_overview|metric_summary|alert|status_update",
-      "data": "Optional structured data"
+      "title": "📊 Executive Summary", 
+      "content": "• Key insight 1\n• Key insight 2\n• Overall assessment",
+      "type": "executive_summary"
+    },
+    {
+      "title": "⚠️ Critical Issues" | "📋 Key Documents" | "💡 Insights",
+      "content": "• Bullet point 1\n• Bullet point 2\n• Action item with timeline",
+      "type": "bullet_list|document_overview|insights|actions"
     }
   ],
   ${intent.requires_visual ? '"visual_data": { "type": "compliance_dashboard|supplier_comparison|expiration_timeline", "data": {} },' : ''}
@@ -843,15 +848,15 @@ RELEVANT DOCUMENTS:
 ${documentContext}
 
 ENHANCED RESPONSE GUIDELINES:
-- Use clean, professional language without asterisks, bullets, or excessive formatting
-- Provide specific insights based on actual data (compliance scores, expiration dates, etc.)
-- For expiring documents: create structured document_overview sections instead of bullet lists
-- For daily overview queries: prioritize urgent items in clear, readable format
-- Include specific numbers, dates, and percentages from the contextual data
-- Generate smart, contextual follow-up actions that anticipate user needs
-- Write in complete sentences and paragraphs, not bullet points
-- Highlight critical issues with urgency levels and suggested timeframes for action
-- When listing documents, use the document_overview section type for clean formatting
+- Structure responses with clear headings using emojis (📊, ⚠️, 📋, 💡, ✅)
+- Use bullet points for lists and key information (• format)
+- Create scannable sections: Executive Summary, Critical Issues, Key Documents, Action Items, Recommendations
+- Include specific numbers, dates, and percentages from contextual data
+- Prioritize urgent items with clear urgency indicators (🔴 Critical, 🟡 Important, 🟢 Normal)
+- Use structured formatting: headings, bullet points, numbered action steps
+- Provide actionable insights with specific timelines and next steps
+- Format document information as clear bullet lists within document_overview sections
+- End with prioritized action items and quick recommendations
 
 Current context: ${userInfo.companyType} in ${userInfo.industry || 'general'} industry. 
 Data available: ${documents.length} documents, ${contextualData.complianceMetrics ? 'compliance metrics' : 'no metrics'}, ${contextualData.dailyOverview ? 'daily overview' : 'no overview'}.`;

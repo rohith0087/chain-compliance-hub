@@ -21,7 +21,9 @@ import {
   CheckCircle,
   Clock,
   XCircle,
-  ExternalLink
+  ExternalLink,
+  AlertTriangle,
+  Info
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -45,7 +47,7 @@ interface StructuredResponse {
   sections?: {
     title: string;
     content: string;
-    type: 'text' | 'list' | 'document_card' | 'document_overview' | 'metric_summary' | 'alert' | 'status_update';
+    type: 'text' | 'list' | 'document_card' | 'document_overview' | 'metric_summary' | 'alert' | 'status_update' | 'executive_summary' | 'bullet_list' | 'insights' | 'actions';
   }[];
   documents?: DocumentReference[];
   quick_actions?: string[];
@@ -290,80 +292,159 @@ if (!message.metadata?.structured_response) {
         )}
 
         {/* Sections */}
-        {response.sections?.map((section, idx) => (
-          <div key={idx} className="border-l-2 border-primary/20 pl-3">
-            <h4 className="font-medium text-sm mb-1">{section.title}</h4>
-            {section.type === 'document_overview' ? (
-              <div className="space-y-3">
-                {section.content.split(/\.\s+(?=[A-Z])|\n/).filter(line => line.trim()).map((line, i) => {
-                  const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
-                  
-                  // Check if this line contains document information
-                  const isDocumentLine = cleanLine.match(/(expires|expiring|expired|from\s+\w+|document type|status:|pending|approved|rejected)/i);
-                  
-                  if (isDocumentLine) {
-                    // Extract document info for better formatting
-                    const parts = cleanLine.split(/,|\s-\s/);
-                    return (
-                      <div key={i} className="bg-muted/30 rounded-lg p-3 border-l-3 border-l-primary/40">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1">
-                            {parts.map((part, idx) => {
-                              const trimmedPart = part.trim();
-                              if (trimmedPart.match(/expires|expiring|expired/i)) {
-                                const isExpired = trimmedPart.match(/expired/i);
-                                const isExpiringSoon = trimmedPart.match(/expiring|expires.*(\d{1,2}\s+days?)/i);
-                                return (
-                                  <div key={idx} className={`text-xs flex items-center gap-1 ${
-                                    isExpired ? 'text-red-600 font-medium' : 
-                                    isExpiringSoon ? 'text-amber-600 font-medium' : 'text-muted-foreground'
-                                  }`}>
-                                    <Calendar className="h-3 w-3" />
-                                    {trimmedPart}
-                                  </div>
-                                );
-                              }
-                              return (
-                                <div key={idx} className="text-sm font-medium text-foreground">
-                                  {trimmedPart}
-                                </div>
-                              );
-                            })}
+        {response.sections?.map((section, idx) => {
+          const sectionStyle = section.type === 'executive_summary' ? 
+            'border-l-4 border-l-primary bg-primary/5' : 
+            section.type === 'alert' || section.title?.includes('⚠️') ? 
+            'border-l-4 border-l-destructive bg-destructive/5' :
+            section.title?.includes('✅') ?
+            'border-l-4 border-l-green-500 bg-green-500/5' :
+            'border-l-2 border-l-muted-foreground/30 bg-muted/20';
+
+          return (
+            <div key={idx} className={`rounded-lg p-4 ${sectionStyle}`}>
+              <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                {section.title}
+              </h4>
+              
+              {section.type === 'document_overview' ? (
+                <div className="space-y-3">
+                  {section.content.split('\n').filter(line => line.trim()).map((line, i) => {
+                    const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
+                    
+                    if (!cleanLine) return null;
+                    
+                    // Check if this is a bullet point
+                    if (line.trim().startsWith('•') || line.trim().startsWith('-') || line.trim().startsWith('*')) {
+                      // Check if this contains document information
+                      const isDocumentLine = cleanLine.match(/(expires|expiring|expired|from\s+\w+|document type|status:|pending|approved|rejected)/i);
+                      
+                      if (isDocumentLine) {
+                        const parts = cleanLine.split(/,|\s-\s|\|/);
+                        return (
+                          <div key={i} className="bg-background/80 rounded-md p-3 border border-border/50">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 space-y-1">
+                                {parts.map((part, idx) => {
+                                  const trimmedPart = part.trim();
+                                  if (trimmedPart.match(/expires|expiring|expired/i)) {
+                                    const isExpired = trimmedPart.match(/expired/i);
+                                    const isExpiringSoon = trimmedPart.match(/expiring|expires.*(\d{1,2}\s+days?)/i);
+                                    return (
+                                      <div key={idx} className={`text-xs flex items-center gap-1 font-medium ${
+                                        isExpired ? 'text-red-600' : 
+                                        isExpiringSoon ? 'text-amber-600' : 'text-muted-foreground'
+                                      }`}>
+                                        <Calendar className="h-3 w-3" />
+                                        {trimmedPart}
+                                      </div>
+                                    );
+                                  }
+                                  return (
+                                    <div key={idx} className="text-sm font-medium text-foreground">
+                                      {trimmedPart}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <FileText className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
+                            </div>
                           </div>
-                          <FileText className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
+                        );
+                      }
+                      
+                      return (
+                        <div key={i} className="flex items-start gap-2 text-sm">
+                          <div className="w-1 h-1 bg-primary rounded-full mt-2 flex-shrink-0" />
+                          <span className="text-foreground">{cleanLine}</span>
                         </div>
+                      );
+                    }
+                    
+                    return (
+                      <p key={i} className="text-sm text-muted-foreground leading-relaxed">
+                        {cleanLine}
+                      </p>
+                    );
+                  })}
+                </div>
+              ) : section.type === 'bullet_list' || section.type === 'list' || section.type === 'insights' || section.type === 'actions' ? (
+                <div className="space-y-2">
+                  {section.content.split('\n').filter(line => line.trim()).map((item, i) => {
+                    const cleanItem = item.replace(/^[•\-\*]\s*/, '').trim();
+                    if (!cleanItem) return null;
+                    
+                    // Check for priority indicators
+                    const isPriority = cleanItem.match(/🔴|critical|urgent|immediate/i);
+                    const isImportant = cleanItem.match(/🟡|important|soon|attention/i);
+                    
+                    return (
+                      <div key={i} className={`flex items-start gap-2 text-sm p-2 rounded ${
+                        isPriority ? 'bg-red-50 border-l-2 border-l-red-500' :
+                        isImportant ? 'bg-yellow-50 border-l-2 border-l-yellow-500' :
+                        'hover:bg-muted/50'
+                      }`}>
+                        <div className={`w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0 ${
+                          isPriority ? 'bg-red-500' :
+                          isImportant ? 'bg-yellow-500' :
+                          'bg-primary'
+                        }`} />
+                        <span className="text-foreground leading-relaxed">{cleanItem}</span>
                       </div>
                     );
-                  }
-                  
-                  return cleanLine ? (
-                    <p key={i} className="text-sm text-muted-foreground leading-relaxed">
-                      {cleanLine}
-                    </p>
-                  ) : null;
-                })}
-              </div>
-            ) : section.type === 'list' ? (
-              <ul className="text-sm space-y-1 list-disc list-inside text-muted-foreground">
-                {section.content.split('\n').filter(line => line.trim()).map((item, i) => (
-                  <li key={i}>{item.replace(/^[•\-\*]\s*/, '')}</li>
-                ))}
-              </ul>
-            ) : section.type === 'alert' ? (
-              <div className="bg-destructive/10 border border-destructive/20 rounded-md p-2">
-                <p className="text-sm text-destructive">{section.content}</p>
-              </div>
-            ) : section.type === 'status_update' ? (
-              <div className="bg-primary/10 border border-primary/20 rounded-md p-2">
-                <p className="text-sm text-primary">{section.content}</p>
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-                {section.content.replace(/\*\s*/g, '• ')}
-              </div>
-            )}
-          </div>
-        ))}
+                  })}
+                </div>
+              ) : section.type === 'executive_summary' ? (
+                <div className="space-y-2">
+                  {section.content.split('\n').filter(line => line.trim()).map((item, i) => {
+                    const cleanItem = item.replace(/^[•\-\*]\s*/, '').trim();
+                    if (!cleanItem) return null;
+                    
+                    return (
+                      <div key={i} className="flex items-start gap-2 text-sm">
+                        <CheckCircle className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                        <span className="text-foreground font-medium">{cleanItem}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : section.type === 'alert' ? (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-destructive font-medium">{section.content}</p>
+                  </div>
+                </div>
+              ) : section.type === 'status_update' ? (
+                <div className="bg-primary/10 border border-primary/20 rounded-md p-3">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-primary font-medium">{section.content}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                  {section.content.split('\n').map((line, i) => {
+                    const trimmedLine = line.trim();
+                    if (!trimmedLine) return null;
+                    
+                    if (trimmedLine.startsWith('•') || trimmedLine.startsWith('-') || trimmedLine.startsWith('*')) {
+                      const cleanLine = trimmedLine.replace(/^[•\-\*]\s*/, '');
+                      return (
+                        <div key={i} className="flex items-start gap-2 mb-1">
+                          <div className="w-1 h-1 bg-primary rounded-full mt-2 flex-shrink-0" />
+                          <span>{cleanLine}</span>
+                        </div>
+                      );
+                    }
+                    
+                    return <div key={i} className="mb-1">{trimmedLine}</div>;
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
 
         {/* Document cards */}
         {response.documents && response.documents.length > 0 && (

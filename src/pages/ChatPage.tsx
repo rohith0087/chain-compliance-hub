@@ -306,6 +306,8 @@ const ChatPage = () => {
         role: 'assistant',
         content: typeof data?.response === 'string'
           ? data.response
+          : typeof data?.response?.content === 'string'
+          ? data.response.content
           : typeof data?.content === 'string'
           ? data.content
           : typeof data?.message === 'string'
@@ -313,7 +315,7 @@ const ChatPage = () => {
           : "The assistant provided a structured response.",
         metadata: {
           ...data,
-          structured_response: data
+          structured_response: data?.response || data
         },
         created_at: new Date().toISOString(),
       };

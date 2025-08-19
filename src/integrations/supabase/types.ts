@@ -1692,6 +1692,7 @@ export type Database = {
         | "approved"
         | "rejected"
         | "expired"
+        | "completed"
       user_role:
         | "buyer"
         | "supplier"
@@ -1845,6 +1846,7 @@ export const Constants = {
         "approved",
         "rejected",
         "expired",
+        "completed",
       ],
       user_role: [
         "buyer",

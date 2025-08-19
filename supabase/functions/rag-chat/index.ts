@@ -841,7 +841,7 @@ Data available: ${documents.length} documents, ${contextualData.complianceMetric
   const messages = [
     { role: 'system', content: systemPrompt },
     ...conversationHistory.slice(-8), // Last 8 messages for context
-    { role: 'user', content: message }
+    { role: 'user', content: userPrompt }
   ];
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {

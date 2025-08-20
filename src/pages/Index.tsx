@@ -2,14 +2,18 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Shield, FileCheck, Users, BarChart3, AlertTriangle, Clock, CheckCircle, Building2 } from 'lucide-react';
+import { Shield, FileCheck, Users, BarChart3, AlertTriangle, Clock, CheckCircle, Building2, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/hooks/useAuth';
 import RegionSelector from '@/components/RegionSelector';
 
 const Index = () => {
   const navigate = useNavigate();
   const { t } = useTranslation(['home', 'common']);
+  const { user, profile } = useAuth();
+  
+  const isAdmin = profile?.roles?.includes('admin');
 
   const features = [
     {
@@ -65,9 +69,27 @@ const Index = () => {
               </div>
               <h1 className="text-2xl font-bold text-gray-900">ComplianceFlow</h1>
             </div>
-            <Button onClick={() => navigate('/auth')} className="bg-blue-600 hover:bg-blue-700">
-              {t('common:navigation.signIn')}
-            </Button>
+            <div className="flex items-center space-x-3">
+              {user && isAdmin && (
+                <Button 
+                  onClick={() => navigate('/admin')} 
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Settings className="w-4 h-4" />
+                  Admin Panel
+                </Button>
+              )}
+              {user ? (
+                <Button onClick={() => navigate('/dashboard')} className="bg-blue-600 hover:bg-blue-700">
+                  Dashboard
+                </Button>
+              ) : (
+                <Button onClick={() => navigate('/auth')} className="bg-blue-600 hover:bg-blue-700">
+                  {t('common:navigation.signIn')}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </header>

@@ -420,13 +420,6 @@ export type Database = {
             foreignKeyName: "buyers_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
-            referencedRelation: "admin_user_stats"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "buyers_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -689,13 +682,6 @@ export type Database = {
             foreignKeyName: "document_activity_logs_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "admin_user_stats"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_activity_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -888,13 +874,6 @@ export type Database = {
             foreignKeyName: "document_requests_requester_id_fkey"
             columns: ["requester_id"]
             isOneToOne: false
-            referencedRelation: "admin_user_stats"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_requests_requester_id_fkey"
-            columns: ["requester_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -945,13 +924,6 @@ export type Database = {
           view_count?: number
         }
         Relationships: [
-          {
-            foreignKeyName: "document_shared_links_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "admin_user_stats"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "document_shared_links_created_by_fkey"
             columns: ["created_by"]
@@ -1036,13 +1008,6 @@ export type Database = {
             foreignKeyName: "document_uploads_uploader_id_fkey"
             columns: ["uploader_id"]
             isOneToOne: false
-            referencedRelation: "admin_user_stats"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_uploads_uploader_id_fkey"
-            columns: ["uploader_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1119,13 +1084,6 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "admin_user_stats"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "notifications_user_id_fkey"
             columns: ["user_id"]
@@ -1308,13 +1266,6 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "suppliers_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "admin_user_stats"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "suppliers_profile_id_fkey"
             columns: ["profile_id"]
@@ -1563,23 +1514,7 @@ export type Database = {
       }
     }
     Views: {
-      admin_user_stats: {
-        Row: {
-          company_name: string | null
-          email: string | null
-          full_name: string | null
-          id: string | null
-          last_activity_date: string | null
-          registration_date: string | null
-          roles: Database["public"]["Enums"]["user_role"][] | null
-          total_activities: number | null
-          total_chat_messages: number | null
-          total_chat_sessions: number | null
-          total_document_requests: number | null
-          total_document_uploads: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       approve_document_request: {

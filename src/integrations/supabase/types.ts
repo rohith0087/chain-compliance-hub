@@ -1624,6 +1624,23 @@ export type Database = {
         }
         Returns: Json
       }
+      get_admin_user_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          company_name: string
+          email: string
+          full_name: string
+          id: string
+          last_activity_date: string
+          registration_date: string
+          roles: Database["public"]["Enums"]["user_role"][]
+          total_activities: number
+          total_chat_messages: number
+          total_chat_sessions: number
+          total_document_requests: number
+          total_document_uploads: number
+        }[]
+      }
       halfvec_avg: {
         Args: { "": number[] }
         Returns: unknown

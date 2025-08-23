@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { REGION_LANGUAGE_MAP, REGIONS } from '../i18n';
+import { useIPLocation } from '../hooks/useIPLocation';
 
 interface LanguageContextType {
   currentLanguage: string;
@@ -19,6 +20,8 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [currentRegion, setCurrentRegion] = useState<string>(() => {
     return localStorage.getItem('selectedRegion') || 'north-america';
   });
+  const [hasDetectedLocation, setHasDetectedLocation] = useState(false);
+  const { detectedLanguage, detectedRegion, loading: locationLoading, countryCode } = useIPLocation();
 
   const setLanguage = (language: string) => {
     i18n.changeLanguage(language);
@@ -39,23 +42,36 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     const savedLanguage = localStorage.getItem('selectedLanguage');
     const savedRegion = localStorage.getItem('selectedRegion');
+    const hasUserOverride = savedLanguage || savedRegion;
     
-    if (savedLanguage) {
-      i18n.changeLanguage(savedLanguage);
-    } else if (savedRegion) {
-      const defaultLanguage = REGION_LANGUAGE_MAP[savedRegion as keyof typeof REGION_LANGUAGE_MAP];
-      if (defaultLanguage) {
-        setLanguage(defaultLanguage);
+    // If user has previously made a selection, respect it
+    if (hasUserOverride) {
+      if (savedLanguage) {
+        i18n.changeLanguage(savedLanguage);
       }
+      if (savedRegion) {
+        setCurrentRegion(savedRegion);
+      }
+      return;
     }
-  }, [i18n]);
+
+    // If location is detected and no user override exists, auto-set
+    if (!locationLoading && detectedLanguage && detectedRegion && !hasDetectedLocation) {
+      console.log(`Auto-detecting location: ${countryCode} -> Language: ${detectedLanguage}, Region: ${detectedRegion}`);
+      setLanguage(detectedLanguage);
+      setCurrentRegion(detectedRegion);
+      localStorage.setItem('autoDetectedRegion', detectedRegion);
+      localStorage.setItem('autoDetectedLanguage', detectedLanguage);
+      setHasDetectedLocation(true);
+    }
+  }, [i18n, detectedLanguage, detectedRegion, locationLoading, hasDetectedLocation, countryCode]);
 
   const value: LanguageContextType = {
     currentLanguage: i18n.language,
     currentRegion,
     setLanguage,
     setRegion,
-    availableLanguages: ['en', 'es'],
+    availableLanguages: ['en', 'es', 'de'],
     regions: REGIONS
   };
 

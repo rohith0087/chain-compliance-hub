@@ -10,6 +10,9 @@ import enDashboard from './locales/en/dashboard.json';
 import esCommon from './locales/es/common.json';
 import esHome from './locales/es/home.json';
 import esDashboard from './locales/es/dashboard.json';
+import deCommon from './locales/de/common.json';
+import deHome from './locales/de/home.json';
+import deDashboard from './locales/de/dashboard.json';
 
 // Region to language mapping
 export const REGION_LANGUAGE_MAP = {
@@ -21,7 +24,7 @@ export const REGION_LANGUAGE_MAP = {
 
 export const REGIONS = [
   { code: 'north-america', name: 'North America', flag: '🇺🇸', languages: ['en'] },
-  { code: 'europe', name: 'Europe', flag: '🇪🇸', languages: ['es', 'en'] },
+  { code: 'europe', name: 'Europe', flag: '🇪🇺', languages: ['de', 'es', 'en'] },
   { code: 'asia', name: 'Asia', flag: '🌏', languages: ['en'] },
   { code: 'latin-america', name: 'Latin America', flag: '🌎', languages: ['es'] }
 ];
@@ -36,6 +39,11 @@ const resources = {
     common: esCommon,
     home: esHome,
     dashboard: esDashboard
+  },
+  de: {
+    common: deCommon,
+    home: deHome,
+    dashboard: deDashboard
   }
 };
 

@@ -1,0 +1,49 @@
+{
+  "navigation": {
+    "signIn": "Anmelden",
+    "getStarted": "Heute Beginnen",
+    "startFreeTrial": "Kostenlose Testversion Starten",
+    "logout": "Abmelden",
+    "switchTo": "Wechseln zu {{role}}",
+    "dashboard": "Dashboard",
+    "compliance": "Compliance",
+    "documents": "Dokumente",
+    "requests": "Meine Anfragen",
+    "suppliers": "Lieferanten"
+  },
+  "buttons": {
+    "refresh": "Daten Aktualisieren",
+    "export": "Exportieren",
+    "view": "Anzeigen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "submit": "Übermitteln",
+    "upload": "Hochladen",
+    "download": "Herunterladen",
+    "approve": "Genehmigen",
+    "reject": "Ablehnen",
+    "pending": "Ausstehend",
+    "approved": "Genehmigt",
+    "rejected": "Abgelehnt"
+  },
+  "forms": {
+    "required": "Dieses Feld ist erforderlich",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "confirmPassword": "Passwort Bestätigen",
+    "firstName": "Vorname",
+    "lastName": "Nachname",
+    "company": "Unternehmen",
+    "industry": "Branche"
+  },
+  "messages": {
+    "loading": "Wird geladen...",
+    "noData": "Keine Daten verfügbar",
+    "error": "Ein Fehler ist aufgetreten",
+    "success": "Erfolgreich",
+    "welcome": "Willkommen",
+    "selectRegion": "Wählen Sie Ihre Region"
+  }
+}

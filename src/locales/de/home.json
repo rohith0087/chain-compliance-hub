@@ -1,0 +1,61 @@
+{
+  "hero": {
+    "title": "Lieferkettenkonformität neu definiert",
+    "subtitle": "Intelligente Compliance-Verwaltung für moderne Unternehmen",
+    "description": "Rationalisieren Sie Ihre Lieferanten-Compliance mit unserer KI-gestützten Plattform. Verwalten Sie Dokumente, verfolgen Sie Konformität und stellen Sie die Einhaltung regulatorischer Standards in Echtzeit sicher.",
+    "badge1": "KI-gestützt",
+    "badge2": "Echtzeit-Tracking",
+    "badge3": "Unternehmenstauglich"
+  },
+  "features": {
+    "title": "Alles was Sie für Compliance-Management brauchen",
+    "subtitle": "Umfassende Werkzeuge um Ihre Lieferanten-Compliance zu vereinfachen und zu automatisieren",
+    "documentManagement": {
+      "title": "Intelligente Dokumentenverwaltung",
+      "description": "Automatisieren Sie Dokumentenanfragen, -verfolgung und -genehmigungen mit KI-gestützten Workflows"
+    },
+    "complianceTracking": {
+      "title": "Echtzeit-Compliance-Verfolgung",
+      "description": "Überwachen Sie den Compliance-Status aller Lieferanten mit automatischen Aktualisierungen und Warnungen"
+    },
+    "roleBasedAccess": {
+      "title": "Rollenbasierter Zugang",
+      "description": "Sichere, rollenbasierte Berechtigungen für Käufer, Lieferanten und Administratoren"
+    },
+    "analytics": {
+      "title": "Erweiterte Analysen",
+      "description": "Detaillierte Einblicke in Compliance-Trends, Risiken und Leistungskennzahlen"
+    },
+    "smartAlerts": {
+      "title": "Intelligente Benachrichtigungen",
+      "description": "Proaktive Warnungen für ablaufende Dokumente, Compliance-Probleme und erforderliche Maßnahmen"
+    },
+    "auditTrail": {
+      "title": "Vollständiger Prüfpfad",
+      "description": "Komplette Dokumentation aller Compliance-Aktivitäten für Audit- und Berichtszwecke"
+    }
+  },
+  "industries": {
+    "title": "Vertraut von Branchen weltweit",
+    "subtitle": "Unsere Plattform ist darauf ausgelegt, den einzigartigen Compliance-Anforderungen verschiedener Branchen gerecht zu werden",
+    "foodService": "Gastronomie",
+    "pharmaceutical": "Pharmazeutika",
+    "manufacturing": "Fertigung",
+    "retail": "Einzelhandel",
+    "logistics": "Logistik",
+    "construction": "Bauwesen"
+  },
+  "cta": {
+    "title": "Transformieren Sie Ihr Compliance-Management noch heute",
+    "subtitle": "Schließen Sie sich Tausenden von Unternehmen an, die bereits unsere Plattform nutzen"
+  },
+  "regionSelector": {
+    "title": "Region auswählen",
+    "regions": {
+      "northamerica": "Nordamerika",
+      "europe": "Europa", 
+      "asia": "Asien",
+      "latinamerica": "Lateinamerika"
+    }
+  }
+}

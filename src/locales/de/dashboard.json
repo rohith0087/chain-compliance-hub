@@ -1,0 +1,56 @@
+{
+  "buyer": {
+    "title": "Käufer Dashboard",
+    "welcome": "Willkommen zurück",
+    "description": "Verwalten Sie Ihre Lieferanten-Compliance und verfolgen Sie Dokumentenanfragen von einem zentralen Hub aus.",
+    "findSuppliers": "Lieferanten finden",
+    "requestDocuments": "Dokumente anfordern",
+    "trackRequests": "Anfragen verfolgen",
+    "viewCompliance": "Compliance anzeigen",
+    "manageSuppliers": "Lieferanten verwalten",
+    "generateReports": "Berichte erstellen",
+    "recentActivity": "Letzte Aktivitäten",
+    "pendingRequests": "Ausstehende Anfragen",
+    "upcomingDeadlines": "Anstehende Fristen"
+  },
+  "supplier": {
+    "title": "Lieferanten Dashboard",
+    "welcome": "Willkommen zurück",
+    "description": "Verwalten Sie Ihre Compliance-Dokumente und antworten Sie auf Käuferanfragen effizient.",
+    "manageDocuments": "Dokumente verwalten",
+    "respondToRequests": "Auf Anfragen antworten",
+    "viewConnectedBuyers": "Verbundene Käufer anzeigen",
+    "updateProfile": "Profil aktualisieren",
+    "complianceScore": "Compliance-Bewertung"
+  },
+  "compliance": {
+    "overallScore": "Gesamtbewertung",
+    "criticalIssues": "Kritische Probleme",
+    "completionRate": "Abschlussrate",
+    "recentActivity": "Letzte Aktivitäten",
+    "upcomingDeadlines": "Anstehende Fristen",
+    "riskAssessment": "Risikobewertung",
+    "auditHistory": "Audit-Verlauf",
+    "complianceMetrics": "Compliance-Kennzahlen",
+    "pending": "Ausstehend",
+    "approved": "Genehmigt",
+    "rejected": "Abgelehnt",
+    "expired": "Abgelaufen"
+  },
+  "company": {
+    "title": "Unternehmensverwaltung",
+    "overview": "Übersicht",
+    "details": "Unternehmensdetails",
+    "branches": "Zweigstellen",
+    "users": "Benutzer",
+    "permissions": "Berechtigungen",
+    "recentActivity": "Letzte Aktivitäten",
+    "manageBranches": "Zweigstellen verwalten",
+    "manageUsers": "Benutzer verwalten",
+    "configurePermissions": "Berechtigungen konfigurieren",
+    "viewReports": "Berichte anzeigen",
+    "systemSettings": "Systemeinstellungen",
+    "auditLogs": "Audit-Protokolle",
+    "dataExport": "Datenexport"
+  }
+}

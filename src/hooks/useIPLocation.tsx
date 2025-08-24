@@ -89,36 +89,117 @@ export const useIPLocation = () => {
 
   useEffect(() => {
     const fetchLocation = async () => {
+      const CACHE_KEY = 'ipLocationCache';
+      const TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+      // 1) Try cache first
       try {
-        // Using BigDataCloud's free IP geolocation API (no key required)
-        const response = await fetch('https://api.bigdatacloud.net/data/ip-geolocation?localityLanguage=en', {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch location data');
+        const raw = localStorage.getItem(CACHE_KEY);
+        if (raw) {
+          const cached = JSON.parse(raw) as { data: any; ts: number };
+          if (Date.now() - cached.ts < TTL_MS && cached.data?.countryCode) {
+            setLocationData({
+              country: cached.data.country,
+              countryCode: cached.data.countryCode,
+              city: cached.data.city,
+              loading: false,
+              error: null
+            });
+            return;
+          }
         }
-
-        const data = await response.json();
-        
-        setLocationData({
-          country: data.country?.name || '',
-          countryCode: data.country?.isoAlpha2 || '',
-          city: data.city?.name || '',
-          loading: false,
-          error: null
-        });
-      } catch (error) {
-        console.warn('IP location detection failed:', error);
-        setLocationData(prev => ({
-          ...prev,
-          loading: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        }));
+      } catch (_) {
+        // ignore cache errors
       }
+
+      // 2) Provider fallbacks
+      type Parsed = { country: string; countryCode: string; city?: string };
+      const providers: {
+        name: string;
+        url: string;
+        parse: (d: any) => Parsed;
+      }[] = [
+        {
+          name: 'ipwhois',
+          url: 'https://ipwho.is/',
+          parse: (d: any) => ({
+            country: d?.country || '',
+            countryCode: d?.country_code || '',
+            city: d?.city || ''
+          })
+        },
+        {
+          name: 'ipapi',
+          url: 'https://ipapi.co/json/',
+          parse: (d: any) => ({
+            country: d?.country_name || d?.country || '',
+            countryCode: d?.country_code || d?.country_code_iso2 || '',
+            city: d?.city || ''
+          })
+        },
+        {
+          name: 'bigdatacloud',
+          url: 'https://api.bigdatacloud.net/data/ip-geolocation?localityLanguage=en',
+          parse: (d: any) => ({
+            country: d?.country?.name || '',
+            countryCode: d?.country?.isoAlpha2 || '',
+            city: d?.city?.name || ''
+          })
+        }
+      ];
+
+      const fetchWithTimeout = async (input: RequestInfo, init?: RequestInit, timeoutMs = 5000) => {
+        const controller = new AbortController();
+        const t = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          const resp = await fetch(input, { ...init, signal: controller.signal, headers: { Accept: 'application/json', ...(init?.headers || {}) } });
+          clearTimeout(t);
+          return resp;
+        } catch (e) {
+          clearTimeout(t);
+          throw e;
+        }
+      };
+
+      let lastError: any = null;
+      for (const p of providers) {
+        try {
+          const resp = await fetchWithTimeout(p.url, { method: 'GET' }, 6000);
+          if (!resp.ok) throw new Error(`Provider ${p.name} returned ${resp.status}`);
+          const json = await resp.json();
+          const parsed = p.parse(json);
+          if (parsed.countryCode) {
+            setLocationData({
+              country: parsed.country,
+              countryCode: parsed.countryCode,
+              city: parsed.city || '',
+              loading: false,
+              error: null
+            });
+            try {
+              localStorage.setItem(CACHE_KEY, JSON.stringify({ data: parsed, ts: Date.now() }));
+            } catch (_) {}
+            return;
+          }
+        } catch (e) {
+          lastError = e;
+          // continue to next provider
+        }
+      }
+
+      // 3) Final fallback to navigator language
+      const navLang = (typeof navigator !== 'undefined' && navigator.language) ? navigator.language : '';
+      const code = navLang.startsWith('es') ? 'ES' : navLang.startsWith('de') ? 'DE' : 'US';
+      const countryName = code === 'ES' ? 'Spain' : code === 'DE' ? 'Germany' : 'United States';
+      console.warn('IP location detection failed, using navigator.language fallback:', lastError);
+      setLocationData(prev => ({
+        ...prev,
+        country: countryName,
+        countryCode: code,
+        city: '',
+        loading: false,
+        error: lastError instanceof Error ? lastError.message : 'Location lookup failed'
+      }));
     };
 
     fetchLocation();

@@ -1,0 +1,41 @@
+{
+  "title": "Panel de Administración",
+  "subtitle": "Gestión del Sistema y Analíticas",
+  "loading": "Cargando panel de administración...",
+  "welcome": "Bienvenido de nuevo, {{name}}",
+  "description": "Gestiona usuarios, monitorea la actividad del sistema y visualiza análisis completos.",
+  "accessDenied": "Acceso Denegado",
+  "accessDeniedDescription": "No tienes permisos para acceder al panel de administración.",
+  "returnToApp": "Volver a la Aplicación",
+  "administrator": "Administrador",
+  "stats": {
+    "totalUsers": "Total de Usuarios",
+    "activeUsers": "Usuarios Activos",
+    "chatSessions": "Sesiones de Chat",
+    "documents": "Documentos"
+  },
+  "tabs": {
+    "users": "Gestión de Usuarios",
+    "analytics": "Analíticas",
+    "activity": "Feed de Actividad",
+    "settings": "Configuración del Sistema"
+  },
+  "sections": {
+    "userManagement": {
+      "title": "Gestión de Usuarios",
+      "description": "Gestiona cuentas de usuario, roles y permisos en toda la plataforma."
+    },
+    "analytics": {
+      "title": "Analíticas del Sistema",
+      "description": "Visualiza análisis detallados e insights sobre el uso de la plataforma."
+    },
+    "activity": {
+      "title": "Feed de Actividad en Tiempo Real",
+      "description": "Monitorea actividades de usuarios y eventos del sistema en tiempo real."
+    },
+    "settings": {
+      "title": "Configuración del Sistema",
+      "description": "Configura ajustes y preferencias a nivel del sistema."
+    }
+  }
+}

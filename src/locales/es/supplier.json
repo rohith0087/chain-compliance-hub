@@ -1,0 +1,31 @@
+{
+  "title": "Portal de Proveedores",
+  "loading": "Cargando dashboard de proveedor...",
+  "welcome": "Bienvenido, {{name}}",
+  "settings": "Configuración",
+  "logout": "Cerrar Sesión",
+  "tabs": {
+    "overview": "Resumen",
+    "compliance": "Cumplimiento",
+    "documents": "Documentos",
+    "connections": "Solicitudes de Conexión",
+    "requests": "Solicitudes de Documentos",
+    "buyers": "Compradores Conectados",
+    "company": "Gestión de Empresa"
+  },
+  "stats": {
+    "pendingRequests": "Solicitudes Pendientes",
+    "completionRate": "Tasa de Finalización",
+    "documentsSubmitted": "Documentos Enviados",
+    "connectedBuyers": "Compradores Conectados",
+    "awaitingSubmission": "Esperando envío",
+    "totalSubmitted": "Total enviados",
+    "activeConnections": "Conexiones activas"
+  },
+  "sections": {
+    "recentRequests": "Solicitudes de Documentos Recientes",
+    "connectedBuyers": "Compradores Conectados",
+    "noRecentRequests": "No hay solicitudes de documentos recientes",
+    "noConnectedBuyers": "Aún no hay compradores conectados"
+  }
+}

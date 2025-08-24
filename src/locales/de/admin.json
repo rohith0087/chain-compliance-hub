@@ -1,0 +1,41 @@
+{
+  "title": "Admin-Dashboard",
+  "subtitle": "Systemverwaltung & Analytik",
+  "loading": "Admin-Dashboard wird geladen...",
+  "welcome": "Willkommen zurück, {{name}}",
+  "description": "Verwalten Sie Benutzer, überwachen Sie Systemaktivitäten und betrachten Sie umfassende Analysen.",
+  "accessDenied": "Zugriff Verweigert",
+  "accessDeniedDescription": "Sie haben keine Berechtigung, auf das Admin-Dashboard zuzugreifen.",
+  "returnToApp": "Zur App Zurückkehren",
+  "administrator": "Administrator",
+  "stats": {
+    "totalUsers": "Gesamte Benutzer",
+    "activeUsers": "Aktive Benutzer",
+    "chatSessions": "Chat-Sitzungen",
+    "documents": "Dokumente"
+  },
+  "tabs": {
+    "users": "Benutzerverwaltung",
+    "analytics": "Analytik",
+    "activity": "Aktivitäts-Feed",
+    "settings": "Systemeinstellungen"
+  },
+  "sections": {
+    "userManagement": {
+      "title": "Benutzerverwaltung",
+      "description": "Verwalten Sie Benutzerkonten, Rollen und Berechtigungen plattformweit."
+    },
+    "analytics": {
+      "title": "System-Analytik",
+      "description": "Betrachten Sie detaillierte Analysen und Einblicke zur Plattformnutzung."
+    },
+    "activity": {
+      "title": "Echtzeit-Aktivitäts-Feed",
+      "description": "Überwachen Sie Benutzeraktivitäten und Systemereignisse in Echtzeit."
+    },
+    "settings": {
+      "title": "Systemeinstellungen",
+      "description": "Konfigurieren Sie systemweite Einstellungen und Präferenzen."
+    }
+  }
+}

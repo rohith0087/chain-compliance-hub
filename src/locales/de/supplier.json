@@ -1,0 +1,31 @@
+{
+  "title": "Lieferantenportal",
+  "loading": "Lieferanten-Dashboard wird geladen...",
+  "welcome": "Willkommen, {{name}}",
+  "settings": "Einstellungen",
+  "logout": "Abmelden",
+  "tabs": {
+    "overview": "Übersicht",
+    "compliance": "Compliance",
+    "documents": "Dokumente",
+    "connections": "Verbindungsanfragen",
+    "requests": "Dokumentenanfragen",
+    "buyers": "Verbundene Käufer",
+    "company": "Unternehmensverwaltung"
+  },
+  "stats": {
+    "pendingRequests": "Ausstehende Anfragen",
+    "completionRate": "Abschlussrate",
+    "documentsSubmitted": "Eingereichte Dokumente",
+    "connectedBuyers": "Verbundene Käufer",
+    "awaitingSubmission": "Warten auf Einreichung",
+    "totalSubmitted": "Insgesamt eingereicht",
+    "activeConnections": "Aktive Verbindungen"
+  },
+  "sections": {
+    "recentRequests": "Aktuelle Dokumentenanfragen",
+    "connectedBuyers": "Verbundene Käufer",
+    "noRecentRequests": "Keine aktuellen Dokumentenanfragen",
+    "noConnectedBuyers": "Noch keine verbundenen Käufer"
+  }
+}

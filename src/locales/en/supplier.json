@@ -1,0 +1,31 @@
+{
+  "title": "Supplier Portal",
+  "loading": "Loading supplier dashboard...",
+  "welcome": "Welcome, {{name}}",
+  "settings": "Settings",
+  "logout": "Logout",
+  "tabs": {
+    "overview": "Overview",
+    "compliance": "Compliance", 
+    "documents": "Documents",
+    "connections": "Connection Requests",
+    "requests": "Document Requests",
+    "buyers": "Connected Buyers",
+    "company": "Company Management"
+  },
+  "stats": {
+    "pendingRequests": "Pending Requests",
+    "completionRate": "Completion Rate",
+    "documentsSubmitted": "Documents Submitted",
+    "connectedBuyers": "Connected Buyers",
+    "awaitingSubmission": "Awaiting submission",
+    "totalSubmitted": "Total submitted",
+    "activeConnections": "Active connections"
+  },
+  "sections": {
+    "recentRequests": "Recent Document Requests",
+    "connectedBuyers": "Connected Buyers",
+    "noRecentRequests": "No recent document requests",
+    "noConnectedBuyers": "No connected buyers yet"
+  }
+}

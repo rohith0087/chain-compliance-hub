@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -49,6 +50,7 @@ interface SupplierDashboardProps {
 }
 
 const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardProps) => {
+  const { t } = useTranslation(['supplier', 'common']);
   const [activeTab, setActiveTab] = useState('overview');
   const [supplierProfile, setSupplierProfile] = useState<any>(null);
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
@@ -284,7 +286,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading supplier dashboard...</p>
+          <p className="text-gray-600">{t('supplier:loading')}</p>
         </div>
       </div>
     );
@@ -302,7 +304,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
                 <Shield className="w-5 h-5 text-white" />
               </div>
               <h1 className="text-xl font-bold text-gray-900">ComplianceFlow</h1>
-              <Badge variant="secondary" className="bg-green-100 text-green-800">Supplier Portal</Badge>
+              <Badge variant="secondary" className="bg-green-100 text-green-800">{t('supplier:title')}</Badge>
             </div>
             <div className="flex items-center space-x-4">
               {user.roles.length > 1 && (
@@ -313,12 +315,12 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
               )}
               <Button variant="ghost" size="sm" onClick={() => setShowSettingsModal(true)}>
                 <Settings className="w-4 h-4 mr-2" />
-                Settings
+                {t('supplier:settings')}
               </Button>
               <NotificationCenter onNavigate={handleNotificationNavigation} />
-              <span className="text-sm text-gray-600">Welcome, {user.name}</span>
+              <span className="text-sm text-gray-600">{t('supplier:welcome', { name: user.name })}</span>
               <Button variant="outline" size="sm" onClick={onLogout}>
-                Logout
+                {t('supplier:logout')}
               </Button>
             </div>
           </div>
@@ -353,7 +355,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
               </div>
                 <Button variant="outline" onClick={() => setShowSettingsModal(true)}>
                   <Settings className="w-4 h-4 mr-2" />
-                  Settings
+                  {t('supplier:settings')}
                 </Button>
               </div>
             </CardContent>
@@ -364,18 +366,18 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('supplier:stats.pendingRequests')}</CardTitle>
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.pendingRequests}</div>
-              <p className="text-xs text-muted-foreground">Awaiting submission</p>
+              <p className="text-xs text-muted-foreground">{t('supplier:stats.awaitingSubmission')}</p>
             </CardContent>
           </Card>
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('supplier:stats.completionRate')}</CardTitle>
               <CheckCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -386,23 +388,23 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Documents Submitted</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('supplier:stats.documentsSubmitted')}</CardTitle>
               <Upload className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.documentsSubmitted}</div>
-              <p className="text-xs text-muted-foreground">Total submitted</p>
+              <p className="text-xs text-muted-foreground">{t('supplier:stats.totalSubmitted')}</p>
             </CardContent>
           </Card>
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Connected Buyers</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('supplier:stats.connectedBuyers')}</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{connectedBuyers.length}</div>
-              <p className="text-xs text-muted-foreground">Active connections</p>
+              <p className="text-xs text-muted-foreground">{t('supplier:stats.activeConnections')}</p>
             </CardContent>
           </Card>
         </div>
@@ -410,45 +412,45 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="overview">{t('supplier:tabs.overview')}</TabsTrigger>
             <TabsTrigger 
               value="compliance"
               className={highlightedTab === 'compliance' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
             >
               <BarChart3 className="w-4 h-4 mr-2" />
-              Compliance
+              {t('supplier:tabs.compliance')}
             </TabsTrigger>
             <TabsTrigger 
               value="documents"
               className={highlightedTab === 'documents' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
             >
               <FileCheck className="w-4 h-4 mr-2" />
-              Documents
+              {t('supplier:tabs.documents')}
             </TabsTrigger>
             <TabsTrigger 
               value="connections"
               className={highlightedTab === 'connections' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
             >
-              Connection Requests
+              {t('supplier:tabs.connections')}
             </TabsTrigger>
             <TabsTrigger 
               value="requests"
               className={highlightedTab === 'requests' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
             >
-              Document Requests
+              {t('supplier:tabs.requests')}
             </TabsTrigger>
             <TabsTrigger 
               value="buyers"
               className={highlightedTab === 'buyers' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
             >
-              Connected Buyers
+              {t('supplier:tabs.buyers')}
             </TabsTrigger>
             <TabsTrigger 
               value="company"
               className={highlightedTab === 'company' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
             >
               <Building2 className="w-4 h-4 mr-2" />
-              Company Management
+              {t('supplier:tabs.company')}
             </TabsTrigger>
           </TabsList>
 

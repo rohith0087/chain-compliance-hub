@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +25,7 @@ import AdminSystemSettings from '@/components/admin/AdminSystemSettings';
 import { useToast } from '@/hooks/use-toast';
 
 const AdminDashboard = () => {
+  const { t } = useTranslation(['admin', 'common']);
   const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -40,8 +42,8 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
       toast({
-        title: "Access Denied",
-        description: "You don't have permission to access the admin dashboard.",
+        title: t('admin:accessDenied'),
+        description: t('admin:accessDeniedDescription'),
         variant: "destructive"
       });
       navigate('/');
@@ -54,7 +56,7 @@ const AdminDashboard = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading admin dashboard...</p>
+          <p className="text-slate-600">{t('admin:loading')}</p>
         </div>
       </div>
     );
@@ -75,14 +77,14 @@ const AdminDashboard = () => {
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-                <p className="text-sm text-gray-600">System Management & Analytics</p>
+                <h1 className="text-2xl font-bold text-gray-900">{t('admin:title')}</h1>
+                <p className="text-sm text-gray-600">{t('admin:subtitle')}</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
               <Badge variant="destructive" className="flex items-center gap-1">
                 <Shield className="w-3 h-3" />
-                Administrator
+                {t('admin:administrator')}
               </Badge>
               <Button 
                 variant="outline" 
@@ -90,7 +92,7 @@ const AdminDashboard = () => {
                 className="flex items-center gap-2"
               >
                 <Home className="w-4 h-4" />
-                Return to App
+                {t('admin:returnToApp')}
               </Button>
             </div>
           </div>
@@ -101,10 +103,10 @@ const AdminDashboard = () => {
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {profile?.full_name || 'Administrator'}
+            {t('admin:welcome', { name: profile?.full_name || t('admin:administrator') })}
           </h2>
           <p className="text-gray-600">
-            Manage users, monitor system activity, and view comprehensive analytics.
+            {t('admin:description')}
           </p>
         </div>
 
@@ -114,7 +116,7 @@ const AdminDashboard = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Users</p>
+                  <p className="text-sm font-medium text-gray-600">{t('admin:stats.totalUsers')}</p>
                   <p className="text-3xl font-bold text-gray-900">{stats.totalUsers}</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
@@ -128,7 +130,7 @@ const AdminDashboard = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Active Users</p>
+                  <p className="text-sm font-medium text-gray-600">{t('admin:stats.activeUsers')}</p>
                   <p className="text-3xl font-bold text-gray-900">{stats.activeUsers}</p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
@@ -142,7 +144,7 @@ const AdminDashboard = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Chat Sessions</p>
+                  <p className="text-sm font-medium text-gray-600">{t('admin:stats.chatSessions')}</p>
                   <p className="text-3xl font-bold text-gray-900">{stats.totalSessions}</p>
                 </div>
                 <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
@@ -156,7 +158,7 @@ const AdminDashboard = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Documents</p>
+                  <p className="text-sm font-medium text-gray-600">{t('admin:stats.documents')}</p>
                   <p className="text-3xl font-bold text-gray-900">{stats.totalDocuments}</p>
                 </div>
                 <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
@@ -172,19 +174,19 @@ const AdminDashboard = () => {
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
-              User Management
+              {t('admin:tabs.users')}
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <BarChart3 className="w-4 h-4" />
-              Analytics
+              {t('admin:tabs.analytics')}
             </TabsTrigger>
             <TabsTrigger value="activity" className="flex items-center gap-2">
               <Activity className="w-4 h-4" />
-              Activity Feed
+              {t('admin:tabs.activity')}
             </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
-              System Settings
+              {t('admin:tabs.settings')}
             </TabsTrigger>
           </TabsList>
 
@@ -193,10 +195,10 @@ const AdminDashboard = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="w-5 h-5" />
-                  User Management
+                  {t('admin:sections.userManagement.title')}
                 </CardTitle>
                 <CardDescription>
-                  Manage user accounts, roles, and permissions across the platform.
+                  {t('admin:sections.userManagement.description')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -210,10 +212,10 @@ const AdminDashboard = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <BarChart3 className="w-5 h-5" />
-                  System Analytics
+                  {t('admin:sections.analytics.title')}
                 </CardTitle>
                 <CardDescription>
-                  View detailed analytics and insights about platform usage.
+                  {t('admin:sections.analytics.description')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -227,10 +229,10 @@ const AdminDashboard = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Activity className="w-5 h-5" />
-                  Real-time Activity Feed
+                  {t('admin:sections.activity.title')}
                 </CardTitle>
                 <CardDescription>
-                  Monitor user activities and system events in real-time.
+                  {t('admin:sections.activity.description')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -244,10 +246,10 @@ const AdminDashboard = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Settings className="w-5 h-5" />
-                  System Settings
+                  {t('admin:sections.settings.title')}
                 </CardTitle>
                 <CardDescription>
-                  Configure system-wide settings and preferences.
+                  {t('admin:sections.settings.description')}
                 </CardDescription>
               </CardHeader>
               <CardContent>

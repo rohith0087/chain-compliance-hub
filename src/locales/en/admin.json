@@ -1,0 +1,41 @@
+{
+  "title": "Admin Dashboard",
+  "subtitle": "System Management & Analytics",
+  "loading": "Loading admin dashboard...",
+  "welcome": "Welcome back, {{name}}",
+  "description": "Manage users, monitor system activity, and view comprehensive analytics.",
+  "accessDenied": "Access Denied",
+  "accessDeniedDescription": "You don't have permission to access the admin dashboard.",
+  "returnToApp": "Return to App",
+  "administrator": "Administrator",
+  "stats": {
+    "totalUsers": "Total Users",
+    "activeUsers": "Active Users",
+    "chatSessions": "Chat Sessions", 
+    "documents": "Documents"
+  },
+  "tabs": {
+    "users": "User Management",
+    "analytics": "Analytics",
+    "activity": "Activity Feed",
+    "settings": "System Settings"
+  },
+  "sections": {
+    "userManagement": {
+      "title": "User Management",
+      "description": "Manage user accounts, roles, and permissions across the platform."
+    },
+    "analytics": {
+      "title": "System Analytics",
+      "description": "View detailed analytics and insights about platform usage."
+    },
+    "activity": {
+      "title": "Real-time Activity Feed",
+      "description": "Monitor user activities and system events in real-time."
+    },
+    "settings": {
+      "title": "System Settings",
+      "description": "Configure system-wide settings and preferences."
+    }
+  }
+}

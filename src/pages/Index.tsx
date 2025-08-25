@@ -2,7 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Shield, FileCheck, Users, BarChart3, AlertTriangle, Clock, CheckCircle, Building2, Settings } from 'lucide-react';
+import { Shield, FileCheck, Users, BarChart3, AlertTriangle, Clock, CheckCircle, Building2, Settings, ArrowRight, Star, Globe, Zap, Lock, TrendingUp, Mail, Phone, MapPin, Linkedin, Twitter, Youtube } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,37 +15,71 @@ const Index = () => {
   
   const isAdmin = profile?.roles?.includes('admin');
 
-  const features = [
+  const coreFeatures = [
     {
       icon: FileCheck,
       title: t('home:features.documentManagement.title'),
-      description: t('home:features.documentManagement.description')
+      description: t('home:features.documentManagement.description'),
+      benefits: ['Automated metadata capture', 'Version control', 'Digital signatures', 'Bulk operations']
     },
     {
       icon: Shield,
       title: t('home:features.complianceTracking.title'),
-      description: t('home:features.complianceTracking.description')
+      description: t('home:features.complianceTracking.description'),
+      benefits: ['Real-time monitoring', 'Risk assessment', 'Compliance scoring', 'Automated reporting']
     },
     {
       icon: Users,
       title: t('home:features.roleBasedAccess.title'),
-      description: t('home:features.roleBasedAccess.description')
+      description: t('home:features.roleBasedAccess.description'),
+      benefits: ['Granular permissions', 'Multi-tenant support', 'Single sign-on', 'Audit logs']
     },
     {
       icon: BarChart3,
       title: t('home:features.analytics.title'),
-      description: t('home:features.analytics.description')
+      description: t('home:features.analytics.description'),
+      benefits: ['Custom dashboards', 'Exportable reports', 'Trend analysis', 'Performance metrics']
     },
     {
       icon: AlertTriangle,
       title: t('home:features.smartAlerts.title'),
-      description: t('home:features.smartAlerts.description')
+      description: t('home:features.smartAlerts.description'),
+      benefits: ['Expiry notifications', 'Risk alerts', 'Custom triggers', 'Multi-channel delivery']
     },
     {
       icon: Clock,
       title: t('home:features.auditTrail.title'),
-      description: t('home:features.auditTrail.description')
+      description: t('home:features.auditTrail.description'),
+      benefits: ['Complete history', 'Immutable records', 'Regulatory compliance', 'Digital evidence']
     }
+  ];
+
+  const advancedFeatures = [
+    {
+      icon: Zap,
+      title: 'AI-Powered Insights',
+      description: 'Leverage artificial intelligence for predictive compliance analytics and automated risk assessment.',
+      highlight: 'New'
+    },
+    {
+      icon: Globe,
+      title: 'Multi-Region Support',
+      description: 'Built for global operations with localized compliance requirements and data residency.',
+      highlight: 'Global'
+    },
+    {
+      icon: Lock,
+      title: 'Enterprise Security',
+      description: 'Bank-grade security with end-to-end encryption, SOC 2 compliance, and zero-trust architecture.',
+      highlight: 'Secure'
+    }
+  ];
+
+  const stats = [
+    { value: '500+', label: 'Enterprise Clients' },
+    { value: '99.9%', label: 'Uptime SLA' },
+    { value: '50M+', label: 'Documents Processed' },
+    { value: '25+', label: 'Countries Served' }
   ];
 
   const industries = [
@@ -58,16 +92,19 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Shield className="w-6 h-6 text-white" />
+              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                <Shield className="w-6 h-6 text-primary-foreground" />
               </div>
-              <h1 className="text-2xl font-bold text-gray-900">ComplianceFlow</h1>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">ComplianceFlow</h1>
+                <p className="text-xs text-muted-foreground">by TraceR2C LLC</p>
+              </div>
             </div>
             <div className="flex items-center space-x-3">
               {user && isAdmin && (
@@ -81,12 +118,14 @@ const Index = () => {
                 </Button>
               )}
               {user ? (
-                <Button onClick={() => navigate('/dashboard')} className="bg-blue-600 hover:bg-blue-700">
+                <Button onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
                   Dashboard
+                  <ArrowRight className="w-4 h-4" />
                 </Button>
               ) : (
-                <Button onClick={() => navigate('/auth')} className="bg-blue-600 hover:bg-blue-700">
+                <Button onClick={() => navigate('/auth')} className="flex items-center gap-2">
                   {t('common:navigation.signIn')}
+                  <ArrowRight className="w-4 h-4" />
                 </Button>
               )}
             </div>
@@ -95,111 +134,271 @@ const Index = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="text-center">
-          <h2 className="text-5xl font-bold text-gray-900 mb-6">
-            {t('home:hero.title')}
-            <span className="text-blue-600 block">{t('home:hero.subtitle')}</span>
-          </h2>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            {t('home:hero.description')}
-          </p>
-          <div className="flex flex-wrap justify-center gap-4 mb-12">
-            <Badge variant="secondary" className="px-4 py-2 text-sm">
-              <CheckCircle className="w-4 h-4 mr-2" />
-              {t('home:hero.badges.realTimeTracking')}
-            </Badge>
-            <Badge variant="secondary" className="px-4 py-2 text-sm">
-              <Shield className="w-4 h-4 mr-2" />
-              {t('home:hero.badges.auditReady')}
-            </Badge>
-            <Badge variant="secondary" className="px-4 py-2 text-sm">
-              <Building2 className="w-4 h-4 mr-2" />
-              {t('home:hero.badges.multiIndustry')}
-            </Badge>
-          </div>
-          <Button 
-            onClick={() => navigate('/auth')} 
-            size="lg" 
-            className="bg-blue-600 hover:bg-blue-700 px-8 py-3 text-lg"
-          >
-            {t('common:navigation.getStarted')}
-          </Button>
-        </div>
-      </section>
-
-      {/* Features Grid */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="text-center mb-16">
-          <h3 className="text-3xl font-bold text-gray-900 mb-4">
-            {t('home:features.title')}
-          </h3>
-          <p className="text-lg text-gray-600">
-            {t('home:features.subtitle')}
-          </p>
-        </div>
-        
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {features.map((feature, index) => (
-            <Card key={index} className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardHeader className="text-center">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <feature.icon className="w-8 h-8 text-blue-600" />
-                </div>
-                <CardTitle className="text-xl font-semibold">{feature.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 text-center">{feature.description}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      {/* Industries Section */}
-      <section className="bg-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-24 overflow-hidden">
+        <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="text-center mb-16">
-            <h3 className="text-3xl font-bold text-gray-900 mb-4">
-              {t('home:industries.title')}
-            </h3>
-            <p className="text-lg text-gray-600">
-              {t('home:industries.subtitle')}
+            <Badge variant="secondary" className="mb-6 px-4 py-2">
+              <Star className="w-4 h-4 mr-2" />
+              Trusted by 500+ Organizations Worldwide
+            </Badge>
+            <h1 className="text-6xl md:text-7xl font-bold text-foreground mb-6 leading-tight">
+              {t('home:hero.title')}
+              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent block">
+                {t('home:hero.subtitle')}
+              </span>
+            </h1>
+            <p className="text-xl text-muted-foreground mb-12 max-w-4xl mx-auto leading-relaxed">
+              {t('home:hero.description')} Transform your supply chain documentation with intelligent automation, 
+              real-time insights, and enterprise-grade security.
             </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+              <Button 
+                onClick={() => navigate('/auth')} 
+                size="lg" 
+                className="px-8 py-4 text-lg hover:shadow-lg transition-all"
+              >
+                Start Free Trial
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+              <Button 
+                variant="outline" 
+                size="lg" 
+                className="px-8 py-4 text-lg"
+                onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+              >
+                Learn More
+              </Button>
+            </div>
+            <div className="flex flex-wrap justify-center gap-6">
+              <Badge variant="secondary" className="px-4 py-2 text-sm">
+                <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
+                {t('home:hero.badges.realTimeTracking')}
+              </Badge>
+              <Badge variant="secondary" className="px-4 py-2 text-sm">
+                <Shield className="w-4 h-4 mr-2 text-blue-500" />
+                {t('home:hero.badges.auditReady')}
+              </Badge>
+              <Badge variant="secondary" className="px-4 py-2 text-sm">
+                <Building2 className="w-4 h-4 mr-2 text-purple-500" />
+                {t('home:hero.badges.multiIndustry')}
+              </Badge>
+            </div>
           </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
-            {industries.map((industry, index) => (
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-20">
+            {stats.map((stat, index) => (
               <div key={index} className="text-center">
-                <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
-                  {industry.icon}
-                </div>
-                <p className="font-medium text-gray-900">{industry.name}</p>
+                <div className="text-4xl font-bold text-primary mb-2">{stat.value}</div>
+                <div className="text-muted-foreground">{stat.label}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="bg-blue-600 py-20">
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h3 className="text-3xl font-bold text-white mb-4">
-            {t('home:cta.title')}
-          </h3>
-          <p className="text-xl text-blue-100 mb-8">
-            {t('home:cta.subtitle')}
-          </p>
-          <Button 
-            onClick={() => navigate('/auth')}
-            size="lg" 
-            variant="secondary" 
-            className="px-8 py-3 text-lg"
-          >
-            {t('common:navigation.startFreeTrial')}
-          </Button>
+      {/* Advanced Features Section */}
+      <section id="features" className="py-24 bg-muted/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-foreground mb-4">
+              Next-Generation Compliance Technology
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Powered by cutting-edge technology and designed for the future of supply chain management
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8 mb-20">
+            {advancedFeatures.map((feature, index) => (
+              <Card key={index} className="relative p-8 border-0 shadow-lg bg-card hover:shadow-xl transition-all duration-300 group">
+                <Badge className="absolute top-4 right-4 text-xs" variant={
+                  feature.highlight === 'New' ? 'default' : 
+                  feature.highlight === 'Global' ? 'secondary' : 'outline'
+                }>
+                  {feature.highlight}
+                </Badge>
+                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
+                  <feature.icon className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-2xl font-semibold mb-4 text-foreground">{feature.title}</h3>
+                <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
+              </Card>
+            ))}
+          </div>
         </div>
       </section>
+
+      {/* Core Features Grid */}
+      <section className="py-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-foreground mb-4">
+              {t('home:features.title')}
+            </h2>
+            <p className="text-xl text-muted-foreground">
+              {t('home:features.subtitle')}
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {coreFeatures.map((feature, index) => (
+              <Card key={index} className="p-8 border-0 shadow-lg hover:shadow-xl transition-all duration-300 group bg-card">
+                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
+                  <feature.icon className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-2xl font-semibold mb-4 text-foreground">{feature.title}</h3>
+                <p className="text-muted-foreground mb-6 leading-relaxed">{feature.description}</p>
+                <div className="space-y-2">
+                  {feature.benefits.map((benefit, benefitIndex) => (
+                    <div key={benefitIndex} className="flex items-center text-sm text-muted-foreground">
+                      <CheckCircle className="w-4 h-4 mr-3 text-green-500" />
+                      {benefit}
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Industries Section */}
+      <section className="py-24 bg-muted/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-foreground mb-4">
+              {t('home:industries.title')}
+            </h2>
+            <p className="text-xl text-muted-foreground">
+              {t('home:industries.subtitle')}
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
+            {industries.map((industry, index) => (
+              <Card key={index} className="p-6 text-center border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-card">
+                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">
+                  {industry.icon}
+                </div>
+                <p className="font-semibold text-foreground text-sm">{industry.name}</p>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-24 bg-gradient-to-r from-primary to-secondary relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
+        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8 relative">
+          <h2 className="text-4xl font-bold text-primary-foreground mb-6">
+            {t('home:cta.title')}
+          </h2>
+          <p className="text-xl text-primary-foreground/80 mb-12 leading-relaxed">
+            {t('home:cta.subtitle')}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button 
+              onClick={() => navigate('/auth')}
+              size="lg" 
+              variant="secondary" 
+              className="px-8 py-4 text-lg font-semibold hover:shadow-lg transition-all"
+            >
+              {t('common:navigation.startFreeTrial')}
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="lg" 
+              className="px-8 py-4 text-lg border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10"
+            >
+              Schedule Demo
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-background border-t py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-4 gap-8 mb-12">
+            <div className="md:col-span-2">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                  <Shield className="w-6 h-6 text-primary-foreground" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-foreground">ComplianceFlow</h3>
+                  <p className="text-sm text-muted-foreground">by TraceR2C LLC</p>
+                </div>
+              </div>
+              <p className="text-muted-foreground mb-6 leading-relaxed">
+                The world's most advanced supply chain compliance management platform. 
+                Trusted by leading organizations to streamline documentation, ensure compliance, 
+                and drive operational excellence.
+              </p>
+              <div className="flex space-x-4">
+                <Button variant="ghost" size="sm" className="p-2">
+                  <Linkedin className="w-5 h-5" />
+                </Button>
+                <Button variant="ghost" size="sm" className="p-2">
+                  <Twitter className="w-5 h-5" />
+                </Button>
+                <Button variant="ghost" size="sm" className="p-2">
+                  <Youtube className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold text-foreground mb-4">Product</h4>
+              <ul className="space-y-3">
+                <li><a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">Features</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Pricing</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Security</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Integrations</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">API Documentation</a></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold text-foreground mb-4">Company</h4>
+              <ul className="space-y-3">
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">About TraceR2C</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Careers</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">News & Press</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Contact</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Partners</a></li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="border-t pt-8">
+            <div className="grid md:grid-cols-3 gap-8 items-center">
+              <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                <div className="flex items-center">
+                  <MapPin className="w-4 h-4 mr-2" />
+                  Global HQ, USA
+                </div>
+              </div>
+              
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">
+                  © 2024 TraceR2C LLC. All rights reserved.
+                </p>
+              </div>
+              
+              <div className="flex justify-end space-x-6 text-sm">
+                <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Privacy Policy</a>
+                <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Terms of Service</a>
+                <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Cookies</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </footer>
 
       {/* Region Selector */}
       <RegionSelector />

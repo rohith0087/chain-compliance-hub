@@ -226,7 +226,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
           </TabsTrigger>
           <TabsTrigger value="company">
             <Building2 className="w-4 h-4 mr-2" />
-            Company Management
+            {t('dashboard:company.title')}
           </TabsTrigger>
         </TabsList>
         

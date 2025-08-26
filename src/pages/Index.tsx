@@ -134,17 +134,17 @@ const Index = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-24 overflow-hidden">
-        <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+      <section className="relative bg-gradient-vibrant py-24 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-vibrant/10 via-purple-vibrant/5 to-green-vibrant/10"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="text-center mb-16">
-            <Badge variant="secondary" className="mb-6 px-4 py-2">
+            <Badge className="mb-6 px-4 py-2 bg-gradient-to-r from-purple-vibrant to-blue-vibrant text-white border-0 shadow-glow animate-pulse-glow">
               <Star className="w-4 h-4 mr-2" />
               Trusted by 500+ Organizations Worldwide
             </Badge>
             <h1 className="text-6xl md:text-7xl font-bold text-foreground mb-6 leading-tight">
               {t('home:hero.title')}
-              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent block">
+              <span className="bg-gradient-to-r from-blue-vibrant via-purple-vibrant to-green-vibrant bg-clip-text text-transparent block">
                 {t('home:hero.subtitle')}
               </span>
             </h1>
@@ -156,7 +156,7 @@ const Index = () => {
               <Button 
                 onClick={() => navigate('/auth')} 
                 size="lg" 
-                className="px-8 py-4 text-lg hover:shadow-lg transition-all"
+                className="px-8 py-4 text-lg bg-gradient-to-r from-blue-vibrant to-purple-vibrant hover:from-purple-vibrant hover:to-blue-vibrant text-white border-0 shadow-colorful hover:shadow-glow transition-all duration-300 transform hover:scale-105"
               >
                 Start Free Trial
                 <ArrowRight className="w-5 h-5 ml-2" />
@@ -164,23 +164,23 @@ const Index = () => {
               <Button 
                 variant="outline" 
                 size="lg" 
-                className="px-8 py-4 text-lg"
+                className="px-8 py-4 text-lg border-2 border-green-vibrant text-green-vibrant hover:bg-green-vibrant hover:text-white transition-all duration-300"
                 onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
               >
                 Learn More
               </Button>
             </div>
             <div className="flex flex-wrap justify-center gap-6">
-              <Badge variant="secondary" className="px-4 py-2 text-sm">
-                <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
+              <Badge className="px-4 py-2 text-sm bg-gradient-to-r from-green-vibrant to-teal-vibrant text-white border-0">
+                <CheckCircle className="w-4 h-4 mr-2" />
                 {t('home:hero.badges.realTimeTracking')}
               </Badge>
-              <Badge variant="secondary" className="px-4 py-2 text-sm">
-                <Shield className="w-4 h-4 mr-2 text-blue-500" />
+              <Badge className="px-4 py-2 text-sm bg-gradient-to-r from-blue-vibrant to-purple-vibrant text-white border-0">
+                <Shield className="w-4 h-4 mr-2" />
                 {t('home:hero.badges.auditReady')}
               </Badge>
-              <Badge variant="secondary" className="px-4 py-2 text-sm">
-                <Building2 className="w-4 h-4 mr-2 text-purple-500" />
+              <Badge className="px-4 py-2 text-sm bg-gradient-to-r from-purple-vibrant to-pink-vibrant text-white border-0">
+                <Building2 className="w-4 h-4 mr-2" />
                 {t('home:hero.badges.multiIndustry')}
               </Badge>
             </div>
@@ -188,18 +188,21 @@ const Index = () => {
 
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-20">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="text-4xl font-bold text-primary mb-2">{stat.value}</div>
-                <div className="text-muted-foreground">{stat.label}</div>
-              </div>
-            ))}
+            {stats.map((stat, index) => {
+              const colors = ['text-blue-vibrant', 'text-purple-vibrant', 'text-green-vibrant', 'text-orange-vibrant'];
+              return (
+                <div key={index} className="text-center p-6 rounded-2xl bg-card/50 backdrop-blur-sm border border-border/50 hover:shadow-colorful transition-all duration-300">
+                  <div className={`text-4xl font-bold mb-2 ${colors[index % colors.length]}`}>{stat.value}</div>
+                  <div className="text-muted-foreground">{stat.label}</div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
 
       {/* Advanced Features Section */}
-      <section id="features" className="py-24 bg-muted/30">
+      <section id="features" className="py-24 bg-gradient-to-br from-purple-vibrant/5 via-background to-blue-vibrant/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-foreground mb-4">
@@ -211,21 +214,32 @@ const Index = () => {
           </div>
           
           <div className="grid md:grid-cols-3 gap-8 mb-20">
-            {advancedFeatures.map((feature, index) => (
-              <Card key={index} className="relative p-8 border-0 shadow-lg bg-card hover:shadow-xl transition-all duration-300 group">
-                <Badge className="absolute top-4 right-4 text-xs" variant={
-                  feature.highlight === 'New' ? 'default' : 
-                  feature.highlight === 'Global' ? 'secondary' : 'outline'
-                }>
-                  {feature.highlight}
-                </Badge>
-                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
-                  <feature.icon className="w-8 h-8 text-primary" />
-                </div>
-                <h3 className="text-2xl font-semibold mb-4 text-foreground">{feature.title}</h3>
-                <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
-              </Card>
-            ))}
+            {advancedFeatures.map((feature, index) => {
+              const gradients = [
+                'from-blue-vibrant/10 to-purple-vibrant/10',
+                'from-green-vibrant/10 to-teal-vibrant/10', 
+                'from-purple-vibrant/10 to-pink-vibrant/10'
+              ];
+              const iconColors = ['text-blue-vibrant', 'text-green-vibrant', 'text-purple-vibrant'];
+              const badgeColors = [
+                'bg-gradient-to-r from-blue-vibrant to-purple-vibrant text-white',
+                'bg-gradient-to-r from-green-vibrant to-teal-vibrant text-white',
+                'bg-gradient-to-r from-purple-vibrant to-pink-vibrant text-white'
+              ];
+              
+              return (
+                <Card key={index} className={`relative p-8 border-0 shadow-lg bg-gradient-to-br ${gradients[index]} hover:shadow-glow transition-all duration-300 group transform hover:scale-105`}>
+                  <Badge className={`absolute top-4 right-4 text-xs border-0 ${badgeColors[index]}`}>
+                    {feature.highlight}
+                  </Badge>
+                  <div className={`w-16 h-16 bg-gradient-to-br ${gradients[index]} rounded-2xl flex items-center justify-center mb-6 group-hover:shadow-colorful transition-all duration-300`}>
+                    <feature.icon className={`w-8 h-8 ${iconColors[index]}`} />
+                  </div>
+                  <h3 className="text-2xl font-semibold mb-4 text-foreground">{feature.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -243,29 +257,41 @@ const Index = () => {
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {coreFeatures.map((feature, index) => (
-              <Card key={index} className="p-8 border-0 shadow-lg hover:shadow-xl transition-all duration-300 group bg-card">
-                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
-                  <feature.icon className="w-8 h-8 text-primary" />
-                </div>
-                <h3 className="text-2xl font-semibold mb-4 text-foreground">{feature.title}</h3>
-                <p className="text-muted-foreground mb-6 leading-relaxed">{feature.description}</p>
-                <div className="space-y-2">
-                  {feature.benefits.map((benefit, benefitIndex) => (
-                    <div key={benefitIndex} className="flex items-center text-sm text-muted-foreground">
-                      <CheckCircle className="w-4 h-4 mr-3 text-green-500" />
-                      {benefit}
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            ))}
+            {coreFeatures.map((feature, index) => {
+              const featureColors = [
+                { bg: 'from-blue-vibrant/10 to-purple-vibrant/10', icon: 'text-blue-vibrant', border: 'border-blue-vibrant/20' },
+                { bg: 'from-green-vibrant/10 to-teal-vibrant/10', icon: 'text-green-vibrant', border: 'border-green-vibrant/20' },
+                { bg: 'from-purple-vibrant/10 to-pink-vibrant/10', icon: 'text-purple-vibrant', border: 'border-purple-vibrant/20' },
+                { bg: 'from-orange-vibrant/10 to-pink-vibrant/10', icon: 'text-orange-vibrant', border: 'border-orange-vibrant/20' },
+                { bg: 'from-teal-vibrant/10 to-blue-vibrant/10', icon: 'text-teal-vibrant', border: 'border-teal-vibrant/20' },
+                { bg: 'from-pink-vibrant/10 to-purple-vibrant/10', icon: 'text-pink-vibrant', border: 'border-pink-vibrant/20' }
+              ];
+              const colorScheme = featureColors[index % featureColors.length];
+              
+              return (
+                <Card key={index} className={`p-8 border-2 ${colorScheme.border} shadow-lg hover:shadow-colorful transition-all duration-300 group bg-gradient-to-br ${colorScheme.bg} transform hover:scale-105`}>
+                  <div className={`w-16 h-16 bg-gradient-to-br ${colorScheme.bg} rounded-2xl flex items-center justify-center mb-6 group-hover:shadow-glow transition-all duration-300`}>
+                    <feature.icon className={`w-8 h-8 ${colorScheme.icon}`} />
+                  </div>
+                  <h3 className="text-2xl font-semibold mb-4 text-foreground">{feature.title}</h3>
+                  <p className="text-muted-foreground mb-6 leading-relaxed">{feature.description}</p>
+                  <div className="space-y-2">
+                    {feature.benefits.map((benefit, benefitIndex) => (
+                      <div key={benefitIndex} className="flex items-center text-sm text-muted-foreground">
+                        <CheckCircle className="w-4 h-4 mr-3 text-green-vibrant" />
+                        {benefit}
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
 
       {/* Industries Section */}
-      <section className="py-24 bg-muted/30">
+      <section className="py-24 bg-gradient-to-br from-green-vibrant/5 via-background to-teal-vibrant/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-foreground mb-4">
@@ -277,34 +303,46 @@ const Index = () => {
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
-            {industries.map((industry, index) => (
-              <Card key={index} className="p-6 text-center border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-card">
-                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">
-                  {industry.icon}
-                </div>
-                <p className="font-semibold text-foreground text-sm">{industry.name}</p>
-              </Card>
-            ))}
+            {industries.map((industry, index) => {
+              const industryColors = [
+                'from-orange-vibrant/20 to-pink-vibrant/20',
+                'from-purple-vibrant/20 to-blue-vibrant/20',
+                'from-green-vibrant/20 to-teal-vibrant/20',
+                'from-blue-vibrant/20 to-purple-vibrant/20',
+                'from-teal-vibrant/20 to-green-vibrant/20',
+                'from-pink-vibrant/20 to-orange-vibrant/20'
+              ];
+              const gradientBg = industryColors[index % industryColors.length];
+              
+              return (
+                <Card key={index} className={`p-6 text-center border-0 shadow-md hover:shadow-colorful transition-all duration-300 bg-gradient-to-br ${gradientBg} transform hover:scale-110`}>
+                  <div className={`w-16 h-16 bg-gradient-to-br ${gradientBg} rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl hover:shadow-glow transition-all duration-300`}>
+                    {industry.icon}
+                  </div>
+                  <p className="font-semibold text-foreground text-sm">{industry.name}</p>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 bg-gradient-to-r from-primary to-secondary relative overflow-hidden">
+      <section className="py-24 bg-gradient-vibrant relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-vibrant/20 via-purple-vibrant/15 to-green-vibrant/20"></div>
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8 relative">
-          <h2 className="text-4xl font-bold text-primary-foreground mb-6">
+          <h2 className="text-4xl font-bold text-white mb-6 drop-shadow-lg">
             {t('home:cta.title')}
           </h2>
-          <p className="text-xl text-primary-foreground/80 mb-12 leading-relaxed">
+          <p className="text-xl text-white/90 mb-12 leading-relaxed drop-shadow-md">
             {t('home:cta.subtitle')}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               onClick={() => navigate('/auth')}
               size="lg" 
-              variant="secondary" 
-              className="px-8 py-4 text-lg font-semibold hover:shadow-lg transition-all"
+              className="px-8 py-4 text-lg font-semibold bg-white text-purple-vibrant hover:bg-white/90 hover:shadow-glow transition-all duration-300 transform hover:scale-105 border-0"
             >
               {t('common:navigation.startFreeTrial')}
               <ArrowRight className="w-5 h-5 ml-2" />
@@ -312,7 +350,7 @@ const Index = () => {
             <Button 
               variant="outline" 
               size="lg" 
-              className="px-8 py-4 text-lg border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10"
+              className="px-8 py-4 text-lg border-2 border-white/80 text-white hover:bg-white/20 hover:border-white transition-all duration-300"
             >
               Schedule Demo
             </Button>

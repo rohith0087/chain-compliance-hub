@@ -1,20 +1,25 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Shield, FileCheck, Users, BarChart3, AlertTriangle, Clock, CheckCircle, Building2, Settings, ArrowRight, Star, Globe, Zap, Lock, TrendingUp, Mail, Phone, MapPin, Linkedin, Twitter, Youtube, Bot, Network, Sparkles, Timer, Workflow, Brain, Layers, MessageSquare } from 'lucide-react';
+import { Shield, FileCheck, Users, BarChart3, AlertTriangle, Clock, CheckCircle, Building2, Settings, ArrowRight, Star, Globe, Zap, Lock, TrendingUp, Mail, Phone, MapPin, Linkedin, Twitter, Youtube, Bot, Network, Sparkles, Timer, Workflow, Brain, Layers, MessageSquare, Calendar } from 'lucide-react';
 // Mock hooks for demo purposes
 const useNavigate = () => (path) => console.log('Navigate to:', path);
 const useTranslation = () => ({ t: (key) => key.split(':').pop() || key });
 const useAuth = () => ({ user: null, profile: null });
 
 // Mock RegionSelector component
-const Index = () => { h-4 mr-2" />
+const RegionSelector = () => (
+  <div className="fixed bottom-4 right-4 z-50">
+    <Button variant="outline" className="flex items-center gap-2">
+      <Globe className="w-4 h-4" />
       Global
     </Button>
   </div>
 );
+
+const Index = () => {
 const navigate = useNavigate();
-const { t } = useTranslation(['home', 'common']);
+const { t } = useTranslation();
 const { user, profile } = useAuth();
 
 const isAdmin = profile?.roles?.includes('admin');

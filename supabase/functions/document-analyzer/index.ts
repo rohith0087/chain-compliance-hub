@@ -97,6 +97,22 @@ serve(async (req) => {
       extractedText = await file.text();
     }
 
+    // Available categories for validation
+    const availableCategories = [
+      'Certificate',
+      'Insurance', 
+      'Financial',
+      'Legal',
+      'Quality',
+      'Safety',
+      'Environmental',
+      'Compliance',
+      'Training',
+      'Policy',
+      'Technical',
+      'Other'
+    ];
+
     // Analyze content with AI for suggestions
     analysisPrompt = `
     Analyze this document for a supplier company with the following context:
@@ -108,12 +124,13 @@ serve(async (req) => {
     Document content: ${extractedText.substring(0, 2000)}
     
     Please provide a JSON response with:
-    1. "suggestedCategory": Best category for this document (e.g., "Certificate", "Insurance", "Financial", "Legal", "Quality", "Safety", "Environmental")
+    1. "suggestedCategory": Choose the BEST category from this EXACT list: ${availableCategories.join(', ')}
     2. "suggestedTags": Array of 3-5 relevant tags
     3. "suggestedDescription": Brief, professional description (max 150 chars)
     4. "potentialExpirationDate": If you find any date that could be an expiration date, return it in YYYY-MM-DD format, otherwise null
     5. "confidence": Your confidence level (0-1) in the suggestions
     
+    IMPORTANT: You MUST choose suggestedCategory from the provided list exactly as written. Do not use any other category names.
     Focus on business compliance and supplier relationship context.
     `;
 
@@ -139,11 +156,17 @@ serve(async (req) => {
     try {
       const responseText = analysisData.choices?.[0]?.message?.content || '{}';
       aiSuggestions = JSON.parse(responseText);
+      
+      // Validate category and fallback to 'Other' if invalid
+      if (aiSuggestions.suggestedCategory && !availableCategories.includes(aiSuggestions.suggestedCategory)) {
+        console.warn(`Invalid category suggested: ${aiSuggestions.suggestedCategory}, using 'Other' instead`);
+        aiSuggestions.suggestedCategory = 'Other';
+      }
     } catch (e) {
       console.error('Failed to parse AI response:', e);
       // Fallback suggestions
       aiSuggestions = {
-        suggestedCategory: 'General',
+        suggestedCategory: 'Other',
         suggestedTags: ['document'],
         suggestedDescription: 'Document uploaded for review',
         potentialExpirationDate: null,

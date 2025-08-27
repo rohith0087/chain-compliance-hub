@@ -1226,6 +1226,8 @@ export type Database = {
       }
       supplier_document_library: {
         Row: {
+          ai_suggested_description: string | null
+          ai_suggested_tags: string[] | null
           category: string | null
           content_extracted: string | null
           content_summary: string | null
@@ -1233,6 +1235,7 @@ export type Database = {
           description: string | null
           document_name: string
           document_type: string
+          expiration_date: string | null
           extraction_status: string
           file_path: string
           file_size: number | null
@@ -1247,6 +1250,8 @@ export type Database = {
           version: number
         }
         Insert: {
+          ai_suggested_description?: string | null
+          ai_suggested_tags?: string[] | null
           category?: string | null
           content_extracted?: string | null
           content_summary?: string | null
@@ -1254,6 +1259,7 @@ export type Database = {
           description?: string | null
           document_name: string
           document_type: string
+          expiration_date?: string | null
           extraction_status?: string
           file_path: string
           file_size?: number | null
@@ -1268,6 +1274,8 @@ export type Database = {
           version?: number
         }
         Update: {
+          ai_suggested_description?: string | null
+          ai_suggested_tags?: string[] | null
           category?: string | null
           content_extracted?: string | null
           content_summary?: string | null
@@ -1275,6 +1283,7 @@ export type Database = {
           description?: string | null
           document_name?: string
           document_type?: string
+          expiration_date?: string | null
           extraction_status?: string
           file_path?: string
           file_size?: number | null

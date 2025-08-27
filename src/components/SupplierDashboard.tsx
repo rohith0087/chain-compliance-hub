@@ -21,7 +21,8 @@ import {
   Users,
   Building2,
   BarChart3,
-  MessageSquare
+  MessageSquare,
+  FileText
 } from 'lucide-react';
 import RoleSwitcher from '@/components/RoleSwitcher';
 import { SupplierSettingsModal } from '@/components/settings/SupplierSettingsModal';
@@ -38,6 +39,7 @@ import SupplierDocumentsDashboard from '@/components/documents/SupplierDocuments
 import { CompanyManagementDashboard } from '@/components/company/CompanyManagementDashboard';
 import { BranchSelector } from '@/components/company/BranchSelector';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
+import { SupplierDocumentLibrary } from '@/components/supplier/SupplierDocumentLibrary';
 
 interface SupplierDashboardProps {
   user: { 
@@ -427,6 +429,10 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
               <FileCheck className="w-4 h-4 mr-2" />
               {t('supplier:tabs.documents')}
             </TabsTrigger>
+            <TabsTrigger value="library">
+              <FileText className="w-4 h-4 mr-2" />
+              Document Library
+            </TabsTrigger>
             <TabsTrigger 
               value="connections"
               className={highlightedTab === 'connections' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
@@ -552,6 +558,12 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
 
           <TabsContent value="documents" className="space-y-6">
             <SupplierDocumentsDashboard />
+          </TabsContent>
+
+          <TabsContent value="library" className="space-y-6">
+            {supplierProfile && (
+              <SupplierDocumentLibrary supplierId={supplierProfile.id} />
+            )}
           </TabsContent>
 
           <TabsContent value="connections" className="space-y-6">

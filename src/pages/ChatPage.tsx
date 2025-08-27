@@ -13,6 +13,7 @@ import ComplianceVisualizer from "@/components/chat/ComplianceVisualizer";
 import ComplianceInsightsDashboard from "@/components/chat/ComplianceInsightsDashboard";
 import DailyInsightsPanel from "@/components/chat/DailyInsightsPanel";
 import ActionExecutor from "@/components/chat/ActionExecutor";
+import ReactMarkdown from "react-markdown";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { 
@@ -435,20 +436,33 @@ const ChatPage = () => {
           )}
           
           {parsed.sections?.map((section, index) => (
-            <div key={index} className="space-y-3">
-              <h4 className="font-semibold text-foreground">{section.title}</h4>
-              {section.type === 'list' ? (
-                <div className="space-y-1 pl-4">
-                  {section.content.split('\n').filter(line => line.trim()).map((item, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2.5 flex-shrink-0" />
-                      <span className="text-muted-foreground">{item.replace(/^[-•]\s*/, '')}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground leading-relaxed">{section.content}</p>
-              )}
+            <div
+              key={index}
+              className={`rounded-lg border border-border/50 p-4 space-y-3 ${
+                section.type === 'executive_summary' 
+                  ? 'bg-primary/5 border-primary/20' 
+                  : section.type === 'actions'
+                  ? 'bg-secondary/5 border-secondary/20'
+                  : 'bg-card/30'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <h4 className="font-semibold text-card-foreground">
+                  {section.title}
+                </h4>
+              </div>
+              <div className="text-muted-foreground leading-relaxed prose prose-sm max-w-none dark:prose-invert prose-strong:text-foreground prose-ul:list-disc prose-ul:pl-4 prose-li:text-muted-foreground">
+                <ReactMarkdown
+                  components={{
+                    p: ({ children }) => <p className="mb-2">{children}</p>,
+                    ul: ({ children }) => <ul className="space-y-1">{children}</ul>,
+                    li: ({ children }) => <li className="text-muted-foreground">{children}</li>,
+                    strong: ({ children }) => <strong className="text-foreground font-semibold">{children}</strong>,
+                  }}
+                >
+                  {section.content}
+                </ReactMarkdown>
+              </div>
             </div>
           ))}
 

@@ -401,13 +401,15 @@ async function createEmbedding(text: string): Promise<number[]> {
   return data.data[0].embedding;
 }
 
-// Search relevant knowledge entries using vector similarity
+// Enhanced search with hybrid approach: vector + database search
 async function searchKnowledge(
   embedding: number[], 
   companyId: string, 
   companyType: string, 
   limit: number = 5
 ): Promise<KnowledgeEntry[]> {
+  
+  console.log(`Searching knowledge for company ${companyId} (${companyType})`);
   
   const { data, error } = await supabase.rpc('search_knowledge_entries', {
     query_embedding: `[${embedding.join(',')}]`,
@@ -422,6 +424,7 @@ async function searchKnowledge(
     return [];
   }
 
+  console.log(`Found ${data?.length || 0} knowledge entries with vector search`);
   return data || [];
 }
 

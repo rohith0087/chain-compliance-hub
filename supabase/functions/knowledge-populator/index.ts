@@ -293,17 +293,47 @@ serve(async (req) => {
   }
 
   try {
-    const { company_id, company_type } = await req.json();
+    const { company_id, company_type, incremental = false } = await req.json();
 
     if (!company_id || !company_type) {
       throw new Error('company_id and company_type are required');
+    }
+
+    console.log(`Populating knowledge base for company: ${company_id} (${company_type}), incremental: ${incremental}`);
+    
+    // If incremental update, check if recent knowledge entries exist
+    if (incremental) {
+      const { data: recentEntries } = await supabase
+        .from('ai_knowledge_entries')
+        .select('id')
+        .eq('company_id', company_id)
+        .eq('company_type', company_type)
+        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+        .limit(1);
+      
+      if (recentEntries && recentEntries.length > 0) {
+        console.log(`Skipping incremental update - recent entries exist for company ${company_id}`);
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: `Knowledge base already up to date for company ${company_id}`,
+            timestamp: new Date().toISOString(),
+            skipped: true
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
     }
 
     await populateKnowledgeBase(company_id, company_type);
 
     return new Response(JSON.stringify({
       success: true,
-      message: `Knowledge base populated for ${company_type} ${company_id}`
+      message: `Knowledge base populated for ${company_type} ${company_id}`,
+      timestamp: new Date().toISOString(),
+      incremental
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

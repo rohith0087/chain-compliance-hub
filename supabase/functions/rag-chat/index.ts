@@ -356,7 +356,18 @@ Respond in JSON format:
 
   try {
     const data = await response.json();
-    const analysis = JSON.parse(data.choices[0].message.content);
+    const rawContent = data.choices[0].message.content;
+    
+    // Clean the response content to remove markdown code blocks
+    const cleanedContent = rawContent
+      .replace(/```json\s*/g, '')
+      .replace(/```\s*$/g, '')
+      .trim();
+    
+    console.log('Raw intent response:', rawContent);
+    console.log('Cleaned intent response:', cleanedContent);
+    
+    const analysis = JSON.parse(cleanedContent);
     return analysis;
   } catch (error) {
     console.error('Intent analysis failed:', error);
@@ -885,8 +896,26 @@ Data available: ${documents.length} documents, ${contextualData.complianceMetric
   const rawResponse = data.choices[0].message.content;
   
   try {
+    // Clean the response content to remove markdown code blocks and fix common issues
+    const cleanedResponse = rawResponse
+      .replace(/```json\s*/g, '')
+      .replace(/```\s*$/g, '')
+      .replace(/^```/g, '')
+      .replace(/```$/g, '')
+      .trim();
+    
+    console.log('Raw OpenAI response:', rawResponse);
+    console.log('Cleaned response for parsing:', cleanedResponse);
+    
     // Try to parse structured response
-    const structuredResponse = JSON.parse(rawResponse);
+    const structuredResponse = JSON.parse(cleanedResponse);
+    
+    // Ensure we have the required response field
+    if (!structuredResponse.response && !structuredResponse.content) {
+      structuredResponse.response = typeof structuredResponse === 'string' 
+        ? structuredResponse 
+        : 'I have analyzed your request and prepared a comprehensive response.';
+    }
     
     // Enhance with actual data - prioritize expiring docs for consistency
     if (intent.intent_type === 'expired_documents' || expiringDocs.length > 0) {
@@ -907,16 +936,39 @@ Data available: ${documents.length} documents, ${contextualData.complianceMetric
     
     return structuredResponse;
   } catch (parseError) {
-    console.error('Failed to parse structured response, falling back to enhanced simple:', parseError);
+    console.error('Failed to parse structured response, creating formatted fallback:', parseError);
+    console.error('Raw response that failed:', rawResponse);
+    
+    // Create a well-formatted fallback response instead of showing raw JSON
+    const cleanContent = rawResponse
+      .replace(/```json\s*/g, '')
+      .replace(/```\s*$/g, '')
+      .replace(/^\{.*\}$/s, '') // Remove any malformed JSON
+      .trim();
+    
+    // If it looks like it was supposed to be JSON but failed, extract meaningful content
+    let formattedContent = cleanContent;
+    if (rawResponse.includes('"response"') || rawResponse.includes('"content"')) {
+      // Try to extract just the response content from malformed JSON
+      const responseMatch = rawResponse.match(/"response":\s*"([^"]+)"/);
+      const contentMatch = rawResponse.match(/"content":\s*"([^"]+)"/);
+      
+      if (responseMatch) {
+        formattedContent = responseMatch[1];
+      } else if (contentMatch) {
+        formattedContent = contentMatch[1];
+      }
+    }
     
     // Enhanced fallback response with contextual intelligence
-    const baseContent = rawResponse;
+    const baseContent = formattedContent || "I've analyzed your compliance data and can provide insights based on the available information.";
     const enhancedContent = contextualData.dailyOverview 
-      ? `${baseContent}\n\nToday's Priorities:\n${contextualData.dailyOverview.pending_tasks.join('\n')}`
+      ? `${baseContent}\n\n**Today's Priorities:**\n${contextualData.dailyOverview.pending_tasks.map(task => `• ${task}`).join('\n')}`
       : baseContent;
 
     return {
       type: 'simple',
+      response: enhancedContent,
       content: enhancedContent,
       documents: documents.length > 0 ? documents : undefined,
       visual_data: visualData,

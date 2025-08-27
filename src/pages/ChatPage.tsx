@@ -394,14 +394,26 @@ const ChatPage = () => {
       return (
 
         <div className="space-y-6">
-{(parsed.response || parsed.content) && (
-            <p className="text-muted-foreground leading-relaxed">
-              {typeof parsed.response === 'string' 
-                ? parsed.response 
-                : typeof parsed.content === 'string' 
-                ? parsed.content 
-                : JSON.stringify(parsed.response || parsed.content)}
-            </p>
+          {(parsed.response || parsed.content) && (
+            <div className="text-muted-foreground leading-relaxed">
+              {typeof parsed.response === 'string' ? (
+                <div dangerouslySetInnerHTML={{
+                  __html: parsed.response
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/\n/g, '<br />')
+                }} />
+              ) : typeof parsed.content === 'string' ? (
+                <div dangerouslySetInnerHTML={{
+                  __html: parsed.content
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/\n/g, '<br />')
+                }} />
+              ) : (
+                <p>I've processed your request and prepared a response based on your compliance data.</p>
+              )}
+            </div>
           )}
           
           {/* Action Executor */}

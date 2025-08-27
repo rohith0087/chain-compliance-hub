@@ -52,13 +52,10 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
-				// Enhanced colorful design tokens
-				'blue-vibrant': 'hsl(var(--blue-vibrant))',
-				'purple-vibrant': 'hsl(var(--purple-vibrant))',
-				'green-vibrant': 'hsl(var(--green-vibrant))',
-				'orange-vibrant': 'hsl(var(--orange-vibrant))',
-				'teal-vibrant': 'hsl(var(--teal-vibrant))',
-				'pink-vibrant': 'hsl(var(--pink-vibrant))',
+				// Strategic accent colors
+				'blue-accent': 'hsl(var(--blue-accent))',
+				'purple-accent': 'hsl(var(--purple-accent))',
+				'green-accent': 'hsl(var(--green-accent))',
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
@@ -77,13 +74,12 @@ export default {
 			},
 			backgroundImage: {
 				'gradient-primary': 'var(--gradient-primary)',
-				'gradient-vibrant': 'var(--gradient-vibrant)',
+				'gradient-hero': 'var(--gradient-hero)',
 				'gradient-subtle': 'var(--gradient-subtle)',
 			},
 			boxShadow: {
-				'colorful': 'var(--shadow-colorful)',
-				'glow': 'var(--shadow-glow)',
-				'green': 'var(--shadow-green)',
+				'elegant': 'var(--shadow-elegant)',
+				'subtle': 'var(--shadow-subtle)',
 			},
 			keyframes: {
 				'accordion-down': {

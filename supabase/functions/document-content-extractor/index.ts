@@ -21,13 +21,24 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const { document_id, file_path } = await req.json();
 
-    console.log(`Processing document: ${document_id}, file: ${file_path}`);
+    console.log(`Processing document with Vision API: ${document_id}, file: ${file_path}`);
 
     // Update processing status
     await supabase
       .from('supplier_document_library')
       .update({ extraction_status: 'processing' })
       .eq('id', document_id);
+
+    // Get document info for context
+    const { data: docData } = await supabase
+      .from('supplier_document_library')
+      .select('supplier_id, document_name, category, description, document_type')
+      .eq('id', document_id)
+      .single();
+
+    if (!docData) {
+      throw new Error('Document not found');
+    }
 
     // Download file from storage
     const { data: fileData, error: downloadError } = await supabase.storage
@@ -38,35 +49,41 @@ serve(async (req) => {
       throw new Error(`Failed to download file: ${downloadError.message}`);
     }
 
-    let extractedText = '';
+    // Convert file to base64 for Vision API
     const fileBuffer = await fileData.arrayBuffer();
+    const base64Data = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)));
     const fileName = file_path.toLowerCase();
 
-    // Extract text based on file type
-    if (fileName.endsWith('.pdf')) {
-      extractedText = await extractPDFText(fileBuffer);
-    } else if (fileName.endsWith('.txt')) {
-      extractedText = new TextDecoder().decode(fileBuffer);
-    } else if (fileName.endsWith('.docx')) {
-      // For now, extract basic text - can be enhanced with docx parsing library
-      extractedText = `Document content from ${file_path}. Full DOCX parsing will be implemented in future versions.`;
-    } else {
-      throw new Error(`Unsupported file type: ${fileName}`);
+    // Determine file type for Vision API
+    let mimeType = 'application/pdf';
+    if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) {
+      mimeType = 'image/jpeg';
+    } else if (fileName.endsWith('.png')) {
+      mimeType = 'image/png';
+    } else if (fileName.endsWith('.pdf')) {
+      mimeType = 'application/pdf';
     }
 
-    // Generate content summary using OpenAI
-    const summary = await generateContentSummary(extractedText);
+    // Analyze document with OpenAI Vision
+    const analysisResult = await analyzeDocumentWithVision(
+      base64Data, 
+      mimeType, 
+      docData.category || 'compliance',
+      docData.document_type || 'certificate'
+    );
 
-    // Create embeddings for the content
-    const embedding = await createEmbedding(extractedText);
+    // Create embeddings for the extracted content
+    const embedding = await createEmbedding(analysisResult.extractedText);
 
-    // Update document with extracted content
+    // Update document with enhanced analysis
     const { error: updateError } = await supabase
       .from('supplier_document_library')
       .update({
         extraction_status: 'completed',
-        content_extracted: extractedText,
-        content_summary: summary
+        content_extracted: analysisResult.extractedText,
+        content_summary: analysisResult.summary,
+        ai_suggested_description: analysisResult.enhancedDescription,
+        ai_suggested_tags: analysisResult.suggestedTags
       })
       .eq('id', document_id);
 
@@ -74,14 +91,7 @@ serve(async (req) => {
       throw new Error(`Failed to update document: ${updateError.message}`);
     }
 
-    // Get supplier and document info for knowledge entry
-    const { data: docData } = await supabase
-      .from('supplier_document_library')
-      .select('supplier_id, document_name, category, description')
-      .eq('id', document_id)
-      .single();
-
-    // Store in AI knowledge entries
+    // Store enhanced knowledge entry
     await supabase
       .from('ai_knowledge_entries')
       .upsert({
@@ -89,24 +99,37 @@ serve(async (req) => {
         company_type: 'supplier',
         entry_type: 'document',
         title: docData.document_name,
-        content: extractedText,
+        content: analysisResult.extractedText,
         source_reference: document_id,
         embedding: embedding,
         metadata: {
           category: docData.category,
           description: docData.description,
           document_id: document_id,
-          summary: summary
+          summary: analysisResult.summary,
+          document_type: analysisResult.documentType,
+          key_dates: analysisResult.keyDates,
+          entities: analysisResult.entities,
+          compliance_standards: analysisResult.complianceStandards,
+          risk_flags: analysisResult.riskFlags,
+          confidence_score: analysisResult.confidenceScore
         }
       });
 
-    console.log(`Successfully processed document: ${document_id}`);
+    console.log(`Successfully processed document with Vision API: ${document_id}`);
 
     return new Response(JSON.stringify({
       success: true,
       document_id,
-      extracted_length: extractedText.length,
-      summary_length: summary.length
+      analysis: {
+        summary: analysisResult.summary,
+        document_type: analysisResult.documentType,
+        confidence_score: analysisResult.confidenceScore,
+        key_dates: analysisResult.keyDates,
+        entities: analysisResult.entities,
+        compliance_standards: analysisResult.complianceStandards,
+        risk_flags: analysisResult.riskFlags
+      }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -114,7 +137,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error processing document:', error);
 
-    // Update status to failed if we have document_id
+    // Update status to failed
     try {
       const body = await req.clone().json();
       if (body.document_id) {
@@ -137,30 +160,129 @@ serve(async (req) => {
   }
 });
 
-async function extractPDFText(arrayBuffer: ArrayBuffer): Promise<string> {
+async function analyzeDocumentWithVision(
+  base64Data: string, 
+  mimeType: string, 
+  category: string,
+  documentType: string
+): Promise<{
+  summary: string;
+  extractedText: string;
+  documentType: string;
+  keyDates: string[];
+  entities: string[];
+  complianceStandards: string[];
+  riskFlags: string[];
+  confidenceScore: number;
+  enhancedDescription: string;
+  suggestedTags: string[];
+}> {
+  
+  // Create category-specific prompts
+  const categoryPrompts = {
+    compliance: "This is a compliance document. Focus on certifications, standards, expiration dates, and regulatory requirements.",
+    safety: "This is a safety document. Focus on safety protocols, incident reports, training records, and safety certifications.",
+    quality: "This is a quality document. Focus on quality standards, test results, specifications, and quality certifications.",
+    financial: "This is a financial document. Focus on financial data, audit results, insurance information, and financial compliance.",
+    default: "This is a business document. Analyze its content comprehensively."
+  };
+
+  const prompt = `${categoryPrompts[category] || categoryPrompts.default}
+
+Please analyze this document and provide a comprehensive analysis in JSON format:
+
+{
+  "summary": "A detailed 3-4 sentence summary of the document's main content and purpose",
+  "extractedText": "Full text content extracted from the document",
+  "documentType": "Specific type of document (e.g., 'ISO 9001 Certificate', 'HACCP Certificate', 'Insurance Policy', 'Safety Training Record')",
+  "keyDates": ["Array of important dates found (issue dates, expiration dates, validity periods)"],
+  "entities": ["Array of important entities (company names, certificate numbers, reference numbers, contact information)"],
+  "complianceStandards": ["Array of compliance standards mentioned (ISO standards, regulatory requirements, certifications)"],
+  "riskFlags": ["Array of potential risks or issues (expiring soon, missing information, non-compliance indicators)"],
+  "confidenceScore": 0.95,
+  "enhancedDescription": "A detailed description of what this document contains and its business purpose",
+  "suggestedTags": ["Array of relevant tags for categorization and search"]
+}
+
+Focus on accuracy and extract all visible text. Pay special attention to dates, numbers, company names, and certification details.`;
+
   try {
-    // Basic PDF text extraction - can be enhanced with proper PDF parsing library
-    const uint8Array = new Uint8Array(arrayBuffer);
-    const text = new TextDecoder().decode(uint8Array);
-    
-    // Simple text extraction from PDF (this is very basic)
-    // In production, you'd want to use a proper PDF parsing library
-    const matches = text.match(/BT\s+(.*?)\s+ET/gs);
-    if (matches) {
-      return matches.map(match => {
-        return match.replace(/BT\s+|\s+ET/g, '').replace(/\(([^)]+)\)/g, '$1');
-      }).join(' ').trim();
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: prompt
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:${mimeType};base64,${base64Data}`,
+                  detail: 'high'
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 2000,
+        temperature: 0.1,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI Vision API error: ${response.statusText}`);
     }
-    
-    // Fallback: extract readable text patterns
-    const readableText = text.replace(/[^\x20-\x7E\n]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    
-    return readableText.length > 100 ? readableText : `PDF document content from uploaded file. Text extraction completed.`;
+
+    const data = await response.json();
+    const content = data.choices[0].message.content;
+
+    try {
+      // Try to parse as JSON
+      const result = JSON.parse(content);
+      
+      // Validate required fields and provide defaults
+      return {
+        summary: result.summary || 'Document analysis completed',
+        extractedText: result.extractedText || 'Content extracted from document',
+        documentType: result.documentType || documentType,
+        keyDates: Array.isArray(result.keyDates) ? result.keyDates : [],
+        entities: Array.isArray(result.entities) ? result.entities : [],
+        complianceStandards: Array.isArray(result.complianceStandards) ? result.complianceStandards : [],
+        riskFlags: Array.isArray(result.riskFlags) ? result.riskFlags : [],
+        confidenceScore: typeof result.confidenceScore === 'number' ? result.confidenceScore : 0.8,
+        enhancedDescription: result.enhancedDescription || result.summary || 'Document processed with Vision API',
+        suggestedTags: Array.isArray(result.suggestedTags) ? result.suggestedTags : [category, documentType]
+      };
+    } catch (parseError) {
+      console.error('Failed to parse Vision API response as JSON:', parseError);
+      
+      // Fallback: extract summary from text response
+      return {
+        summary: content.substring(0, 500) + '...',
+        extractedText: content,
+        documentType: documentType,
+        keyDates: [],
+        entities: [],
+        complianceStandards: [],
+        riskFlags: [],
+        confidenceScore: 0.6,
+        enhancedDescription: 'Document analyzed with Vision API',
+        suggestedTags: [category, documentType]
+      };
+    }
+
   } catch (error) {
-    console.error('PDF extraction error:', error);
-    return `PDF document uploaded successfully. Content extraction will be enhanced in future versions.`;
+    console.error('Vision API analysis error:', error);
+    throw new Error(`Failed to analyze document with Vision API: ${error.message}`);
   }
 }
 
@@ -185,34 +307,5 @@ async function createEmbedding(text: string): Promise<number[]> {
   return data.data[0].embedding;
 }
 
-async function generateContentSummary(text: string): Promise<string> {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${openAIApiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a document analyzer. Create a concise summary of the document content in 2-3 sentences.'
-        },
-        {
-          role: 'user',
-          content: `Summarize this document content: ${text.substring(0, 4000)}`
-        }
-      ],
-      max_tokens: 150,
-      temperature: 0.3,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`OpenAI API error: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  return data.choices[0].message.content;
-}
+// This function is now replaced by analyzeDocumentWithVision above
+// Keeping createEmbedding function as it's still needed

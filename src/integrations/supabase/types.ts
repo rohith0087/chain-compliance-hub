@@ -800,6 +800,47 @@ export type Database = {
           },
         ]
       }
+      document_processing_logs: {
+        Row: {
+          created_at: string
+          document_id: string
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          processing_step: string
+          processing_time_ms: number | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          processing_step: string
+          processing_time_ms?: number | null
+          status: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          processing_step?: string
+          processing_time_ms?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_processing_logs_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_document_library"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_requests: {
         Row: {
           branch_id: string | null
@@ -1179,6 +1220,87 @@ export type Database = {
             columns: ["shared_to_branch_id"]
             isOneToOne: false
             referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_document_library: {
+        Row: {
+          category: string | null
+          content_extracted: string | null
+          content_summary: string | null
+          created_at: string
+          description: string | null
+          document_name: string
+          document_type: string
+          extraction_status: string
+          file_path: string
+          file_size: number | null
+          id: string
+          is_current_version: boolean
+          mime_type: string | null
+          original_document_id: string | null
+          supplier_id: string
+          tags: string[] | null
+          updated_at: string
+          uploaded_by: string
+          version: number
+        }
+        Insert: {
+          category?: string | null
+          content_extracted?: string | null
+          content_summary?: string | null
+          created_at?: string
+          description?: string | null
+          document_name: string
+          document_type: string
+          extraction_status?: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          is_current_version?: boolean
+          mime_type?: string | null
+          original_document_id?: string | null
+          supplier_id: string
+          tags?: string[] | null
+          updated_at?: string
+          uploaded_by: string
+          version?: number
+        }
+        Update: {
+          category?: string | null
+          content_extracted?: string | null
+          content_summary?: string | null
+          created_at?: string
+          description?: string | null
+          document_name?: string
+          document_type?: string
+          extraction_status?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          is_current_version?: boolean
+          mime_type?: string | null
+          original_document_id?: string | null
+          supplier_id?: string
+          tags?: string[] | null
+          updated_at?: string
+          uploaded_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_document_library_original_document_id_fkey"
+            columns: ["original_document_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_document_library"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_document_library_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]

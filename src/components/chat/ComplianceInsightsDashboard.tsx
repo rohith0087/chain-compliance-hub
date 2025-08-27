@@ -160,9 +160,9 @@ const ComplianceInsightsDashboard: React.FC<ComplianceInsightsDashboardProps> = 
             .eq('document_requests.supplier_id', supplierId);
 
           const docCount = docs?.length || 0;
-          const approvedDocs = docs?.filter(d => d.status === 'approved').length || 0;
+          const approvedDocs = docs?.filter(d => d && d.status === 'approved').length || 0;
           const expiredDocs = docs?.filter(d => {
-            if (!d.expiration_date) return false;
+            if (!d || !d.expiration_date) return false;
             return new Date(d.expiration_date) < new Date();
           }).length || 0;
 

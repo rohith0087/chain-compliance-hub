@@ -1672,6 +1672,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      cleanup_expired_knowledge_entries: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       create_notification: {
         Args: {
           p_message: string
@@ -1705,6 +1709,15 @@ export type Database = {
           total_chat_sessions: number
           total_document_requests: number
           total_document_uploads: number
+        }[]
+      }
+      get_companies_for_knowledge_refresh: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          company_id: string
+          company_name: string
+          company_type: string
+          document_count: number
         }[]
       }
       halfvec_avg: {

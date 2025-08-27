@@ -35,7 +35,8 @@ import {
   Menu,
   ChevronDown,
   Building,
-  Shield
+  Shield,
+  RotateCcw
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -113,6 +114,7 @@ const ChatPage = () => {
   const [dynamicQuestions, setDynamicQuestions] = useState<string[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<DocumentReference | null>(null);
   const [isDocumentViewerOpen, setIsDocumentViewerOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -355,6 +357,45 @@ const ChatPage = () => {
   const closeDocumentViewer = () => {
     setIsDocumentViewerOpen(false);
     setSelectedDocument(null);
+  };
+
+  const triggerKnowledgeRefresh = async () => {
+    if (!companyInfo) {
+      toast({
+        title: "Error",
+        description: "Company information not available",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsRefreshing(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('knowledge-refresh', {
+        body: {
+          mode: 'initial_population',
+          company_id: companyInfo.id,
+          company_type: companyInfo.type
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Knowledge Base Updated",
+        description: data?.message || "Knowledge base has been refreshed successfully",
+      });
+    } catch (error) {
+      console.error('Error refreshing knowledge base:', error);
+      toast({
+        title: "Refresh Failed",
+        description: "Failed to refresh knowledge base. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -834,10 +875,23 @@ const ChatPage = () => {
               </div>
             </div>
             
-            <Button variant="outline" size="sm" onClick={startNewChat}>
-              <Plus className="w-4 h-4 mr-1" />
-              New Chat
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={triggerKnowledgeRefresh}
+                disabled={isRefreshing}
+                className="flex items-center gap-2"
+                title="Refresh Knowledge Base"
+              >
+                <RotateCcw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Updating...' : ''}
+              </Button>
+              <Button variant="outline" size="sm" onClick={startNewChat}>
+                <Plus className="w-4 h-4 mr-1" />
+                New Chat
+              </Button>
+            </div>
           </div>
         </div>
 

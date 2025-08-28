@@ -213,7 +213,7 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
         .eq('email', email)
         .single();
 
-      // If profile exists, check if that specific user is already part of the company
+      // If profile exists, check if that specific user is already part of the same branch
       if (profileData && !profileError) {
         const { data: existingUser } = await supabase
           .from('company_users')
@@ -221,11 +221,13 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
           .eq('company_id', companyId)
           .eq('company_type', companyType)
           .eq('profile_id', profileData.id)
+          .eq('branch_id', branchId)
           .single();
 
         if (existingUser) {
-          toast.error('User is already part of this company');
-          return { error: 'User already exists in company' };
+          console.log('User already exists in this branch, resending invitation');
+          toast.info('User already invited to this branch - resending invitation email');
+          // Continue to send email but don't create duplicate record
         }
       }
 
@@ -248,7 +250,7 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
         .eq('id', companyId)
         .single();
 
-      // Create database record first
+      // Create database record first (with duplicate handling)
       const invitationData = {
         company_id: companyId,
         company_type: companyType,
@@ -259,13 +261,21 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
         profile_id: profileData?.id || '00000000-0000-0000-0000-000000000000'
       };
 
+      let isResendingInvite = false;
       const { error: insertError } = await supabase
         .from('company_users')
         .insert(invitationData);
 
       if (insertError) {
-        console.error('Error creating invitation record:', insertError);
-        throw insertError;
+        // Check if it's a duplicate key constraint violation
+        if (insertError.message?.includes('duplicate key') || insertError.code === '23505') {
+          console.log('Duplicate invitation detected - this is a resend');
+          isResendingInvite = true;
+          // Continue to send email despite duplicate record
+        } else {
+          console.error('Error creating invitation record:', insertError);
+          throw insertError;
+        }
       }
 
       // Send invitation email
@@ -287,7 +297,9 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
           throw new Error(response.error.message || 'Failed to send email');
         }
         
-        toast.success(`Invitation sent to ${email} for ${role} role`);
+        const actionType = isResendingInvite ? 'resent' : 'sent';
+        console.log(`Invitation ${actionType} successfully to ${email} for ${role} role in branch ${branchDetails?.branch_name}`);
+        toast.success(`Invitation ${actionType} to ${email} for ${role} role`);
       } catch (emailError) {
         console.error('Error sending invitation email:', emailError);
         // Show specific error message for email delivery issues

@@ -331,19 +331,36 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
           throw new Error(response.error.message || 'Failed to send email');
         }
         
-        const actionType = isResendingInvite ? 'resent' : 'sent';
-        console.log(`Invitation ${actionType} successfully to ${email} for ${role} role in branch ${branchDetails?.branch_name}`);
-        toast.success(`Invitation ${actionType} to ${email} for ${role} role`);
+        // Handle different response types
+        if (response.data?.userExists && response.data?.alreadyInCompany) {
+          toast.error('User is already part of this company');
+          return { error: 'User already in company' };
+        } else if (response.data?.userExists && !response.data?.alreadyInCompany) {
+          toast.success(`Existing user invited to join company!`);
+        } else {
+          const actionType = isResendingInvite ? 'resent' : 'sent';
+          toast.success(`New user account created and invitation ${actionType}!`);
+        }
+        
+        console.log(`Invitation processed successfully for ${email} for ${role} role in branch ${branchDetails?.branch_name}`);
       } catch (emailError) {
         console.error('Error sending invitation email:', emailError);
-        // Show specific error message for email delivery issues
-        if (emailError.message?.includes('domain')) {
+        
+        // Handle specific error messages
+        if (emailError.message?.includes('already been registered') || emailError.message?.includes('User already exists')) {
+          toast.error('This email is already registered. Please contact support.');
+        } else if (emailError.message?.includes('already part of this company')) {
+          toast.error('User is already part of this company');
+          return { error: 'User already in company' };
+        } else if (emailError.message?.includes('domain')) {
           toast.error(`Email delivery failed: Please verify your domain in Resend dashboard`);
         } else {
           toast.error(`Email delivery failed: ${emailError.message || 'Please check your email configuration'}`);
         }
-        // Still show the invitation was created in the system
-        toast.info(`User invitation created for ${email} (manual follow-up may be needed)`);
+        // Still show the invitation was created in the system for general errors
+        if (!emailError.message?.includes('already')) {
+          toast.info(`User invitation created for ${email} (manual follow-up may be needed)`);
+        }
       }
 
       await fetchCompanyUsers(); // Refresh the users list
@@ -400,7 +417,16 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
         throw new Error(response.error.message || 'Failed to send email');
       }
       
-      toast.success(`Invitation resent to ${userEmail}`);
+      // Handle different response types for resend
+      if (response.data?.userExists && response.data?.alreadyInCompany) {
+        toast.error('User is already part of this company');
+        return { error: 'User already in company' };
+      } else if (response.data?.userExists && !response.data?.alreadyInCompany) {
+        toast.success(`Company invitation resent to ${userEmail}!`);
+      } else {
+        toast.success(`Invitation resent to ${userEmail}!`);
+      }
+      
       await fetchCompanyUsers(); // Refresh the users list
       return { data: response.data, error: null };
     } catch (err) {

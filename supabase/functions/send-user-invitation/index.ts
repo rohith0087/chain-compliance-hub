@@ -61,7 +61,175 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Processing user invitation for:", recipientEmail);
 
-    // Generate secure credentials
+    // Check if user already exists
+    const { data: existingUser, error: userCheckError } = await supabase.auth.admin.listUsers();
+    const userExists = existingUser?.users?.find(user => user.email === recipientEmail);
+
+    if (userExists) {
+      console.log("User already exists:", recipientEmail);
+      
+      // Check if user is already in this company
+      const { data: existingCompanyUser } = await supabase
+        .from('company_users')
+        .select('*')
+        .eq('profile_id', userExists.id)
+        .eq('company_id', companyId)
+        .eq('company_type', companyType)
+        .single();
+
+      if (existingCompanyUser) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "User is already part of this company",
+            userExists: true,
+            alreadyInCompany: true
+          }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json", ...corsHeaders }
+          }
+        );
+      }
+
+      // Add existing user to company
+      const inviteToken = await generateInviteToken();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      // Create company_users record for existing user
+      const { error: companyUserError } = await supabase
+        .from('company_users')
+        .insert({
+          profile_id: userExists.id,
+          company_id: companyId,
+          company_type: companyType,
+          branch_id: branchId,
+          role: role,
+          status: 'pending',
+          invitation_token: inviteToken
+        });
+
+      if (companyUserError) {
+        console.error('Error creating company_users record:', companyUserError);
+        throw new Error(`Failed to add user to company: ${companyUserError.message}`);
+      }
+
+      // Store invitation for existing user
+      const { error: inviteError } = await supabase
+        .from('user_invitations')
+        .insert({
+          token: inviteToken,
+          user_id: userExists.id,
+          email: recipientEmail,
+          company_id: companyId,
+          company_type: companyType,
+          branch_id: branchId,
+          role: role,
+          invited_by: inviterEmail,
+          expires_at: expiresAt.toISOString(),
+          temp_password: null // No temp password for existing users
+        });
+
+      // Send different email for existing users
+      const baseUrl = "https://compliance.tracer2c.com";
+      const roleDisplayName = role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      const joinUrl = `${baseUrl}/dashboard`;
+
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Join ${companyName} - Company Invitation</title>
+          </head>
+          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 30px;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">You're Invited to Join ${companyName}!</h1>
+              <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">A new opportunity awaits</p>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 25px; border-radius: 8px; margin-bottom: 25px;">
+              <h2 style="color: #333; margin-top: 0;">Invitation Details</h2>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; font-weight: 600; color: #555;">Company:</td>
+                  <td style="padding: 8px 0;">${companyName}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: 600; color: #555;">Branch:</td>
+                  <td style="padding: 8px 0;">${branchName}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: 600; color: #555;">Role:</td>
+                  <td style="padding: 8px 0;">${roleDisplayName}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: 600; color: #555;">Invited by:</td>
+                  <td style="padding: 8px 0;">${inviterName}</td>
+                </tr>
+              </table>
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${joinUrl}" 
+                 style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+                🏢 Log In to Access Your New Company
+              </a>
+            </div>
+
+            <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; border-left: 4px solid #2196f3;">
+              <h3 style="color: #1976d2; margin-top: 0;">What's next:</h3>
+              <p style="margin: 0; color: #1976d2;">Simply log in with your existing account credentials to access ${companyName} and start collaborating with your new team!</p>
+            </div>
+
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #666;">
+              <p><strong>Need help?</strong> Contact ${inviterName} at ${inviterEmail}</p>
+              <p style="margin-bottom: 0;">This invitation was sent to ${recipientEmail}.</p>
+            </div>
+          </body>
+        </html>
+      `;
+
+      const emailResponse = await resend.emails.send({
+        from: "Compliance Platform <no-reply@tracer2c.com>",
+        to: [recipientEmail],
+        subject: `Join ${companyName} - Company Invitation`,
+        html: htmlContent,
+      });
+
+      if (emailResponse.error) {
+        console.error("Failed to send company invitation:", emailResponse.error);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Failed to send invitation email"
+          }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json", ...corsHeaders }
+          }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          messageId: emailResponse.data?.id,
+          userId: userExists.id,
+          message: "Existing user invited to join company",
+          userExists: true,
+          alreadyInCompany: false
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders }
+        }
+      );
+    }
+
+    // User doesn't exist, create new account
     const tempPassword = generateSecurePassword(16);
     const inviteToken = await generateInviteToken();
     const baseUrl = "https://compliance.tracer2c.com";
@@ -127,6 +295,24 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (inviteError && !inviteError.message.includes('does not exist')) {
       console.error('Error storing invitation details:', inviteError);
+      // Continue as this is not critical for the invitation flow
+    }
+
+    // Create company_users record for new user
+    const { error: companyUserError } = await supabase
+      .from('company_users')
+      .insert({
+        profile_id: authUser.user.id,
+        company_id: companyId,
+        company_type: companyType,
+        branch_id: branchId,
+        role: role,
+        status: 'pending',
+        invitation_token: inviteToken
+      });
+
+    if (companyUserError) {
+      console.error('Error creating company_users record:', companyUserError);
       // Continue as this is not critical for the invitation flow
     }
 
@@ -278,6 +464,8 @@ const handler = async (req: Request): Promise<Response> => {
         userId: authUser.user.id,
         inviteToken: inviteToken,
         message: "User account created and invitation sent successfully",
+        userExists: false,
+        alreadyInCompany: false
       }),
       {
         status: 200,

@@ -286,10 +286,11 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
             companyName: companyDetails?.company_name || 'Unknown Company',
             companyType: companyType,
             branchName: branchDetails?.branch_name || 'Unknown Branch',
+            branchId: branchId,
+            companyId: companyId,
             role: role,
             inviterName: currentUserProfile?.full_name || user.email || 'Team Administrator',
-            inviterEmail: user.email || '',
-            signupUrl: `${window.location.origin}/auth`
+            inviterEmail: user.email || ''
           }
         });
         

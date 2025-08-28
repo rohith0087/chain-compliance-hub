@@ -545,8 +545,11 @@ export type Database = {
           company_type: string
           created_at: string
           id: string
+          invitation_token: string | null
           invited_by: string | null
           joined_at: string | null
+          last_login_at: string | null
+          password_reset_required: boolean | null
           profile_id: string
           role: Database["public"]["Enums"]["user_role"]
           status: string | null
@@ -558,8 +561,11 @@ export type Database = {
           company_type: string
           created_at?: string
           id?: string
+          invitation_token?: string | null
           invited_by?: string | null
           joined_at?: string | null
+          last_login_at?: string | null
+          password_reset_required?: boolean | null
           profile_id: string
           role?: Database["public"]["Enums"]["user_role"]
           status?: string | null
@@ -571,8 +577,11 @@ export type Database = {
           company_type?: string
           created_at?: string
           id?: string
+          invitation_token?: string | null
           invited_by?: string | null
           joined_at?: string | null
+          last_login_at?: string | null
+          password_reset_required?: boolean | null
           profile_id?: string
           role?: Database["public"]["Enums"]["user_role"]
           status?: string | null
@@ -1432,6 +1441,54 @@ export type Database = {
           id?: string
           ip_address?: string | null
           user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_invitations: {
+        Row: {
+          branch_id: string | null
+          company_id: string
+          company_type: string
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          role: string
+          temp_password: string
+          token: string
+          used_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          company_id: string
+          company_type: string
+          created_at?: string
+          email: string
+          expires_at: string
+          id?: string
+          invited_by: string
+          role: string
+          temp_password: string
+          token: string
+          used_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          company_id?: string
+          company_type?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          role?: string
+          temp_password?: string
+          token?: string
+          used_at?: string | null
           user_id?: string | null
         }
         Relationships: []

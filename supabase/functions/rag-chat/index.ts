@@ -561,7 +561,7 @@ async function basicDocumentSearch(query: string, companyId: string, companyType
   // Map to DocumentReference format
   let mappedDocs = documents.map(doc => ({
     id: doc.id,
-    title: doc.file_name,
+    title: doc.document_requests?.title || doc.file_name,
     supplier_name: doc.document_requests?.suppliers?.company_name,
     document_type: doc.document_requests?.document_type || 'Unknown',
     expiration_date: doc.expiration_date,
@@ -569,6 +569,7 @@ async function basicDocumentSearch(query: string, companyId: string, companyType
     file_path: doc.file_path,
     metadata: {
       request_title: doc.document_requests?.title,
+      file_name: doc.file_name,
       created_at: doc.created_at
     }
   }));

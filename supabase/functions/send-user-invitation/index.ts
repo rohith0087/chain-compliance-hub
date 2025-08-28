@@ -108,7 +108,7 @@ const handler = async (req: Request): Promise<Response> => {
     `;
 
     const emailResponse = await resend.emails.send({
-      from: "Compliance Platform <no-reply@yourdomain.com>", // Update this to your verified domain
+      from: "Compliance Platform <no-reply@tracer2c.com>",
       to: [recipientEmail],
       subject: `Invitation to join ${companyName} - ${branchName}`,
       html: htmlContent,

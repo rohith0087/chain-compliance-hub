@@ -30,6 +30,10 @@ export interface CompanyUser {
   joined_at?: string;
   created_at: string;
   updated_at: string;
+  // Additional profile fields
+  email?: string;
+  full_name?: string;
+  inviter_name?: string;
 }
 
 export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | 'supplier') => {
@@ -84,6 +88,7 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
     if (!companyId || !companyType) return;
 
     try {
+      // First get company users
       const { data: usersData, error: usersError } = await supabase
         .from('company_users')
         .select('*')
@@ -96,7 +101,37 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
         return;
       }
 
-      setCompanyUsers(usersData as CompanyUser[] || []);
+      // Then get profile data for each user
+      const enhancedUsers = await Promise.all(
+        (usersData || []).map(async (user) => {
+          // Get profile data
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('email, full_name')
+            .eq('id', user.profile_id)
+            .single();
+
+          // Get inviter data if exists
+          let inviterData = null;
+          if (user.invited_by) {
+            const { data } = await supabase
+              .from('profiles')
+              .select('email, full_name')
+              .eq('id', user.invited_by)
+              .single();
+            inviterData = data;
+          }
+
+          return {
+            ...user,
+            email: profileData?.email || 'No email',
+            full_name: profileData?.full_name || 'No name',
+            inviter_name: inviterData?.full_name || inviterData?.email || 'Unknown'
+          };
+        })
+      );
+
+      setCompanyUsers(enhancedUsers as CompanyUser[]);
     } catch (err) {
       console.error('Error in fetchCompanyUsers:', err);
     }
@@ -235,7 +270,7 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
 
       // Send invitation email
       try {
-        await supabase.functions.invoke('send-user-invitation', {
+        const response = await supabase.functions.invoke('send-user-invitation', {
           body: {
             recipientEmail: email,
             companyName: companyDetails?.company_name || 'Unknown Company',
@@ -248,11 +283,21 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
           }
         });
         
+        if (response.error) {
+          throw new Error(response.error.message || 'Failed to send email');
+        }
+        
         toast.success(`Invitation sent to ${email} for ${role} role`);
       } catch (emailError) {
         console.error('Error sending invitation email:', emailError);
-        // Don't fail the whole process if email fails
-        toast.success(`Invitation created for ${email} (email delivery may be delayed)`);
+        // Show specific error message for email delivery issues
+        if (emailError.message?.includes('domain')) {
+          toast.error(`Email delivery failed: Please verify your domain in Resend dashboard`);
+        } else {
+          toast.error(`Email delivery failed: ${emailError.message || 'Please check your email configuration'}`);
+        }
+        // Still show the invitation was created in the system
+        toast.info(`User invitation created for ${email} (manual follow-up may be needed)`);
       }
 
       await fetchCompanyUsers(); // Refresh the users list

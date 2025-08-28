@@ -108,7 +108,7 @@ const handler = async (req: Request): Promise<Response> => {
     `;
 
     const emailResponse = await resend.emails.send({
-      from: "Lovable <onboarding@resend.dev>",
+      from: "Compliance Platform <no-reply@yourdomain.com>", // Update this to your verified domain
       to: [recipientEmail],
       subject: `Invitation to join ${companyName} - ${branchName}`,
       html: htmlContent,

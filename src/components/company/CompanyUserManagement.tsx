@@ -216,16 +216,35 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
                   <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
                     <Users className="h-5 w-5 text-primary" />
                   </div>
-                  <div>
-                    <div className="font-medium">{user.profile_id}</div>
-                    <div className="text-sm text-muted-foreground flex items-center space-x-2">
-                      <Building className="h-3 w-3" />
-                      <span>{getBranchName(user.branch_id || '')}</span>
-                      <span>•</span>
-                      <Shield className="h-3 w-3" />
-                      <span>{getRoleDisplay(user.role)}</span>
-                    </div>
-                  </div>
+                   <div>
+                     <div className="font-medium">
+                       {user.status === 'pending' 
+                         ? `Pending invitation: ${user.email}` 
+                         : user.full_name || user.email || 'Unknown User'
+                       }
+                     </div>
+                     <div className="text-sm text-muted-foreground">
+                       {user.status !== 'pending' && user.email && (
+                         <div className="flex items-center space-x-1 mb-1">
+                           <Mail className="h-3 w-3" />
+                           <span>{user.email}</span>
+                         </div>
+                       )}
+                       <div className="flex items-center space-x-2">
+                         <Building className="h-3 w-3" />
+                         <span>{getBranchName(user.branch_id || '')}</span>
+                         <span>•</span>
+                         <Shield className="h-3 w-3" />
+                         <span>{getRoleDisplay(user.role)}</span>
+                         {user.status === 'pending' && user.inviter_name && (
+                           <>
+                             <span>•</span>
+                             <span>Invited by {user.inviter_name}</span>
+                           </>
+                         )}
+                       </div>
+                     </div>
+                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Badge 

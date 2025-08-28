@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import Index from "./pages/Index";
 import AuthPage from "./components/auth/AuthPage";
+import InvitePage from "./pages/InvitePage";
 import DynamicDashboard from "./components/dashboard/DynamicDashboard";
 import ChatPage from "./pages/ChatPage";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -80,6 +81,7 @@ const AppRoutes = () => {
                 <AuthPage />
               </PublicRoute>
             } />
+            <Route path="/invite/:token" element={<InvitePage />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <DynamicDashboard />

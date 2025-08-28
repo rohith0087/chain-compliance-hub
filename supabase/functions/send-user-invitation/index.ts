@@ -1,7 +1,12 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0'
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+)
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,10 +18,26 @@ interface UserInvitationRequest {
   companyName: string;
   companyType: string;
   branchName: string;
+  branchId: string;
+  companyId: string;
   role: string;
   inviterName: string;
   inviterEmail: string;
-  signupUrl?: string;
+}
+
+function generateSecurePassword(length: number = 12): string {
+  const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+  let password = "";
+  for (let i = 0; i < length; i++) {
+    password += charset.charAt(Math.floor(Math.random() * charset.length));
+  }
+  return password;
+}
+
+async function generateInviteToken(): Promise<string> {
+  const buffer = new Uint8Array(32);
+  crypto.getRandomValues(buffer);
+  return Array.from(buffer, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -31,16 +52,87 @@ const handler = async (req: Request): Promise<Response> => {
       companyName, 
       companyType,
       branchName,
+      branchId,
+      companyId,
       role, 
       inviterName, 
-      inviterEmail,
-      signupUrl = "https://edwerzutsknhuplidhsj.supabase.co/auth"
+      inviterEmail
     }: UserInvitationRequest = await req.json();
 
-    console.log("Sending user invitation to:", recipientEmail);
+    console.log("Processing user invitation for:", recipientEmail);
+
+    // Generate secure credentials
+    const tempPassword = generateSecurePassword(16);
+    const inviteToken = await generateInviteToken();
+    const baseUrl = "https://compliance.tracer2c.com";
+
+    // Create user account in Supabase Auth
+    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+      email: recipientEmail,
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: {
+        full_name: recipientEmail.split('@')[0], // temporary name
+        company_name: companyName,
+        invited_by: inviterName,
+        requires_password_reset: true,
+        invite_token: inviteToken,
+        company_id: companyId,
+        company_type: companyType,
+        branch_id: branchId,
+        role: role
+      }
+    });
+
+    if (authError) {
+      console.error('Error creating user account:', authError);
+      throw new Error(`Failed to create user account: ${authError.message}`);
+    }
+
+    console.log('User account created successfully:', authUser.user.id);
+
+    // Create profile record
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id: authUser.user.id,
+        email: recipientEmail,
+        full_name: recipientEmail.split('@')[0], // Will be updated on first login
+        roles: ['supplier'] // Default role, will be updated based on company
+      });
+
+    if (profileError) {
+      console.error('Error creating profile:', profileError);
+      // Don't throw here as user account is already created
+    }
+
+    // Store invitation details for later verification
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
+
+    const { error: inviteError } = await supabase
+      .from('user_invitations')
+      .insert({
+        token: inviteToken,
+        user_id: authUser.user.id,
+        email: recipientEmail,
+        company_id: companyId,
+        company_type: companyType,
+        branch_id: branchId,
+        role: role,
+        invited_by: inviterEmail,
+        expires_at: expiresAt.toISOString(),
+        temp_password: tempPassword
+      });
+
+    if (inviteError && !inviteError.message.includes('does not exist')) {
+      console.error('Error storing invitation details:', inviteError);
+      // Continue as this is not critical for the invitation flow
+    }
 
     const roleDisplayName = role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     const companyTypeDisplay = companyType === 'buyer' ? 'Buyer Company' : 'Supplier Company';
+    const inviteUrl = `${baseUrl}/invite/${inviteToken}`;
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -48,24 +140,24 @@ const handler = async (req: Request): Promise<Response> => {
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Invitation to Join ${companyName}</title>
+          <title>Welcome to ${companyName} - Set Up Your Account</title>
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 30px;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">You're Invited!</h1>
-            <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">Join ${companyName} as a team member</p>
+            <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to ${companyName}!</h1>
+            <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">Your account is ready - just set up your password</p>
           </div>
           
           <div style="background: #f8f9fa; padding: 25px; border-radius: 8px; margin-bottom: 25px;">
-            <h2 style="color: #333; margin-top: 0;">Invitation Details</h2>
+            <h2 style="color: #333; margin-top: 0;">Your Account Details</h2>
             <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; font-weight: 600; color: #555;">Email:</td>
+                <td style="padding: 8px 0;">${recipientEmail}</td>
+              </tr>
               <tr>
                 <td style="padding: 8px 0; font-weight: 600; color: #555;">Company:</td>
                 <td style="padding: 8px 0;">${companyName}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; font-weight: 600; color: #555;">Type:</td>
-                <td style="padding: 8px 0;">${companyTypeDisplay}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; font-weight: 600; color: #555;">Branch:</td>
@@ -77,45 +169,60 @@ const handler = async (req: Request): Promise<Response> => {
               </tr>
               <tr>
                 <td style="padding: 8px 0; font-weight: 600; color: #555;">Invited by:</td>
-                <td style="padding: 8px 0;">${inviterName} (${inviterEmail})</td>
+                <td style="padding: 8px 0;">${inviterName}</td>
               </tr>
             </table>
           </div>
 
+          <div style="background: #fff3cd; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107; margin-bottom: 25px;">
+            <h3 style="color: #856404; margin-top: 0; font-size: 16px;">🔑 Your Temporary Password</h3>
+            <p style="color: #856404; margin: 10px 0;">For security, here's your temporary password:</p>
+            <div style="background: white; padding: 15px; border-radius: 6px; font-family: monospace; font-size: 14px; color: #333; border: 2px dashed #ffc107; text-align: center; letter-spacing: 1px;">
+              <strong>${tempPassword}</strong>
+            </div>
+            <p style="color: #856404; margin: 10px 0 0 0; font-size: 14px;"><em>You'll be asked to change this when you first log in.</em></p>
+          </div>
+
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${signupUrl}" 
-               style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
-              Accept Invitation & Join
+            <a href="${inviteUrl}" 
+               style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); margin-bottom: 10px;">
+              🚀 Set Up Your Account Now
             </a>
+            <br>
+            <small style="color: #666; font-size: 12px;">This link expires in 7 days</small>
           </div>
 
           <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; border-left: 4px solid #2196f3;">
-            <h3 style="color: #1976d2; margin-top: 0;">Next Steps:</h3>
-            <ol style="margin: 0; padding-left: 20px;">
-              <li>Click the "Accept Invitation" button above</li>
-              <li>Create your account or sign in if you already have one</li>
-              <li>Complete your profile setup</li>
-              <li>Start collaborating with your new team!</li>
+            <h3 style="color: #1976d2; margin-top: 0;">What happens next:</h3>
+            <ol style="margin: 0; padding-left: 20px; color: #1976d2;">
+              <li>Click "Set Up Your Account Now" above</li>
+              <li>Sign in with your email and temporary password</li>
+              <li>Create a new secure password</li>
+              <li>Complete your profile information</li>
+              <li>Start working with your team!</li>
             </ol>
           </div>
 
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #666;">
-            <p><strong>Need help?</strong> Contact your team administrator ${inviterName} at ${inviterEmail}</p>
-            <p style="margin-bottom: 0;">This invitation was sent to ${recipientEmail}. If you didn't expect this invitation, you can safely ignore this email.</p>
+            <p><strong>Need help?</strong> Contact ${inviterName} at ${inviterEmail}</p>
+            <p style="margin-bottom: 0;">This invitation was sent to ${recipientEmail}. If you didn't expect this invitation, please contact the sender.</p>
           </div>
         </body>
       </html>
     `;
 
     const fromAddress = "Compliance Platform <no-reply@tracer2c.com>";
+    const subject = `Welcome to ${companyName} - Your Account is Ready!`;
 
     console.log(
       JSON.stringify(
         {
-          action: "sending_user_invitation",
+          action: "sending_user_account_setup",
           from: fromAddress,
           to: recipientEmail,
-          subject: `Invitation to join ${companyName} - ${branchName}`,
+          subject: subject,
+          inviteToken: inviteToken,
+          hasAccount: true
         },
         null,
         2,
@@ -125,7 +232,7 @@ const handler = async (req: Request): Promise<Response> => {
     const emailResponse = await resend.emails.send({
       from: fromAddress,
       to: [recipientEmail],
-      subject: `Invitation to join ${companyName} - ${branchName}`,
+      subject: subject,
       html: htmlContent,
     });
 
@@ -151,10 +258,13 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(
       JSON.stringify(
         {
-          action: "user_invitation_sent",
+          action: "user_account_created_and_invited",
           messageId: emailResponse.data.id,
+          userId: authUser.user.id,
           to: recipientEmail,
           from: fromAddress,
+          inviteToken: inviteToken,
+          tempPasswordGenerated: true
         },
         null,
         2,
@@ -165,7 +275,9 @@ const handler = async (req: Request): Promise<Response> => {
       JSON.stringify({
         success: true,
         messageId: emailResponse.data.id,
-        message: "Invitation email sent successfully",
+        userId: authUser.user.id,
+        inviteToken: inviteToken,
+        message: "User account created and invitation sent successfully",
       }),
       {
         status: 200,

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, UserPlus, Mail, Shield, Building, Trash2, Eye } from 'lucide-react';
+import { Users, UserPlus, Mail, Shield, Building, Trash2, Eye, RotateCcw, Clock } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ interface CompanyUserManagementProps {
   branches: CompanyBranch[];
   companyUsers: CompanyUser[];
   onInviteUser: (email: string, branchId: string, role: string) => Promise<any>;
+  onResendInvitation?: (email: string, branchId: string, role: string) => Promise<any>;
   loading?: boolean;
 }
 
@@ -35,15 +36,19 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
   branches,
   companyUsers,
   onInviteUser,
+  onResendInvitation,
   loading = false
 }) => {
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [viewUserModalOpen, setViewUserModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<CompanyUser | null>(null);
   const [inviteForm, setInviteForm] = useState({
     email: '',
     branchId: '',
     role: 'viewer'
   });
   const [inviting, setInviting] = useState(false);
+  const [resending, setResending] = useState<string | null>(null);
 
   const handleInviteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +80,43 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
   const getRoleDisplay = (role: string) => {
     const roleOption = roleOptions.find(r => r.value === role);
     return roleOption?.label || role;
+  };
+
+  const handleResendInvitation = async (user: CompanyUser) => {
+    if (!onResendInvitation || !user.email || !user.branch_id) {
+      toast.error('Cannot resend invitation - missing required information');
+      return;
+    }
+
+    setResending(user.id);
+    try {
+      await onResendInvitation(user.email, user.branch_id, user.role);
+    } catch (error) {
+      console.error('Error resending invitation:', error);
+    } finally {
+      setResending(null);
+    }
+  };
+
+  const handleViewUser = (user: CompanyUser) => {
+    setSelectedUser(user);
+    setViewUserModalOpen(true);
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const isInvitationExpired = (expiresAt?: string) => {
+    if (!expiresAt) return false;
+    return new Date(expiresAt) < new Date();
   };
 
   return (
@@ -187,6 +229,108 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
               </form>
             </DialogContent>
           </Dialog>
+          
+          {/* User Details Modal */}
+          <Dialog open={viewUserModalOpen} onOpenChange={setViewUserModalOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>User Details</DialogTitle>
+                <DialogDescription>
+                  View detailed information about this user
+                </DialogDescription>
+              </DialogHeader>
+              {selectedUser && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Name</Label>
+                    <p className="text-sm">{selectedUser.full_name}</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Email</Label>
+                    <p className="text-sm">{selectedUser.email}</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Branch</Label>
+                    <p className="text-sm">{getBranchName(selectedUser.branch_id || '')}</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Role</Label>
+                    <p className="text-sm">{getRoleDisplay(selectedUser.role)}</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Status</Label>
+                    <Badge 
+                      variant="outline" 
+                      className={statusColors[selectedUser.status as keyof typeof statusColors]}
+                    >
+                      {selectedUser.status}
+                    </Badge>
+                  </div>
+                  
+                  {selectedUser.status === 'pending' && (
+                    <>
+                      {selectedUser.invitation_expires_at && (
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Invitation Expires</Label>
+                          <p className="text-sm">{formatDate(selectedUser.invitation_expires_at)}</p>
+                          {isInvitationExpired(selectedUser.invitation_expires_at) && (
+                            <p className="text-sm text-red-600">⚠️ Invitation has expired</p>
+                          )}
+                        </div>
+                      )}
+                      
+                      {selectedUser.inviter_name && (
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Invited By</Label>
+                          <p className="text-sm">{selectedUser.inviter_name}</p>
+                        </div>
+                      )}
+                      
+                      {onResendInvitation && (
+                        <Button 
+                          onClick={() => handleResendInvitation(selectedUser)}
+                          disabled={resending === selectedUser.id}
+                          className="w-full"
+                        >
+                          {resending === selectedUser.id ? (
+                            <>
+                              <RotateCcw className="h-4 w-4 mr-2 animate-spin" />
+                              Resending...
+                            </>
+                          ) : (
+                            <>
+                              <Mail className="h-4 w-4 mr-2" />
+                              Resend Invitation
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </>
+                  )}
+                  
+                  {selectedUser.status === 'active' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Joined</Label>
+                        <p className="text-sm">{formatDate(selectedUser.joined_at)}</p>
+                      </div>
+                      
+                      {selectedUser.inviter_name && (
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Originally Invited By</Label>
+                          <p className="text-sm">{selectedUser.inviter_name}</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </div>
       </CardHeader>
       <CardContent>
@@ -216,47 +360,78 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
                   <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
                     <Users className="h-5 w-5 text-primary" />
                   </div>
-                   <div>
-                     <div className="font-medium">
-                       {user.status === 'pending' 
-                         ? `Pending invitation: ${user.email}` 
-                         : user.full_name || user.email || 'Unknown User'
-                       }
-                     </div>
-                     <div className="text-sm text-muted-foreground">
-                       {user.status !== 'pending' && user.email && (
-                         <div className="flex items-center space-x-1 mb-1">
-                           <Mail className="h-3 w-3" />
-                           <span>{user.email}</span>
-                         </div>
+                    <div>
+                      <div className="font-medium">
+                        {user.status === 'pending' 
+                          ? user.full_name || 'Pending invitation'
+                          : user.full_name || user.email || 'Unknown User'
+                        }
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        <div className="flex items-center space-x-1 mb-1">
+                          <Mail className="h-3 w-3" />
+                          <span>{user.email}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Building className="h-3 w-3" />
+                          <span>{getBranchName(user.branch_id || '')}</span>
+                          <span>•</span>
+                          <Shield className="h-3 w-3" />
+                          <span>{getRoleDisplay(user.role)}</span>
+                          {user.status === 'pending' && user.inviter_name && (
+                            <>
+                              <span>•</span>
+                              <span>Invited by {user.inviter_name}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                </div>
+                 <div className="flex items-center space-x-2">
+                   <div className="flex flex-col items-end space-y-1">
+                     <Badge 
+                       variant="outline" 
+                       className={statusColors[user.status as keyof typeof statusColors]}
+                     >
+                       {user.status}
+                       {user.status === 'pending' && user.invitation_expires_at && isInvitationExpired(user.invitation_expires_at) && (
+                         <span className="ml-1 text-red-600">(Expired)</span>
                        )}
-                       <div className="flex items-center space-x-2">
-                         <Building className="h-3 w-3" />
-                         <span>{getBranchName(user.branch_id || '')}</span>
-                         <span>•</span>
-                         <Shield className="h-3 w-3" />
-                         <span>{getRoleDisplay(user.role)}</span>
-                         {user.status === 'pending' && user.inviter_name && (
-                           <>
-                             <span>•</span>
-                             <span>Invited by {user.inviter_name}</span>
-                           </>
-                         )}
+                     </Badge>
+                     {user.status === 'pending' && user.invitation_expires_at && (
+                       <div className="text-xs text-muted-foreground flex items-center">
+                         <Clock className="h-3 w-3 mr-1" />
+                         Expires {formatDate(user.invitation_expires_at)}
                        </div>
-                     </div>
+                     )}
                    </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Badge 
-                    variant="outline" 
-                    className={statusColors[user.status as keyof typeof statusColors]}
-                  >
-                    {user.status}
-                  </Badge>
-                  <Button variant="ghost" size="sm">
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </div>
+                   <div className="flex space-x-1">
+                     {user.status === 'pending' && onResendInvitation && (
+                       <Button 
+                         variant="ghost" 
+                         size="sm"
+                         onClick={() => handleResendInvitation(user)}
+                         disabled={resending === user.id}
+                         title="Resend invitation"
+                       >
+                         {resending === user.id ? (
+                           <RotateCcw className="h-4 w-4 animate-spin" />
+                         ) : (
+                           <Mail className="h-4 w-4" />
+                         )}
+                       </Button>
+                     )}
+                     <Button 
+                       variant="ghost" 
+                       size="sm"
+                       onClick={() => handleViewUser(user)}
+                       title="View user details"
+                     >
+                       <Eye className="h-4 w-4" />
+                     </Button>
+                   </div>
+                 </div>
               </div>
             ))}
           </div>

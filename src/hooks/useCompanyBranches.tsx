@@ -34,6 +34,7 @@ export interface CompanyUser {
   email?: string;
   full_name?: string;
   inviter_name?: string;
+  invitation_expires_at?: string;
 }
 
 export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | 'supplier') => {
@@ -101,33 +102,65 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
         return;
       }
 
-      // Then get profile data for each user
+      // Enhanced user data processing
       const enhancedUsers = await Promise.all(
         (usersData || []).map(async (user) => {
-          // Get profile data
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('email, full_name')
-            .eq('id', user.profile_id)
-            .single();
+          if (user.status === 'pending') {
+            // For pending users, get email from user_invitations table
+            const { data: invitationData } = await supabase
+              .from('user_invitations')
+              .select('email, expires_at')
+              .eq('company_id', companyId)
+              .eq('company_type', companyType)
+              .eq('role', user.role)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
 
-          // Get inviter data if exists
-          let inviterData = null;
-          if (user.invited_by) {
-            const { data } = await supabase
+            // Get inviter data
+            let inviterData = null;
+            if (user.invited_by) {
+              const { data } = await supabase
+                .from('profiles')
+                .select('email, full_name')
+                .eq('id', user.invited_by)
+                .single();
+              inviterData = data;
+            }
+
+            return {
+              ...user,
+              email: invitationData?.email || 'No email found',
+              full_name: `Pending invitation`,
+              inviter_name: inviterData?.full_name || inviterData?.email || 'Unknown',
+              invitation_expires_at: invitationData?.expires_at
+            };
+          } else {
+            // For active users, get profile data
+            const { data: profileData } = await supabase
               .from('profiles')
               .select('email, full_name')
-              .eq('id', user.invited_by)
+              .eq('id', user.profile_id)
               .single();
-            inviterData = data;
-          }
 
-          return {
-            ...user,
-            email: profileData?.email || 'No email',
-            full_name: profileData?.full_name || 'No name',
-            inviter_name: inviterData?.full_name || inviterData?.email || 'Unknown'
-          };
+            // Get inviter data if exists
+            let inviterData = null;
+            if (user.invited_by) {
+              const { data } = await supabase
+                .from('profiles')
+                .select('email, full_name')
+                .eq('id', user.invited_by)
+                .single();
+              inviterData = data;
+            }
+
+            return {
+              ...user,
+              email: profileData?.email || 'No email',
+              full_name: profileData?.full_name || 'No name',
+              inviter_name: inviterData?.full_name || inviterData?.email || 'Unknown'
+            };
+          }
         })
       );
 
@@ -322,6 +355,61 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
     }
   };
 
+  const resendInvitation = async (userEmail: string, branchId: string, role: string) => {
+    if (!user || !companyId || !companyType) {
+      toast.error('Missing required information to resend invitation');
+      return { error: 'Missing required data' };
+    }
+
+    try {
+      // Get current user's profile and branch details for email
+      const { data: currentUserProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+
+      const { data: branchDetails } = await supabase
+        .from('company_branches')
+        .select('branch_name')
+        .eq('id', branchId)
+        .single();
+
+      const { data: companyDetails } = await supabase
+        .from(companyType === 'buyer' ? 'buyers' : 'suppliers')
+        .select('company_name')
+        .eq('id', companyId)
+        .single();
+
+      // Send invitation email
+      const response = await supabase.functions.invoke('send-user-invitation', {
+        body: {
+          recipientEmail: userEmail,
+          companyName: companyDetails?.company_name || 'Unknown Company',
+          companyType: companyType,
+          branchName: branchDetails?.branch_name || 'Unknown Branch',
+          branchId: branchId,
+          companyId: companyId,
+          role: role,
+          inviterName: currentUserProfile?.full_name || user.email || 'Team Administrator',
+          inviterEmail: user.email || ''
+        }
+      });
+      
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to send email');
+      }
+      
+      toast.success(`Invitation resent to ${userEmail}`);
+      await fetchCompanyUsers(); // Refresh the users list
+      return { data: response.data, error: null };
+    } catch (err) {
+      console.error('Error resending invitation:', err);
+      toast.error('Failed to resend invitation');
+      return { error: err };
+    }
+  };
+
   const switchBranch = (branch: CompanyBranch) => {
     setCurrentBranch(branch);
     toast.success(`Switched to ${branch.branch_name}`);
@@ -341,6 +429,7 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
     createBranch,
     updateBranch,
     inviteUserToBranch,
+    resendInvitation,
     switchBranch,
     refetch: () => {
       fetchBranches();

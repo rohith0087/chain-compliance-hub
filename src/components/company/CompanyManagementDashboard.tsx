@@ -29,6 +29,7 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
     createBranch,
     updateBranch,
     inviteUserToBranch,
+    resendInvitation,
     switchBranch,
     refetch
   } = useCompanyBranches(companyId, companyType);
@@ -219,6 +220,7 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
             branches={branches}
             companyUsers={companyUsers}
             onInviteUser={inviteUserToBranch}
+            onResendInvitation={resendInvitation}
             loading={loading}
           />
         </TabsContent>

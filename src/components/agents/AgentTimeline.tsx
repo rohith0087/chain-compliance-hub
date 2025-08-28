@@ -108,47 +108,75 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({ companyType, compa
   };
 
   const setupRealtimeSubscriptions = () => {
-    // Subscribe to agent configuration changes
-    const configChannel = supabase
-      .channel(`agent-configs-${companyId}-${companyType}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'agent_configurations',
-          filter: `company_id=eq.${companyId}`
-        },
-        (payload) => {
-          console.log('Agent config changed:', payload);
-          loadAgentData();
-        }
-      )
-      .subscribe();
+    // Check if we're in a secure context before setting up WebSocket connections
+    if (!window.isSecureContext) {
+      console.warn('AgentTimeline: Skipping realtime subscriptions - not in secure context');
+      return () => {}; // Return empty cleanup function
+    }
 
-    // Subscribe to agent activity changes
-    const activityChannel = supabase
-      .channel(`agent-activities-${companyId}-${companyType}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'agent_activities',
-          filter: `entity_id=eq.${companyId}`
-        },
-        (payload) => {
-          console.log('New agent activity:', payload);
-          setActivities(prev => [payload.new as any, ...prev.slice(0, 49)]);
-        }
-      )
-      .subscribe();
+    try {
+      // Subscribe to agent configuration changes
+      const configChannel = supabase
+        .channel(`agent-configs-${companyId}-${companyType}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'agent_configurations',
+            filter: `company_id=eq.${companyId}`
+          },
+          (payload) => {
+            console.log('Agent config changed:', payload);
+            loadAgentData();
+          }
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('Agent config channel subscribed successfully');
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error('Agent config channel subscription failed');
+          }
+        });
 
-    return () => {
-      console.log('Cleaning up agent timeline subscriptions');
-      supabase.removeChannel(configChannel);
-      supabase.removeChannel(activityChannel);
-    };
+      // Subscribe to agent activity changes
+      const activityChannel = supabase
+        .channel(`agent-activities-${companyId}-${companyType}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'agent_activities',
+            filter: `entity_id=eq.${companyId}`
+          },
+          (payload) => {
+            console.log('New agent activity:', payload);
+            setActivities(prev => [payload.new as any, ...prev.slice(0, 49)]);
+          }
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('Agent activity channel subscribed successfully');
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error('Agent activity channel subscription failed');
+          }
+        });
+
+      return () => {
+        console.log('Cleaning up agent timeline subscriptions');
+        try {
+          supabase.removeChannel(configChannel);
+          supabase.removeChannel(activityChannel);
+        } catch (error) {
+          console.error('Error cleaning up channels:', error);
+        }
+      };
+    } catch (error) {
+      console.error('Error setting up realtime subscriptions:', error);
+      // Return empty cleanup function if setup fails
+      return () => {};
+    }
   };
 
   const getStatusColor = (status: string) => {

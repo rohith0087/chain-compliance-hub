@@ -107,26 +107,74 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
+    const fromAddress = "Compliance Platform <no-reply@tracer2c.com>";
+
+    console.log(
+      JSON.stringify(
+        {
+          action: "sending_user_invitation",
+          from: fromAddress,
+          to: recipientEmail,
+          subject: `Invitation to join ${companyName} - ${branchName}`,
+        },
+        null,
+        2,
+      ),
+    );
+
     const emailResponse = await resend.emails.send({
-      from: "Compliance Platform <no-reply@tracer2c.com>",
+      from: fromAddress,
       to: [recipientEmail],
       subject: `Invitation to join ${companyName} - ${branchName}`,
       html: htmlContent,
     });
 
-    console.log("User invitation email sent successfully:", emailResponse);
+    // Resend returns either { data: { id }, error: null } or { data: null, error: {...} }
+    if (emailResponse.error || !emailResponse.data?.id) {
+      console.error(
+        "Failed to send user invitation via Resend:",
+        JSON.stringify(emailResponse, null, 2),
+      );
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: emailResponse.error?.error || "Failed to send invitation email",
+          errorDetails: emailResponse.error || null,
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        },
+      );
+    }
 
-    return new Response(JSON.stringify({ 
-      success: true, 
-      messageId: emailResponse.data?.id,
-      message: "Invitation email sent successfully" 
-    }), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        ...corsHeaders,
+    console.log(
+      JSON.stringify(
+        {
+          action: "user_invitation_sent",
+          messageId: emailResponse.data.id,
+          to: recipientEmail,
+          from: fromAddress,
+        },
+        null,
+        2,
+      ),
+    );
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        messageId: emailResponse.data.id,
+        message: "Invitation email sent successfully",
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
       },
-    });
+    );
   } catch (error: any) {
     console.error("Error sending user invitation:", error);
     return new Response(

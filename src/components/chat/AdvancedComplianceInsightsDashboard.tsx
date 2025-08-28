@@ -218,12 +218,12 @@ const AdvancedComplianceInsightsDashboard: React.FC<AdvancedComplianceInsightsDa
             `)
             .eq('document_requests.supplier_id', supplierId);
 
-          const docCount = docs?.length || 0;
-          const approvedDocs = docs?.filter(d => d && d.status === 'approved').length || 0;
-          const expiredDocs = docs?.filter(d => {
-            if (!d || !d.expiration_date) return false;
-            return new Date(d.expiration_date) < new Date();
-          }).length || 0;
+           const docCount = docs?.length || 0;
+           const approvedDocs = docs?.filter(d => d?.status === 'approved').length || 0;
+           const expiredDocs = docs?.filter(d => {
+             if (!d?.expiration_date) return false;
+             return new Date(d.expiration_date) < new Date();
+           }).length || 0;
 
           let complianceScore = docCount > 0 ? Math.round((approvedDocs / docCount) * 100) : 0;
           complianceScore = Math.max(0, complianceScore - (expiredDocs * 20));

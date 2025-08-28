@@ -27,10 +27,10 @@ const COLORS = {
 const ComplianceVisualizer: React.FC<ComplianceVisualizerProps> = ({ visualData }) => {
   const renderComplianceDashboard = (data: any) => {
     const statusData = [
-      { name: 'Approved', value: data.document_status.approved, color: COLORS.approved },
-      { name: 'Pending', value: data.document_status.pending, color: COLORS.pending },
-      { name: 'Rejected', value: data.document_status.rejected, color: COLORS.rejected },
-      { name: 'Expired', value: data.document_status.expired, color: COLORS.expired }
+      { name: 'Approved', value: data?.document_status?.approved || 0, color: COLORS.approved },
+      { name: 'Pending', value: data?.document_status?.pending || 0, color: COLORS.pending },
+      { name: 'Rejected', value: data?.document_status?.rejected || 0, color: COLORS.rejected },
+      { name: 'Expired', value: data?.document_status?.expired || 0, color: COLORS.expired }
     ];
 
     const getTrendIcon = (trend: string) => {

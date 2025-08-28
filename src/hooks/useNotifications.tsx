@@ -58,46 +58,65 @@ export const useNotifications = () => {
   useEffect(() => {
     if (!user) return;
 
+    // Check if we're in a sandbox/development environment where WebSockets might be restricted
+    const isSandbox = window.location.hostname.includes('sandbox') || 
+                     window.location.hostname.includes('localhost') ||
+                     window.location.protocol === 'http:';
+
+    if (isSandbox) {
+      console.log('Skipping real-time notifications setup in sandbox environment');
+      return;
+    }
+
     console.log('Setting up real-time notifications for user:', user.id);
     
-    const channel = supabase
-      .channel('notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`
-        },
-        (payload) => {
-          console.log('New notification received:', payload);
-          setNotifications(prev => [payload.new as Notification, ...prev]);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`
-        },
-        (payload) => {
-          console.log('Notification updated:', payload);
-          setNotifications(prev => 
-            prev.map(notif => 
-              notif.id === payload.new.id ? payload.new as Notification : notif
-            )
-          );
-        }
-      )
-      .subscribe();
+    try {
+      const channel = supabase
+        .channel('notifications')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('New notification received:', payload);
+            setNotifications(prev => [payload.new as Notification, ...prev]);
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('Notification updated:', payload);
+            setNotifications(prev => 
+              prev.map(notif => 
+                notif.id === payload.new.id ? payload.new as Notification : notif
+              )
+            );
+          }
+        )
+        .subscribe();
 
-    return () => {
-      console.log('Cleaning up notifications subscription');
-      supabase.removeChannel(channel);
-    };
+      return () => {
+        console.log('Cleaning up notifications subscription');
+        try {
+          supabase.removeChannel(channel);
+        } catch (error) {
+          console.log('Error cleaning up subscription:', error);
+        }
+      };
+    } catch (error) {
+      console.log('Failed to setup real-time notifications:', error);
+      // Continue without real-time updates in case of WebSocket errors
+    }
   }, [user]);
 
   const markAsRead = async (notificationId: string) => {

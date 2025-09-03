@@ -13,7 +13,11 @@ import {
   Heart,
   Lock,
   Award,
-  CheckCircle
+  CheckCircle,
+  Settings,
+  MapPin,
+  ClipboardList,
+  CheckSquare
 } from 'lucide-react';
 
 export interface ComplianceDocument {
@@ -385,6 +389,124 @@ export const getComplianceDocuments = (userType: string): ComplianceDocument[] =
           { name: 'Vehicle Fleet', required: true },
           { name: 'Driver Qualifications', required: true },
           { name: 'Insurance Coverage', required: true }
+        ]
+      }
+    },
+    
+    // Risk Control
+    {
+      id: 'allergen-survey',
+      title: 'Allergen Survey',
+      category: 'Risk Control',
+      description: 'Comprehensive allergen control and management survey',
+      icon: AlertTriangle,
+      required: true,
+      regulatoryBody: 'FDA',
+      template: {
+        sections: [
+          { name: 'Allergen Identification', required: true },
+          { name: 'Control Measures', required: true },
+          { name: 'Cross-contamination Prevention', required: true },
+          { name: 'Testing Protocols', required: true },
+          { name: 'Staff Training Records', required: true }
+        ]
+      }
+    },
+    {
+      id: 'process-change-agreement',
+      title: 'Process Change Agreement',
+      category: 'Risk Control',
+      description: 'Agreement for manufacturing process modifications and risk assessment',
+      icon: Settings,
+      required: true,
+      regulatoryBody: 'FDA',
+      template: {
+        sections: [
+          { name: 'Current Process Description', required: true },
+          { name: 'Proposed Changes', required: true },
+          { name: 'Risk Assessment', required: true },
+          { name: 'Approval Signatures', required: true },
+          { name: 'Implementation Timeline', required: true }
+        ]
+      }
+    },
+    
+    // Traceability
+    {
+      id: 'approved-supplier-locations',
+      title: 'Approved Supplier Locations',
+      category: 'Traceability',
+      description: 'Documentation of approved supplier facilities and locations',
+      icon: MapPin,
+      required: true,
+      regulatoryBody: 'FDA',
+      template: {
+        sections: [
+          { name: 'Facility Information', required: true },
+          { name: 'Location Details', required: true },
+          { name: 'Approval Status', required: true },
+          { name: 'Audit History', required: true },
+          { name: 'Contact Information', required: true }
+        ]
+      }
+    },
+    
+    // Onboarding/Approval
+    {
+      id: 'supplier-questionnaire',
+      title: 'Supplier Questionnaire',
+      category: 'Onboarding/Approval',
+      description: 'Comprehensive supplier onboarding and approval questionnaire',
+      icon: ClipboardList,
+      required: true,
+      regulatoryBody: 'Internal',
+      template: {
+        sections: [
+          { name: 'Company Information', required: true },
+          { name: 'Quality Management System', required: true },
+          { name: 'Certifications and Accreditations', required: true },
+          { name: 'Financial Information', required: true },
+          { name: 'References', required: true }
+        ]
+      }
+    },
+    
+    // Ethical Sourcing
+    {
+      id: 'code-of-conduct',
+      title: 'Code of Conduct',
+      category: 'Ethical Sourcing',
+      description: 'Supplier code of conduct agreement and compliance documentation',
+      icon: Users,
+      required: true,
+      regulatoryBody: 'Internal',
+      template: {
+        sections: [
+          { name: 'Labor Practices', required: true },
+          { name: 'Environmental Responsibility', required: true },
+          { name: 'Business Ethics', required: true },
+          { name: 'Human Rights', required: true },
+          { name: 'Compliance Acknowledgment', required: true }
+        ]
+      }
+    },
+    
+    // Audit Readiness
+    {
+      id: 'supplier-checklist',
+      title: 'Supplier Checklist',
+      category: 'Audit Readiness',
+      description: 'Pre-audit checklist and readiness assessment for suppliers',
+      icon: CheckSquare,
+      required: false,
+      regulatoryBody: 'Internal',
+      template: {
+        sections: [
+          { name: 'Documentation Review', required: true },
+          { name: 'Facility Preparation', required: true },
+          { name: 'Personnel Availability', required: true },
+          { name: 'System Access', required: true },
+          { name: 'Corrective Actions', required: false }
         ]
       }
     }

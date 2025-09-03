@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -146,6 +146,7 @@ export const CustomTemplateUploadModal = ({ isOpen, onClose, onSuccess }: Custom
         .upload(filePath, selectedFile);
 
       if (uploadError) {
+        console.error('Storage upload error:', { uploadError, message: uploadError.message });
         throw uploadError;
       }
 
@@ -185,7 +186,7 @@ export const CustomTemplateUploadModal = ({ isOpen, onClose, onSuccess }: Custom
       onClose();
       resetForm();
     } catch (error: any) {
-      console.error('Error uploading template:', error);
+      console.error('Error uploading template:', { error, message: error?.message });
       toast.error(error.message || 'Failed to upload template');
     } finally {
       setIsUploading(false);
@@ -214,7 +215,9 @@ export const CustomTemplateUploadModal = ({ isOpen, onClose, onSuccess }: Custom
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">Create Custom Template</DialogTitle>
-          <p className="text-sm text-muted-foreground">Upload a custom document template for your suppliers to complete</p>
+          <DialogDescription className="text-sm text-muted-foreground">
+            Upload a custom document template for your suppliers to complete
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">

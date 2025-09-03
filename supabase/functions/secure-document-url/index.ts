@@ -93,7 +93,7 @@ serve(async (req) => {
     
     let upload = null;
     let customTemplate = null;
-    
+    let submission: any = null;
     if (isCustomTemplate) {
       // For custom templates, check direct access
       const { data: templateData } = await adminClient
@@ -148,11 +148,46 @@ serve(async (req) => {
 
       upload = await tryFindUpload();
       if (!upload) {
-        console.warn('Upload not found for key', { resolved });
-        return new Response(JSON.stringify({ error: 'Document not found' }), {
-          status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        // Try to find a template submission with this file path
+        const tryFindSubmission = async () => {
+          // Exact match
+          let { data: sub, error } = await adminClient
+            .from('template_submissions')
+            .select('id, request_id, supplier_id, submission_file_path')
+            .eq('submission_file_path', resolved!.key)
+            .maybeSingle();
+
+          if (!sub || error) {
+            // Try with bucket-prefixed key
+            const prefixedKey = `${resolved!.bucket}/${resolved!.key}`;
+            ({ data: sub, error } = await adminClient
+              .from('template_submissions')
+              .select('id, request_id, supplier_id, submission_file_path')
+              .eq('submission_file_path', prefixedKey)
+              .maybeSingle());
+
+            if (!sub || error) {
+              // Last resort: ILIKE contains
+              const { data: list } = await adminClient
+                .from('template_submissions')
+                .select('id, request_id, supplier_id, submission_file_path')
+                .ilike('submission_file_path', `%${resolved!.key}%`)
+                .limit(1);
+              sub = list && list[0];
+            }
+          }
+
+          return sub;
+        };
+
+        submission = await tryFindSubmission();
+        if (!submission) {
+          console.warn('Document not found for key', { resolved });
+          return new Response(JSON.stringify({ error: 'Document not found' }), {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
       }
     }
 
@@ -218,6 +253,46 @@ serve(async (req) => {
           adminClient.from('suppliers').select('id').eq('id', request.supplier_id).eq('profile_id', userId).maybeSingle(),
         ]);
         if (buyer || supplier) allowed = true;
+      }
+
+      // Company teammates (buyer or supplier)
+      if (!allowed && request) {
+        const { data: companyUser } = await adminClient
+          .from('company_users')
+          .select('id')
+          .eq('profile_id', userId)
+          .eq('status', 'active')
+          .or(`and(company_id.eq.${request.buyer_id},company_type.eq.buyer),and(company_id.eq.${request.supplier_id},company_type.eq.supplier)`)
+          .limit(1);
+        if (companyUser && companyUser.length > 0) allowed = true;
+      }
+    } else if (submission) {
+      // Access checks for template submission files
+      const { data: request } = await adminClient
+        .from('document_requests')
+        .select('id, buyer_id, supplier_id')
+        .eq('id', submission.request_id)
+        .maybeSingle();
+
+      // Supplier owner of the submission
+      const { data: sOwner } = await adminClient
+        .from('suppliers')
+        .select('id')
+        .eq('profile_id', userId)
+        .maybeSingle();
+      if (sOwner && sOwner.id === submission.supplier_id) {
+        allowed = true;
+      }
+
+      // Buyer owner
+      if (!allowed && request) {
+        const { data: bOwner } = await adminClient
+          .from('buyers')
+          .select('id')
+          .eq('id', request.buyer_id)
+          .eq('profile_id', userId)
+          .maybeSingle();
+        if (bOwner) allowed = true;
       }
 
       // Company teammates (buyer or supplier)

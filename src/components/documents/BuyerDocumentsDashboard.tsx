@@ -358,6 +358,26 @@ const handleViewDocumentFile = async (doc: any) => {
       : uploads[0];
 
     if (!latest?.file_path) {
+      try {
+        if (doc.template_type === 'custom') {
+          const { data: subs } = await supabase
+            .from('template_submissions')
+            .select('submission_file_path, submission_file_name, submission_mime_type')
+            .eq('request_id', doc.id)
+            .limit(1);
+          const sub = subs && subs[0];
+          if (sub?.submission_file_path) {
+            const { data, error } = await supabase.functions.invoke('secure-document-url', {
+              body: { filePath: sub.submission_file_path, expiresIn: 3600 }
+            });
+            if (error || !data?.success) throw new Error(data?.error || 'Failed to get secure URL');
+            window.open(data.url, '_blank');
+            return;
+          }
+        }
+      } catch (e) {
+        console.error('Custom submission view fallback failed', e);
+      }
       toast({
         title: 'No File',
         description: 'No file available for viewing',
@@ -416,6 +436,31 @@ const handleViewDocumentFile = async (doc: any) => {
         : uploads[0];
 
       if (!latest?.file_path) {
+        try {
+          if (doc.template_type === 'custom') {
+            const { data: subs } = await supabase
+              .from('template_submissions')
+              .select('submission_file_path, submission_file_name')
+              .eq('request_id', doc.id)
+              .limit(1);
+            const sub = subs && subs[0];
+            if (sub?.submission_file_path) {
+              const { data, error } = await supabase.functions.invoke('secure-document-url', {
+                body: { filePath: sub.submission_file_path, expiresIn: 3600 }
+              });
+              if (error || !data?.success) throw new Error(data?.error || 'Failed to get secure URL');
+              const a = window.document.createElement('a');
+              a.href = data.url;
+              a.download = sub.submission_file_name || 'download';
+              window.document.body.appendChild(a);
+              a.click();
+              window.document.body.removeChild(a);
+              return;
+            }
+          }
+        } catch (e) {
+          console.error('Custom submission download fallback failed', e);
+        }
         toast({
           title: 'No File',
           description: 'No file available for download',

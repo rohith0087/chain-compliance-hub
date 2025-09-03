@@ -589,6 +589,72 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_document_templates: {
+        Row: {
+          buyer_id: string
+          category: string
+          created_at: string | null
+          created_by: string
+          description: string | null
+          document_type: string
+          expires_at: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          is_active: boolean | null
+          metadata: Json | null
+          mime_type: string | null
+          required_fields: Json | null
+          template_name: string
+          template_version: number | null
+          updated_at: string | null
+          usage_count: number | null
+        }
+        Insert: {
+          buyer_id: string
+          category: string
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          document_type: string
+          expires_at?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          mime_type?: string | null
+          required_fields?: Json | null
+          template_name: string
+          template_version?: number | null
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Update: {
+          buyer_id?: string
+          category?: string
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          document_type?: string
+          expires_at?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          mime_type?: string | null
+          required_fields?: Json | null
+          template_name?: string
+          template_version?: number | null
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Relationships: []
+      }
       delegation_permissions: {
         Row: {
           branch_id: string | null
@@ -856,6 +922,7 @@ export type Database = {
           buyer_id: string | null
           category: string
           created_at: string | null
+          custom_template_id: string | null
           description: string | null
           document_type: string
           due_date: string | null
@@ -866,6 +933,7 @@ export type Database = {
           status: Database["public"]["Enums"]["request_status"] | null
           supplier_id: string | null
           template_sections: Json | null
+          template_type: string | null
           title: string
           updated_at: string | null
         }
@@ -874,6 +942,7 @@ export type Database = {
           buyer_id?: string | null
           category: string
           created_at?: string | null
+          custom_template_id?: string | null
           description?: string | null
           document_type: string
           due_date?: string | null
@@ -884,6 +953,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["request_status"] | null
           supplier_id?: string | null
           template_sections?: Json | null
+          template_type?: string | null
           title: string
           updated_at?: string | null
         }
@@ -892,6 +962,7 @@ export type Database = {
           buyer_id?: string | null
           category?: string
           created_at?: string | null
+          custom_template_id?: string | null
           description?: string | null
           document_type?: string
           due_date?: string | null
@@ -902,6 +973,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["request_status"] | null
           supplier_id?: string | null
           template_sections?: Json | null
+          template_type?: string | null
           title?: string
           updated_at?: string | null
         }
@@ -918,6 +990,13 @@ export type Database = {
             columns: ["buyer_id"]
             isOneToOne: false
             referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_requests_custom_template_id_fkey"
+            columns: ["custom_template_id"]
+            isOneToOne: false
+            referencedRelation: "custom_document_templates"
             referencedColumns: ["id"]
           },
           {
@@ -1411,6 +1490,78 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_submissions: {
+        Row: {
+          created_at: string | null
+          form_data: Json | null
+          id: string
+          request_id: string
+          reviewed_at: string | null
+          reviewer_notes: string | null
+          status: string | null
+          submission_file_name: string | null
+          submission_file_path: string | null
+          submission_file_size: number | null
+          submission_mime_type: string | null
+          submission_type: string | null
+          submitted_at: string | null
+          supplier_id: string
+          template_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          form_data?: Json | null
+          id?: string
+          request_id: string
+          reviewed_at?: string | null
+          reviewer_notes?: string | null
+          status?: string | null
+          submission_file_name?: string | null
+          submission_file_path?: string | null
+          submission_file_size?: number | null
+          submission_mime_type?: string | null
+          submission_type?: string | null
+          submitted_at?: string | null
+          supplier_id: string
+          template_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          form_data?: Json | null
+          id?: string
+          request_id?: string
+          reviewed_at?: string | null
+          reviewer_notes?: string | null
+          status?: string | null
+          submission_file_name?: string | null
+          submission_file_path?: string | null
+          submission_file_size?: number | null
+          submission_mime_type?: string | null
+          submission_type?: string | null
+          submitted_at?: string | null
+          supplier_id?: string
+          template_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_submissions_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "document_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_submissions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "custom_document_templates"
             referencedColumns: ["id"]
           },
         ]

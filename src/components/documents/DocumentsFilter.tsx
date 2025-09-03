@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,13 +23,33 @@ interface DocumentsFilterProps {
 }
 
 const DocumentsFilter = ({ filters, onFiltersChange, showExpirationFilter = false, availableSuppliers = [] }: DocumentsFilterProps) => {
-  const updateFilter = (key: string, value: string) => {
+  const [localSearchValue, setLocalSearchValue] = useState(filters.search);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+
+  const updateFilter = useCallback((key: string, value: string) => {
     // Convert "all" values back to empty strings for the filter logic
     const actualValue = value === 'all' ? '' : value;
     onFiltersChange({ ...filters, [key]: actualValue });
-  };
+  }, [filters, onFiltersChange]);
+
+  const debouncedSearchUpdate = useCallback((searchValue: string) => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    
+    debounceTimeoutRef.current = setTimeout(() => {
+      updateFilter('search', searchValue);
+    }, 300);
+  }, [updateFilter]);
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setLocalSearchValue(value);
+    debouncedSearchUpdate(value);
+  }, [debouncedSearchUpdate]);
 
   const clearFilters = () => {
+    setLocalSearchValue('');
     onFiltersChange({
       search: '',
       status: '',
@@ -73,8 +93,8 @@ const DocumentsFilter = ({ filters, onFiltersChange, showExpirationFilter = fals
             <Input
               type="text"
               placeholder="Search documents..."
-              value={filters.search}
-              onChange={(e) => updateFilter('search', e.target.value)}
+              value={localSearchValue}
+              onChange={handleSearchChange}
               className="pl-10"
               autoComplete="off"
             />

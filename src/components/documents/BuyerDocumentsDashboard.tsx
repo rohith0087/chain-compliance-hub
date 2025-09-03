@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -48,13 +48,25 @@ const BuyerDocumentsDashboard = () => {
   
   const { user } = useAuth();
   const { toast } = useToast();
+  const loadTimeoutRef = useRef<NodeJS.Timeout>();
+  const abortControllerRef = useRef<AbortController>();
+
+  const debouncedLoadDocuments = useCallback(() => {
+    if (loadTimeoutRef.current) {
+      clearTimeout(loadTimeoutRef.current);
+    }
+    
+    loadTimeoutRef.current = setTimeout(() => {
+      loadDocuments();
+    }, 150);
+  }, []);
 
   useEffect(() => {
     if (user) {
-      loadDocuments();
       loadConnectedSuppliers();
+      debouncedLoadDocuments();
     }
-  }, [user, filters]);
+  }, [user, filters, debouncedLoadDocuments]);
 
   const loadConnectedSuppliers = async () => {
     try {
@@ -106,6 +118,12 @@ const BuyerDocumentsDashboard = () => {
   };
 
   const loadDocuments = async () => {
+    // Cancel previous request if still pending
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    abortControllerRef.current = new AbortController();
     setLoading(true);
     try {
       // Get the buyer profile

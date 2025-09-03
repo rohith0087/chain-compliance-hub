@@ -6,6 +6,7 @@ import {
   DialogTitle,
   DialogDescription 
 } from '@/components/ui/dialog';
+import { FileText } from 'lucide-react';
 import DocumentSelectionStep from './requests/DocumentSelectionStep';
 import RequestConfigurationStep from './requests/RequestConfigurationStep';
 import { getComplianceDocuments, ComplianceDocument } from './requests/ComplianceDocuments';
@@ -32,10 +33,12 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
   const [loading, setLoading] = useState(false);
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
   const [connectedSuppliers, setConnectedSuppliers] = useState<any[]>([]);
+  const [customTemplates, setCustomTemplates] = useState<any[]>([]);
+  const [allDocuments, setAllDocuments] = useState<ComplianceDocument[]>([]);
 
   const { user } = useAuth();
   const { toast } = useToast();
-  const complianceDocuments = getComplianceDocuments(userType);
+  const staticComplianceDocuments = getComplianceDocuments(userType);
 
   // Fetch buyer data and connected suppliers when modal opens
   React.useEffect(() => {
@@ -43,6 +46,26 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
       fetchBuyerData();
     }
   }, [isOpen, user]);
+
+  // Combine static documents with custom templates
+  React.useEffect(() => {
+    const transformedCustomTemplates: ComplianceDocument[] = customTemplates.map(template => ({
+      id: `custom-${template.id}`,
+      title: template.template_name,
+      category: template.category,
+      description: template.description || 'Custom template',
+      icon: staticComplianceDocuments[0]?.icon || FileText,
+      required: false,
+      regulatoryBody: 'Custom Template',
+      template: {
+        sections: template.required_fields || []
+      },
+      isCustomTemplate: true,
+      customTemplateId: template.id
+    }));
+
+    setAllDocuments([...staticComplianceDocuments, ...transformedCustomTemplates]);
+  }, [staticComplianceDocuments, customTemplates]);
 
   const fetchBuyerData = async () => {
     try {
@@ -76,6 +99,19 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
       }
 
       setConnectedSuppliers(connections?.map(conn => conn.suppliers) || []);
+
+      // Fetch custom templates
+      const { data: templates, error: templatesError } = await supabase
+        .from('custom_document_templates')
+        .select('*')
+        .eq('buyer_id', buyer.id)
+        .eq('is_active', true);
+
+      if (templatesError) {
+        console.error('Error fetching custom templates:', templatesError);
+      } else {
+        setCustomTemplates(templates || []);
+      }
     } catch (error) {
       console.error('Error in fetchBuyerData:', error);
     }
@@ -112,21 +148,29 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
     try {
       // Create a separate request for each selected document
       for (const doc of selectedDocuments) {
+        const insertData: any = {
+          title: doc.title,
+          description: doc.description,
+          document_type: doc.title,
+          category: doc.category,
+          priority: formData.priority,
+          due_date: formData.dueDate || null,
+          supplier_id: formData.supplier,
+          buyer_id: buyerProfile.id,
+          requester_id: user.id,
+          notes: formData.notes || null,
+          template_sections: doc.template || null,
+        };
+
+        // Add custom template ID if this is a custom template
+        if ((doc as any).isCustomTemplate && (doc as any).customTemplateId) {
+          insertData.custom_template_id = (doc as any).customTemplateId;
+          insertData.template_type = 'custom';
+        }
+
         const { data: request, error } = await supabase
           .from('document_requests')
-          .insert({
-            title: doc.title,
-            description: doc.description,
-            document_type: doc.title,
-            category: doc.category,
-            priority: formData.priority,
-            due_date: formData.dueDate || null,
-            supplier_id: formData.supplier,
-            buyer_id: buyerProfile.id,
-            requester_id: user.id,
-            notes: formData.notes || null,
-            template_sections: doc.template || null,
-          })
+          .insert(insertData)
           .select()
           .single();
 
@@ -231,7 +275,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
 
         {step === 1 && (
           <DocumentSelectionStep
-            complianceDocuments={complianceDocuments}
+            complianceDocuments={allDocuments}
             selectedDocuments={selectedDocuments}
             onDocumentToggle={handleDocumentToggle}
             onRemoveSelected={removeSelectedDocument}

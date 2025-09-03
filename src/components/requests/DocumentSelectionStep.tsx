@@ -197,16 +197,23 @@ const DocumentSelectionStep = ({
                     <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                       <doc.icon className="w-5 h-5 text-blue-600" />
                     </div>
-                    <div>
-                      <CardTitle className="text-lg">{doc.title}</CardTitle>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="secondary">{doc.category}</Badge>
-                        <Badge variant="outline">{doc.regulatoryBody}</Badge>
-                        {doc.required && (
-                          <Badge variant="destructive" className="text-xs">Required</Badge>
-                        )}
-                      </div>
-                    </div>
+                     <div>
+                       <div className="flex items-center gap-2">
+                         <CardTitle className="text-lg">{doc.title}</CardTitle>
+                         {(doc as any).isCustomTemplate && (
+                           <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                             Custom
+                           </Badge>
+                         )}
+                       </div>
+                       <div className="flex items-center gap-2 mt-1">
+                         <Badge variant="secondary">{doc.category}</Badge>
+                         <Badge variant="outline">{doc.regulatoryBody}</Badge>
+                         {doc.required && (
+                           <Badge variant="destructive" className="text-xs">Required</Badge>
+                         )}
+                       </div>
+                     </div>
                   </div>
                 </div>
               </CardHeader>

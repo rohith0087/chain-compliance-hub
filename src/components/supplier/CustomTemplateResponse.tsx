@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Download, Eye, Upload, FileText, Calendar, AlertCircle } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { toast } from 'sonner';
-import { useDropzone } from 'react-dropzone';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useDropzone } from 'react-dropzone';
+import { Download, FileCheck, AlertTriangle, Upload, Eye, Calendar, Building2, FileText, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 
@@ -19,7 +20,7 @@ interface CustomTemplate {
   category: string;
   file_path: string;
   file_name: string;
-  required_fields: string[];
+  required_fields: any;
 }
 
 interface DocumentRequest {
@@ -29,7 +30,7 @@ interface DocumentRequest {
   due_date: string;
   status: string;
   custom_template_id: string;
-  template: CustomTemplate;
+  template?: CustomTemplate;
 }
 
 interface TemplateSubmission {
@@ -42,16 +43,20 @@ interface TemplateSubmission {
 }
 
 interface CustomTemplateResponseProps {
+  isOpen: boolean;
+  onClose: () => void;
   request: DocumentRequest;
   onSubmissionComplete: () => void;
 }
 
-export const CustomTemplateResponse = ({ request, onSubmissionComplete }: CustomTemplateResponseProps) => {
+export const CustomTemplateResponse = ({ isOpen, onClose, request, onSubmissionComplete }: CustomTemplateResponseProps) => {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [template, setTemplate] = useState<CustomTemplate | null>(null);
   const [submission, setSubmission] = useState<TemplateSubmission | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [submissionNotes, setSubmissionNotes] = useState('');
 
@@ -73,14 +78,34 @@ export const CustomTemplateResponse = ({ request, onSubmissionComplete }: Custom
   });
 
   useEffect(() => {
-    if (request.custom_template_id) {
-      fetchExistingSubmission();
+    if (isOpen && request.custom_template_id) {
+      fetchTemplateAndSubmission();
     }
-  }, [request.custom_template_id]);
+  }, [isOpen, request.custom_template_id]);
 
-  const fetchExistingSubmission = async () => {
+  const fetchTemplateAndSubmission = async () => {
     try {
-      setIsLoading(true);
+      setLoading(true);
+
+      // Get template details
+      const { data: templateData, error: templateError } = await supabase
+        .from('custom_document_templates')
+        .select('*')
+        .eq('id', request.custom_template_id)
+        .single();
+
+      if (templateError) {
+        throw templateError;
+      }
+
+      // Ensure required_fields is an array
+      const processedTemplate = {
+        ...templateData,
+        required_fields: Array.isArray(templateData.required_fields) 
+          ? templateData.required_fields 
+          : []
+      };
+      setTemplate(processedTemplate);
 
       // Get supplier ID
       const { data: supplierData, error: supplierError } = await supabase
@@ -94,31 +119,37 @@ export const CustomTemplateResponse = ({ request, onSubmissionComplete }: Custom
       }
 
       // Check for existing submission
-      const { data, error } = await supabase
+      const { data: submissionData, error: submissionError } = await supabase
         .from('template_submissions')
         .select('*')
         .eq('request_id', request.id)
         .eq('supplier_id', supplierData.id)
         .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
-        throw error;
+      if (submissionError && submissionError.code !== 'PGRST116') {
+        throw submissionError;
       }
 
-      setSubmission(data);
+      setSubmission(submissionData);
     } catch (error: any) {
-      console.error('Error fetching submission:', error);
-      toast.error('Failed to fetch submission status');
+      console.error('Error fetching template and submission:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch template information",
+        variant: "destructive",
+      });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   const handleDownloadTemplate = async () => {
+    if (!template) return;
+
     try {
       const { data, error } = await supabase.storage
         .from('compliance-documents')
-        .download(request.template.file_path);
+        .download(template.file_path);
 
       if (error) {
         throw error;
@@ -127,24 +158,33 @@ export const CustomTemplateResponse = ({ request, onSubmissionComplete }: Custom
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = request.template.file_name;
+      a.download = template.file_name;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast.success('Template downloaded');
+      toast({
+        title: "Success",
+        description: "Template downloaded successfully",
+      });
     } catch (error: any) {
       console.error('Error downloading template:', error);
-      toast.error('Failed to download template');
+      toast({
+        title: "Error",
+        description: "Failed to download template",
+        variant: "destructive",
+      });
     }
   };
 
   const handlePreviewTemplate = async () => {
+    if (!template) return;
+
     try {
       const { data, error } = await supabase.storage
         .from('compliance-documents')
-        .createSignedUrl(request.template.file_path, 60);
+        .createSignedUrl(template.file_path, 60);
 
       if (error) {
         throw error;
@@ -153,13 +193,21 @@ export const CustomTemplateResponse = ({ request, onSubmissionComplete }: Custom
       window.open(data.signedUrl, '_blank');
     } catch (error: any) {
       console.error('Error previewing template:', error);
-      toast.error('Failed to preview template');
+      toast({
+        title: "Error",
+        description: "Failed to preview template",
+        variant: "destructive",
+      });
     }
   };
 
   const handleSubmitResponse = async () => {
-    if (!selectedFile || !user) {
-      toast.error('Please select a file to upload');
+    if (!selectedFile || !user || !template) {
+      toast({
+        title: "Error",
+        description: "Please select a file to upload",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -231,15 +279,23 @@ export const CustomTemplateResponse = ({ request, onSubmissionComplete }: Custom
         .update({ status: 'submitted' })
         .eq('id', request.id);
 
-      toast.success('Response submitted successfully');
+      toast({
+        title: "Success",
+        description: "Response submitted successfully",
+      });
+      
       onSubmissionComplete();
       setIsUploadModalOpen(false);
       setSelectedFile(null);
       setSubmissionNotes('');
-      fetchExistingSubmission();
+      fetchTemplateAndSubmission();
     } catch (error: any) {
       console.error('Error submitting response:', error);
-      toast.error(error.message || 'Failed to submit response');
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit response",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -260,188 +316,220 @@ export const CustomTemplateResponse = ({ request, onSubmissionComplete }: Custom
     }
   };
 
-  const isOverdue = new Date(request.due_date) < new Date();
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <>
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                {request.template.template_name}
-              </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Custom template: {request.template.document_type}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary">{request.template.category}</Badge>
-              {submission && (
-                <Badge className={getStatusColor(submission.status)}>
-                  {submission.status.replace('_', ' ').toUpperCase()}
-                </Badge>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          {request.template.description && (
-            <p className="text-sm text-muted-foreground">
-              {request.template.description}
-            </p>
-          )}
-
-          {request.template.required_fields && request.template.required_fields.length > 0 && (
-            <div>
-              <Label className="text-sm font-medium">Required Information:</Label>
-              <ul className="text-sm text-muted-foreground mt-1 list-disc list-inside">
-                {request.template.required_fields.map((field, index) => (
-                  <li key={index}>{field}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Calendar className="h-4 w-4" />
-            <span>Due: {new Date(request.due_date).toLocaleDateString()}</span>
-            {isOverdue && (
-              <Badge variant="destructive" className="ml-2">
-                <AlertCircle className="h-3 w-3 mr-1" />
-                Overdue
-              </Badge>
-            )}
-          </div>
-
-          {submission && submission.reviewer_notes && (
-            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <Label className="text-sm font-medium text-yellow-800">Reviewer Notes:</Label>
-              <p className="text-sm text-yellow-700 mt-1">{submission.reviewer_notes}</p>
-            </div>
-          )}
-
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handlePreviewTemplate}>
-              <Eye className="h-4 w-4 mr-2" />
-              Preview Template
-            </Button>
-            <Button variant="outline" onClick={handleDownloadTemplate}>
-              <Download className="h-4 w-4 mr-2" />
-              Download Template
-            </Button>
-            <Button
-              onClick={() => setIsUploadModalOpen(true)}
-              disabled={submission?.status === 'approved'}
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              {submission ? 'Update Response' : 'Submit Response'}
-            </Button>
-          </div>
-
-          {submission && submission.submitted_at && (
-            <p className="text-xs text-muted-foreground">
-              {submission.status === 'submitted' ? 'Submitted' : 'Last updated'}: {' '}
-              {new Date(submission.submitted_at).toLocaleString()}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Dialog open={isUploadModalOpen} onOpenChange={setIsUploadModalOpen}>
-        <DialogContent className="max-w-lg">
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {submission ? 'Update Response' : 'Submit Response'}
-            </DialogTitle>
+            <DialogTitle>Loading Template Response...</DialogTitle>
           </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Upload your completed document</Label>
-              {!selectedFile ? (
-                <div
-                  {...getRootProps()}
-                  className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-                    isDragActive ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-primary'
-                  }`}
-                >
-                  <input {...getInputProps()} />
-                  <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                  <p className="text-sm font-medium text-gray-900 mb-1">
-                    {isDragActive ? 'Drop your file here' : 'Upload completed document'}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    PDF, DOC, DOCX, XLS, XLSX, or image files
-                  </p>
-                </div>
-              ) : (
-                <div className="border rounded-lg p-3">
-                  <div className="flex items-center space-x-3">
-                    <FileText className="h-6 w-6 text-blue-500" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
-                      <p className="text-xs text-gray-500">
-                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedFile(null)}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="notes">Additional Notes (optional)</Label>
-              <Textarea
-                id="notes"
-                value={submissionNotes}
-                onChange={(e) => setSubmissionNotes(e.target.value)}
-                placeholder="Add any additional information or notes about your submission"
-                rows={3}
-              />
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsUploadModalOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSubmitResponse}
-                disabled={!selectedFile || isSubmitting}
-              >
-                {isSubmitting ? 'Submitting...' : 'Submit Response'}
-              </Button>
-            </div>
+          <div className="space-y-4 p-6">
+            <Skeleton className="h-6 w-3/4" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
           </div>
         </DialogContent>
       </Dialog>
-    </>
+    );
+  }
+
+  if (!template) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Template Not Found</DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-4">
+            <p>The custom template for this request could not be found.</p>
+            <Button onClick={onClose} className="mt-4">
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  const isOverdue = new Date(request.due_date) < new Date();
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileCheck className="w-5 h-5 text-green-600" />
+            Custom Template Response: {request.title}
+          </DialogTitle>
+        </DialogHeader>
+
+        <Card className="border-0 shadow-none">
+          <CardHeader className="px-0">
+            <div className="flex items-start justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  {template.template_name}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Custom template: {template.document_type}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{template.category}</Badge>
+                {submission && (
+                  <Badge className={getStatusColor(submission.status)}>
+                    {submission.status.replace('_', ' ').toUpperCase()}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-4 px-0">
+            {template.description && (
+              <p className="text-sm text-muted-foreground">
+                {template.description}
+              </p>
+            )}
+
+            {template.required_fields && template.required_fields.length > 0 && (
+              <div>
+                <Label className="text-sm font-medium">Required Information:</Label>
+                <ul className="text-sm text-muted-foreground mt-1 list-disc list-inside">
+                  {template.required_fields.map((field, index) => (
+                    <li key={index}>{field}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Calendar className="h-4 w-4" />
+              <span>Due: {new Date(request.due_date).toLocaleDateString()}</span>
+              {isOverdue && (
+                <Badge variant="destructive" className="ml-2">
+                  <AlertCircle className="h-3 w-3 mr-1" />
+                  Overdue
+                </Badge>
+              )}
+            </div>
+
+            {submission && submission.reviewer_notes && (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <Label className="text-sm font-medium text-yellow-800">Reviewer Notes:</Label>
+                <p className="text-sm text-yellow-700 mt-1">{submission.reviewer_notes}</p>
+              </div>
+            )}
+
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" onClick={handlePreviewTemplate}>
+                <Eye className="h-4 w-4 mr-2" />
+                Preview Template
+              </Button>
+              <Button variant="outline" onClick={handleDownloadTemplate}>
+                <Download className="h-4 w-4 mr-2" />
+                Download Template
+              </Button>
+              <Button
+                onClick={() => setIsUploadModalOpen(true)}
+                disabled={submission?.status === 'approved'}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                {submission ? 'Update Response' : 'Submit Response'}
+              </Button>
+            </div>
+
+            {submission && submission.submitted_at && (
+              <p className="text-xs text-muted-foreground">
+                {submission.status === 'submitted' ? 'Submitted' : 'Last updated'}: {' '}
+                {new Date(submission.submitted_at).toLocaleString()}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Upload Modal */}
+        <Dialog open={isUploadModalOpen} onOpenChange={setIsUploadModalOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>
+                {submission ? 'Update Response' : 'Submit Response'}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Upload your completed document</Label>
+                {!selectedFile ? (
+                  <div
+                    {...getRootProps()}
+                    className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                      isDragActive ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-primary'
+                    }`}
+                  >
+                    <input {...getInputProps()} />
+                    <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                    <p className="text-sm font-medium text-gray-900 mb-1">
+                      {isDragActive ? 'Drop your file here' : 'Upload completed document'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      PDF, DOC, DOCX, XLS, XLSX, or image files
+                    </p>
+                  </div>
+                ) : (
+                  <div className="border rounded-lg p-3">
+                    <div className="flex items-center space-x-3">
+                      <FileText className="h-6 w-6 text-blue-500" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedFile(null)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">Additional Notes (optional)</Label>
+                <Textarea
+                  id="notes"
+                  value={submissionNotes}
+                  onChange={(e) => setSubmissionNotes(e.target.value)}
+                  placeholder="Add any additional information or notes about your submission"
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsUploadModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSubmitResponse}
+                  disabled={!selectedFile || isSubmitting}
+                >
+                  {isSubmitting ? 'Submitting...' : 'Submit Response'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </DialogContent>
+    </Dialog>
   );
 };

@@ -10,7 +10,7 @@ import RequestsList from '@/components/requests/RequestsList';
 import SupplierDiscovery from '@/components/buyer/SupplierDiscovery';
 import NewRequestModal from '@/components/NewRequestModal';
 import BuyerComplianceDashboard from '@/components/dashboard/BuyerComplianceDashboard';
-import { Building2, Users, ListChecks, Plus, BarChart3, FileCheck, UserCheck, Settings, Calendar, AlertTriangle, Clock, MessageSquare, Compass } from 'lucide-react';
+import { Building2, Users, ListChecks, Plus, BarChart3, FileCheck, UserCheck, Settings, Calendar, AlertTriangle, Clock, MessageSquare, Compass, FileText } from 'lucide-react';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import BuyerDocumentsDashboard from '@/components/documents/BuyerDocumentsDashboard';
 import { BuyerIdCard } from '@/components/buyer/BuyerIdCard';
@@ -20,6 +20,7 @@ import { CompanyManagementDashboard } from '@/components/company/CompanyManageme
 import { BranchSelector } from '@/components/company/BranchSelector';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
 import ChatAgentPanel from '@/components/chat/ChatAgentPanel';
+import { CustomTemplateManager } from '@/components/buyer/CustomTemplateManager';
 import { supabase } from '@/integrations/supabase/client';
 
 interface BuyerDashboardProps {
@@ -220,6 +221,10 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
             <FileCheck className="w-4 h-4 mr-2" />
             {t('common:navigation.documents')}
           </TabsTrigger>
+          <TabsTrigger value="templates">
+            <FileText className="w-4 h-4 mr-2" />
+            Templates
+          </TabsTrigger>
           <TabsTrigger value="suppliers">
             <Users className="w-4 h-4 mr-2" />
             {t('common:navigation.suppliers')}
@@ -416,6 +421,10 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
 
         <TabsContent value="documents" className="space-y-2">
           <BuyerDocumentsDashboard />
+        </TabsContent>
+
+        <TabsContent value="templates" className="space-y-2">
+          <CustomTemplateManager />
         </TabsContent>
         
         <TabsContent value="requests" className="space-y-2">

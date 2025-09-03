@@ -28,8 +28,11 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
   const [dueDate, setDueDate] = useState<Date>();
   const [selectedSupplier, setSelectedSupplier] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('');
+  const [templateType, setTemplateType] = useState<'standard' | 'custom'>('standard');
+  const [selectedTemplate, setSelectedTemplate] = useState('');
   const [connectedSuppliers, setConnectedSuppliers] = useState<any[]>([]);
   const [availableBranches, setAvailableBranches] = useState<any[]>([]);
+  const [customTemplates, setCustomTemplates] = useState<any[]>([]);
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
@@ -84,6 +87,18 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
             setSelectedBranch(mainBranch.id);
           }
         }
+
+        // Get custom templates for this buyer
+        const { data: templates } = await supabase
+          .from('custom_document_templates')
+          .select('*')
+          .eq('buyer_id', buyer.id)
+          .eq('is_active', true)
+          .order('template_name');
+
+        if (templates) {
+          setCustomTemplates(templates);
+        }
       }
     } catch (error) {
       console.error('Error fetching buyer data:', error);
@@ -111,6 +126,8 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
           buyer_id: buyerProfile.id,
           branch_id: selectedBranch,
           requester_id: user.id,
+          template_type: templateType,
+          custom_template_id: templateType === 'custom' ? selectedTemplate : null,
         })
         .select()
         .single();
@@ -143,6 +160,8 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
       setDueDate(undefined);
       setSelectedSupplier('');
       setSelectedBranch('');
+      setTemplateType('standard');
+      setSelectedTemplate('');
       onClose();
     } catch (error: any) {
       toast({
@@ -241,6 +260,41 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
             </Select>
           </div>
 
+          <div>
+            <Label htmlFor="templateType">Request Type *</Label>
+            <Select value={templateType} onValueChange={(value) => setTemplateType(value as 'standard' | 'custom')} required>
+              <SelectTrigger>
+                <SelectValue placeholder="Select request type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="standard">Standard Document Request</SelectItem>
+                <SelectItem value="custom">Custom Template Request</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {templateType === 'custom' && (
+            <div>
+              <Label htmlFor="template">Custom Template *</Label>
+              <Select value={selectedTemplate} onValueChange={setSelectedTemplate} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select custom template" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customTemplates.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.template_name} - {template.category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {customTemplates.length === 0 && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  No custom templates available. Create templates in the Templates tab.
+                </p>
+              )}
+            </div>
+          )}
 
           <div>
             <Label htmlFor="description">Description</Label>

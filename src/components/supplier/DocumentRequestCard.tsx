@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import DocumentUploadDialog from './DocumentUploadDialog';
 import DocumentPreview from './DocumentPreview';
+import { CustomTemplateResponse } from './CustomTemplateResponse';
 
 interface DocumentRequestCardProps {
   request: any;
@@ -27,6 +28,9 @@ interface DocumentRequestCardProps {
 const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardProps) => {
   const [showUpload, setShowUpload] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showTemplateResponse, setShowTemplateResponse] = useState(false);
+
+  const isCustomTemplate = request.template_type === 'custom' && request.custom_template_id;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -108,10 +112,15 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                     <div>
                       <h4 className="font-semibold mb-3 text-gray-900">Request Information</h4>
                       <div className="grid md:grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Document Type</p>
-                          <p className="text-sm capitalize">{request.document_type}</p>
-                        </div>
+                       <div>
+                         <p className="text-sm font-medium text-gray-500">Document Type</p>
+                         <p className="text-sm capitalize">{request.document_type}</p>
+                         {isCustomTemplate && (
+                           <Badge variant="outline" className="mt-1 bg-purple-50 text-purple-700 border-purple-200">
+                             Custom Template
+                           </Badge>
+                         )}
+                       </div>
                         <div>
                           <p className="text-sm font-medium text-gray-500">Category</p>
                           <p className="text-sm capitalize">{request.category}</p>
@@ -230,7 +239,7 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
               )}
               
               {/* Show upload button for pending documents only */}
-              {request.status === 'pending' && (
+              {request.status === 'pending' && !isCustomTemplate && (
                 <Button 
                   size="sm" 
                   onClick={() => setShowUpload(true)}
@@ -240,9 +249,21 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                   Upload
                 </Button>
               )}
+
+              {/* Show template response button for custom template requests */}
+              {(request.status === 'pending' || request.status === 'rejected') && isCustomTemplate && (
+                <Button 
+                  size="sm" 
+                  onClick={() => setShowTemplateResponse(true)}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <FileCheck className="w-4 h-4 mr-2" />
+                  {request.status === 'rejected' ? 'Resubmit Template' : 'Complete Template'}
+                </Button>
+              )}
               
-              {/* Show resubmit button only for rejected documents */}
-              {request.status === 'rejected' && (
+              {/* Show resubmit button only for rejected standard documents */}
+              {request.status === 'rejected' && !isCustomTemplate && (
                 <Button 
                   size="sm" 
                   onClick={() => setShowUpload(true)}
@@ -293,6 +314,16 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
         isOpen={showPreview}
         onClose={() => setShowPreview(false)}
         request={request}
+      />
+
+      <CustomTemplateResponse
+        isOpen={showTemplateResponse}
+        onClose={() => setShowTemplateResponse(false)}
+        request={request}
+        onSubmissionComplete={() => {
+          setShowTemplateResponse(false);
+          onUploadSuccess();
+        }}
       />
     </>
   );

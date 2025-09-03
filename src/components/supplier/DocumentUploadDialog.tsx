@@ -87,8 +87,24 @@ if (file) {
   const fileExt = file.name.split('.').pop();
   const generatedName = `${request.id}_${Date.now()}.${fileExt}`;
   fileName = generatedName;
-  // Store key without bucket prefix
-  const fileKey = `${user?.id || 'uploads'}/${generatedName}`;
+
+  // Resolve supplier ID (prefer from request, fallback to lookup by profile_id)
+  let resolvedSupplierId: string | null = request?.supplier_id || null;
+  if (!resolvedSupplierId) {
+    const { data: supplierRow, error: supplierLookupError } = await supabase
+      .from('suppliers')
+      .select('id')
+      .eq('profile_id', user.id)
+      .single();
+    if (supplierLookupError || !supplierRow) {
+      console.error('Supplier lookup failed:', supplierLookupError);
+      throw new Error('Supplier profile not found');
+    }
+    resolvedSupplierId = supplierRow.id;
+  }
+
+  // Store key without bucket prefix under supplier namespace to satisfy RLS
+  const fileKey = `${resolvedSupplierId}/${generatedName}`;
   filePath = fileKey;
   fileSize = file.size;
   mimeType = file.type;

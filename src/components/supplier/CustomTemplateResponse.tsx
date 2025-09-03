@@ -227,7 +227,7 @@ export const CustomTemplateResponse = ({ isOpen, onClose, request, onSubmissionC
 
       // Upload response file
       const fileName = `${Date.now()}-${selectedFile.name}`;
-      const filePath = `template-submissions/${request.id}/${fileName}`;
+      const filePath = `${supplierData.id}/template-submissions/${request.id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('compliance-documents')

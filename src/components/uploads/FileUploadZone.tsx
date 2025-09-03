@@ -48,10 +48,18 @@ const FileUploadZone = ({ requestId, onUploadComplete }: FileUploadZoneProps) =>
     setUploadProgress(0);
 
     try {
+      // Resolve supplier ID by current profile
+      const { data: supplier, error: supplierError } = await supabase
+        .from('suppliers')
+        .select('id')
+        .eq('profile_id', user.id)
+        .single();
+      if (supplierError || !supplier) throw supplierError || new Error('Supplier profile not found');
+
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
         const fileExt = file.name.split('.').pop();
-        const fileName = `${user.id}/${Date.now()}_${file.name}`;
+        const fileName = `${supplier.id}/${Date.now()}_${file.name}`;
 
         // Upload to Supabase Storage
         const { error: uploadError } = await supabase.storage

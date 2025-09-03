@@ -69,12 +69,14 @@ const DocumentsFilter = ({ filters, onFiltersChange, showExpirationFilter = fals
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Search */}
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+            <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground pointer-events-none" />
             <Input
+              type="text"
               placeholder="Search documents..."
               value={filters.search}
               onChange={(e) => updateFilter('search', e.target.value)}
               className="pl-10"
+              autoComplete="off"
             />
           </div>
 

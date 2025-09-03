@@ -169,14 +169,14 @@ serve(async (req) => {
 
       if (supplierData) {
         // Check if supplier has a document request for this template
-        const { data: templateRequest } = await adminClient
+        const { data: templateRequests } = await adminClient
           .from('document_requests')
           .select('id, supplier_id, custom_template_id')
           .eq('supplier_id', supplierData.id)
           .eq('custom_template_id', customTemplate.id)
-          .maybeSingle();
+          .limit(1);
 
-        if (templateRequest) {
+        if (templateRequests && templateRequests.length > 0) {
           allowed = true;
           console.log('Supplier access granted for custom template');
         }

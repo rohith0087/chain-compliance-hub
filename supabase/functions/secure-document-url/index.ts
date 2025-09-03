@@ -88,88 +88,153 @@ serve(async (req) => {
       });
     }
 
-    // Fetch the upload row by matching file_path
-    // Try exact first; if not found, fallback to ILIKE
-    const tryFindUpload = async () => {
-      let query = adminClient
-        .from('document_uploads')
-        .select('id, request_id, uploader_id, file_path')
-        .eq('file_path', resolved!.key)
+    // Check if this is a custom template request
+    const isCustomTemplate = resolved.key.startsWith('custom-templates/');
+    
+    let upload = null;
+    let customTemplate = null;
+    
+    if (isCustomTemplate) {
+      // For custom templates, check direct access
+      const { data: templateData } = await adminClient
+        .from('custom_document_templates')
+        .select('id, buyer_id, file_path')
+        .eq('file_path', resolved.key)
         .maybeSingle();
-
-      let { data: upload, error } = await query;
-
-      if (!upload || error) {
-        // Try with bucket-prefixed key
-        const prefixedKey = `${resolved!.bucket}/${resolved!.key}`;
-        ({ data: upload, error } = await adminClient
+      
+      if (templateData) {
+        customTemplate = templateData;
+        console.log('Found custom template:', templateData);
+      } else {
+        console.warn('Custom template not found for key', { resolved });
+        return new Response(JSON.stringify({ error: 'Template not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } else {
+      // Regular document upload lookup
+      const tryFindUpload = async () => {
+        let query = adminClient
           .from('document_uploads')
           .select('id, request_id, uploader_id, file_path')
-          .eq('file_path', prefixedKey)
-          .maybeSingle());
+          .eq('file_path', resolved!.key)
+          .maybeSingle();
 
-        if (!upload || error) {
-          // Last resort: ILIKE contains
-          const { data: list } = await adminClient
+        let { data: uploadData, error } = await query;
+
+        if (!uploadData || error) {
+          // Try with bucket-prefixed key
+          const prefixedKey = `${resolved!.bucket}/${resolved!.key}`;
+          ({ data: uploadData, error } = await adminClient
             .from('document_uploads')
             .select('id, request_id, uploader_id, file_path')
-            .ilike('file_path', `%${resolved!.key}%`)
-            .limit(1);
-          upload = list && list[0];
+            .eq('file_path', prefixedKey)
+            .maybeSingle());
+
+          if (!uploadData || error) {
+            // Last resort: ILIKE contains
+            const { data: list } = await adminClient
+              .from('document_uploads')
+              .select('id, request_id, uploader_id, file_path')
+              .ilike('file_path', `%${resolved!.key}%`)
+              .limit(1);
+            uploadData = list && list[0];
+          }
+        }
+
+        return uploadData;
+      };
+
+      upload = await tryFindUpload();
+      if (!upload) {
+        console.warn('Upload not found for key', { resolved });
+        return new Response(JSON.stringify({ error: 'Document not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    const userId = userData.user.id;
+    let allowed = false;
+
+    if (isCustomTemplate && customTemplate) {
+      // For custom templates, check if user is supplier with an active request for this template
+      const { data: supplierData } = await adminClient
+        .from('suppliers')
+        .select('id')
+        .eq('profile_id', userId)
+        .maybeSingle();
+
+      if (supplierData) {
+        // Check if supplier has a document request for this template
+        const { data: templateRequest } = await adminClient
+          .from('document_requests')
+          .select('id, supplier_id, custom_template_id')
+          .eq('supplier_id', supplierData.id)
+          .eq('custom_template_id', customTemplate.id)
+          .maybeSingle();
+
+        if (templateRequest) {
+          allowed = true;
+          console.log('Supplier access granted for custom template');
         }
       }
 
-      return upload;
-    };
+      // Check if user is the buyer who owns this template
+      if (!allowed) {
+        const { data: buyerData } = await adminClient
+          .from('buyers')
+          .select('id')
+          .eq('id', customTemplate.buyer_id)
+          .eq('profile_id', userId)
+          .maybeSingle();
 
-    const upload = await tryFindUpload();
-    if (!upload) {
-      console.warn('Upload not found for key', { resolved });
-      return new Response(JSON.stringify({ error: 'Document not found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+        if (buyerData) {
+          allowed = true;
+          console.log('Buyer access granted for custom template');
+        }
+      }
+    } else if (upload) {
+      // Regular document upload access checks
+      
+      // Load the associated request
+      const { data: request } = await adminClient
+        .from('document_requests')
+        .select('id, buyer_id, supplier_id, requester_id')
+        .eq('id', upload.request_id)
+        .maybeSingle();
 
-    // Load the associated request
-    const { data: request } = await adminClient
-      .from('document_requests')
-      .select('id, buyer_id, supplier_id, requester_id')
-      .eq('id', upload.request_id)
-      .maybeSingle();
+      // Uploader can always access
+      if (upload.uploader_id === userId) {
+        allowed = true;
+      }
 
-    const userId = userData.user.id;
+      // Buyer or Supplier owner
+      if (!allowed && request) {
+        const [{ data: buyer }, { data: supplier }] = await Promise.all([
+          adminClient.from('buyers').select('id').eq('id', request.buyer_id).eq('profile_id', userId).maybeSingle(),
+          adminClient.from('suppliers').select('id').eq('id', request.supplier_id).eq('profile_id', userId).maybeSingle(),
+        ]);
+        if (buyer || supplier) allowed = true;
+      }
 
-    // Access checks
-    let allowed = false;
-
-    // Uploader can always access
-    if (upload.uploader_id === userId) {
-      allowed = true;
-    }
-
-    // Buyer or Supplier owner
-    if (!allowed && request) {
-      const [{ data: buyer }, { data: supplier }] = await Promise.all([
-        adminClient.from('buyers').select('id').eq('id', request.buyer_id).eq('profile_id', userId).maybeSingle(),
-        adminClient.from('suppliers').select('id').eq('id', request.supplier_id).eq('profile_id', userId).maybeSingle(),
-      ]);
-      if (buyer || supplier) allowed = true;
-    }
-
-    // Company teammates (buyer or supplier)
-    if (!allowed && request) {
-      const { data: companyUser } = await adminClient
-        .from('company_users')
-        .select('id')
-        .eq('profile_id', userId)
-        .eq('status', 'active')
-        .or(`and(company_id.eq.${request.buyer_id},company_type.eq.buyer),and(company_id.eq.${request.supplier_id},company_type.eq.supplier)`)
-        .limit(1);
-      if (companyUser && companyUser.length > 0) allowed = true;
+      // Company teammates (buyer or supplier)
+      if (!allowed && request) {
+        const { data: companyUser } = await adminClient
+          .from('company_users')
+          .select('id')
+          .eq('profile_id', userId)
+          .eq('status', 'active')
+          .or(`and(company_id.eq.${request.buyer_id},company_type.eq.buyer),and(company_id.eq.${request.supplier_id},company_type.eq.supplier)`)
+          .limit(1);
+        if (companyUser && companyUser.length > 0) allowed = true;
+      }
     }
 
     if (!allowed) {
+      console.log('Access denied for user', userId, 'to resource', resolved.key);
       return new Response(JSON.stringify({ error: 'Access denied' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

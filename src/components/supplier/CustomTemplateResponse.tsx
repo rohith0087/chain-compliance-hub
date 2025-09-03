@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useDropzone } from 'react-dropzone';
 import { Download, FileCheck, AlertTriangle, Upload, Eye, Calendar, Building2, FileText, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -147,15 +147,26 @@ export const CustomTemplateResponse = ({ isOpen, onClose, request, onSubmissionC
     if (!template) return;
 
     try {
-      const { data, error } = await supabase.storage
-        .from('compliance-documents')
-        .download(template.file_path);
+      // Use the secure document URL edge function for custom templates
+      const { data, error } = await supabase.functions.invoke('secure-document-url', {
+        body: {
+          filePath: template.file_path,
+          expiresIn: 3600
+        }
+      });
 
-      if (error) {
-        throw error;
+      if (error || !data?.success) {
+        throw new Error(data?.error || 'Failed to get secure URL');
       }
 
-      const url = URL.createObjectURL(data);
+      // Use the signed URL to download
+      const response = await fetch(data.url);
+      if (!response.ok) {
+        throw new Error('Failed to download file');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = template.file_name;
@@ -172,7 +183,7 @@ export const CustomTemplateResponse = ({ isOpen, onClose, request, onSubmissionC
       console.error('Error downloading template:', error);
       toast({
         title: "Error",
-        description: "Failed to download template",
+        description: error.message || "Failed to download template. Please check if you have access to this template.",
         variant: "destructive",
       });
     }
@@ -182,20 +193,24 @@ export const CustomTemplateResponse = ({ isOpen, onClose, request, onSubmissionC
     if (!template) return;
 
     try {
-      const { data, error } = await supabase.storage
-        .from('compliance-documents')
-        .createSignedUrl(template.file_path, 60);
+      // Use the secure document URL edge function for custom templates
+      const { data, error } = await supabase.functions.invoke('secure-document-url', {
+        body: {
+          filePath: template.file_path,
+          expiresIn: 3600
+        }
+      });
 
-      if (error) {
-        throw error;
+      if (error || !data?.success) {
+        throw new Error(data?.error || 'Failed to get secure URL');
       }
 
-      window.open(data.signedUrl, '_blank');
+      window.open(data.url, '_blank');
     } catch (error: any) {
       console.error('Error previewing template:', error);
       toast({
         title: "Error",
-        description: "Failed to preview template",
+        description: error.message || "Failed to preview template. Please check if you have access to this template.",
         variant: "destructive",
       });
     }
@@ -322,6 +337,7 @@ export const CustomTemplateResponse = ({ isOpen, onClose, request, onSubmissionC
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Loading Template Response...</DialogTitle>
+            <DialogDescription>Please wait while we load the template information.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 p-6">
             <Skeleton className="h-6 w-3/4" />
@@ -339,6 +355,7 @@ export const CustomTemplateResponse = ({ isOpen, onClose, request, onSubmissionC
         <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Template Not Found</DialogTitle>
+            <DialogDescription>The custom template for this request could not be found.</DialogDescription>
           </DialogHeader>
           <div className="text-center py-4">
             <p>The custom template for this request could not be found.</p>
@@ -361,6 +378,9 @@ export const CustomTemplateResponse = ({ isOpen, onClose, request, onSubmissionC
             <FileCheck className="w-5 h-5 text-green-600" />
             Custom Template Response: {request.title}
           </DialogTitle>
+          <DialogDescription>
+            Complete and submit your response using the custom template provided by the buyer.
+          </DialogDescription>
         </DialogHeader>
 
         <Card className="border-0 shadow-none">
@@ -456,6 +476,9 @@ export const CustomTemplateResponse = ({ isOpen, onClose, request, onSubmissionC
               <DialogTitle>
                 {submission ? 'Update Response' : 'Submit Response'}
               </DialogTitle>
+              <DialogDescription>
+                Upload your completed document based on the template provided.
+              </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4">

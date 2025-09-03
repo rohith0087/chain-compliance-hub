@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import DocumentUploadDialog from './DocumentUploadDialog';
 import DocumentPreview from './DocumentPreview';
-import { CustomTemplateResponse } from './CustomTemplateResponse';
+import CustomTemplateResponse from './CustomTemplateResponse';
 
 interface DocumentRequestCardProps {
   request: any;

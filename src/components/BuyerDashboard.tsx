@@ -20,7 +20,7 @@ import { CompanyManagementDashboard } from '@/components/company/CompanyManageme
 import { BranchSelector } from '@/components/company/BranchSelector';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
 import ChatAgentPanel from '@/components/chat/ChatAgentPanel';
-import { CustomTemplateManager } from '@/components/buyer/CustomTemplateManager';
+import CustomTemplateManager from '@/components/buyer/CustomTemplateManager';
 import { supabase } from '@/integrations/supabase/client';
 
 interface BuyerDashboardProps {

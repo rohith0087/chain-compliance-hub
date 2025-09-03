@@ -533,3 +533,5 @@ export const CustomTemplateResponse = ({ isOpen, onClose, request, onSubmissionC
     </Dialog>
   );
 };
+
+export default CustomTemplateResponse;

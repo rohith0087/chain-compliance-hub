@@ -364,3 +364,5 @@ export const CustomTemplateManager = () => {
     </div>
   );
 };
+
+export default CustomTemplateManager;

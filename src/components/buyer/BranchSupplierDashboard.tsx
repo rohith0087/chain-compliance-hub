@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Building2, Users } from 'lucide-react';
 import { BranchSupplierManagement } from '@/components/supplier/BranchSupplierManagement';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
+import { useCompanyUserRole } from '@/hooks/useCompanyUserRole';
 
 interface BranchSupplierDashboardProps {
   buyerId: string;
@@ -15,6 +16,7 @@ export const BranchSupplierDashboard: React.FC<BranchSupplierDashboardProps> = (
   currentUserRole
 }) => {
   const { branches, loading } = useCompanyBranches(buyerId, 'buyer');
+  const { role: companyUserRole } = useCompanyUserRole(buyerId, 'buyer');
 
   if (loading) {
     return (
@@ -65,9 +67,11 @@ export const BranchSupplierDashboard: React.FC<BranchSupplierDashboardProps> = (
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-sm font-bold capitalize">{currentUserRole || 'User'}</div>
+            <div className="text-sm font-bold capitalize">
+              {companyUserRole || currentUserRole || 'User'}
+            </div>
             <p className="text-xs text-muted-foreground">
-              Your access level
+              Company role: {companyUserRole || 'None assigned'}
             </p>
           </CardContent>
         </Card>
@@ -77,6 +81,7 @@ export const BranchSupplierDashboard: React.FC<BranchSupplierDashboardProps> = (
       <BranchSupplierManagement 
         buyerId={buyerId}
         currentUserRole={currentUserRole}
+        companyUserRole={companyUserRole || undefined}
       />
     </div>
   );

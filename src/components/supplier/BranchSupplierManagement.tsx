@@ -27,11 +27,13 @@ import { useCompanyBranches } from '@/hooks/useCompanyBranches';
 interface BranchSupplierManagementProps {
   buyerId: string;
   currentUserRole?: string;
+  companyUserRole?: string;
 }
 
 export const BranchSupplierManagement: React.FC<BranchSupplierManagementProps> = ({
   buyerId,
-  currentUserRole
+  currentUserRole,
+  companyUserRole
 }) => {
   const [selectedBranchId, setSelectedBranchId] = useState<string>('');
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
@@ -46,8 +48,9 @@ export const BranchSupplierManagement: React.FC<BranchSupplierManagementProps> =
     assignSupplierToBranch, 
     removeSupplierFromBranch 
   } = useBranchSupplierConnections(selectedBranchId);
-
-  const isAdmin = currentUserRole === 'company_admin';
+  
+  const isAdmin = companyUserRole === 'company_admin' || currentUserRole === 'admin';
+  console.log('BranchSupplierManagement - isAdmin:', isAdmin, 'companyUserRole:', companyUserRole, 'currentUserRole:', currentUserRole);
 
   const handleAssignSupplier = async () => {
     if (!selectedSupplierId) return;

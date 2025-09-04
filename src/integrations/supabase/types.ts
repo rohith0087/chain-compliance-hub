@@ -327,8 +327,48 @@ export type Database = {
           },
         ]
       }
+      branch_supplier_connections: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          branch_id: string
+          buyer_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          status: string
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          branch_id: string
+          buyer_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          branch_id?: string
+          buyer_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       buyer_supplier_connections: {
         Row: {
+          branch_id: string | null
           buyer_id: string | null
           id: string
           initiated_by: string | null
@@ -339,6 +379,7 @@ export type Database = {
           supplier_id: string | null
         }
         Insert: {
+          branch_id?: string | null
           buyer_id?: string | null
           id?: string
           initiated_by?: string | null
@@ -349,6 +390,7 @@ export type Database = {
           supplier_id?: string | null
         }
         Update: {
+          branch_id?: string | null
           buyer_id?: string | null
           id?: string
           initiated_by?: string | null
@@ -359,6 +401,13 @@ export type Database = {
           supplier_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "buyer_supplier_connections_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "buyer_supplier_connections_buyer_id_fkey"
             columns: ["buyer_id"]
@@ -1860,6 +1909,10 @@ export type Database = {
         Args: { p_notes?: string; p_request_id: string }
         Returns: Json
       }
+      assign_supplier_to_branch: {
+        Args: { p_branch_id: string; p_notes?: string; p_supplier_id: string }
+        Returns: Json
+      }
       binary_quantize: {
         Args: { "": string } | { "": unknown }
         Returns: unknown
@@ -1917,6 +1970,20 @@ export type Database = {
           total_chat_sessions: number
           total_document_requests: number
           total_document_uploads: number
+        }[]
+      }
+      get_branch_suppliers: {
+        Args: { p_branch_id: string }
+        Returns: {
+          address: string
+          assigned_at: string
+          company_name: string
+          connection_status: string
+          contact_email: string
+          industry: string
+          notes: string
+          phone: string
+          supplier_id: string
         }[]
       }
       get_companies_for_knowledge_refresh: {

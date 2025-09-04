@@ -11,7 +11,8 @@
     "connections": "Solicitudes de Conexión",
     "requests": "Solicitudes de Documentos",
     "buyers": "Compradores Conectados",
-    "company": "Gestión de Empresa"
+    "company": "Gestión de Empresa",
+    "branchSuppliers": "Proveedores de Sucursal"
   },
   "stats": {
     "pendingRequests": "Solicitudes Pendientes",

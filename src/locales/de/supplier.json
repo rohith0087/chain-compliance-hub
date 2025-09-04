@@ -11,7 +11,8 @@
     "connections": "Verbindungsanfragen",
     "requests": "Dokumentenanfragen",
     "buyers": "Verbundene Käufer",
-    "company": "Unternehmensverwaltung"
+    "company": "Unternehmensverwaltung",
+    "branchSuppliers": "Zweigstellen-Lieferanten"
   },
   "stats": {
     "pendingRequests": "Ausstehende Anfragen",

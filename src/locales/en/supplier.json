@@ -11,7 +11,8 @@
     "connections": "Connection Requests",
     "requests": "Document Requests",
     "buyers": "Connected Buyers",
-    "company": "Company Management"
+    "company": "Company Management",
+    "branchSuppliers": "Branch Suppliers"
   },
   "stats": {
     "pendingRequests": "Pending Requests",

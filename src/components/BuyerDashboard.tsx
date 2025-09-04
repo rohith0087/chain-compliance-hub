@@ -21,6 +21,7 @@ import { BranchSelector } from '@/components/company/BranchSelector';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
 import ChatAgentPanel from '@/components/chat/ChatAgentPanel';
 import CustomTemplateManager from '@/components/buyer/CustomTemplateManager';
+import { BranchSupplierDashboard } from '@/components/buyer/BranchSupplierDashboard';
 import { supabase } from '@/integrations/supabase/client';
 
 interface BuyerDashboardProps {
@@ -228,6 +229,10 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
           <TabsTrigger value="suppliers">
             <Users className="w-4 h-4 mr-2" />
             {t('common:navigation.suppliers')}
+          </TabsTrigger>
+          <TabsTrigger value="branch-suppliers">
+            <Building2 className="w-4 h-4 mr-2" />
+            Branch Suppliers
           </TabsTrigger>
           <TabsTrigger value="company">
             <Building2 className="w-4 h-4 mr-2" />
@@ -450,6 +455,15 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         
         <TabsContent value="connections" className="space-y-2">
           <BuyerConnectionRequests />
+        </TabsContent>
+        
+        <TabsContent value="branch-suppliers" className="space-y-2">
+          {buyerProfile && (
+            <BranchSupplierDashboard
+              buyerId={buyerProfile.id}
+              currentUserRole={profile?.roles?.[0] as string}
+            />
+          )}
         </TabsContent>
         
         <TabsContent value="company" className="space-y-2">

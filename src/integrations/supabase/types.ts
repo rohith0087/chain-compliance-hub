@@ -1928,6 +1928,10 @@ export type Database = {
           document_count: number
         }[]
       }
+      grant_pg_net_access: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       halfvec_avg: {
         Args: { "": number[] }
         Returns: unknown

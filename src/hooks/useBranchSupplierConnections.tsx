@@ -45,18 +45,16 @@ export const useBranchSupplierConnections = (branchId?: string) => {
       const { data, error } = await supabase
         .from('branch_supplier_connections')
         .select(`
-          *,
-          supplier:suppliers(
-            company_name,
-            contact_email,
-            industry,
-            phone,
-            address
-          ),
-          branch:company_branches(
-            branch_name,
-            location
-          )
+          id,
+          branch_id,
+          supplier_id,
+          buyer_id,
+          status,
+          assigned_by,
+          assigned_at,
+          notes,
+          created_at,
+          updated_at
         `)
         .eq('branch_id', branchId)
         .eq('status', 'active')
@@ -68,7 +66,32 @@ export const useBranchSupplierConnections = (branchId?: string) => {
         return;
       }
 
-      setConnections((data as any) || []);
+      // Fetch supplier and branch details separately for each connection
+      const connectionsWithDetails = await Promise.all(
+        (data || []).map(async (connection) => {
+          // Fetch supplier details
+          const { data: supplierData } = await supabase
+            .from('suppliers')
+            .select('company_name, contact_email, industry, phone, address')
+            .eq('id', connection.supplier_id)
+            .single();
+
+          // Fetch branch details
+          const { data: branchData } = await supabase
+            .from('company_branches')
+            .select('branch_name, location')
+            .eq('id', connection.branch_id)
+            .single();
+
+          return {
+            ...connection,
+            supplier: supplierData,
+            branch: branchData
+          };
+        })
+      );
+
+      setConnections(connectionsWithDetails);
     } catch (err) {
       console.error('Error in fetchBranchSuppliers:', err);
       setError('Failed to load branch suppliers');

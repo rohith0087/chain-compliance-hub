@@ -364,7 +364,29 @@ export type Database = {
           supplier_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_branch_supplier_connections_branch_id"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_branch_supplier_connections_buyer_id"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_branch_supplier_connections_supplier_id"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       buyer_supplier_connections: {
         Row: {

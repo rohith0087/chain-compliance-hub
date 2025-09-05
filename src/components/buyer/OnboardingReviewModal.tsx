@@ -5,9 +5,10 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { CheckCircle, XCircle, FileText, Building2 } from 'lucide-react';
+import { CheckCircle, XCircle, FileText, Building2, Eye, Download } from 'lucide-react';
 import { useOnboardingRequests } from '@/hooks/useOnboardingRequests';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface OnboardingReviewModalProps {
   request: any;
@@ -28,6 +29,7 @@ export const OnboardingReviewModal: React.FC<OnboardingReviewModalProps> = ({
   const [reviewNotes, setReviewNotes] = useState('');
   const [loading, setLoading] = useState(true);
   const { getDocumentRequirements, getFormFields } = useOnboardingRequests();
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchOnboardingData();
@@ -79,6 +81,69 @@ export const OnboardingReviewModal: React.FC<OnboardingReviewModalProps> = ({
       console.error('Error fetching onboarding data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const viewDocument = async (submission: any) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('compliance-documents')
+        .createSignedUrl(submission.file_path, 300); // 5 minutes
+
+      if (error) {
+        console.error('Error creating signed URL:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load document",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, '_blank');
+      }
+    } catch (error) {
+      console.error('Error viewing document:', error);
+      toast({
+        title: "Error",
+        description: "Failed to view document",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const downloadDocument = async (submission: any) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('compliance-documents')
+        .createSignedUrl(submission.file_path, 300);
+
+      if (error) {
+        console.error('Error creating signed URL:', error);
+        toast({
+          title: "Error",
+          description: "Failed to download document",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data?.signedUrl) {
+        const link = document.createElement('a');
+        link.href = data.signedUrl;
+        link.download = submission.file_name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      toast({
+        title: "Error",
+        description: "Failed to download document",
+        variant: "destructive"
+      });
     }
   };
 
@@ -185,9 +250,26 @@ export const OnboardingReviewModal: React.FC<OnboardingReviewModalProps> = ({
                             Submitted: {new Date(submission.created_at).toLocaleString()}
                           </div>
                         </div>
-                        <Button variant="outline" size="sm">
-                          View Document
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => viewDocument(submission)}
+                            className="flex items-center gap-1"
+                          >
+                            <Eye className="w-3 h-3" />
+                            View
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => downloadDocument(submission)}
+                            className="flex items-center gap-1"
+                          >
+                            <Download className="w-3 h-3" />
+                            Download
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>

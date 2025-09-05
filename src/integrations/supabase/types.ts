@@ -388,6 +388,56 @@ export type Database = {
           },
         ]
       }
+      buyer_default_onboarding_settings: {
+        Row: {
+          allow_branch_selection: boolean
+          auto_approve_standard_docs: boolean
+          buyer_id: string
+          created_at: string
+          created_by: string
+          default_welcome_message: string | null
+          expires_days: number
+          id: string
+          require_all_documents: boolean
+          require_branch_selection: boolean
+          updated_at: string
+        }
+        Insert: {
+          allow_branch_selection?: boolean
+          auto_approve_standard_docs?: boolean
+          buyer_id: string
+          created_at?: string
+          created_by: string
+          default_welcome_message?: string | null
+          expires_days?: number
+          id?: string
+          require_all_documents?: boolean
+          require_branch_selection?: boolean
+          updated_at?: string
+        }
+        Update: {
+          allow_branch_selection?: boolean
+          auto_approve_standard_docs?: boolean
+          buyer_id?: string
+          created_at?: string
+          created_by?: string
+          default_welcome_message?: string | null
+          expires_days?: number
+          id?: string
+          require_all_documents?: boolean
+          require_branch_selection?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyer_default_onboarding_settings_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: true
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       buyer_supplier_connections: {
         Row: {
           branch_id: string | null
@@ -725,6 +775,106 @@ export type Database = {
           usage_count?: number | null
         }
         Relationships: []
+      }
+      default_document_requirements: {
+        Row: {
+          buyer_id: string
+          created_at: string
+          description: string | null
+          display_order: number
+          document_name: string
+          document_type: string
+          id: string
+          is_required: boolean
+          template_file_name: string | null
+          template_file_path: string | null
+          updated_at: string
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          document_name: string
+          document_type: string
+          id?: string
+          is_required?: boolean
+          template_file_name?: string | null
+          template_file_path?: string | null
+          updated_at?: string
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          document_name?: string
+          document_type?: string
+          id?: string
+          is_required?: boolean
+          template_file_name?: string | null
+          template_file_path?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "default_document_requirements_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      default_form_fields: {
+        Row: {
+          buyer_id: string
+          created_at: string
+          field_category: string | null
+          field_description: string | null
+          field_label: string
+          field_options: Json | null
+          field_order: number
+          field_type: string
+          id: string
+          is_required: boolean
+          updated_at: string
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string
+          field_category?: string | null
+          field_description?: string | null
+          field_label: string
+          field_options?: Json | null
+          field_order?: number
+          field_type: string
+          id?: string
+          is_required?: boolean
+          updated_at?: string
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string
+          field_category?: string | null
+          field_description?: string | null
+          field_label?: string
+          field_options?: Json | null
+          field_order?: number
+          field_type?: string
+          id?: string
+          is_required?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "default_form_fields_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       delegation_permissions: {
         Row: {

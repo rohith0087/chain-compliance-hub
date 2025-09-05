@@ -6,6 +6,8 @@ import {
   DialogTitle,
   DialogDescription 
 } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { FileText } from 'lucide-react';
 import DocumentSelectionStep from './requests/DocumentSelectionStep';
 import RequestConfigurationStep from './requests/RequestConfigurationStep';
@@ -25,6 +27,7 @@ interface NewRequestModalProps {
 
 const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBranch }: NewRequestModalProps) => {
   const [step, setStep] = useState(1);
+  const [selectedSupplierType, setSelectedSupplierType] = useState<string>('General Supplier');
   const [selectedDocuments, setSelectedDocuments] = useState<ComplianceDocument[]>([]);
   const [formData, setFormData] = useState({
     supplier: '',
@@ -39,7 +42,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
 
   const { user } = useAuth();
   const { toast } = useToast();
-  const staticComplianceDocuments = useMemo(() => getComplianceDocuments(userType), [userType]);
+  const staticComplianceDocuments = useMemo(() => getComplianceDocuments(selectedSupplierType), [selectedSupplierType]);
 
   // Use branch-specific supplier connections if branch is provided, otherwise fall back to all connections
   const { 
@@ -286,7 +289,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {step === 1 ? 'Select Compliance Documents' : 'Create Document Requests'}
+            {step === 1 ? 'Select Supplier Type & Compliance Documents' : 'Create Document Requests'}
             {currentBranch && (
               <span className="text-sm font-normal text-muted-foreground ml-2">
                 for {currentBranch.branch_name}
@@ -295,7 +298,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
           </DialogTitle>
           <DialogDescription>
             {step === 1 
-              ? `Select multiple compliance documents for ${userType} industry standards`
+              ? `Select the supplier type and compliance documents for industry standards`
               : `Configure the batch request details for ${selectedDocuments.length} document(s)`
             }
             {currentBranch && step === 2 && (
@@ -307,13 +310,40 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
         </DialogHeader>
 
         {step === 1 && (
-          <DocumentSelectionStep
-            complianceDocuments={allDocuments}
-            selectedDocuments={selectedDocuments}
-            onDocumentToggle={handleDocumentToggle}
-            onRemoveSelected={removeSelectedDocument}
-            onNext={() => setStep(2)}
-          />
+          <div className="space-y-6">
+            {/* Supplier Type Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="supplier-type">Supplier Type</Label>
+              <Select 
+                value={selectedSupplierType} 
+                onValueChange={(value) => {
+                  setSelectedSupplierType(value);
+                  setSelectedDocuments([]); // Clear selected documents when supplier type changes
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select supplier type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="General Supplier">General Supplier</SelectItem>
+                  <SelectItem value="Chicken Processor Co">Chicken Processor</SelectItem>
+                  <SelectItem value="Poultry - Egg Supplier">Poultry - Egg Supplier</SelectItem>
+                  <SelectItem value="Poultry - Ingredient Supplier">Poultry - Ingredient Supplier</SelectItem>
+                  <SelectItem value="Poultry - Packaging Supplier">Poultry - Packaging Supplier</SelectItem>
+                  <SelectItem value="Poultry - Gas/Lube Supplier">Poultry - Gas/Lube Supplier</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Document Selection */}
+            <DocumentSelectionStep
+              complianceDocuments={allDocuments}
+              selectedDocuments={selectedDocuments}
+              onDocumentToggle={handleDocumentToggle}
+              onRemoveSelected={removeSelectedDocument}
+              onNext={() => setStep(2)}
+            />
+          </div>
         )}
 
         {step === 2 && (

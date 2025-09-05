@@ -336,13 +336,6 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
               </Card>
             </div>
 
-            {/* Show the connect with suppliers message if no connections */}
-            {buyerProfile && (
-              <ChatAgentPanel 
-                companyType="buyer"
-                companyId={buyerProfile.id}
-              />
-            )}
           </div>
         )}
 

@@ -35,6 +35,32 @@ export const useBranchSupplierConnections = (branchId?: string) => {
     }
   }, [branchId]);
 
+  // Set up real-time subscription for branch supplier connections
+  useEffect(() => {
+    if (!branchId) return;
+
+    const channel = supabase
+      .channel('branch-supplier-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'branch_supplier_connections',
+          filter: `branch_id=eq.${branchId}`
+        },
+        () => {
+          console.log('Branch supplier connection changed, refetching...');
+          fetchBranchSuppliers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [branchId]);
+
   const fetchBranchSuppliers = async () => {
     if (!branchId) return;
     

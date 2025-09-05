@@ -17,7 +17,8 @@ import {
   Settings,
   MapPin,
   ClipboardList,
-  CheckSquare
+  CheckSquare,
+  Clock
 } from 'lucide-react';
 
 export interface ComplianceDocument {
@@ -34,6 +35,1006 @@ export interface ComplianceDocument {
 }
 
 export const getComplianceDocuments = (userType: string): ComplianceDocument[] => {
+  // Industry-specific document sets for Poultry
+  if (userType === 'Poultry - Egg Supplier') {
+    return [
+      {
+        id: 'supplier-questionnaire-egg',
+        title: 'Completed Supplier Questionnaire',
+        category: 'Egg Supplier Documentation',
+        description: 'Comprehensive supplier information and capabilities questionnaire',
+        icon: ClipboardCheck,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Company Information', required: true }] }
+      },
+      {
+        id: 'allergen-survey-egg',
+        title: 'Completed Allergen Survey',
+        category: 'Egg Supplier Documentation',
+        description: 'Allergen control and management assessment',
+        icon: AlertTriangle,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Allergen Controls', required: true }] }
+      },
+      {
+        id: 'shell-egg-questionnaire',
+        title: 'Completed Shell Egg Supplier Questionnaire',
+        category: 'Egg Supplier Documentation',
+        description: 'Specific questionnaire for shell egg production and handling',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Production Details', required: true }] }
+      },
+      {
+        id: 'letter-guarantee-egg',
+        title: 'Dated Letter of Guarantee',
+        category: 'Egg Supplier Legal',
+        description: 'Legal guarantee documentation with date verification',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'Legal',
+        template: { sections: [{ name: 'Guarantee Terms', required: true }] }
+      },
+      {
+        id: 'supplier-agreement-egg',
+        title: 'Supplier Agreement',
+        category: 'Egg Supplier Legal',
+        description: 'Contractual agreement between buyer and egg supplier',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'Legal',
+        template: { sections: [{ name: 'Terms and Conditions', required: true }] }
+      },
+      {
+        id: 'coa-example-egg',
+        title: 'Example Certificate of Analysis',
+        category: 'Egg Supplier Quality',
+        description: 'Sample certificate of analysis for egg products',
+        icon: Award,
+        required: true,
+        regulatoryBody: 'Quality Control',
+        template: { sections: [{ name: 'Analysis Results', required: true }] }
+      },
+      {
+        id: 'lot-code-definitions-egg',
+        title: 'Lot Code Definitions',
+        category: 'Egg Supplier Traceability',
+        description: 'Definition and explanation of lot coding system',
+        icon: MapPin,
+        required: true,
+        regulatoryBody: 'Traceability',
+        template: { sections: [{ name: 'Coding System', required: true }] }
+      },
+      {
+        id: 'specification-sheet-egg',
+        title: 'Specification Sheet (with nutritional information)',
+        category: 'Egg Supplier Quality',
+        description: 'Product specifications including nutritional data',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Nutritional Information', required: true }] }
+      },
+      {
+        id: 'gfsi-certificate-egg',
+        title: 'Current & Valid GFSI Certificate',
+        category: 'Egg Supplier Certification',
+        description: 'Global Food Safety Initiative certification',
+        icon: Award,
+        required: true,
+        regulatoryBody: 'GFSI',
+        template: { sections: [{ name: 'Certification Details', required: true }] }
+      },
+      {
+        id: 'haccp-plan-egg',
+        title: 'Copy of HACCP Plan with flow charts',
+        category: 'Egg Supplier Food Safety',
+        description: 'Hazard Analysis Critical Control Points plan with visual flow charts',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'HACCP Documentation', required: true }] }
+      },
+      {
+        id: 'identity-preservation-egg',
+        title: 'Identity Preservation Certificates',
+        category: 'Egg Supplier Certification',
+        description: 'Certificates ensuring product identity preservation',
+        icon: CheckCircle,
+        required: false,
+        regulatoryBody: 'Certification Body',
+        template: { sections: [{ name: 'Identity Verification', required: true }] }
+      },
+      {
+        id: 'ca-prop12-egg',
+        title: 'California Egg Prop 12 Certificate',
+        category: 'Egg Supplier Compliance',
+        description: 'California Proposition 12 compliance certification',
+        icon: MapPin,
+        required: false,
+        regulatoryBody: 'California',
+        template: { sections: [{ name: 'Compliance Documentation', required: true }] }
+      },
+      {
+        id: 'colorado-compliance-egg',
+        title: 'Colorado Certificate of Compliance',
+        category: 'Egg Supplier Compliance',
+        description: 'Colorado state compliance certification',
+        icon: MapPin,
+        required: false,
+        regulatoryBody: 'Colorado',
+        template: { sections: [{ name: 'State Compliance', required: true }] }
+      },
+      {
+        id: 'arizona-cage-free-egg',
+        title: 'Arizona Cage Free Compliance Certificate',
+        category: 'Egg Supplier Compliance',
+        description: 'Arizona cage-free compliance certification',
+        icon: MapPin,
+        required: false,
+        regulatoryBody: 'Arizona',
+        template: { sections: [{ name: 'Cage-Free Compliance', required: true }] }
+      },
+      {
+        id: 'halal-certification-egg',
+        title: 'Halal Certification or letter of compliance',
+        category: 'Egg Supplier Religious',
+        description: 'Halal certification or compliance documentation',
+        icon: Award,
+        required: false,
+        regulatoryBody: 'Halal Authority',
+        template: { sections: [{ name: 'Halal Compliance', required: true }] }
+      },
+      {
+        id: 'kosher-certificate-egg',
+        title: 'Kosher Certificate or letter of compliance',
+        category: 'Egg Supplier Religious',
+        description: 'Kosher certification or compliance documentation',
+        icon: Award,
+        required: false,
+        regulatoryBody: 'Kosher Authority',
+        template: { sections: [{ name: 'Kosher Compliance', required: true }] }
+      },
+      {
+        id: 'kosher-passover-egg',
+        title: 'Kosher for Passover Certificate',
+        category: 'Egg Supplier Religious',
+        description: 'Kosher for Passover certification',
+        icon: Award,
+        required: false,
+        regulatoryBody: 'Kosher Authority',
+        template: { sections: [{ name: 'Passover Compliance', required: true }] }
+      },
+      {
+        id: 'country-origin-egg',
+        title: 'Country of Origin (non-USA; FSVP Statement)',
+        category: 'Egg Supplier Import',
+        description: 'Country of origin documentation and FSVP statement for non-USA products',
+        icon: Globe,
+        required: false,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Origin Documentation', required: true }] }
+      },
+      {
+        id: 'insurance-certificate-egg',
+        title: 'Current Certificate of Insurance',
+        category: 'Egg Supplier Insurance',
+        description: 'Current and valid insurance coverage certificate',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'Insurance Provider',
+        template: { sections: [{ name: 'Coverage Details', required: true }] }
+      },
+      {
+        id: 'non-gmo-statement-egg',
+        title: 'Non-GMO Statement',
+        category: 'Egg Supplier Quality',
+        description: 'Non-genetically modified organism statement',
+        icon: Leaf,
+        required: false,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'GMO Status', required: true }] }
+      },
+      {
+        id: 'bioterrorism-statement-egg',
+        title: 'Bio-terrorism/ Food Defense Statement or Program',
+        category: 'Egg Supplier Security',
+        description: 'Bio-terrorism and food defense documentation',
+        icon: Lock,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Security Measures', required: true }] }
+      },
+      {
+        id: 'sds-sheet-egg',
+        title: 'Current SDS Sheet or Letter of Exemption',
+        category: 'Egg Supplier Safety',
+        description: 'Safety Data Sheet or exemption letter',
+        icon: AlertTriangle,
+        required: true,
+        regulatoryBody: 'OSHA',
+        template: { sections: [{ name: 'Safety Information', required: true }] }
+      },
+      {
+        id: 'food-fraud-assessment-egg',
+        title: 'Food Fraud Vulnerability Assessment',
+        category: 'Egg Supplier Risk',
+        description: 'Assessment of food fraud vulnerabilities',
+        icon: AlertTriangle,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Vulnerability Analysis', required: true }] }
+      },
+      {
+        id: 'mitigation-strategies-egg',
+        title: 'Mitigation Strategies/Statement',
+        category: 'Egg Supplier Risk',
+        description: 'Risk mitigation strategies and implementation statement',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Mitigation Plans', required: true }] }
+      },
+      {
+        id: 'ca-prop65-statement-egg',
+        title: 'California Prop 65 Statement',
+        category: 'Egg Supplier Compliance',
+        description: 'California Proposition 65 compliance statement',
+        icon: MapPin,
+        required: false,
+        regulatoryBody: 'California',
+        template: { sections: [{ name: 'Prop 65 Compliance', required: true }] }
+      },
+      {
+        id: 'flock-certificate-egg',
+        title: 'Flock Certificate',
+        category: 'Egg Supplier Health',
+        description: 'Flock health and certification documentation',
+        icon: Heart,
+        required: true,
+        regulatoryBody: 'USDA',
+        template: { sections: [{ name: 'Flock Health Status', required: true }] }
+      },
+      {
+        id: 'shelf-life-statement-egg',
+        title: 'Product Shelf Life Statement',
+        category: 'Egg Supplier Quality',
+        description: 'Product shelf life and storage requirements',
+        icon: Clock,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Shelf Life Data', required: true }] }
+      },
+      {
+        id: 'transport-storage-egg',
+        title: 'Transportation and Storage Requirements',
+        category: 'Egg Supplier Logistics',
+        description: 'Transportation and storage requirement specifications',
+        icon: Truck,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Transport Requirements', required: true }] }
+      },
+      {
+        id: 'cfr-118-letter-egg',
+        title: '21 CFR 118 Letter',
+        category: 'Egg Supplier Compliance',
+        description: '21 CFR 118 compliance letter for shell egg producers',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'CFR 118 Compliance', required: true }] }
+      },
+      {
+        id: 'ethical-conduct-egg',
+        title: 'Ethical Code of Conduct (ETI) Agreement',
+        category: 'Egg Supplier Ethics',
+        description: 'Ethical Trading Initiative code of conduct agreement',
+        icon: Users,
+        required: true,
+        regulatoryBody: 'ETI',
+        template: { sections: [{ name: 'Ethical Standards', required: true }] }
+      }
+    ];
+  }
+
+  if (userType === 'Poultry - Ingredient Supplier') {
+    return [
+      {
+        id: 'supplier-questionnaire-ingredient',
+        title: 'Completed Supplier Questionnaire',
+        category: 'Ingredient Supplier Documentation',
+        description: 'Comprehensive supplier information and capabilities questionnaire',
+        icon: ClipboardCheck,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Company Information', required: true }] }
+      },
+      {
+        id: 'allergen-survey-ingredient',
+        title: 'Completed Allergen Survey',
+        category: 'Ingredient Supplier Documentation',
+        description: 'Allergen control and management assessment',
+        icon: AlertTriangle,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Allergen Controls', required: true }] }
+      },
+      {
+        id: 'ingredient-questionnaire',
+        title: 'Completed Ingredient Supplier Questionnaire',
+        category: 'Ingredient Supplier Documentation',
+        description: 'Specific questionnaire for ingredient suppliers',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Ingredient Details', required: true }] }
+      },
+      {
+        id: 'letter-guarantee-ingredient',
+        title: 'Dated Letter of Guarantee',
+        category: 'Ingredient Supplier Legal',
+        description: 'Legal guarantee documentation with date verification',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'Legal',
+        template: { sections: [{ name: 'Guarantee Terms', required: true }] }
+      },
+      {
+        id: 'supplier-agreement-ingredient',
+        title: 'Supplier Agreement',
+        category: 'Ingredient Supplier Legal',
+        description: 'Contractual agreement between buyer and ingredient supplier',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'Legal',
+        template: { sections: [{ name: 'Terms and Conditions', required: true }] }
+      },
+      {
+        id: 'coa-example-ingredient',
+        title: 'Example Certificate of Analysis',
+        category: 'Ingredient Supplier Quality',
+        description: 'Sample certificate of analysis for ingredients',
+        icon: Award,
+        required: true,
+        regulatoryBody: 'Quality Control',
+        template: { sections: [{ name: 'Analysis Results', required: true }] }
+      },
+      {
+        id: 'lot-code-definitions-ingredient',
+        title: 'Lot Code Definitions',
+        category: 'Ingredient Supplier Traceability',
+        description: 'Definition and explanation of lot coding system',
+        icon: MapPin,
+        required: true,
+        regulatoryBody: 'Traceability',
+        template: { sections: [{ name: 'Coding System', required: true }] }
+      },
+      {
+        id: 'specification-sheet-ingredient',
+        title: 'Specification Sheet (with nutritional information)',
+        category: 'Ingredient Supplier Quality',
+        description: 'Ingredient specifications including nutritional data',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Nutritional Information', required: true }] }
+      },
+      {
+        id: 'gfsi-certificate-ingredient',
+        title: 'Current & Valid GFSI Certificate',
+        category: 'Ingredient Supplier Certification',
+        description: 'Global Food Safety Initiative certification',
+        icon: Award,
+        required: true,
+        regulatoryBody: 'GFSI',
+        template: { sections: [{ name: 'Certification Details', required: true }] }
+      },
+      {
+        id: 'haccp-plan-ingredient',
+        title: 'Copy of HACCP Plan with flow charts',
+        category: 'Ingredient Supplier Food Safety',
+        description: 'Hazard Analysis Critical Control Points plan with visual flow charts',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'HACCP Documentation', required: true }] }
+      },
+      {
+        id: 'identity-preservation-ingredient',
+        title: 'Identity Preservation Certificates',
+        category: 'Ingredient Supplier Certification',
+        description: 'Certificates ensuring ingredient identity preservation',
+        icon: CheckCircle,
+        required: false,
+        regulatoryBody: 'Certification Body',
+        template: { sections: [{ name: 'Identity Verification', required: true }] }
+      },
+      {
+        id: 'halal-certification-ingredient',
+        title: 'Halal Certification or letter of compliance',
+        category: 'Ingredient Supplier Religious',
+        description: 'Halal certification or compliance documentation',
+        icon: Award,
+        required: false,
+        regulatoryBody: 'Halal Authority',
+        template: { sections: [{ name: 'Halal Compliance', required: true }] }
+      },
+      {
+        id: 'kosher-certificate-ingredient',
+        title: 'Kosher Certificate or letter of compliance',
+        category: 'Ingredient Supplier Religious',
+        description: 'Kosher certification or compliance documentation',
+        icon: Award,
+        required: false,
+        regulatoryBody: 'Kosher Authority',
+        template: { sections: [{ name: 'Kosher Compliance', required: true }] }
+      },
+      {
+        id: 'kosher-passover-ingredient',
+        title: 'Kosher for Passover Certificate',
+        category: 'Ingredient Supplier Religious',
+        description: 'Kosher for Passover certification',
+        icon: Award,
+        required: false,
+        regulatoryBody: 'Kosher Authority',
+        template: { sections: [{ name: 'Passover Compliance', required: true }] }
+      },
+      {
+        id: 'country-origin-ingredient',
+        title: 'Country of Origin (non-USA; FSVP Statement)',
+        category: 'Ingredient Supplier Import',
+        description: 'Country of origin documentation and FSVP statement for non-USA products',
+        icon: Globe,
+        required: false,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Origin Documentation', required: true }] }
+      },
+      {
+        id: 'insurance-certificate-ingredient',
+        title: 'Current Certificate of Insurance',
+        category: 'Ingredient Supplier Insurance',
+        description: 'Current and valid insurance coverage certificate',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'Insurance Provider',
+        template: { sections: [{ name: 'Coverage Details', required: true }] }
+      },
+      {
+        id: 'non-gmo-statement-ingredient',
+        title: 'Non-GMO Statement',
+        category: 'Ingredient Supplier Quality',
+        description: 'Non-genetically modified organism statement',
+        icon: Leaf,
+        required: false,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'GMO Status', required: true }] }
+      },
+      {
+        id: 'bioterrorism-statement-ingredient',
+        title: 'Bio-terrorism/ Food Defense Statement or Program',
+        category: 'Ingredient Supplier Security',
+        description: 'Bio-terrorism and food defense documentation',
+        icon: Lock,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Security Measures', required: true }] }
+      },
+      {
+        id: 'sds-sheet-ingredient',
+        title: 'Current SDS Sheet or Letter of Exemption',
+        category: 'Ingredient Supplier Safety',
+        description: 'Safety Data Sheet or exemption letter',
+        icon: AlertTriangle,
+        required: true,
+        regulatoryBody: 'OSHA',
+        template: { sections: [{ name: 'Safety Information', required: true }] }
+      },
+      {
+        id: 'food-fraud-assessment-ingredient',
+        title: 'Food Fraud Vulnerability Assessment',
+        category: 'Ingredient Supplier Risk',
+        description: 'Assessment of food fraud vulnerabilities',
+        icon: AlertTriangle,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Vulnerability Analysis', required: true }] }
+      },
+      {
+        id: 'mitigation-strategies-ingredient',
+        title: 'Mitigation Strategies/Statement',
+        category: 'Ingredient Supplier Risk',
+        description: 'Risk mitigation strategies and implementation statement',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Mitigation Plans', required: true }] }
+      },
+      {
+        id: 'ca-prop65-statement-ingredient',
+        title: 'California Prop 65 Statement',
+        category: 'Ingredient Supplier Compliance',
+        description: 'California Proposition 65 compliance statement',
+        icon: MapPin,
+        required: false,
+        regulatoryBody: 'California',
+        template: { sections: [{ name: 'Prop 65 Compliance', required: true }] }
+      },
+      {
+        id: 'shelf-life-statement-ingredient',
+        title: 'Product Shelf Life Statement',
+        category: 'Ingredient Supplier Quality',
+        description: 'Ingredient shelf life and storage requirements',
+        icon: Clock,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Shelf Life Data', required: true }] }
+      },
+      {
+        id: 'transport-storage-ingredient',
+        title: 'Transportation and Storage Requirements',
+        category: 'Ingredient Supplier Logistics',
+        description: 'Transportation and storage requirement specifications',
+        icon: Truck,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Transport Requirements', required: true }] }
+      },
+      {
+        id: 'cfr-118-letter-ingredient',
+        title: '21 CFR 118 Letter',
+        category: 'Ingredient Supplier Compliance',
+        description: '21 CFR 118 compliance letter',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'CFR 118 Compliance', required: true }] }
+      },
+      {
+        id: 'ethical-conduct-ingredient',
+        title: 'Ethical Code of Conduct (ETI) Agreement',
+        category: 'Ingredient Supplier Ethics',
+        description: 'Ethical Trading Initiative code of conduct agreement',
+        icon: Users,
+        required: true,
+        regulatoryBody: 'ETI',
+        template: { sections: [{ name: 'Ethical Standards', required: true }] }
+      }
+    ];
+  }
+
+  if (userType === 'Poultry - Packaging Supplier') {
+    return [
+      {
+        id: 'country-origin-packaging',
+        title: 'Country of Origin',
+        category: 'Packaging Supplier Import',
+        description: 'Country of origin documentation for packaging materials',
+        icon: Globe,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Origin Documentation', required: true }] }
+      },
+      {
+        id: 'haccp-flowchart-packaging',
+        title: 'HACCP flow chart or CCPs',
+        category: 'Packaging Supplier Food Safety',
+        description: 'HACCP flow chart or Critical Control Points documentation',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'HACCP Documentation', required: true }] }
+      },
+      {
+        id: 'fsvp-compliance-packaging',
+        title: 'FSVP Compliance',
+        category: 'Packaging Supplier Compliance',
+        description: 'Foreign Supplier Verification Program compliance',
+        icon: CheckCircle,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'FSVP Documentation', required: true }] }
+      },
+      {
+        id: 'insurance-certificate-packaging',
+        title: 'Certificate of Insurance',
+        category: 'Packaging Supplier Insurance',
+        description: 'Current and valid insurance coverage certificate',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'Insurance Provider',
+        template: { sections: [{ name: 'Coverage Details', required: true }] }
+      },
+      {
+        id: 'change-management-packaging',
+        title: 'Management of Change',
+        category: 'Packaging Supplier Quality',
+        description: 'Change management procedures and documentation',
+        icon: Settings,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Change Procedures', required: true }] }
+      },
+      {
+        id: 'allergen-survey-packaging',
+        title: 'Allergen Survey',
+        category: 'Packaging Supplier Safety',
+        description: 'Allergen control and management survey',
+        icon: AlertTriangle,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Allergen Controls', required: true }] }
+      },
+      {
+        id: 'approved-supplier-survey-packaging',
+        title: 'Approved Supplier Survey',
+        category: 'Packaging Supplier Documentation',
+        description: 'Approved supplier assessment and survey',
+        icon: ClipboardCheck,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Supplier Assessment', required: true }] }
+      },
+      {
+        id: 'ethical-conduct-packaging',
+        title: 'Ethical Code of Conduct',
+        category: 'Packaging Supplier Ethics',
+        description: 'Ethical code of conduct agreement',
+        icon: Users,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Ethical Standards', required: true }] }
+      },
+      {
+        id: 'letter-guarantee-packaging',
+        title: 'Letter of Continuing Guarantee',
+        category: 'Packaging Supplier Legal',
+        description: 'Letter of continuing guarantee',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'Legal',
+        template: { sections: [{ name: 'Guarantee Terms', required: true }] }
+      },
+      {
+        id: 'ca-prop65-packaging',
+        title: 'California Prop 65',
+        category: 'Packaging Supplier Compliance',
+        description: 'California Proposition 65 compliance documentation',
+        icon: MapPin,
+        required: false,
+        regulatoryBody: 'California',
+        template: { sections: [{ name: 'Prop 65 Compliance', required: true }] }
+      },
+      {
+        id: 'transport-storage-packaging',
+        title: 'Transportation/Storage Requirements',
+        category: 'Packaging Supplier Logistics',
+        description: 'Transportation and storage requirement specifications',
+        icon: Truck,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Transport Requirements', required: true }] }
+      },
+      {
+        id: 'ca-transparency-packaging',
+        title: 'California Transparency Act',
+        category: 'Packaging Supplier Compliance',
+        description: 'California Transparency in Supply Chains Act compliance',
+        icon: MapPin,
+        required: false,
+        regulatoryBody: 'California',
+        template: { sections: [{ name: 'Transparency Compliance', required: true }] }
+      },
+      {
+        id: 'gfsi-certificate-packaging',
+        title: 'GFSI Certificate',
+        category: 'Packaging Supplier Certification',
+        description: 'Global Food Safety Initiative certification',
+        icon: Award,
+        required: true,
+        regulatoryBody: 'GFSI',
+        template: { sections: [{ name: 'Certification Details', required: true }] }
+      },
+      {
+        id: 'kosher-compliance-packaging',
+        title: 'Kosher Certificate/Compliance',
+        category: 'Packaging Supplier Religious',
+        description: 'Kosher certification or compliance documentation',
+        icon: Award,
+        required: false,
+        regulatoryBody: 'Kosher Authority',
+        template: { sections: [{ name: 'Kosher Compliance', required: true }] }
+      },
+      {
+        id: 'halal-compliance-packaging',
+        title: 'Halal Certificate/Compliance',
+        category: 'Packaging Supplier Religious',
+        description: 'Halal certification or compliance documentation',
+        icon: Award,
+        required: false,
+        regulatoryBody: 'Halal Authority',
+        template: { sections: [{ name: 'Halal Compliance', required: true }] }
+      },
+      {
+        id: 'specification-sheet-packaging',
+        title: 'Specification Sheet',
+        category: 'Packaging Supplier Quality',
+        description: 'Packaging material specifications',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Material Specifications', required: true }] }
+      },
+      {
+        id: 'lot-code-definitions-packaging',
+        title: 'Lot Code Definitions',
+        category: 'Packaging Supplier Traceability',
+        description: 'Definition and explanation of lot coding system',
+        icon: MapPin,
+        required: true,
+        regulatoryBody: 'Traceability',
+        template: { sections: [{ name: 'Coding System', required: true }] }
+      },
+      {
+        id: 'coa-example-packaging',
+        title: 'Example COA',
+        category: 'Packaging Supplier Quality',
+        description: 'Example Certificate of Analysis',
+        icon: Award,
+        required: true,
+        regulatoryBody: 'Quality Control',
+        template: { sections: [{ name: 'Analysis Results', required: true }] }
+      },
+      {
+        id: 'shelf-life-packaging',
+        title: 'Shelf Life',
+        category: 'Packaging Supplier Quality',
+        description: 'Packaging material shelf life documentation',
+        icon: Clock,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Shelf Life Data', required: true }] }
+      },
+      {
+        id: 'packaging-survey',
+        title: 'Packaging Survey',
+        category: 'Packaging Supplier Documentation',
+        description: 'Comprehensive packaging supplier survey',
+        icon: ClipboardCheck,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Packaging Assessment', required: true }] }
+      },
+      {
+        id: 'sds-packaging',
+        title: 'SDS',
+        category: 'Packaging Supplier Safety',
+        description: 'Safety Data Sheet for packaging materials',
+        icon: AlertTriangle,
+        required: true,
+        regulatoryBody: 'OSHA',
+        template: { sections: [{ name: 'Safety Information', required: true }] }
+      }
+    ];
+  }
+
+  if (userType === 'Poultry - Gas/Lube Supplier') {
+    return [
+      {
+        id: 'country-origin-gas',
+        title: 'Country of Origin',
+        category: 'Gas/Lube Supplier Import',
+        description: 'Country of origin documentation for gas/lube products',
+        icon: Globe,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Origin Documentation', required: true }] }
+      },
+      {
+        id: 'haccp-flowchart-gas',
+        title: 'HACCP flow chart or CCPs',
+        category: 'Gas/Lube Supplier Food Safety',
+        description: 'HACCP flow chart or Critical Control Points documentation',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'HACCP Documentation', required: true }] }
+      },
+      {
+        id: 'fsvp-compliance-gas',
+        title: 'FSVP Compliance',
+        category: 'Gas/Lube Supplier Compliance',
+        description: 'Foreign Supplier Verification Program compliance',
+        icon: CheckCircle,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'FSVP Documentation', required: true }] }
+      },
+      {
+        id: 'insurance-certificate-gas',
+        title: 'Certificate of Insurance',
+        category: 'Gas/Lube Supplier Insurance',
+        description: 'Current and valid insurance coverage certificate',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'Insurance Provider',
+        template: { sections: [{ name: 'Coverage Details', required: true }] }
+      },
+      {
+        id: 'change-management-gas',
+        title: 'Management of Change',
+        category: 'Gas/Lube Supplier Quality',
+        description: 'Change management procedures and documentation',
+        icon: Settings,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Change Procedures', required: true }] }
+      },
+      {
+        id: 'allergen-survey-gas',
+        title: 'Allergen Survey',
+        category: 'Gas/Lube Supplier Safety',
+        description: 'Allergen control and management survey',
+        icon: AlertTriangle,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Allergen Controls', required: true }] }
+      },
+      {
+        id: 'approved-supplier-survey-gas',
+        title: 'Approved Supplier Survey',
+        category: 'Gas/Lube Supplier Documentation',
+        description: 'Approved supplier assessment and survey',
+        icon: ClipboardCheck,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Supplier Assessment', required: true }] }
+      },
+      {
+        id: 'ethical-conduct-gas',
+        title: 'Ethical Code of Conduct',
+        category: 'Gas/Lube Supplier Ethics',
+        description: 'Ethical code of conduct agreement',
+        icon: Users,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Ethical Standards', required: true }] }
+      },
+      {
+        id: 'letter-guarantee-gas',
+        title: 'Letter of Continuing Guarantee',
+        category: 'Gas/Lube Supplier Legal',
+        description: 'Letter of continuing guarantee',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'Legal',
+        template: { sections: [{ name: 'Guarantee Terms', required: true }] }
+      },
+      {
+        id: 'ca-prop65-gas',
+        title: 'California Prop 65',
+        category: 'Gas/Lube Supplier Compliance',
+        description: 'California Proposition 65 compliance documentation',
+        icon: MapPin,
+        required: false,
+        regulatoryBody: 'California',
+        template: { sections: [{ name: 'Prop 65 Compliance', required: true }] }
+      },
+      {
+        id: 'transport-storage-gas',
+        title: 'Transportation/Storage Requirements',
+        category: 'Gas/Lube Supplier Logistics',
+        description: 'Transportation and storage requirement specifications',
+        icon: Truck,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Transport Requirements', required: true }] }
+      },
+      {
+        id: 'ca-transparency-gas',
+        title: 'California Transparency Act',
+        category: 'Gas/Lube Supplier Compliance',
+        description: 'California Transparency in Supply Chains Act compliance',
+        icon: MapPin,
+        required: false,
+        regulatoryBody: 'California',
+        template: { sections: [{ name: 'Transparency Compliance', required: true }] }
+      },
+      {
+        id: 'gfsi-certificate-gas',
+        title: 'GFSI Certificate',
+        category: 'Gas/Lube Supplier Certification',
+        description: 'Global Food Safety Initiative certification',
+        icon: Award,
+        required: true,
+        regulatoryBody: 'GFSI',
+        template: { sections: [{ name: 'Certification Details', required: true }] }
+      },
+      {
+        id: 'kosher-compliance-gas',
+        title: 'Kosher Certificate/Compliance',
+        category: 'Gas/Lube Supplier Religious',
+        description: 'Kosher certification or compliance documentation',
+        icon: Award,
+        required: false,
+        regulatoryBody: 'Kosher Authority',
+        template: { sections: [{ name: 'Kosher Compliance', required: true }] }
+      },
+      {
+        id: 'halal-compliance-gas',
+        title: 'Halal Certificate/Compliance',
+        category: 'Gas/Lube Supplier Religious',
+        description: 'Halal certification or compliance documentation',
+        icon: Award,
+        required: false,
+        regulatoryBody: 'Halal Authority',
+        template: { sections: [{ name: 'Halal Compliance', required: true }] }
+      },
+      {
+        id: 'specification-sheet-gas',
+        title: 'Specification Sheet',
+        category: 'Gas/Lube Supplier Quality',
+        description: 'Gas/lube product specifications',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Product Specifications', required: true }] }
+      },
+      {
+        id: 'lot-code-definitions-gas',
+        title: 'Lot Code Definitions',
+        category: 'Gas/Lube Supplier Traceability',
+        description: 'Definition and explanation of lot coding system',
+        icon: MapPin,
+        required: true,
+        regulatoryBody: 'Traceability',
+        template: { sections: [{ name: 'Coding System', required: true }] }
+      },
+      {
+        id: 'coa-example-gas',
+        title: 'Example COA',
+        category: 'Gas/Lube Supplier Quality',
+        description: 'Example Certificate of Analysis',
+        icon: Award,
+        required: true,
+        regulatoryBody: 'Quality Control',
+        template: { sections: [{ name: 'Analysis Results', required: true }] }
+      },
+      {
+        id: 'shelf-life-gas',
+        title: 'Shelf Life',
+        category: 'Gas/Lube Supplier Quality',
+        description: 'Product shelf life documentation',
+        icon: Clock,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Shelf Life Data', required: true }] }
+      },
+      {
+        id: 'gas-lube-survey',
+        title: 'Gas/Lube Supplier Survey',
+        category: 'Gas/Lube Supplier Documentation',
+        description: 'Comprehensive gas/lube supplier survey',
+        icon: ClipboardCheck,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Supplier Assessment', required: true }] }
+      },
+      {
+        id: 'sds-gas',
+        title: 'SDS',
+        category: 'Gas/Lube Supplier Safety',
+        description: 'Safety Data Sheet for gas/lube products',
+        icon: AlertTriangle,
+        required: true,
+        regulatoryBody: 'OSHA',
+        template: { sections: [{ name: 'Safety Information', required: true }] }
+      }
+    ];
+  }
   if (userType === 'Chicken Processor Co') {
     return [
       {

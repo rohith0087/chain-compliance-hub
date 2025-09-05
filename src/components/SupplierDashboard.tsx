@@ -40,6 +40,9 @@ import { CompanyManagementDashboard } from '@/components/company/CompanyManageme
 import { BranchSelector } from '@/components/company/BranchSelector';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
 import { SupplierDocumentLibrary } from '@/components/supplier/SupplierDocumentLibrary';
+import { OnboardingNotification } from '@/components/supplier/OnboardingNotification';
+import { OnboardingProcess } from '@/components/supplier/OnboardingProcess';
+import { useOnboardingRequests } from '@/hooks/useOnboardingRequests';
 
 interface SupplierDashboardProps {
   user: { 
@@ -60,6 +63,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
   const [loading, setLoading] = useState(true);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [highlightedTab, setHighlightedTab] = useState<string | null>(null);
+  const [onboardingRequests, setOnboardingRequests] = useState<any[]>([]);
   
   // Filter state for document requests
   const [filters, setFilters] = useState({
@@ -73,6 +77,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
   
   const { user: authUser } = useAuth();
   const { getSupplierProfile } = useCompanySetup();
+  const { requests: allOnboardingRequests } = useOnboardingRequests();
 
   // Company branches management
   const {
@@ -87,7 +92,8 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
     pendingRequests: documentRequests.filter(req => req.status === 'pending').length,
     documentsSubmitted: documentRequests.filter(req => req.status === 'submitted').length,
     approvedDocuments: documentRequests.filter(req => req.status === 'approved').length,
-    expiringDocuments: 0 // This would need a separate query for expiring documents
+    expiringDocuments: 0, // This would need a separate query for expiring documents
+    pendingOnboarding: onboardingRequests.filter(req => req.status === 'pending').length
   };
 
   const completionRate = documentRequests.length > 0 
@@ -99,6 +105,17 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
       loadSupplierData();
     }
   }, [authUser]);
+
+  // Filter onboarding requests for current supplier
+  useEffect(() => {
+    if (authUser && allOnboardingRequests) {
+      const supplierRequests = allOnboardingRequests.filter(req => 
+        req.supplier_email === authUser.email || 
+        (supplierProfile && req.supplier_id === supplierProfile.id)
+      );
+      setOnboardingRequests(supplierRequests);
+    }
+  }, [authUser, allOnboardingRequests, supplierProfile]);
 
   // Handle URL params for tab navigation
   useEffect(() => {
@@ -401,12 +418,12 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t('supplier:stats.connectedBuyers')}</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Pending Onboarding</CardTitle>
+              <Bell className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{connectedBuyers.length}</div>
-              <p className="text-xs text-muted-foreground">{t('supplier:stats.activeConnections')}</p>
+              <div className="text-2xl font-bold">{stats.pendingOnboarding}</div>
+              <p className="text-xs text-muted-foreground">New onboarding requests</p>
             </CardContent>
           </Card>
         </div>
@@ -415,6 +432,18 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
             <TabsTrigger value="overview">{t('supplier:tabs.overview')}</TabsTrigger>
+            <TabsTrigger 
+              value="onboarding"
+              className={highlightedTab === 'onboarding' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
+            >
+              <Bell className="w-4 h-4 mr-2" />
+              Onboarding
+              {stats.pendingOnboarding > 0 && (
+                <Badge variant="destructive" className="ml-2 px-1 py-0 text-xs">
+                  {stats.pendingOnboarding}
+                </Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger 
               value="compliance"
               className={highlightedTab === 'compliance' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
@@ -459,6 +488,63 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
               {t('supplier:tabs.company')}
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="onboarding" className="space-y-6">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Supplier Onboarding</h2>
+                <p className="text-muted-foreground">
+                  {onboardingRequests.length === 0 ? 'No onboarding requests' : `${onboardingRequests.length} requests`}
+                </p>
+              </div>
+              
+              {onboardingRequests.length > 0 ? (
+                <div className="space-y-4">
+                  {onboardingRequests.map(request => {
+                    // If request is in onboarding_initiated or under_review, show process
+                    if (request.status === 'onboarding_initiated' || request.status === 'under_review') {
+                      return (
+                        <OnboardingProcess
+                          key={request.id}
+                          request={request}
+                          onComplete={() => {
+                            // Refresh data when onboarding completes
+                            loadSupplierData();
+                          }}
+                        />
+                      );
+                    }
+                    
+                    // Otherwise show notification
+                    return (
+                      <OnboardingNotification
+                        key={request.id}
+                        request={request}
+                        onAccept={() => {
+                          // Refresh data when accepting
+                          loadSupplierData();
+                        }}
+                        onDecline={() => {
+                          // Refresh data when declining
+                          loadSupplierData();
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="text-center py-12">
+                    <Bell className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Onboarding Requests</h3>
+                    <p className="text-muted-foreground">
+                      You don't have any pending onboarding requests at the moment.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid lg:grid-cols-2 gap-6">

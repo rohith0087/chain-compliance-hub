@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Upload, FileText, CheckCircle, X, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,6 +36,9 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  // Create refs for file inputs to trigger programmatically
+  const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
   useEffect(() => {
     fetchExistingSubmissions();
@@ -60,15 +62,36 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
     }
   };
 
+  // Function to trigger file selection
+  const triggerFileSelect = (requirementId: string) => {
+    console.log(`🔴 DEBUG: triggerFileSelect called for requirement ${requirementId}`);
+    const input = fileInputRefs.current[requirementId];
+    if (input) {
+      console.log(`🔴 DEBUG: Found input element, calling click()`);
+      input.click();
+    } else {
+      console.error(`🔴 DEBUG: No input found for requirement ${requirementId}`);
+      console.log(`🔴 DEBUG: Available refs:`, Object.keys(fileInputRefs.current));
+    }
+  };
+
   const handleFileUpload = async (requirementId: string, documentName: string, file: File) => {
+    console.log(`🔴 DEBUG: handleFileUpload called`, { requirementId, documentName, fileName: file?.name });
+    
     if (!file) {
-      console.error('No file selected');
+      console.error('🔴 DEBUG: No file selected');
+      toast({
+        title: "No File Selected",
+        description: "Please select a file to upload",
+        variant: "destructive"
+      });
       return;
     }
 
     // Validate file size (10MB limit)
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
+      console.error(`🔴 DEBUG: File too large: ${file.size} bytes`);
       toast({
         title: "File Too Large",
         description: "File size must be less than 10MB",
@@ -80,6 +103,7 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
     // Validate file type
     const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/png', 'text/plain'];
     if (!allowedTypes.includes(file.type)) {
+      console.error(`🔴 DEBUG: Invalid file type: ${file.type}`);
       toast({
         title: "Invalid File Type",
         description: "Only PDF, DOC, DOCX, JPG, PNG, and TXT files are allowed",
@@ -88,15 +112,26 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
       return;
     }
 
-    console.log('Starting file upload:', { requirementId, documentName, fileName: file.name, fileSize: file.size, fileType: file.type });
+    console.log('🔴 DEBUG: Starting file upload:', { 
+      requirementId, 
+      documentName, 
+      fileName: file.name, 
+      fileSize: file.size, 
+      fileType: file.type,
+      requestId: request.id,
+      userId: user?.id 
+    });
 
     const fileExt = file.name.split('.').pop();
     const fileName = `${request.id}/${requirementId}/${Date.now()}.${fileExt}`;
+    console.log(`🔴 DEBUG: Upload path will be: ${fileName}`);
 
     setUploading(requirementId);
     setUploadProgress({ ...uploadProgress, [requirementId]: 0 });
 
     try {
+      console.log(`🔴 DEBUG: About to upload to storage with bucket: compliance-documents, path: ${fileName}`);
+      
       // Upload file to Supabase storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('compliance-documents')
@@ -105,44 +140,52 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
           upsert: false
         });
       
+      console.log(`🔴 DEBUG: Storage upload result:`, { uploadData, uploadError });
       setUploadProgress({ ...uploadProgress, [requirementId]: 100 });
 
       if (uploadError) {
-        console.error('Error uploading file:', uploadError);
+        console.error('🔴 DEBUG: Storage upload failed:', uploadError);
         toast({
           title: "Upload Error",
-          description: uploadError.message || "Failed to upload file",
+          description: `Storage upload failed: ${uploadError.message}. This might be a permissions issue.`,
           variant: "destructive"
         });
         return;
       }
+
+      console.log(`🔴 DEBUG: Storage upload successful, saving to database...`);
+      const submissionData = {
+        onboarding_request_id: request.id,
+        requirement_id: requirementId,
+        document_name: documentName,
+        file_path: uploadData.path,
+        file_name: file.name,
+        file_size: file.size,
+        mime_type: file.type,
+        submitted_by: user?.id
+      };
+      console.log(`🔴 DEBUG: Submission data:`, submissionData);
 
       // Save submission record
       const { error: insertError } = await supabase
         .from('onboarding_document_submissions')
-        .insert({
-          onboarding_request_id: request.id,
-          requirement_id: requirementId,
-          document_name: documentName,
-          file_path: uploadData.path,
-          file_name: file.name,
-          file_size: file.size,
-          mime_type: file.type,
-          submitted_by: user?.id
-        });
+        .insert(submissionData);
+
+      console.log(`🔴 DEBUG: Database insert result:`, { insertError });
 
       if (insertError) {
-        console.error('Error saving submission:', insertError);
+        console.error('🔴 DEBUG: Database insert failed:', insertError);
         // Clean up uploaded file
         await supabase.storage.from('compliance-documents').remove([uploadData.path]);
         toast({
-          title: "Save Error",
-          description: insertError.message || "Failed to save submission record",
+          title: "Save Error", 
+          description: `Database save failed: ${insertError.message}. This might be an RLS policy issue.`,
           variant: "destructive"
         });
         return;
       }
 
+      console.log(`🔴 DEBUG: Success! Refreshing submissions...`);
       await fetchExistingSubmissions();
       
       toast({
@@ -157,14 +200,20 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
         requiredDocs.some(req => req.id === sub.requirement_id)
       );
 
+      console.log(`🔴 DEBUG: Completion check:`, {
+        requiredDocs: requiredDocs.length,
+        submittedRequiredDocs: submittedRequiredDocs.length
+      });
+
       if (submittedRequiredDocs.length >= requiredDocs.length) {
+        console.log(`🔴 DEBUG: All required docs uploaded, calling onComplete()`);
         onComplete();
       }
     } catch (error) {
-      console.error('Error in handleFileUpload:', error);
+      console.error('🔴 DEBUG: Unexpected error in handleFileUpload:', error);
       toast({
         title: "Error",
-        description: "Failed to upload document",
+        description: `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       });
     } finally {
@@ -272,11 +321,16 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
                           View
                         </Button>
                         {!isCompleted && (
-                          <Label htmlFor={`file-${requirement.id}`} className="cursor-pointer">
-                            <Button variant="outline" size="sm" asChild>
-                              <span>Replace</span>
-                            </Button>
-                          </Label>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              console.log(`🔴 DEBUG: Replace button clicked for ${requirement.id}`);
+                              triggerFileSelect(requirement.id);
+                            }}
+                          >
+                            Replace
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -294,11 +348,16 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
                       {!isCompleted && (
                         <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                           <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                          <Label htmlFor={`file-${requirement.id}`} className="cursor-pointer">
-                            <Button variant="outline" disabled={isUploading}>
-                              {isUploading ? 'Uploading...' : 'Choose File'}
-                            </Button>
-                          </Label>
+                          <Button 
+                            variant="outline" 
+                            disabled={isUploading}
+                            onClick={() => {
+                              console.log(`🔴 DEBUG: Choose File button clicked for ${requirement.id}`);
+                              triggerFileSelect(requirement.id);
+                            }}
+                          >
+                            {isUploading ? 'Uploading...' : 'Choose File'}
+                          </Button>
                           <p className="text-xs text-muted-foreground mt-2">
                             Supported formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB)
                           </p>
@@ -309,17 +368,21 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
 
                   {!isCompleted && (
                     <Input
-                      id={`file-${requirement.id}`}
+                      ref={(el) => {
+                        fileInputRefs.current[requirement.id] = el;
+                        console.log(`🔴 DEBUG: Set ref for ${requirement.id}:`, !!el);
+                      }}
                       type="file"
                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
                       className="hidden"
                       onChange={(e) => {
+                        console.log(`🔴 DEBUG: File input onChange triggered for ${requirement.id}`);
                         const file = e.target.files?.[0];
                         if (file) {
-                          console.log('File selected:', file.name, file.type, file.size);
+                          console.log(`🔴 DEBUG: File selected:`, file.name, file.type, file.size);
                           handleFileUpload(requirement.id, requirement.document_name, file);
                         } else {
-                          console.log('No file selected');
+                          console.log(`🔴 DEBUG: No file selected in onChange`);
                         }
                         // Reset the input to allow selecting the same file again
                         e.target.value = '';

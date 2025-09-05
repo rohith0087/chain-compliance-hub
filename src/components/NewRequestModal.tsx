@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -39,7 +39,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
 
   const { user } = useAuth();
   const { toast } = useToast();
-  const staticComplianceDocuments = getComplianceDocuments(userType);
+  const staticComplianceDocuments = useMemo(() => getComplianceDocuments(userType), [userType]);
 
   // Use branch-specific supplier connections if branch is provided, otherwise fall back to all connections
   const { 

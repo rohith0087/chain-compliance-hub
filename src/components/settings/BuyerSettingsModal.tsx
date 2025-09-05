@@ -14,6 +14,7 @@ import { VALID_INDUSTRIES } from '@/config/industries';
 import { AccountSettingsForm } from './AccountSettingsForm';
 import { PasswordChangeForm } from './PasswordChangeForm';
 import { LogoUploadWidget } from './LogoUploadWidget';
+import { DefaultOnboardingSettings } from './DefaultOnboardingSettings';
 
 interface BuyerSettingsModalProps {
   open: boolean;
@@ -148,8 +149,9 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
         </DialogHeader>
 
         <Tabs defaultValue="company" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="company">Company</TabsTrigger>
+            <TabsTrigger value="defaults">Default Onboarding</TabsTrigger>
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="password">Password</TabsTrigger>
             <TabsTrigger value="logo">Logo</TabsTrigger>
@@ -227,6 +229,10 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
                 </form>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="defaults">
+            <DefaultOnboardingSettings />
           </TabsContent>
 
           <TabsContent value="account">

@@ -553,16 +553,28 @@ export const DEFAULT_ONBOARDING_TEMPLATES: DefaultOnboardingTemplate[] = [
         field_order: 24
       },
       {
-        field_type: 'checkbox',
-        field_label: 'Food Security Measures',
-        field_description: 'Check all that apply',
-        is_required: false,
+        field_type: 'select',
+        field_label: 'FDA Registration',
+        field_description: 'Do you have FDA Registration?',
+        is_required: true,
         field_order: 25,
-        field_options: [
-          'Food Security Policy in Place', 'Risk Assessment Conducted', 
-          'FDA Mitigation Strategy Compliance', 'Food Defense Audits Conducted', 
-          'Food Defense Plan Annual Review'
-        ]
+        field_options: ['Yes', 'No']
+      },
+      {
+        field_type: 'select',
+        field_label: 'Food Security/Defense Policy',
+        field_description: 'Do you have a Food Security/Defense Policy in place?',
+        is_required: true,
+        field_order: 26,
+        field_options: ['Yes', 'No']
+      },
+      {
+        field_type: 'select',
+        field_label: 'Risk Assessment Conducted',
+        field_description: 'Have you conducted a Risk Assessment?',
+        is_required: true,
+        field_order: 27,
+        field_options: ['Yes', 'No']
       },
       {
         field_type: 'text',
@@ -607,28 +619,28 @@ export const DEFAULT_ONBOARDING_TEMPLATES: DefaultOnboardingTemplate[] = [
         field_label: 'Third Party Certificates',
         field_description: 'List third party certificates (SQF, BRC, Other)',
         is_required: false,
-        field_order: 30
+        field_order: 47
       },
       {
         field_type: 'text',
         field_label: 'Last Inspection Date',
         field_description: 'Date of last third party inspection',
         is_required: false,
-        field_order: 31
+        field_order: 48
       },
       {
         field_type: 'text',
         field_label: 'Inspection Score',
         field_description: 'Score from last inspection',
         is_required: false,
-        field_order: 32
+        field_order: 49
       },
       {
         field_type: 'checkbox',
         field_label: 'Supplier Management',
         field_description: 'Check all that apply',
         is_required: false,
-        field_order: 33,
+        field_order: 50,
         field_options: [
           'Supplier Approval Program', 'Supplier Fraud Assessment', 
           'FSVP Importer Status', 'FSVP Compliance'
@@ -639,14 +651,14 @@ export const DEFAULT_ONBOARDING_TEMPLATES: DefaultOnboardingTemplate[] = [
         field_label: 'Supplier Information Maintenance',
         field_description: 'Method of maintaining supplier information',
         is_required: false,
-        field_order: 34
+        field_order: 51
       },
       {
         field_type: 'checkbox',
         field_label: 'Recall Procedures',
         field_description: 'Check all that apply',
         is_required: false,
-        field_order: 35,
+        field_order: 52,
         field_options: ['Recall Policy in Place', 'Mock Recalls Conducted']
       },
       {
@@ -654,28 +666,28 @@ export const DEFAULT_ONBOARDING_TEMPLATES: DefaultOnboardingTemplate[] = [
         field_label: 'Mock Recall Frequency',
         field_description: 'Frequency of mock recalls',
         is_required: false,
-        field_order: 36
+        field_order: 53
       },
       {
         field_type: 'text',
         field_label: 'Last Mock Recall Date',
         field_description: 'Date of last mock recall',
         is_required: false,
-        field_order: 37
+        field_order: 54
       },
       {
         field_type: 'text',
         field_label: 'Mock Recall Recovery Percentage',
         field_description: 'Percentage recovery from last mock recall',
         is_required: false,
-        field_order: 38
+        field_order: 55
       },
       {
         field_type: 'text',
         field_label: 'Mock Recall Conducted By',
         field_description: 'Who conducted the mock recall',
         is_required: false,
-        field_order: 39
+        field_order: 56
       }
     ]
   }

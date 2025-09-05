@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Search, Send, Plus, Eye, Users } from 'lucide-react';
+import { Building2, Search, Send, Plus, Eye, Users, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -15,6 +15,7 @@ import { createSafeSelectValue } from '@/utils/selectValidation';
 import IndustryBasedSupplierSetup from './IndustryBasedSupplierSetup';
 import BuyerConnectionRequests from './BuyerConnectionRequests';
 import { SupplierDetailModal } from './SupplierDetailModal';
+import { BranchSupplierDashboard } from './BranchSupplierDashboard';
 
 const SupplierDiscovery = () => {
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -28,6 +29,7 @@ const SupplierDiscovery = () => {
   const [showConnectionRequests, setShowConnectionRequests] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [showSupplierDetail, setShowSupplierDetail] = useState(false);
+  const [currentView, setCurrentView] = useState<'suppliers' | 'branches'>('suppliers');
   const { user } = useAuth();
   const { getBuyerProfile } = useBuyerSetup();
   const { toast } = useToast();
@@ -250,12 +252,41 @@ const SupplierDiscovery = () => {
 
   const { connected, sent, rejected, notConnected } = categorizeSuppliers();
 
+  // Handle view switching
+  if (currentView === 'branches') {
+    return (
+      <div className="space-y-6">
+        {/* Header with Back Button */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              onClick={() => setCurrentView('suppliers')}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Suppliers
+            </Button>
+            <div>
+              <h2 className="text-2xl font-semibold">Branch Supplier Management</h2>
+              <p className="text-muted-foreground">Manage supplier assignments across your company branches</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Branch Supplier Dashboard */}
+        {buyerProfile && (
+          <BranchSupplierDashboard buyerId={buyerProfile.id} />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header with Action Buttons */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold">Supplier Management</h2>
           <p className="text-muted-foreground">Manage your supplier connections and discover new suppliers</p>
         </div>
         <div className="flex items-center gap-3">
@@ -270,7 +301,7 @@ const SupplierDiscovery = () => {
           <Button
             variant="outline"
             className="flex items-center gap-2"
-            onClick={() => {/* Handle branch suppliers navigation */}}
+            onClick={() => setCurrentView('branches')}
           >
             <Building2 className="w-4 h-4" />
             Branch Suppliers

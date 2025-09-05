@@ -488,17 +488,20 @@ if (!message.metadata?.structured_response) {
         {/* Quick actions */}
         {response.quick_actions && response.quick_actions.length > 0 && (
           <div className="flex flex-wrap gap-2 pt-2">
-            {response.quick_actions.map((action, idx) => (
-              <Button
-                key={idx}
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => setInputMessage(action)}
-              >
-                {action}
-              </Button>
-            ))}
+            {response.quick_actions.map((action: any, idx: number) => {
+              const label = typeof action === 'string' ? action : action?.label ?? 'Run action';
+              return (
+                <Button
+                  key={idx}
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setInputMessage(label)}
+                >
+                  {label}
+                </Button>
+              );
+            })}
           </div>
         )}
       </div>

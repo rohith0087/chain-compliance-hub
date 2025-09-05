@@ -10,7 +10,7 @@ import RequestsList from '@/components/requests/RequestsList';
 import SupplierDiscovery from '@/components/buyer/SupplierDiscovery';
 import NewRequestModal from '@/components/NewRequestModal';
 import BuyerComplianceDashboard from '@/components/dashboard/BuyerComplianceDashboard';
-import { Building2, Users, ListChecks, Plus, BarChart3, FileCheck, UserCheck, Settings, Calendar, AlertTriangle, Clock, MessageSquare, Compass, FileText } from 'lucide-react';
+import { Building2, Users, ListChecks, Plus, BarChart3, FileCheck, UserCheck, Settings, Calendar, AlertTriangle, Clock, MessageSquare, Compass, FileText, Send } from 'lucide-react';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import BuyerDocumentsDashboard from '@/components/documents/BuyerDocumentsDashboard';
 import { BuyerIdCard } from '@/components/buyer/BuyerIdCard';
@@ -21,6 +21,8 @@ import { BranchSelector } from '@/components/company/BranchSelector';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
 import ChatAgentPanel from '@/components/chat/ChatAgentPanel';
 import CustomTemplateManager from '@/components/buyer/CustomTemplateManager';
+import { QuickOnboardingModal } from '@/components/buyer/QuickOnboardingModal';
+import { BulkInviteModal } from '@/components/buyer/BulkInviteModal';
 
 import { supabase } from '@/integrations/supabase/client';
 
@@ -39,6 +41,8 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showQuickOnboarding, setShowQuickOnboarding] = useState(false);
+  const [showBulkInvite, setShowBulkInvite] = useState(false);
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
   const [upcomingDeadlines, setUpcomingDeadlines] = useState<any[]>([]);
   const [actionItems, setActionItems] = useState<any[]>([]);
@@ -198,6 +202,15 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
               {t('common:navigation.switchTo', { role: 'supplier' })}
             </Button>
           )}
+          <Button 
+            onClick={() => setShowBulkInvite(true)}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <Users className="w-4 h-4" />
+            Bulk Invite
+          </Button>
           <Button variant="destructive" size="sm" onClick={handleLogoutClick}>
             {t('common:navigation.logout')}
           </Button>
@@ -403,17 +416,44 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
             </div>
 
             {/* Show the connect with suppliers message if no connections */}
+            {/* Quick Actions Card */}
             <Card>
-              <CardContent className="p-6 text-center">
-                <Users className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">{t('dashboard:buyer.connectFirst.title')}</h3>
-                <p className="text-gray-600 mb-4">
-                  {t('dashboard:buyer.connectFirst.description')}
-                </p>
-                <Button onClick={handleFindSuppliersClick} className="flex items-center gap-2 mx-auto">
-                  <Users className="w-4 h-4" />
-                  {t('dashboard:buyer.findSuppliers')}
-                </Button>
+              <CardContent className="p-6">
+                <h3 className="text-xl font-semibold mb-4">Quick Actions</h3>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <Button 
+                    onClick={handleFindSuppliersClick} 
+                    className="flex items-center gap-2 h-auto py-4 px-6"
+                    variant="outline"
+                  >
+                    <Users className="w-5 h-5" />
+                    <div className="text-left">
+                      <div className="font-medium">Find Suppliers</div>
+                      <div className="text-xs opacity-75">Discover & connect</div>
+                    </div>
+                  </Button>
+                  <Button 
+                    onClick={() => setShowQuickOnboarding(true)} 
+                    className="flex items-center gap-2 h-auto py-4 px-6"
+                  >
+                    <Send className="w-5 h-5" />
+                    <div className="text-left">
+                      <div className="font-medium">Quick Onboarding</div>
+                      <div className="text-xs opacity-75">Send with defaults</div>
+                    </div>
+                  </Button>
+                  <Button 
+                    onClick={() => setActiveTab('templates')} 
+                    className="flex items-center gap-2 h-auto py-4 px-6"
+                    variant="outline"
+                  >
+                    <FileText className="w-5 h-5" />
+                    <div className="text-left">
+                      <div className="font-medium">Manage Templates</div>
+                      <div className="text-xs opacity-75">Custom documents</div>
+                    </div>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -480,6 +520,25 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         open={showSettings} 
         onOpenChange={setShowSettings}
       />
+
+      {buyerProfile && profile && (
+        <>
+          <QuickOnboardingModal
+            isOpen={showQuickOnboarding}
+            onClose={() => setShowQuickOnboarding(false)}
+            buyerId={buyerProfile.id}
+            buyerProfile={buyerProfile}
+            userProfile={{ full_name: profile.full_name }}
+          />
+
+          <BulkInviteModal
+            isOpen={showBulkInvite}
+            onClose={() => setShowBulkInvite(false)}
+            buyerId={buyerProfile.id}
+            buyerProfile={buyerProfile}
+          />
+        </>
+      )}
     </div>
   );
 };

@@ -50,6 +50,7 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
         .maybeSingle();
 
       let buyerResult;
+      let isNewProfile = false;
       
       if (existingBuyer) {
         console.log('Updating existing buyer profile:', existingBuyer.id);
@@ -72,6 +73,7 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
         buyerResult = data;
       } else {
         console.log('Creating new buyer profile...');
+        isNewProfile = true;
         // Create new buyer profile
         const { data, error } = await supabase
           .from('buyers')
@@ -92,10 +94,77 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
 
       console.log('Buyer profile saved successfully:', buyerResult);
 
-      toast({
-        title: "Profile Created",
-        description: "Your buyer profile has been set up successfully.",
-      });
+      // Initialize default onboarding settings for new profiles
+      if (isNewProfile && formData.industry) {
+        try {
+          const { getTemplateForIndustry } = await import('@/config/defaultOnboardingTemplates');
+          const template = getTemplateForIndustry(formData.industry);
+          
+          if (template) {
+            // Create default onboarding settings
+            const { error: settingsError } = await supabase
+              .from('buyer_default_onboarding_settings')
+              .insert({
+                buyer_id: buyerResult.id,
+                created_by: user.id,
+                default_welcome_message: template.default_welcome_message,
+                allow_branch_selection: template.allow_branch_selection,
+                require_branch_selection: template.require_branch_selection,
+                auto_approve_standard_docs: template.auto_approve_standard_docs,
+                require_all_documents: template.require_all_documents,
+                expires_days: template.expires_days
+              });
+
+            if (settingsError) {
+              console.error('Error creating default settings:', settingsError);
+            }
+
+            // Create default document requirements
+            if (template.document_requirements.length > 0) {
+              const { error: docError } = await supabase
+                .from('default_document_requirements')
+                .insert(
+                  template.document_requirements.map(req => ({
+                    buyer_id: buyerResult.id,
+                    ...req
+                  }))
+                );
+
+              if (docError) {
+                console.error('Error creating default document requirements:', docError);
+              }
+            }
+
+            // Create default form fields
+            if (template.form_fields.length > 0) {
+              const { error: fieldsError } = await supabase
+                .from('default_form_fields')
+                .insert(
+                  template.form_fields.map(field => ({
+                    buyer_id: buyerResult.id,
+                    ...field
+                  }))
+                );
+
+              if (fieldsError) {
+                console.error('Error creating default form fields:', fieldsError);
+              }
+            }
+
+            toast({
+              title: "Setup Complete",
+              description: `Your ${formData.industry} industry defaults have been configured automatically!`,
+            });
+          }
+        } catch (importError) {
+          console.error('Error setting up defaults:', importError);
+        }
+      } else {
+        toast({
+          title: "Profile Updated",
+          description: "Your buyer profile has been updated successfully.",
+        });
+      }
 
       // Call the callback to refresh parent component
       onProfileCreated();

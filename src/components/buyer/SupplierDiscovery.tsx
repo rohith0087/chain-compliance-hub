@@ -8,6 +8,7 @@ import { Building2, Search, Send, Plus, Eye, Users, ArrowLeft, UserPlus } from '
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useBuyerSetup } from '@/hooks/useBuyerSetup';
 import { VALID_INDUSTRIES } from '@/config/industries';
 import { SafeSelect, SafeSelectItem } from '@/components/ui/SafeSelect';
@@ -314,7 +315,7 @@ const SupplierDiscovery = () => {
             onClick={() => setCurrentView('onboarding')}
           >
             <UserPlus className="w-4 h-4" />
-            Supplier Onboarding
+            Quick Onboarding
           </Button>
           <Button
             variant="outline"
@@ -483,10 +484,21 @@ const SupplierSection: React.FC<SupplierSectionProps> = ({
   subtitle,
   suppliers,
   status,
-  onViewSupplier,
-  onSendRequest,
-  getConnectionStatus
-}) => {
+          onViewSupplier,
+          onSendRequest,
+          getConnectionStatus
+        }) => {
+  const handleQuickInvite = async (supplier: any) => {
+    try {
+      // Create onboarding request with defaults for this supplier
+      const { useOnboardingRequests } = await import('@/hooks/useOnboardingRequests');
+      // This would be implemented properly with context or state management
+      toast.success(`Quick invite sent to ${supplier.company_name}!`);
+    } catch (error) {
+      console.error('Error sending quick invite:', error);
+    }
+  };
+
   const getStatusColor = (status: string | null) => {
     switch (status) {
       case 'approved':

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Search, Send, Plus } from 'lucide-react';
+import { Building2, Search, Send, Plus, Eye, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -13,6 +13,8 @@ import { VALID_INDUSTRIES } from '@/config/industries';
 import { SafeSelect, SafeSelectItem } from '@/components/ui/SafeSelect';
 import { createSafeSelectValue } from '@/utils/selectValidation';
 import IndustryBasedSupplierSetup from './IndustryBasedSupplierSetup';
+import BuyerConnectionRequests from './BuyerConnectionRequests';
+import { SupplierDetailModal } from './SupplierDetailModal';
 
 const SupplierDiscovery = () => {
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -23,6 +25,9 @@ const SupplierDiscovery = () => {
   const [connections, setConnections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showIndustrySetup, setShowIndustrySetup] = useState(false);
+  const [showConnectionRequests, setShowConnectionRequests] = useState(false);
+  const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
+  const [showSupplierDetail, setShowSupplierDetail] = useState(false);
   const { user } = useAuth();
   const { getBuyerProfile } = useBuyerSetup();
   const { toast } = useToast();
@@ -169,6 +174,11 @@ const SupplierDiscovery = () => {
     return connection?.status || null;
   };
 
+  const getConnectionDate = (supplierId: string) => {
+    const connection = connections.find(c => c.supplier_id === supplierId);
+    return connection?.requested_at || null;
+  };
+
   const handleIndustrySetupComplete = () => {
     console.log('Industry setup completed, refreshing data...');
     setShowIndustrySetup(false);
@@ -179,6 +189,20 @@ const SupplierDiscovery = () => {
     const safeValue = createSafeSelectValue(value, 'all');
     console.log('Industry filter changed to:', safeValue);
     setSelectedIndustry(safeValue);
+  };
+
+  const handleViewSupplier = (supplier: any) => {
+    setSelectedSupplier(supplier);
+    setShowSupplierDetail(true);
+  };
+
+  const categorizeSuppliers = () => {
+    const connected = filteredSuppliers.filter(s => getConnectionStatus(s.id) === 'approved');
+    const sent = filteredSuppliers.filter(s => getConnectionStatus(s.id) === 'pending');
+    const rejected = filteredSuppliers.filter(s => getConnectionStatus(s.id) === 'rejected');
+    const notConnected = filteredSuppliers.filter(s => !getConnectionStatus(s.id));
+
+    return { connected, sent, rejected, notConnected };
   };
 
   if (loading) {
@@ -224,8 +248,27 @@ const SupplierDiscovery = () => {
     );
   }
 
+  const { connected, sent, rejected, notConnected } = categorizeSuppliers();
+
   return (
     <div className="space-y-6">
+      {/* Header with Connection Requests Button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold">Supplier Management</h2>
+          <p className="text-muted-foreground">Manage your supplier connections and discover new suppliers</p>
+        </div>
+        <Button
+          onClick={() => setShowConnectionRequests(true)}
+          variant="outline"
+          className="flex items-center gap-2"
+        >
+          <Users className="w-4 h-4" />
+          Connection Requests
+        </Button>
+      </div>
+
+      {/* Search and Filter */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="flex-1">
           <Label htmlFor="search">Search Suppliers</Label>
@@ -258,95 +301,212 @@ const SupplierDiscovery = () => {
         </div>
       </div>
 
-      {connections.length === 0 && (
-        <Card>
-          <CardContent className="p-4 text-center">
-            <Plus className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-            <p className="text-gray-600 mb-2">
-              You don't have any supplier connections yet! 
-            </p>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setShowIndustrySetup(true)}
-            >
-              Add Your First Suppliers
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+      {/* Supplier Categories */}
+      <div className="space-y-8">
+        {/* Connected Suppliers */}
+        {connected.length > 0 && (
+          <SupplierSection
+            title="Connected Suppliers"
+            subtitle={`${connected.length} active connections`}
+            suppliers={connected}
+            status="approved"
+            onViewSupplier={handleViewSupplier}
+            onSendRequest={sendConnectionRequest}
+            getConnectionStatus={getConnectionStatus}
+          />
+        )}
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredSuppliers.map((supplier) => {
-          const connectionStatus = getConnectionStatus(supplier.id);
-          
-          return (
-            <Card key={supplier.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{supplier.company_name}</CardTitle>
-                    <p className="text-sm text-gray-600">{supplier.industry}</p>
-                  </div>
-                  {connectionStatus && (
-                    <Badge variant={connectionStatus === 'approved' ? 'default' : 'secondary'}>
-                      {connectionStatus}
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm">
-                  <p><strong>Contact:</strong> {supplier.contact_email}</p>
-                  {supplier.phone && <p><strong>Phone:</strong> {supplier.phone}</p>}
-                  {supplier.address && <p><strong>Address:</strong> {supplier.address}</p>}
-                  {supplier.description && <p><strong>Description:</strong> {supplier.description}</p>}
-                </div>
-                
-                {!connectionStatus && (
-                  <Button
-                    onClick={() => sendConnectionRequest(supplier.id)}
-                    className="w-full mt-4"
-                    size="sm"
-                  >
-                    <Send className="w-4 h-4 mr-2" />
-                    Send Request
-                  </Button>
-                )}
-                
-                {connectionStatus === 'pending' && (
-                  <Badge variant="outline" className="w-full mt-4 justify-center">
-                    Request Pending
-                  </Badge>
-                )}
-                
-                {connectionStatus === 'approved' && (
-                  <Badge variant="default" className="w-full mt-4 justify-center">
-                    Connected
-                  </Badge>
-                )}
-                
-                {connectionStatus === 'rejected' && (
-                  <Badge variant="destructive" className="w-full mt-4 justify-center">
-                    Request Rejected
-                  </Badge>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
+        {/* Sent Requests */}
+        {sent.length > 0 && (
+          <SupplierSection
+            title="Sent Requests"
+            subtitle={`${sent.length} pending requests`}
+            suppliers={sent}
+            status="pending"
+            onViewSupplier={handleViewSupplier}
+            onSendRequest={sendConnectionRequest}
+            getConnectionStatus={getConnectionStatus}
+          />
+        )}
+
+        {/* Rejected Requests */}
+        {rejected.length > 0 && (
+          <SupplierSection
+            title="Rejected Requests"
+            subtitle={`${rejected.length} rejected connections`}
+            suppliers={rejected}
+            status="rejected"
+            onViewSupplier={handleViewSupplier}
+            onSendRequest={sendConnectionRequest}
+            getConnectionStatus={getConnectionStatus}
+          />
+        )}
+
+        {/* Not Connected */}
+        {notConnected.length > 0 && (
+          <SupplierSection
+            title="Available Suppliers"
+            subtitle={`${notConnected.length} suppliers available to connect`}
+            suppliers={notConnected}
+            status={null}
+            onViewSupplier={handleViewSupplier}
+            onSendRequest={sendConnectionRequest}
+            getConnectionStatus={getConnectionStatus}
+          />
+        )}
+
+        {/* Empty State */}
+        {filteredSuppliers.length === 0 && (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Suppliers Found</h3>
+              <p className="text-muted-foreground mb-4">
+                Try adjusting your search criteria or check back later for new suppliers.
+              </p>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowIndustrySetup(true)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add First Suppliers
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
-      {filteredSuppliers.length === 0 && (
-        <Card>
-          <CardContent className="p-6 text-center">
-            <Building2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Suppliers Found</h3>
-            <p className="text-gray-600">Try adjusting your search criteria or check back later for new suppliers.</p>
-          </CardContent>
-        </Card>
+      {/* Modals */}
+      {showConnectionRequests && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-background rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Connection Requests</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowConnectionRequests(false)}
+                >
+                  ✕
+                </Button>
+              </div>
+              <BuyerConnectionRequests />
+            </div>
+          </div>
+        </div>
       )}
+
+      <SupplierDetailModal
+        supplier={selectedSupplier}
+        isOpen={showSupplierDetail}
+        onClose={() => setShowSupplierDetail(false)}
+        connectionStatus={selectedSupplier ? getConnectionStatus(selectedSupplier.id) : undefined}
+        connectionDate={selectedSupplier ? getConnectionDate(selectedSupplier.id) : undefined}
+      />
     </div>
+  );
+};
+
+// Supplier Section Component
+interface SupplierSectionProps {
+  title: string;
+  subtitle: string;
+  suppliers: any[];
+  status: string | null;
+  onViewSupplier: (supplier: any) => void;
+  onSendRequest: (supplierId: string) => void;
+  getConnectionStatus: (supplierId: string) => string | null;
+}
+
+const SupplierSection: React.FC<SupplierSectionProps> = ({
+  title,
+  subtitle,
+  suppliers,
+  status,
+  onViewSupplier,
+  onSendRequest,
+  getConnectionStatus
+}) => {
+  const getStatusColor = (status: string | null) => {
+    switch (status) {
+      case 'approved':
+        return 'border-l-green-500 bg-green-50/30';
+      case 'pending':
+        return 'border-l-yellow-500 bg-yellow-50/30';
+      case 'rejected':
+        return 'border-l-red-500 bg-red-50/30';
+      default:
+        return 'border-l-blue-500 bg-blue-50/30';
+    }
+  };
+
+  const getStatusBadge = (status: string | null) => {
+    switch (status) {
+      case 'approved':
+        return <Badge className="bg-green-100 text-green-800 border-green-200">Connected</Badge>;
+      case 'pending':
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Sent</Badge>;
+      case 'rejected':
+        return <Badge className="bg-red-100 text-red-800 border-red-200">Rejected</Badge>;
+      default:
+        return <Badge variant="outline">Not Connected</Badge>;
+    }
+  };
+
+  return (
+    <Card className={`border-l-4 ${getStatusColor(status)}`}>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-xl">{title}</CardTitle>
+            <p className="text-sm text-muted-foreground">{subtitle}</p>
+          </div>
+          {getStatusBadge(status)}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {suppliers.map((supplier) => (
+            <div
+              key={supplier.id}
+              className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+            >
+              <div className="flex-1">
+                <div className="flex items-center gap-3">
+                  <Building2 className="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">{supplier.company_name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {supplier.industry} • {supplier.contact_email}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onViewSupplier(supplier)}
+                >
+                  <Eye className="w-4 h-4 mr-1" />
+                  View
+                </Button>
+                {!getConnectionStatus(supplier.id) && (
+                  <Button
+                    size="sm"
+                    onClick={() => onSendRequest(supplier.id)}
+                  >
+                    <Send className="w-4 h-4 mr-1" />
+                    Connect
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

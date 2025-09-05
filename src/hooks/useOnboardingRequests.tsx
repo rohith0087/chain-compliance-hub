@@ -161,6 +161,13 @@ export const useOnboardingRequests = () => {
 
   const loadDefaultSettings = async (buyerId: string) => {
     try {
+      // First get the buyer's industry
+      const { data: buyer } = await supabase
+        .from('buyers')
+        .select('industry')
+        .eq('id', buyerId)
+        .single();
+
       const { data: settings } = await supabase
         .from('buyer_default_onboarding_settings')
         .select('*')
@@ -178,6 +185,42 @@ export const useOnboardingRequests = () => {
         .select('*')
         .eq('buyer_id', buyerId)
         .order('field_order');
+
+      // If no custom settings exist but buyer has a matching industry template, use it
+      if (!settings && (!docs || docs.length === 0) && (!fields || fields.length === 0) && buyer?.industry) {
+        const { getTemplateForIndustry } = await import('@/config/defaultOnboardingTemplates');
+        const industryTemplate = getTemplateForIndustry(buyer.industry);
+        
+        if (industryTemplate) {
+          return {
+            settings: {
+              allow_branch_selection: industryTemplate.allow_branch_selection,
+              require_branch_selection: industryTemplate.require_branch_selection,
+              auto_approve_standard_docs: industryTemplate.auto_approve_standard_docs,
+              require_all_documents: industryTemplate.require_all_documents,
+              expires_days: industryTemplate.expires_days,
+              default_welcome_message: industryTemplate.default_welcome_message,
+            },
+            documentRequirements: industryTemplate.document_requirements.map((doc, index) => ({
+              document_type: doc.document_type,
+              document_name: doc.document_name,
+              description: doc.description,
+              is_required: doc.is_required,
+              display_order: doc.display_order,
+              template_file_path: doc.template_file_path,
+              template_file_name: doc.template_file_name,
+            })),
+            formFields: industryTemplate.form_fields.map((field, index) => ({
+              field_type: field.field_type as FormField['field_type'],
+              field_label: field.field_label,
+              field_description: field.field_description,
+              field_options: field.field_options,
+              is_required: field.is_required,
+              field_order: field.field_order,
+            }))
+          };
+        }
+      }
 
       return {
         settings,

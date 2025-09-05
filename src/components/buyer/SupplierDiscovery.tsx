@@ -252,20 +252,30 @@ const SupplierDiscovery = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header with Connection Requests Button */}
+      {/* Header with Action Buttons */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-semibold">Supplier Management</h2>
           <p className="text-muted-foreground">Manage your supplier connections and discover new suppliers</p>
         </div>
-        <Button
-          onClick={() => setShowConnectionRequests(true)}
-          variant="outline"
-          className="flex items-center gap-2"
-        >
-          <Users className="w-4 h-4" />
-          Connection Requests
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => setShowConnectionRequests(true)}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Users className="w-4 h-4" />
+            Connection Requests
+          </Button>
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={() => {/* Handle branch suppliers navigation */}}
+          >
+            <Building2 className="w-4 h-4" />
+            Branch Suppliers
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filter */}

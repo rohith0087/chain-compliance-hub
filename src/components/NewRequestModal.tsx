@@ -51,7 +51,8 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
 
   // Get the appropriate suppliers based on branch context
   const connectedSuppliers = currentBranch 
-    ? branchSupplierConnections.map(conn => conn.supplier).filter(Boolean)
+    ? branchSupplierConnections
+        .map(conn => ({ id: conn.supplier_id, company_name: conn.supplier?.company_name || 'Supplier' }))
     : allConnectedSuppliers;
 
   // Fetch buyer data and connected suppliers when modal opens

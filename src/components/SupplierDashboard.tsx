@@ -548,6 +548,44 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid lg:grid-cols-2 gap-6">
+              {/* Onboarding Requests */}
+              {onboardingRequests.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Pending Onboarding</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {onboardingRequests.slice(0, 3).map(request => (
+                        <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <Bell className="w-5 h-5 text-blue-500" />
+                            <div>
+                              <p className="font-medium">Onboarding Request</p>
+                              <p className="text-sm text-gray-500">From: {request.supplier_company_name}</p>
+                              <p className="text-xs text-gray-400">
+                                {new Date(request.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge className={
+                            request.status === 'pending' ? 'bg-amber-100 text-amber-800' :
+                            request.status === 'onboarding_initiated' ? 'bg-blue-100 text-blue-800' :
+                            request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                            'bg-red-100 text-red-800'
+                          }>
+                            {request.status.replace('_', ' ')}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                    <Button variant="outline" className="w-full mt-4" onClick={() => setActiveTab('onboarding')}>
+                      View All Onboarding
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Recent Requests */}
               <Card>
                 <CardHeader>

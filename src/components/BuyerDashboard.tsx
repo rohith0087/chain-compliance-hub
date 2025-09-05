@@ -1,9 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import RequestsList from '@/components/requests/RequestsList';
@@ -11,18 +9,17 @@ import SupplierDiscovery from '@/components/buyer/SupplierDiscovery';
 import NewRequestModal from '@/components/NewRequestModal';
 import BuyerComplianceDashboard from '@/components/dashboard/BuyerComplianceDashboard';
 import { Building2, Users, ListChecks, Plus, BarChart3, FileCheck, UserCheck, Settings, Calendar, AlertTriangle, Clock, MessageSquare, Compass, FileText, Send } from 'lucide-react';
-import NotificationCenter from '@/components/notifications/NotificationCenter';
 import BuyerDocumentsDashboard from '@/components/documents/BuyerDocumentsDashboard';
 import { BuyerIdCard } from '@/components/buyer/BuyerIdCard';
 import BuyerConnectionRequests from '@/components/buyer/BuyerConnectionRequests';
 import { BuyerSettingsModal } from '@/components/settings/BuyerSettingsModal';
 import { CompanyManagementDashboard } from '@/components/company/CompanyManagementDashboard';
-import { BranchSelector } from '@/components/company/BranchSelector';
-import { useCompanyBranches } from '@/hooks/useCompanyBranches';
 import ChatAgentPanel from '@/components/chat/ChatAgentPanel';
 import CustomTemplateManager from '@/components/buyer/CustomTemplateManager';
 import { QuickOnboardingModal } from '@/components/buyer/QuickOnboardingModal';
 import { BulkInviteModal } from '@/components/buyer/BulkInviteModal';
+import { BuyerSidebarLayout } from '@/components/buyer/BuyerSidebarLayout';
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 import { supabase } from '@/integrations/supabase/client';
 
@@ -49,14 +46,6 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const { user: authUser, profile } = useAuth();
   const { t } = useTranslation(['dashboard', 'common']);
-
-  // Company branches management
-  const {
-    branches,
-    currentBranch,
-    switchBranch,
-    loading: branchesLoading
-  } = useCompanyBranches(buyerProfile?.id, 'buyer');
 
   // Fetch buyer profile data and dashboard data
   useEffect(() => {
@@ -174,122 +163,54 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
   };
 
   return (
-    <div className="container mx-auto py-10">
-      <div className="mb-8 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-semibold">{t('dashboard:buyer.title')}</h1>
-          {branches.length > 1 && (
-            <BranchSelector
-              branches={branches}
-              currentBranch={currentBranch}
-              onBranchChange={switchBranch}
-              loading={branchesLoading}
-            />
-          )}
-        </div>
-        <div className="space-x-4 flex items-center">
-          <NotificationCenter />
-          <Button 
-            onClick={() => setShowSettings(true)}
-            variant="outline"
-            size="sm"
-          >
-            <Settings className="mr-2 h-4 w-4" />
-            Settings
-          </Button>
-          {profile?.roles?.includes('supplier') && (
-            <Button variant="outline" size="sm" onClick={() => onRoleSwitch('supplier')}>
-              {t('common:navigation.switchTo', { role: 'supplier' })}
-            </Button>
-          )}
-          <Button 
-            onClick={() => setShowBulkInvite(true)}
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2"
-          >
-            <Users className="w-4 h-4" />
-            Bulk Invite
-          </Button>
-          <Button variant="destructive" size="sm" onClick={handleLogoutClick}>
-            {t('common:navigation.logout')}
-          </Button>
-        </div>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="dashboard">
-            <Building2 className="w-4 h-4 mr-2" />
-            {t('common:navigation.dashboard')}
-          </TabsTrigger>
-          <TabsTrigger value="compliance">
-            <BarChart3 className="w-4 h-4 mr-2" />
-            {t('common:navigation.compliance')}
-          </TabsTrigger>
-          <TabsTrigger value="requests">
-            <ListChecks className="w-4 h-4 mr-2" />
-            {t('common:navigation.requests')}
-          </TabsTrigger>
-          <TabsTrigger value="documents">
-            <FileCheck className="w-4 h-4 mr-2" />
-            {t('common:navigation.documents')}
-          </TabsTrigger>
-          <TabsTrigger value="templates">
-            <FileText className="w-4 h-4 mr-2" />
-            Templates
-          </TabsTrigger>
-          <TabsTrigger value="suppliers">
-            <Users className="w-4 h-4 mr-2" />
-            {t('common:navigation.suppliers')}
-          </TabsTrigger>
-          <TabsTrigger value="company">
-            <Building2 className="w-4 h-4 mr-2" />
-            {t('dashboard:company.title')}
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="dashboard" className="space-y-2">
+    <SidebarProvider>
+      <BuyerSidebarLayout
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        user={user}
+        onLogout={handleLogoutClick}
+        onRoleSwitch={onRoleSwitch}
+        onShowRequestForm={() => setShowRequestForm(true)}
+        onShowSettings={() => setShowSettings(true)}
+        onShowQuickOnboarding={() => setShowQuickOnboarding(true)}
+        onShowBulkInvite={() => setShowBulkInvite(true)}
+        buyerProfile={buyerProfile}
+      >
+        {/* Dashboard Content */}
+        {activeTab === 'dashboard' && (
           <div className="space-y-6">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-2xl">{t('dashboard:buyer.welcome', { name: user.name })}</CardTitle>
-                    <p className="text-gray-600">
+                    <p className="text-muted-foreground">
                       {t('dashboard:buyer.description')}
                     </p>
                   </div>
-                  <Button onClick={() => setShowRequestForm(true)} className="flex items-center gap-2">
-                    <Plus className="w-4 h-4" />
-                    {t('dashboard:buyer.newRequest')}
-                    {currentBranch && (
-                      <span className="text-xs opacity-75">({currentBranch.branch_name})</span>
-                    )}
-                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-3 gap-4">
                   <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={handleFindSuppliersClick}>
                     <CardContent className="p-4 text-center">
-                      <Users className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+                      <Users className="w-8 h-8 mx-auto mb-2 text-primary" />
                       <h3 className="font-medium">{t('dashboard:buyer.findSuppliers')}</h3>
-                      <p className="text-sm text-gray-600">{t('dashboard:buyer.connectSuppliers')}</p>
+                      <p className="text-sm text-muted-foreground">{t('dashboard:buyer.connectSuppliers')}</p>
                     </CardContent>
                   </Card>
                   <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('requests')}>
                     <CardContent className="p-4 text-center">
-                      <ListChecks className="w-8 h-8 mx-auto mb-2 text-green-600" />
+                      <ListChecks className="w-8 h-8 mx-auto mb-2 text-accent" />
                       <h3 className="font-medium">{t('dashboard:buyer.myRequests')}</h3>
-                      <p className="text-sm text-gray-600">{t('dashboard:buyer.trackRequests')}</p>
+                      <p className="text-sm text-muted-foreground">{t('dashboard:buyer.trackRequests')}</p>
                     </CardContent>
                   </Card>
                   <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/chat')}>
                     <CardContent className="p-4 text-center">
-                      <Compass className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+                      <Compass className="w-8 h-8 mx-auto mb-2 text-secondary" />
                       <h3 className="font-medium">Compliance Compass</h3>
-                      <p className="text-sm text-gray-600">AI-powered compliance guidance</p>
+                      <p className="text-sm text-muted-foreground">AI-powered compliance guidance</p>
                     </CardContent>
                   </Card>
                 </div>
@@ -311,7 +232,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-blue-500" />
+                    <Calendar className="w-5 h-5 text-primary" />
                     Upcoming Deadlines
                   </CardTitle>
                 </CardHeader>
@@ -333,7 +254,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                               </p>
                             </div>
                             <div className="text-right">
-                              <div className={`text-xs font-medium ${isUrgent ? 'text-red-600' : 'text-orange-600'}`}>
+                              <div className={`text-xs font-medium ${isUrgent ? 'text-destructive' : 'text-orange-600'}`}>
                                 {daysUntilDue === 0 ? 'Due Today' : 
                                  daysUntilDue === 1 ? 'Due Tomorrow' : 
                                  `${daysUntilDue} days`}
@@ -380,7 +301,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                         <div key={item.id} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
                           <div className="mt-1">
                             {item.actionType === 'overdue' ? (
-                              <AlertTriangle className="w-4 h-4 text-red-500" />
+                              <AlertTriangle className="w-4 h-4 text-destructive" />
                             ) : (
                               <Clock className="w-4 h-4 text-orange-500" />
                             )}
@@ -390,7 +311,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                             <p className="text-xs text-muted-foreground mb-1">
                               {item.suppliers?.company_name}
                             </p>
-                            <p className={`text-xs ${item.actionType === 'overdue' ? 'text-red-600' : 'text-orange-600'}`}>
+                            <p className={`text-xs ${item.actionType === 'overdue' ? 'text-destructive' : 'text-orange-600'}`}>
                               {item.actionText}
                             </p>
                           </div>
@@ -416,108 +337,65 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
             </div>
 
             {/* Show the connect with suppliers message if no connections */}
-            {/* Quick Actions Card */}
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="text-xl font-semibold mb-4">Quick Actions</h3>
-                <div className="grid md:grid-cols-3 gap-4">
-                  <Button 
-                    onClick={handleFindSuppliersClick} 
-                    className="flex items-center gap-2 h-auto py-4 px-6"
-                    variant="outline"
-                  >
-                    <Users className="w-5 h-5" />
-                    <div className="text-left">
-                      <div className="font-medium">Find Suppliers</div>
-                      <div className="text-xs opacity-75">Discover & connect</div>
-                    </div>
-                  </Button>
-                  <Button 
-                    onClick={() => setShowQuickOnboarding(true)} 
-                    className="flex items-center gap-2 h-auto py-4 px-6"
-                  >
-                    <Send className="w-5 h-5" />
-                    <div className="text-left">
-                      <div className="font-medium">Quick Onboarding</div>
-                      <div className="text-xs opacity-75">Send with defaults</div>
-                    </div>
-                  </Button>
-                  <Button 
-                    onClick={() => setActiveTab('templates')} 
-                    className="flex items-center gap-2 h-auto py-4 px-6"
-                    variant="outline"
-                  >
-                    <FileText className="w-5 h-5" />
-                    <div className="text-left">
-                      <div className="font-medium">Manage Templates</div>
-                      <div className="text-xs opacity-75">Custom documents</div>
-                    </div>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            {buyerProfile && (
+              <ChatAgentPanel 
+                companyType="buyer"
+                companyId={buyerProfile.id}
+              />
+            )}
           </div>
-        </TabsContent>
-        
-        <TabsContent value="compliance" className="space-y-2">
+        )}
+
+        {/* Compliance Content */}
+        {activeTab === 'compliance' && (
           <BuyerComplianceDashboard />
-        </TabsContent>
+        )}
 
-        <TabsContent value="documents" className="space-y-2">
-          <BuyerDocumentsDashboard />
-        </TabsContent>
-
-        <TabsContent value="templates" className="space-y-2">
-          <CustomTemplateManager />
-        </TabsContent>
-        
-        <TabsContent value="requests" className="space-y-2">
+        {/* Requests Content */}
+        {activeTab === 'requests' && (
           <RequestsList />
-        </TabsContent>
-        
-        <TabsContent value="suppliers" className="space-y-2">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold">Suppliers</h2>
-              <Button 
-                onClick={() => setActiveTab('connections')}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <UserCheck className="w-4 h-4" />
-                Connection Requests
-              </Button>
-            </div>
-            <SupplierDiscovery />
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="connections" className="space-y-2">
-          <BuyerConnectionRequests />
-        </TabsContent>
-        
-        
-        <TabsContent value="company" className="space-y-2">
-          {buyerProfile && (
-            <CompanyManagementDashboard
-              companyId={buyerProfile.id}
-              companyType="buyer"
-              companyName={buyerProfile.company_name}
-            />
-          )}
-        </TabsContent>
-      </Tabs>
+        )}
 
-      <NewRequestModal 
-        isOpen={showRequestForm} 
+        {/* Documents Content */}
+        {activeTab === 'documents' && (
+          <BuyerDocumentsDashboard />
+        )}
+
+        {/* Templates Content */}
+        {activeTab === 'templates' && (
+          <CustomTemplateManager />
+        )}
+
+        {/* Suppliers Content */}
+        {activeTab === 'suppliers' && (
+          <SupplierDiscovery />
+        )}
+
+        {/* Supplier Requests Content */}
+        {activeTab === 'supplier-requests' && (
+          <BuyerConnectionRequests />
+        )}
+
+        {/* Company Content */}
+        {activeTab === 'company' && buyerProfile && (
+          <CompanyManagementDashboard 
+            companyId={buyerProfile.id}
+            companyType="buyer"
+            companyName={buyerProfile.company_name || 'Company'}
+          />
+        )}
+      </BuyerSidebarLayout>
+
+      {/* Modals */}
+      <NewRequestModal
+        isOpen={showRequestForm}
         onClose={() => setShowRequestForm(false)}
         onCreateRequest={handleCreateRequest}
-        userType={profile?.industry || 'General Business'}
-        currentBranch={currentBranch}
+        userType="buyer"
       />
 
-      <BuyerSettingsModal 
-        open={showSettings} 
+      <BuyerSettingsModal
+        open={showSettings}
         onOpenChange={setShowSettings}
       />
 
@@ -528,7 +406,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
             onClose={() => setShowQuickOnboarding(false)}
             buyerId={buyerProfile.id}
             buyerProfile={buyerProfile}
-            userProfile={{ full_name: profile.full_name }}
+            userProfile={profile}
           />
 
           <BulkInviteModal
@@ -539,7 +417,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
           />
         </>
       )}
-    </div>
+    </SidebarProvider>
   );
 };
 

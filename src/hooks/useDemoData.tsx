@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
-export const useCompanySetup = () => {
+export const useDemoData = () => {
   const { user, profile } = useAuth();
 
   const createSupplierRecord = async () => {

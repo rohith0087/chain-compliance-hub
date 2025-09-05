@@ -1293,6 +1293,174 @@ export type Database = {
           },
         ]
       }
+      onboarding_branch_selections: {
+        Row: {
+          branch_id: string
+          created_at: string
+          id: string
+          onboarding_request_id: string
+          selected_by: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          id?: string
+          onboarding_request_id: string
+          selected_by: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          id?: string
+          onboarding_request_id?: string
+          selected_by?: string
+        }
+        Relationships: []
+      }
+      onboarding_document_requirements: {
+        Row: {
+          created_at: string
+          description: string | null
+          document_name: string
+          document_type: string
+          id: string
+          is_required: boolean
+          onboarding_request_id: string
+          template_file_name: string | null
+          template_file_path: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          document_name: string
+          document_type: string
+          id?: string
+          is_required?: boolean
+          onboarding_request_id: string
+          template_file_name?: string | null
+          template_file_path?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          document_name?: string
+          document_type?: string
+          id?: string
+          is_required?: boolean
+          onboarding_request_id?: string
+          template_file_name?: string | null
+          template_file_path?: string | null
+        }
+        Relationships: []
+      }
+      onboarding_document_submissions: {
+        Row: {
+          created_at: string
+          document_name: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          onboarding_request_id: string
+          requirement_id: string | null
+          submitted_by: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document_name: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          onboarding_request_id: string
+          requirement_id?: string | null
+          submitted_by: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document_name?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          onboarding_request_id?: string
+          requirement_id?: string | null
+          submitted_by?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      onboarding_form_fields: {
+        Row: {
+          created_at: string
+          field_description: string | null
+          field_label: string
+          field_options: Json | null
+          field_order: number
+          field_type: string
+          id: string
+          is_required: boolean
+          onboarding_request_id: string
+        }
+        Insert: {
+          created_at?: string
+          field_description?: string | null
+          field_label: string
+          field_options?: Json | null
+          field_order?: number
+          field_type: string
+          id?: string
+          is_required?: boolean
+          onboarding_request_id: string
+        }
+        Update: {
+          created_at?: string
+          field_description?: string | null
+          field_label?: string
+          field_options?: Json | null
+          field_order?: number
+          field_type?: string
+          id?: string
+          is_required?: boolean
+          onboarding_request_id?: string
+        }
+        Relationships: []
+      }
+      onboarding_form_responses: {
+        Row: {
+          created_at: string
+          field_id: string
+          id: string
+          onboarding_request_id: string
+          response_value: string | null
+          submitted_by: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          field_id: string
+          id?: string
+          onboarding_request_id: string
+          response_value?: string | null
+          submitted_by: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          field_id?: string
+          id?: string
+          onboarding_request_id?: string
+          response_value?: string | null
+          submitted_by?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           company_name: string | null
@@ -1472,6 +1640,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      supplier_onboarding_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          buyer_id: string
+          can_choose_branches: boolean
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          custom_message: string | null
+          expires_at: string | null
+          id: string
+          invitation_token: string
+          status: string
+          supplier_company_name: string | null
+          supplier_email: string
+          supplier_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          buyer_id: string
+          can_choose_branches?: boolean
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          custom_message?: string | null
+          expires_at?: string | null
+          id?: string
+          invitation_token?: string
+          status?: string
+          supplier_company_name?: string | null
+          supplier_email: string
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          buyer_id?: string
+          can_choose_branches?: boolean
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          custom_message?: string | null
+          expires_at?: string | null
+          id?: string
+          invitation_token?: string
+          status?: string
+          supplier_company_name?: string | null
+          supplier_email?: string
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       supplier_response_metrics: {
         Row: {

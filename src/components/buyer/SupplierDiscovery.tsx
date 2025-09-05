@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Search, Send, Plus, Eye, Users, ArrowLeft } from 'lucide-react';
+import { Building2, Search, Send, Plus, Eye, Users, ArrowLeft, UserPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -16,6 +16,7 @@ import IndustryBasedSupplierSetup from './IndustryBasedSupplierSetup';
 import BuyerConnectionRequests from './BuyerConnectionRequests';
 import { SupplierDetailModal } from './SupplierDetailModal';
 import { BranchSupplierDashboard } from './BranchSupplierDashboard';
+import { SupplierOnboarding } from './SupplierOnboarding';
 
 const SupplierDiscovery = () => {
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -29,7 +30,7 @@ const SupplierDiscovery = () => {
   const [showConnectionRequests, setShowConnectionRequests] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [showSupplierDetail, setShowSupplierDetail] = useState(false);
-  const [currentView, setCurrentView] = useState<'suppliers' | 'branches'>('suppliers');
+  const [currentView, setCurrentView] = useState<'suppliers' | 'branches' | 'onboarding'>('suppliers');
   const { user } = useAuth();
   const { getBuyerProfile } = useBuyerSetup();
   const { toast } = useToast();
@@ -282,6 +283,15 @@ const SupplierDiscovery = () => {
     );
   }
 
+  if (currentView === 'onboarding') {
+    return buyerProfile && (
+      <SupplierOnboarding 
+        buyerId={buyerProfile.id} 
+        onBack={() => setCurrentView('suppliers')}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header with Action Buttons */}
@@ -297,6 +307,14 @@ const SupplierDiscovery = () => {
           >
             <Users className="w-4 h-4" />
             Connection Requests
+          </Button>
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={() => setCurrentView('onboarding')}
+          >
+            <UserPlus className="w-4 h-4" />
+            Supplier Onboarding
           </Button>
           <Button
             variant="outline"

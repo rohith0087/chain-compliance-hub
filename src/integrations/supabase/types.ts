@@ -1517,40 +1517,46 @@ export type Database = {
         Row: {
           created_at: string
           document_name: string
-          file_name: string
-          file_path: string
+          file_name: string | null
+          file_path: string | null
           file_size: number | null
           id: string
+          is_document_available: boolean
           mime_type: string | null
           onboarding_request_id: string
           requirement_id: string | null
           submitted_by: string
+          unavailability_reason: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           document_name: string
-          file_name: string
-          file_path: string
+          file_name?: string | null
+          file_path?: string | null
           file_size?: number | null
           id?: string
+          is_document_available?: boolean
           mime_type?: string | null
           onboarding_request_id: string
           requirement_id?: string | null
           submitted_by: string
+          unavailability_reason?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           document_name?: string
-          file_name?: string
-          file_path?: string
+          file_name?: string | null
+          file_path?: string | null
           file_size?: number | null
           id?: string
+          is_document_available?: boolean
           mime_type?: string | null
           onboarding_request_id?: string
           requirement_id?: string | null
           submitted_by?: string
+          unavailability_reason?: string | null
           updated_at?: string
         }
         Relationships: []

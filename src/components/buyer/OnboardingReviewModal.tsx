@@ -263,35 +263,68 @@ export const OnboardingReviewModal: React.FC<OnboardingReviewModalProps> = ({
                 <CardContent>
                   <div className="space-y-3">
                     {documentSubmissions.map((submission) => (
-                      <div key={submission.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <div className="font-medium">{submission.document_name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {submission.file_name} • {Math.round(submission.file_size / 1024)}KB
+                      <div key={submission.id} className={`p-3 border rounded-lg ${
+                        submission.is_document_available === false 
+                          ? 'border-orange-200 bg-orange-50' 
+                          : 'border-gray-200'
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <div className="font-medium">{submission.document_name}</div>
+                              {submission.is_document_available === false && (
+                                <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-200">
+                                  Doc not submitted by supplier
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            {submission.is_document_available === false ? (
+                              <div className="mt-2 space-y-1">
+                                <div className="text-sm text-orange-700">
+                                  <span className="font-medium">Reason for unavailability:</span>
+                                </div>
+                                <div className="text-sm text-orange-600 bg-orange-100 p-2 rounded">
+                                  {submission.unavailability_reason || 'No reason provided'}
+                                </div>
+                                <div className="text-xs text-orange-600">
+                                  Submitted: {new Date(submission.created_at).toLocaleString()}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-1">
+                                <div className="text-sm text-muted-foreground">
+                                  {submission.file_name} • {Math.round((submission.file_size || 0) / 1024)}KB
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  Submitted: {new Date(submission.created_at).toLocaleString()}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            Submitted: {new Date(submission.created_at).toLocaleString()}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => viewDocument(submission)}
-                            className="flex items-center gap-1"
-                          >
-                            <Eye className="w-3 h-3" />
-                            View
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => downloadDocument(submission)}
-                            className="flex items-center gap-1"
-                          >
-                            <Download className="w-3 h-3" />
-                            Download
-                          </Button>
+                          
+                          {submission.is_document_available !== false && (
+                            <div className="flex items-center gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => viewDocument(submission)}
+                                className="flex items-center gap-1"
+                              >
+                                <Eye className="w-3 h-3" />
+                                View
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => downloadDocument(submission)}
+                                className="flex items-center gap-1"
+                              >
+                                <Download className="w-3 h-3" />
+                                Download
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}

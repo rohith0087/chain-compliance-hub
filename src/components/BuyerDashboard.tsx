@@ -254,6 +254,9 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                   <Button onClick={() => setShowRequestForm(true)} className="flex items-center gap-2">
                     <Plus className="w-4 h-4" />
                     {t('dashboard:buyer.newRequest')}
+                    {currentBranch && (
+                      <span className="text-xs opacity-75">({currentBranch.branch_name})</span>
+                    )}
                   </Button>
                 </div>
               </CardHeader>
@@ -482,6 +485,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         onClose={() => setShowRequestForm(false)}
         onCreateRequest={handleCreateRequest}
         userType={profile?.industry || 'General Business'}
+        currentBranch={currentBranch}
       />
 
       <BuyerSettingsModal 

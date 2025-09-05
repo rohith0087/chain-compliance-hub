@@ -13,15 +13,17 @@ import { getComplianceDocuments, ComplianceDocument } from './requests/Complianc
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useBranchSupplierConnections } from '@/hooks/useBranchSupplierConnections';
 
 interface NewRequestModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreateRequest: (request: any) => void;
   userType: string;
+  currentBranch?: { id: string; branch_name: string } | null;
 }
 
-const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequestModalProps) => {
+const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBranch }: NewRequestModalProps) => {
   const [step, setStep] = useState(1);
   const [selectedDocuments, setSelectedDocuments] = useState<ComplianceDocument[]>([]);
   const [formData, setFormData] = useState({
@@ -32,13 +34,25 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
   });
   const [loading, setLoading] = useState(false);
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
-  const [connectedSuppliers, setConnectedSuppliers] = useState<any[]>([]);
   const [customTemplates, setCustomTemplates] = useState<any[]>([]);
   const [allDocuments, setAllDocuments] = useState<ComplianceDocument[]>([]);
 
   const { user } = useAuth();
   const { toast } = useToast();
   const staticComplianceDocuments = getComplianceDocuments(userType);
+
+  // Use branch-specific supplier connections if branch is provided, otherwise fall back to all connections
+  const { 
+    connections: branchSupplierConnections, 
+    loading: branchSuppliersLoading 
+  } = useBranchSupplierConnections(currentBranch?.id);
+  
+  const [allConnectedSuppliers, setAllConnectedSuppliers] = useState<any[]>([]);
+
+  // Get the appropriate suppliers based on branch context
+  const connectedSuppliers = currentBranch 
+    ? branchSupplierConnections.map(conn => conn.supplier).filter(Boolean)
+    : allConnectedSuppliers;
 
   // Fetch buyer data and connected suppliers when modal opens
   React.useEffect(() => {
@@ -83,22 +97,24 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
 
       setBuyerProfile(buyer);
 
-      // Get connected suppliers
-      const { data: connections, error: connectionsError } = await supabase
-        .from('buyer_supplier_connections')
-        .select(`
-          *,
-          suppliers (*)
-        `)
-        .eq('buyer_id', buyer.id)
-        .eq('status', 'approved');
+      // Only fetch all connected suppliers if no branch is selected (backward compatibility)
+      if (!currentBranch) {
+        const { data: connections, error: connectionsError } = await supabase
+          .from('buyer_supplier_connections')
+          .select(`
+            *,
+            suppliers (*)
+          `)
+          .eq('buyer_id', buyer.id)
+          .eq('status', 'approved');
 
-      if (connectionsError) {
-        console.error('Error fetching connections:', connectionsError);
-        return;
+        if (connectionsError) {
+          console.error('Error fetching connections:', connectionsError);
+          return;
+        }
+
+        setAllConnectedSuppliers(connections?.map(conn => conn.suppliers) || []);
       }
-
-      setConnectedSuppliers(connections?.map(conn => conn.suppliers) || []);
 
       // Fetch custom templates
       const { data: templates, error: templatesError } = await supabase
@@ -243,15 +259,21 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
   }
 
   // Show connection message if no suppliers are connected
-  if (isOpen && connectedSuppliers.length === 0) {
+  if (isOpen && connectedSuppliers.length === 0 && !branchSuppliersLoading) {
+    const message = currentBranch 
+      ? `No suppliers are assigned to the "${currentBranch.branch_name}" branch. Please assign suppliers to this branch first.`
+      : 'You need to connect with suppliers before creating document requests.';
+    
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>No Connected Suppliers</DialogTitle>
+            <DialogTitle>
+              {currentBranch ? 'No Branch Suppliers' : 'No Connected Suppliers'}
+            </DialogTitle>
           </DialogHeader>
           <div className="text-center py-4">
-            <p>You need to connect with suppliers before creating document requests.</p>
+            <p>{message}</p>
           </div>
         </DialogContent>
       </Dialog>
@@ -264,12 +286,22 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType }: NewRequ
         <DialogHeader>
           <DialogTitle>
             {step === 1 ? 'Select Compliance Documents' : 'Create Document Requests'}
+            {currentBranch && (
+              <span className="text-sm font-normal text-muted-foreground ml-2">
+                for {currentBranch.branch_name}
+              </span>
+            )}
           </DialogTitle>
           <DialogDescription>
             {step === 1 
               ? `Select multiple compliance documents for ${userType} industry standards`
               : `Configure the batch request details for ${selectedDocuments.length} document(s)`
             }
+            {currentBranch && step === 2 && (
+              <span className="block mt-1 text-sm">
+                Requests will be sent to suppliers assigned to {currentBranch.branch_name}
+              </span>
+            )}
           </DialogDescription>
         </DialogHeader>
 

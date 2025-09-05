@@ -19,10 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Trash2, Building2, MapPin, Phone, Mail } from 'lucide-react';
+import { Plus, Trash2, Building2, MapPin, Phone, Mail, Users } from 'lucide-react';
 import { useBranchSupplierConnections } from '@/hooks/useBranchSupplierConnections';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
+import { useBuyerSupplierConnections } from '@/hooks/useBuyerSupplierConnections';
 
 interface BranchSupplierManagementProps {
   buyerId: string;
@@ -42,6 +43,7 @@ export const BranchSupplierManagement: React.FC<BranchSupplierManagementProps> =
 
   const { branches } = useCompanyBranches(buyerId, 'buyer');
   const { suppliers } = useSuppliers();
+  const { connections: buyerSupplierConnections } = useBuyerSupplierConnections(buyerId);
   const { 
     connections, 
     loading, 
@@ -69,7 +71,12 @@ export const BranchSupplierManagement: React.FC<BranchSupplierManagementProps> =
     }
   };
 
-  // Get suppliers that are not yet assigned to the selected branch
+  // Get connected suppliers that are not yet assigned to the selected branch
+  const connectedSuppliers = buyerSupplierConnections
+    .map(conn => conn.supplier)
+    .filter(supplier => supplier && !connections.some(conn => conn.supplier_id === supplier.id));
+
+  // Get all suppliers that are not yet assigned to the selected branch (including non-connected ones)
   const availableSuppliers = suppliers.filter(supplier => 
     !connections.some(conn => conn.supplier_id === supplier.id)
   );
@@ -105,59 +112,83 @@ export const BranchSupplierManagement: React.FC<BranchSupplierManagementProps> =
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-medium">Connected Suppliers</h3>
                 {isAdmin && (
-                  <Dialog open={isAssignModalOpen} onOpenChange={setIsAssignModalOpen}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Assign Supplier
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Assign Supplier to Branch</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="supplier-select">Select Supplier</Label>
-                          <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId}>
-                            <SelectTrigger id="supplier-select">
-                              <SelectValue placeholder="Choose a supplier" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableSuppliers.map((supplier) => (
-                                <SelectItem key={supplier.id} value={supplier.id}>
-                                  {supplier.company_name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                  <div className="space-y-2">
+                    {connectedSuppliers.length > 0 && (
+                      <div className="p-3 border rounded-lg bg-blue-50 border-blue-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Users className="h-4 w-4 text-blue-600" />
+                          <span className="text-sm font-medium text-blue-900">Quick Assign Connected Suppliers</span>
                         </div>
-                        <div>
-                          <Label htmlFor="notes">Notes (Optional)</Label>
-                          <Textarea
-                            id="notes"
-                            value={notes}
-                            onChange={(e) => setNotes(e.target.value)}
-                            placeholder="Add any notes about this assignment..."
-                          />
-                        </div>
-                        <div className="flex justify-end gap-2">
-                          <Button 
-                            variant="outline" 
-                            onClick={() => setIsAssignModalOpen(false)}
-                          >
-                            Cancel
-                          </Button>
-                          <Button 
-                            onClick={handleAssignSupplier}
-                            disabled={!selectedSupplierId}
-                          >
-                            Assign Supplier
-                          </Button>
+                        <div className="flex flex-wrap gap-2">
+                          {connectedSuppliers.map((supplier) => (
+                            <Button
+                              key={supplier.id}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => assignSupplierToBranch(supplier.id, 'Assigned from connected suppliers')}
+                              className="text-xs border-blue-200 hover:bg-blue-100"
+                            >
+                              + {supplier.company_name}
+                            </Button>
+                          ))}
                         </div>
                       </div>
-                    </DialogContent>
-                  </Dialog>
+                    )}
+                    
+                    <Dialog open={isAssignModalOpen} onOpenChange={setIsAssignModalOpen}>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Assign Supplier
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Assign Supplier to Branch</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="supplier-select">Select Supplier</Label>
+                            <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId}>
+                              <SelectTrigger id="supplier-select">
+                                <SelectValue placeholder="Choose a supplier" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableSuppliers.map((supplier) => (
+                                  <SelectItem key={supplier.id} value={supplier.id}>
+                                    {supplier.company_name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="notes">Notes (Optional)</Label>
+                            <Textarea
+                              id="notes"
+                              value={notes}
+                              onChange={(e) => setNotes(e.target.value)}
+                              placeholder="Add any notes about this assignment..."
+                            />
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <Button 
+                              variant="outline" 
+                              onClick={() => setIsAssignModalOpen(false)}
+                            >
+                              Cancel
+                            </Button>
+                            <Button 
+                              onClick={handleAssignSupplier}
+                              disabled={!selectedSupplierId}
+                            >
+                              Assign Supplier
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 )}
               </div>
 

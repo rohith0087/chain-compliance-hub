@@ -328,6 +328,356 @@ export const DEFAULT_ONBOARDING_TEMPLATES: DefaultOnboardingTemplate[] = [
         field_options: ['OSHA 30-Hour', 'OSHA 10-Hour', 'First Aid/CPR', 'Confined Space', 'Fall Protection', 'Hazmat']
       }
     ]
+  },
+  {
+    industry: 'Poultry',
+    default_welcome_message: 'Welcome to our poultry supplier onboarding process. As a food safety-critical industry, we require comprehensive documentation and compliance verification to ensure the highest standards of quality and safety.',
+    allow_branch_selection: true,
+    require_branch_selection: false,
+    auto_approve_standard_docs: false,
+    require_all_documents: true,
+    expires_days: 21,
+    document_requirements: [
+      ...COMMON_DOCUMENTS,
+      {
+        document_type: 'haccp_plan',
+        document_name: 'HACCP Plan',
+        description: 'Current Hazard Analysis Critical Control Points (HACCP) plan',
+        is_required: true,
+        display_order: 5
+      },
+      {
+        document_type: 'fda_registration',
+        document_name: 'FDA Facility Registration',
+        description: 'FDA facility registration certificate',
+        is_required: true,
+        display_order: 6
+      },
+      {
+        document_type: 'fsis_establishment',
+        document_name: 'FSIS Establishment Number',
+        description: 'FSIS establishment number (if applicable for processed products)',
+        is_required: false,
+        display_order: 7
+      },
+      {
+        document_type: 'ssop_plan',
+        document_name: 'SSOP Plan',
+        description: 'Sanitation Standard Operating Procedures',
+        is_required: true,
+        display_order: 8
+      },
+      {
+        document_type: 'food_defense_plan',
+        document_name: 'Food Defense Plan',
+        description: 'Food defense and security plan',
+        is_required: true,
+        display_order: 9
+      },
+      {
+        document_type: 'recall_plan',
+        document_name: 'Recall Plan and Procedures',
+        description: 'Documented recall procedures and emergency response plan',
+        is_required: true,
+        display_order: 10
+      },
+      {
+        document_type: 'food_safety_audit',
+        document_name: 'Third-Party Food Safety Audit',
+        description: 'Current third-party food safety audit (SQF, BRC, or similar)',
+        is_required: true,
+        display_order: 11
+      },
+      {
+        document_type: 'npip_certificate',
+        document_name: 'NPIP Certificate',
+        description: 'National Poultry Improvement Plan (NPIP) certificate',
+        is_required: true,
+        display_order: 12
+      },
+      {
+        document_type: 'organic_certification',
+        document_name: 'Organic Certification',
+        description: 'USDA Organic certification (if applicable)',
+        is_required: false,
+        display_order: 13
+      },
+      {
+        document_type: 'supplier_agreement',
+        document_name: 'Supplier Agreement',
+        description: 'Signed supplier agreement with change notification requirements',
+        is_required: true,
+        display_order: 14
+      },
+      {
+        document_type: 'animal_welfare_cert',
+        document_name: 'Animal Welfare Certification',
+        description: 'Animal welfare certification (GAA BAP, Animal Welfare Approved, etc.)',
+        is_required: false,
+        display_order: 15
+      }
+    ],
+    form_fields: [
+      ...COMMON_FORM_FIELDS,
+      {
+        field_type: 'text',
+        field_label: 'Emergency Contact Name',
+        field_description: 'Name of emergency contact person',
+        is_required: true,
+        field_order: 7
+      },
+      {
+        field_type: 'text',
+        field_label: 'Emergency Contact Phone',
+        field_description: 'Emergency contact phone number',
+        is_required: true,
+        field_order: 8
+      },
+      {
+        field_type: 'text',
+        field_label: 'Emergency Contact Email',
+        field_description: 'Emergency contact email address',
+        is_required: true,
+        field_order: 9
+      },
+      {
+        field_type: 'text',
+        field_label: 'Plant Manager Name',
+        field_description: 'Name of plant manager',
+        is_required: true,
+        field_order: 10
+      },
+      {
+        field_type: 'text',
+        field_label: 'Plant Manager Phone',
+        field_description: 'Plant manager phone number',
+        is_required: true,
+        field_order: 11
+      },
+      {
+        field_type: 'text',
+        field_label: 'Plant Manager Email',
+        field_description: 'Plant manager email address',
+        is_required: true,
+        field_order: 12
+      },
+      {
+        field_type: 'text',
+        field_label: 'QC Manager Name',
+        field_description: 'Name of Quality Control manager',
+        is_required: true,
+        field_order: 13
+      },
+      {
+        field_type: 'text',
+        field_label: 'QC Manager Phone',
+        field_description: 'QC manager phone number',
+        is_required: true,
+        field_order: 14
+      },
+      {
+        field_type: 'text',
+        field_label: 'QC Manager Email',
+        field_description: 'QC manager email address',
+        is_required: true,
+        field_order: 15
+      },
+      {
+        field_type: 'text',
+        field_label: 'Recall Coordinator Name',
+        field_description: 'Name of recall coordinator',
+        is_required: true,
+        field_order: 16
+      },
+      {
+        field_type: 'text',
+        field_label: 'Recall Coordinator Phone',
+        field_description: 'Recall coordinator phone number',
+        is_required: true,
+        field_order: 17
+      },
+      {
+        field_type: 'text',
+        field_label: 'Recall Coordinator Email',
+        field_description: 'Recall coordinator email address',
+        is_required: true,
+        field_order: 18
+      },
+      {
+        field_type: 'textarea',
+        field_label: 'Manufacturing Locations',
+        field_description: 'List each manufacturing location with complete address',
+        is_required: true,
+        field_order: 19
+      },
+      {
+        field_type: 'checkbox',
+        field_label: 'Products Supplied',
+        field_description: 'Select all products that apply',
+        is_required: false,
+        field_order: 20,
+        field_options: [
+          'Whole Egg', 'Egg Whites', 'Egg Yolks', 'Cage Free', 'Organic', 
+          'Nest Run', 'Conventional', 'Pasture Raised', 'Non-GMO', 
+          'Free Range Organic', 'Free Range Cage Free', 'Prop 12 Compliant', 
+          'State/Regional Compliant'
+        ]
+      },
+      {
+        field_type: 'textarea',
+        field_label: 'Other Products',
+        field_description: 'Describe any other products you supply',
+        is_required: false,
+        field_order: 21
+      },
+      {
+        field_type: 'select',
+        field_label: 'HPAI/ND Compliance',
+        field_description: 'Products did not originate in quarantine control zone for HPAI or Newcastle disease',
+        is_required: true,
+        field_order: 22,
+        field_options: ['Yes - Compliant', 'No - Non-compliant', 'Not Applicable']
+      },
+      {
+        field_type: 'textarea',
+        field_label: 'Packaging/Ingredients/Other',
+        field_description: 'Describe packaging, ingredients, and other relevant information',
+        is_required: false,
+        field_order: 23
+      },
+      {
+        field_type: 'text',
+        field_label: 'FDA Registration Number',
+        field_description: 'FDA facility registration number',
+        is_required: true,
+        field_order: 24
+      },
+      {
+        field_type: 'checkbox',
+        field_label: 'Food Security Measures',
+        field_description: 'Check all that apply',
+        is_required: false,
+        field_order: 25,
+        field_options: [
+          'Food Security Policy in Place', 'Risk Assessment Conducted', 
+          'FDA Mitigation Strategy Compliance', 'Food Defense Audits Conducted', 
+          'Food Defense Plan Annual Review'
+        ]
+      },
+      {
+        field_type: 'text',
+        field_label: 'Risk Assessment Date',
+        field_description: 'Date of most recent risk assessment',
+        is_required: false,
+        field_order: 26
+      },
+      {
+        field_type: 'text',
+        field_label: 'Last Food Defense Audit Date',
+        field_description: 'Date of last food defense audit',
+        is_required: false,
+        field_order: 27
+      },
+      {
+        field_type: 'checkbox',
+        field_label: 'Food Fraud Prevention',
+        field_description: 'Check all that apply',
+        is_required: false,
+        field_order: 28,
+        field_options: [
+          'Vulnerability Assessment Conducted', 'Dilution Risk Mitigation', 
+          'Mislabeling Risk Mitigation', 'Substitution Risk Mitigation', 
+          'Counterfeit Risk Mitigation'
+        ]
+      },
+      {
+        field_type: 'checkbox',
+        field_label: 'Allergen Controls',
+        field_description: 'Check all that apply',
+        is_required: false,
+        field_order: 29,
+        field_options: [
+          'Allergen Control Program', 'Annual Employee Training', 
+          'Allergen Testing Program', 'Cross-contamination Prevention', 
+          'Rework Allergen Control'
+        ]
+      },
+      {
+        field_type: 'text',
+        field_label: 'Third Party Certificates',
+        field_description: 'List third party certificates (SQF, BRC, Other)',
+        is_required: false,
+        field_order: 30
+      },
+      {
+        field_type: 'text',
+        field_label: 'Last Inspection Date',
+        field_description: 'Date of last third party inspection',
+        is_required: false,
+        field_order: 31
+      },
+      {
+        field_type: 'text',
+        field_label: 'Inspection Score',
+        field_description: 'Score from last inspection',
+        is_required: false,
+        field_order: 32
+      },
+      {
+        field_type: 'checkbox',
+        field_label: 'Supplier Management',
+        field_description: 'Check all that apply',
+        is_required: false,
+        field_order: 33,
+        field_options: [
+          'Supplier Approval Program', 'Supplier Fraud Assessment', 
+          'FSVP Importer Status', 'FSVP Compliance'
+        ]
+      },
+      {
+        field_type: 'text',
+        field_label: 'Supplier Information Maintenance',
+        field_description: 'Method of maintaining supplier information',
+        is_required: false,
+        field_order: 34
+      },
+      {
+        field_type: 'checkbox',
+        field_label: 'Recall Procedures',
+        field_description: 'Check all that apply',
+        is_required: false,
+        field_order: 35,
+        field_options: ['Recall Policy in Place', 'Mock Recalls Conducted']
+      },
+      {
+        field_type: 'text',
+        field_label: 'Mock Recall Frequency',
+        field_description: 'Frequency of mock recalls',
+        is_required: false,
+        field_order: 36
+      },
+      {
+        field_type: 'text',
+        field_label: 'Last Mock Recall Date',
+        field_description: 'Date of last mock recall',
+        is_required: false,
+        field_order: 37
+      },
+      {
+        field_type: 'text',
+        field_label: 'Mock Recall Recovery Percentage',
+        field_description: 'Percentage recovery from last mock recall',
+        is_required: false,
+        field_order: 38
+      },
+      {
+        field_type: 'text',
+        field_label: 'Mock Recall Conducted By',
+        field_description: 'Who conducted the mock recall',
+        is_required: false,
+        field_order: 39
+      }
+    ]
   }
 ];
 

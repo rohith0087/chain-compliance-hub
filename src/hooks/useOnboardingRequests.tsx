@@ -90,28 +90,12 @@ export const useOnboardingRequests = () => {
     customMessage?: string
   ) => {
     try {
-      // Get buyer's default settings
-      const { data: defaultSettings } = await supabase
-        .from('buyer_default_onboarding_settings')
-        .select('*')
-        .eq('buyer_id', buyerId)
-        .maybeSingle();
-
-      const { data: defaultDocs } = await supabase
-        .from('default_document_requirements')
-        .select('*')
-        .eq('buyer_id', buyerId)
-        .order('display_order');
-
-      const { data: defaultFields } = await supabase
-        .from('default_form_fields')
-        .select('*')
-        .eq('buyer_id', buyerId)
-        .order('field_order');
+      // Load default settings (including industry templates)
+      const defaults = await loadDefaultSettings(buyerId);
 
       // Use defaults or fallback values
-      const canChooseBranches = defaultSettings?.allow_branch_selection ?? false;
-      const finalMessage = customMessage || defaultSettings?.default_welcome_message || '';
+      const canChooseBranches = defaults.settings?.allow_branch_selection ?? false;
+      const finalMessage = customMessage || defaults.settings?.default_welcome_message || '';
 
       // Create the request
       const request = await createOnboardingRequest(
@@ -123,8 +107,8 @@ export const useOnboardingRequests = () => {
       );
 
       // Add default document requirements
-      if (defaultDocs && defaultDocs.length > 0) {
-        for (const doc of defaultDocs) {
+      if (defaults.documentRequirements && defaults.documentRequirements.length > 0) {
+        for (const doc of defaults.documentRequirements) {
           await addDocumentRequirement(
             request.id,
             doc.document_type,
@@ -138,11 +122,11 @@ export const useOnboardingRequests = () => {
       }
 
       // Add default form fields
-      if (defaultFields && defaultFields.length > 0) {
-        for (const field of defaultFields) {
+      if (defaults.formFields && defaults.formFields.length > 0) {
+        for (const field of defaults.formFields) {
           await addFormField(
             request.id,
-            field.field_type as FormField['field_type'],
+            field.field_type,
             field.field_label,
             field.field_description,
             field.field_options,

@@ -37,6 +37,17 @@ export const OnboardingBranchSelection: React.FC<OnboardingBranchSelectionProps>
     fetchBranchesAndSelections();
   }, [request.buyer_id]);
 
+  // Auto-complete step when no branches are available
+  useEffect(() => {
+    if (!loading && branches.length === 0 && !isCompleted) {
+      toast({
+        title: "No branches found",
+        description: "Defaulting to Main Branch. Branch selection skipped.",
+      });
+      onComplete();
+    }
+  }, [loading, branches.length, isCompleted, onComplete, toast]);
+
   const fetchBranchesAndSelections = async () => {
     try {
       setLoading(true);
@@ -150,7 +161,7 @@ export const OnboardingBranchSelection: React.FC<OnboardingBranchSelectionProps>
   if (branches.length === 0) {
     return (
       <div className="text-center py-4">
-        <div className="text-muted-foreground">No branches available for selection</div>
+        <div className="text-muted-foreground">No branches found. Defaulting to Main Branch and continuing...</div>
       </div>
     );
   }

@@ -51,6 +51,31 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
     fetchExistingSubmissions();
   }, [request.id]);
 
+  // Effect to check completion when submissions change
+  useEffect(() => {
+    if (!isCompleted && documentRequirements.length > 0 && submissions.length > 0) {
+      checkCompletion();
+    }
+  }, [submissions, documentRequirements, isCompleted]);
+
+  const checkCompletion = () => {
+    const requiredDocs = documentRequirements.filter(req => req.is_required);
+    const submittedRequiredDocs = submissions.filter(sub => 
+      requiredDocs.some(req => req.id === sub.requirement_id)
+    );
+
+    console.log('🔴 DEBUG: Checking completion:', {
+      requiredDocs: requiredDocs.length,
+      submittedRequiredDocs: submittedRequiredDocs.length,
+      allRequiredCompleted: submittedRequiredDocs.length >= requiredDocs.length
+    });
+
+    if (submittedRequiredDocs.length >= requiredDocs.length && submittedRequiredDocs.length > 0) {
+      console.log('🔴 DEBUG: All documents completed, calling onComplete()');
+      onComplete();
+    }
+  };
+
   const fetchExistingSubmissions = async () => {
     try {
       const { data, error } = await supabase
@@ -200,22 +225,7 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
         description: `${documentName} uploaded successfully`
       });
 
-      // Check if all required documents are uploaded or marked as unavailable
-      const requiredDocs = documentRequirements.filter(req => req.is_required);
-      const currentSubmissions = await fetchCurrentSubmissions();
-      const submittedRequiredDocs = currentSubmissions.filter(sub => 
-        requiredDocs.some(req => req.id === sub.requirement_id)
-      );
-
-      console.log(`🔴 DEBUG: Completion check:`, {
-        requiredDocs: requiredDocs.length,
-        submittedRequiredDocs: submittedRequiredDocs.length
-      });
-
-      if (submittedRequiredDocs.length >= requiredDocs.length) {
-        console.log(`🔴 DEBUG: All required docs submitted, calling onComplete()`);
-        onComplete();
-      }
+      // Completion check will be handled by the useEffect
     } catch (error) {
       console.error('🔴 DEBUG: Unexpected error in handleFileUpload:', error);
       toast({
@@ -294,16 +304,7 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
         description: `${documentName} marked as unavailable`
       });
 
-      // Check completion
-      const requiredDocs = documentRequirements.filter(req => req.is_required);
-      const currentSubmissions = await fetchCurrentSubmissions();
-      const submittedRequiredDocs = currentSubmissions.filter(sub => 
-        requiredDocs.some(req => req.id === sub.requirement_id)
-      );
-
-      if (submittedRequiredDocs.length >= requiredDocs.length) {
-        onComplete();
-      }
+      // Completion check will be handled by the useEffect
     } catch (error) {
       console.error('Error in handleDocumentUnavailable:', error);
       toast({
@@ -568,9 +569,20 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
       </div>
 
       {allRequiredCompleted && !isCompleted && (
-        <div className="flex items-center gap-2 text-green-600 pt-4">
-          <CheckCircle className="w-4 h-4" />
-          <span className="text-sm">All required documents uploaded</span>
+        <div className="space-y-4 pt-4">
+          <div className="flex items-center gap-2 text-green-600">
+            <CheckCircle className="w-4 h-4" />
+            <span className="text-sm">All required documents uploaded</span>
+          </div>
+          <Button 
+            onClick={() => {
+              console.log('🔴 DEBUG: Manual proceed button clicked');
+              onComplete();
+            }}
+            className="w-full"
+          >
+            Proceed to Next Step
+          </Button>
         </div>
       )}
 

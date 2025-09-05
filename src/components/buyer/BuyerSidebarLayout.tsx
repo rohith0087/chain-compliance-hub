@@ -185,13 +185,27 @@ export function BuyerSidebarLayout({
       <Sidebar className="border-r">
         <SidebarHeader className="border-b px-3 py-4">
           <div className="flex items-center gap-3">
+            {/* Company Logo - displays uploaded logo or default Building2 icon */}
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary overflow-hidden">
-              {buyerProfile?.company_logo ? (
-                <img 
-                  src={buyerProfile.company_logo} 
-                  alt="Company Logo"
-                  className="h-full w-full object-contain"
-                />
+              {buyerProfile?.company_logo_url ? (
+                <>
+                  <img 
+                    src={buyerProfile.company_logo_url} 
+                    alt="Company Logo"
+                    className="h-full w-full object-contain"
+                    onError={(e) => {
+                      // Fallback to default icon if image fails to load
+                      const target = e.currentTarget;
+                      target.style.display = 'none';
+                      const fallback = target.nextElementSibling as HTMLElement;
+                      if (fallback) {
+                        fallback.classList.remove('hidden');
+                      }
+                    }}
+                  />
+                  {/* Hidden fallback icon */}
+                  <Building2 className="h-4 w-4 text-primary-foreground hidden" />
+                </>
               ) : (
                 <Building2 className="h-4 w-4 text-primary-foreground" />
               )}

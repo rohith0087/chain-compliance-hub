@@ -47,6 +47,28 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
   const { user: authUser, profile } = useAuth();
   const { t } = useTranslation(['dashboard', 'common']);
 
+  // Refresh buyer profile function  
+  const refreshBuyerProfile = async () => {
+    if (!authUser) return;
+    
+    try {
+      const { data: buyer, error: buyerError } = await supabase
+        .from('buyers')
+        .select('*')
+        .eq('profile_id', authUser.id)
+        .single();
+
+      if (buyerError && buyerError.code !== 'PGRST116') {
+        console.error('Error fetching buyer profile:', buyerError);
+        return;
+      }
+
+      setBuyerProfile(buyer);
+    } catch (error) {
+      console.error('Error refreshing buyer profile:', error);
+    }
+  };
+
   // Fetch buyer profile data and dashboard data
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -390,6 +412,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
       <BuyerSettingsModal
         open={showSettings}
         onOpenChange={setShowSettings}
+        onSettingsUpdated={refreshBuyerProfile}
       />
 
       {buyerProfile && profile && (

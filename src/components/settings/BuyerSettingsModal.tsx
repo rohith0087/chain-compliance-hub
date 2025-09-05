@@ -19,11 +19,13 @@ import { DefaultOnboardingSettings } from './DefaultOnboardingSettings';
 interface BuyerSettingsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSettingsUpdated?: () => void;
 }
 
 export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
   open,
   onOpenChange,
+  onSettingsUpdated,
 }) => {
   const [buyerData, setBuyerData] = useState({
     company_name: '',
@@ -99,6 +101,9 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
         title: "Success",
         description: "Company settings updated successfully",
       });
+      
+      // Call the callback to refresh parent component
+      onSettingsUpdated?.();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -128,6 +133,9 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
         title: "Success",
         description: "Logo updated and saved successfully",
       });
+      
+      // Call the callback to refresh parent component
+      onSettingsUpdated?.();
     } catch (error: any) {
       toast({
         title: "Error",

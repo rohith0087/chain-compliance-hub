@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useBuyerDefaultSettings } from './useBuyerDefaultSettings';
 
 export interface OnboardingRequest {
   id: string;
@@ -79,6 +80,116 @@ export const useOnboardingRequests = () => {
       setError('Failed to load onboarding requests');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createOnboardingRequestFromDefaults = async (
+    buyerId: string,
+    supplierEmail: string,
+    supplierCompanyName: string,
+    customMessage?: string
+  ) => {
+    try {
+      // Get buyer's default settings
+      const { data: defaultSettings } = await supabase
+        .from('buyer_default_onboarding_settings')
+        .select('*')
+        .eq('buyer_id', buyerId)
+        .maybeSingle();
+
+      const { data: defaultDocs } = await supabase
+        .from('default_document_requirements')
+        .select('*')
+        .eq('buyer_id', buyerId)
+        .order('display_order');
+
+      const { data: defaultFields } = await supabase
+        .from('default_form_fields')
+        .select('*')
+        .eq('buyer_id', buyerId)
+        .order('field_order');
+
+      // Use defaults or fallback values
+      const canChooseBranches = defaultSettings?.allow_branch_selection ?? false;
+      const finalMessage = customMessage || defaultSettings?.default_welcome_message || '';
+
+      // Create the request
+      const request = await createOnboardingRequest(
+        buyerId,
+        supplierEmail,
+        supplierCompanyName,
+        canChooseBranches,
+        finalMessage
+      );
+
+      // Add default document requirements
+      if (defaultDocs && defaultDocs.length > 0) {
+        for (const doc of defaultDocs) {
+          await addDocumentRequirement(
+            request.id,
+            doc.document_type,
+            doc.document_name,
+            doc.description,
+            doc.is_required,
+            doc.template_file_path,
+            doc.template_file_name
+          );
+        }
+      }
+
+      // Add default form fields
+      if (defaultFields && defaultFields.length > 0) {
+        for (const field of defaultFields) {
+          await addFormField(
+            request.id,
+            field.field_type as FormField['field_type'],
+            field.field_label,
+            field.field_description,
+            field.field_options,
+            field.is_required,
+            field.field_order
+          );
+        }
+      }
+
+      return request;
+    } catch (err) {
+      console.error('Error in createOnboardingRequestFromDefaults:', err);
+      throw err;
+    }
+  };
+
+  const loadDefaultSettings = async (buyerId: string) => {
+    try {
+      const { data: settings } = await supabase
+        .from('buyer_default_onboarding_settings')
+        .select('*')
+        .eq('buyer_id', buyerId)
+        .maybeSingle();
+
+      const { data: docs } = await supabase
+        .from('default_document_requirements')
+        .select('*')
+        .eq('buyer_id', buyerId)
+        .order('display_order');
+
+      const { data: fields } = await supabase
+        .from('default_form_fields')
+        .select('*')
+        .eq('buyer_id', buyerId)
+        .order('field_order');
+
+      return {
+        settings,
+        documentRequirements: docs || [],
+        formFields: (fields || []).map(field => ({
+          ...field,
+          field_type: field.field_type as FormField['field_type']
+        }))
+      };
+    } catch (err) {
+      console.error('Error loading default settings:', err);
+      throw err;
     }
   };
 
@@ -257,6 +368,8 @@ export const useOnboardingRequests = () => {
     loading,
     error,
     createOnboardingRequest,
+    createOnboardingRequestFromDefaults,
+    loadDefaultSettings,
     updateRequestStatus,
     addDocumentRequirement,
     addFormField,

@@ -37,16 +37,8 @@ export const OnboardingBranchSelection: React.FC<OnboardingBranchSelectionProps>
     fetchBranchesAndSelections();
   }, [request.buyer_id]);
 
-  // Auto-complete step when no branches are available
-  useEffect(() => {
-    if (!loading && branches.length === 0 && !isCompleted) {
-      toast({
-        title: "No branches found",
-        description: "Defaulting to Main Branch. Branch selection skipped.",
-      });
-      onComplete();
-    }
-  }, [loading, branches.length, isCompleted, onComplete, toast]);
+  // Removed auto-skip behavior to avoid skipping step 1 unintentionally
+  // If no branches are found, the user can choose to continue manually.
 
   const fetchBranchesAndSelections = async () => {
     try {
@@ -160,16 +152,25 @@ export const OnboardingBranchSelection: React.FC<OnboardingBranchSelectionProps>
 
   if (branches.length === 0) {
     return (
-      <div className="text-center py-4">
-        <div className="text-muted-foreground">No branches found. Defaulting to Main Branch and continuing...</div>
+      <div className="text-center py-6 space-y-3">
+        <div className="text-muted-foreground">No branches found for this buyer.</div>
+        {!isCompleted && (
+          <Button onClick={onComplete} variant="outline">Continue without selecting branches</Button>
+        )}
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="text-sm text-muted-foreground">
-        Select the branches you want to supply to. You can modify this selection later if needed.
+      <div className="text-sm text-muted-foreground flex items-center justify-between">
+        <span>Select the branches you want to supply to. You can modify this selection later if needed.</span>
+        {!isCompleted && branches.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setSelectedBranches(branches.map(b => b.id))}>Select all</Button>
+            <Button variant="ghost" size="sm" onClick={() => setSelectedBranches([])}>Clear</Button>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-3">

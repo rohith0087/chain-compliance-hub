@@ -157,7 +157,7 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
         requiredDocs.some(req => req.id === sub.requirement_id)
       );
 
-      if (submittedRequiredDocs.length + 1 >= requiredDocs.length) {
+      if (submittedRequiredDocs.length >= requiredDocs.length) {
         onComplete();
       }
     } catch (error) {
@@ -248,23 +248,37 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
                           </div>
                         </div>
                       </div>
-                      {!isCompleted && (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-2"
-                          >
-                            <Download className="w-3 h-3" />
-                            View
-                          </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-2"
+                          onClick={async () => {
+                            try {
+                              const { data, error } = await supabase.storage
+                                .from('compliance-documents')
+                                .createSignedUrl(submission.file_path, 300);
+                              if (error) {
+                                throw error;
+                              }
+                              window.open(data.signedUrl, '_blank');
+                            } catch (err: any) {
+                              console.error('Error opening file:', err);
+                              toast({ title: 'Error', description: err.message || 'Unable to open file', variant: 'destructive' });
+                            }
+                          }}
+                        >
+                          <Download className="w-3 h-3" />
+                          View
+                        </Button>
+                        {!isCompleted && (
                           <Label htmlFor={`file-${requirement.id}`} className="cursor-pointer">
                             <Button variant="outline" size="sm" asChild>
                               <span>Replace</span>
                             </Button>
                           </Label>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-3">

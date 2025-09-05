@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import RoleSwitcher from '@/components/RoleSwitcher';
 import { SupplierSettingsModal } from '@/components/settings/SupplierSettingsModal';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import ConnectionRequests from '@/components/supplier/ConnectionRequests';
 import ConnectedBuyersTab from '@/components/supplier/ConnectedBuyersTab';
 import DocumentRequestCard from '@/components/supplier/DocumentRequestCard';
@@ -499,39 +500,48 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
               </div>
               
               {onboardingRequests.length > 0 ? (
-                <div className="space-y-4">
+                <Accordion type="multiple" className="w-full">
                   {onboardingRequests.map(request => {
-                    // If request is in onboarding_initiated or under_review, show process
-                    if (request.status === 'onboarding_initiated' || request.status === 'under_review') {
-                      return (
-                        <OnboardingProcess
-                          key={request.id}
-                          request={request}
-                          onComplete={() => {
-                            // Refresh data when onboarding completes
-                            loadSupplierData();
-                          }}
-                        />
-                      );
-                    }
-                    
-                    // Otherwise show notification
+                    const headerTitle = request.supplier_company_name || 'Onboarding Request';
+                    const headerSubtitle = new Date(request.created_at).toLocaleString();
                     return (
-                      <OnboardingNotification
-                        key={request.id}
-                        request={request}
-                        onAccept={() => {
-                          // Refresh data when accepting
-                          loadSupplierData();
-                        }}
-                        onDecline={() => {
-                          // Refresh data when declining
-                          loadSupplierData();
-                        }}
-                      />
+                      <AccordionItem key={request.id} value={request.id} className="border rounded-md mb-3">
+                        <AccordionTrigger className="px-4 py-3">
+                          <div className="flex items-center justify-between w-full">
+                            <div className="text-left">
+                              <div className="font-medium">{headerTitle}</div>
+                              <div className="text-xs text-muted-foreground">{headerSubtitle}</div>
+                            </div>
+                            <Badge className={
+                              request.status === 'pending' ? 'bg-amber-100 text-amber-800' :
+                              request.status === 'onboarding_initiated' ? 'bg-blue-100 text-blue-800' :
+                              request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                              'bg-red-100 text-red-800'
+                            }>
+                              {request.status.replace('_', ' ')}
+                            </Badge>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4 pb-4">
+                          {request.status === 'onboarding_initiated' || request.status === 'under_review' ? (
+                            <OnboardingProcess
+                              request={request}
+                              onComplete={() => {
+                                loadSupplierData();
+                              }}
+                            />
+                          ) : (
+                            <OnboardingNotification
+                              request={request}
+                              onAccept={() => { loadSupplierData(); }}
+                              onDecline={() => { loadSupplierData(); }}
+                            />
+                          )}
+                        </AccordionContent>
+                      </AccordionItem>
                     );
                   })}
-                </div>
+                </Accordion>
               ) : (
                 <Card>
                   <CardContent className="text-center py-12">

@@ -117,56 +117,43 @@ const BuyerConnectionRequests = () => {
     setProcessingIds(prev => new Set(prev).add(connectionId));
 
     try {
-      // Update both status and responded_at timestamp
-      const updateData = {
-        status: action,
-        responded_at: new Date().toISOString()
-      };
-
-      console.log(`Updating connection ${connectionId} with:`, updateData);
-
-      const { data: updateResult, error } = await supabase
-        .from('buyer_supplier_connections')
-        .update(updateData)
-        .eq('id', connectionId)
-        .select('id, status, responded_at');
+      // Use the new unified connection approval function
+      const { data, error } = await supabase.rpc('handle_unified_connection_approval', {
+        p_connection_id: connectionId,
+        p_action: action,
+        p_notes: null
+      });
 
       if (error) {
-        console.error('Database update error:', error);
+        console.error(`Error ${action === 'approved' ? 'approving' : 'rejecting'} connection:`, error);
         toast({
           title: "Error",
-          description: `Failed to update connection request: ${error.message}`,
-          variant: "destructive"
+          description: `Failed to ${action === 'approved' ? 'approve' : 'reject'} connection request`,
+          variant: "destructive",
         });
         return;
       }
 
-      // Verify the update was successful
-      if (!updateResult || updateResult.length === 0) {
-        console.error('No rows were updated for connection:', connectionId);
+      // Cast data to expected type since it's jsonb
+      const result = data as { success: boolean; error?: string; message?: string; onboarding_request_id?: string };
+
+      if (!result?.success) {
         toast({
           title: "Error",
-          description: "Failed to update connection request - no rows affected",
-          variant: "destructive"
+          description: result?.error || "Failed to process connection request",
+          variant: "destructive",
         });
         return;
       }
 
-      console.log('Database update successful:', updateResult[0]);
+      const successMessage = action === 'approved' 
+        ? 'Connection approved and onboarding request created' 
+        : 'Connection request rejected';
 
-      // Verify the status was actually changed
-      if (updateResult[0].status !== action) {
-        console.error('Status mismatch after update:', {
-          expected: action,
-          actual: updateResult[0].status
-        });
-        toast({
-          title: "Error",
-          description: "Connection status update failed to persist",
-          variant: "destructive"
-        });
-        return;
-      }
+      toast({
+        title: "Success",
+        description: successMessage,
+      });
 
       // Get the connection details to create notification for supplier
       const connection = connectionRequests.find(req => req.id === connectionId);

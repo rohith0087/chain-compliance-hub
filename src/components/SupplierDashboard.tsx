@@ -192,12 +192,18 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
           setDocumentRequests(requests || []);
         }
 
-        // Load connected buyers - First get connections, then fetch buyer details separately
+        // Load connected buyers - Include onboarding status in the query
         const { data: connections, error: connectionsError } = await supabase
           .from('buyer_supplier_connections')
-          .select('*')
-          .eq('supplier_id', profile.id)
-          .eq('status', 'approved');
+          .select(`
+            *,
+            supplier_onboarding_requests!onboarding_request_id (
+              id,
+              status,
+              approved_at
+            )
+          `)
+          .eq('supplier_id', profile.id);
 
         if (connectionsError) {
           console.error('Error loading buyer connections:', connectionsError);
@@ -206,34 +212,53 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
           console.log('Loaded connections:', connections);
           
           // Fetch buyer details separately for each connection
-          if (connections && connections.length > 0) {
-            const buyerDetailsPromises = connections.map(async (connection) => {
-              const { data: buyerData, error: buyerError } = await supabase
-                .from('buyers')
-                .select('*')
-                .eq('id', connection.buyer_id)
-                .single();
-              
-              if (buyerError) {
-                console.error('Error fetching buyer details for connection:', connection.id, buyerError);
-                return {
-                  ...connection,
-                  buyers: null
-                };
+              if (connections && connections.length > 0) {
+                const buyerDetailsPromises = connections.map(async (connection) => {
+                  const { data: buyerData, error: buyerError } = await supabase
+                    .from('buyers')
+                    .select('*')
+                    .eq('id', connection.buyer_id)
+                    .single();
+                  
+                  if (buyerError) {
+                    console.error('Error fetching buyer details for connection:', connection.id, buyerError);
+                    return {
+                      ...connection,
+                      buyers: null,
+                      unifiedStatus: 'error'
+                    };
+                  }
+                  
+                  // Determine unified status
+                  let unifiedStatus = 'pending';
+                  if (connection.status === 'approved') {
+                    if (connection.supplier_onboarding_requests && Array.isArray(connection.supplier_onboarding_requests) && connection.supplier_onboarding_requests.length > 0) {
+                      const onboardingRequest = connection.supplier_onboarding_requests[0];
+                      if (onboardingRequest.status === 'approved') {
+                        unifiedStatus = 'fullyConnected';
+                      } else {
+                        unifiedStatus = 'onboardingPending';
+                      }
+                    } else {
+                      unifiedStatus = 'approved';
+                    }
+                  } else if (connection.status === 'rejected') {
+                    unifiedStatus = 'rejected';
+                  }
+                  
+                  return {
+                    ...connection,
+                    buyers: buyerData,
+                    unifiedStatus
+                  };
+                });
+                
+                const connectionsWithBuyers = await Promise.all(buyerDetailsPromises);
+                console.log('Connected buyers with unified status:', connectionsWithBuyers);
+                setConnectedBuyers(connectionsWithBuyers);
+              } else {
+                setConnectedBuyers([]);
               }
-              
-              return {
-                ...connection,
-                buyers: buyerData
-              };
-            });
-            
-            const connectionsWithBuyers = await Promise.all(buyerDetailsPromises);
-            console.log('Connected buyers with details:', connectionsWithBuyers);
-            setConnectedBuyers(connectionsWithBuyers);
-          } else {
-            setConnectedBuyers([]);
-          }
         }
       }
     } catch (error) {

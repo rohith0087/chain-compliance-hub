@@ -147,8 +147,31 @@ export const OnboardingReviewModal: React.FC<OnboardingReviewModalProps> = ({
     }
   };
 
-  const handleApprove = () => {
-    onApprove();
+  const handleApprove = async () => {
+    try {
+      // Use the new finalize onboarding approval function
+      const { data, error } = await supabase.rpc('finalize_onboarding_approval', {
+        p_onboarding_request_id: request.id,
+        p_notes: reviewNotes
+      });
+
+      if (error) {
+        console.error('Error approving onboarding:', error);
+        return;
+      }
+
+      // Cast data to expected type since it's jsonb
+      const result = data as { success: boolean; error?: string; message?: string };
+      
+      if (!result?.success) {
+        console.error('Onboarding approval failed:', result?.error);
+        return;
+      }
+
+      onApprove();
+    } catch (error) {
+      console.error('Error in handleApprove:', error);
+    }
   };
 
   const handleReject = () => {

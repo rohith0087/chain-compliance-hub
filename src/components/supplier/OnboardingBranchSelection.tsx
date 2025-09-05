@@ -59,9 +59,9 @@ export const OnboardingBranchSelection: React.FC<OnboardingBranchSelectionProps>
 
       setBranches(branchData || []);
 
-      // Fetch existing selections
+      // Fetch existing temporary selections
       const { data: selectionData, error: selectionError } = await supabase
-        .from('onboarding_branch_selections')
+        .from('temporary_branch_selections')
         .select('branch_id')
         .eq('onboarding_request_id', request.id);
 
@@ -100,34 +100,38 @@ export const OnboardingBranchSelection: React.FC<OnboardingBranchSelectionProps>
 
     setSaving(true);
     try {
-      // Remove existing selections
-      if (existingSelections.length > 0) {
-        await supabase
-          .from('onboarding_branch_selections')
-          .delete()
-          .eq('onboarding_request_id', request.id);
+      // Save to temporary branch selections instead of permanent ones
+      // First, delete existing temporary selections for this request
+      const { error: deleteError } = await supabase
+        .from('temporary_branch_selections')
+        .delete()
+        .eq('onboarding_request_id', request.id);
+
+      if (deleteError) {
+        console.error('Error deleting existing temporary selections:', deleteError);
+        throw deleteError;
       }
 
-      // Add new selections
-      const selections = selectedBranches.map(branchId => ({
+      // Insert new temporary selections
+      const selectionsToInsert = selectedBranches.map(branchId => ({
         onboarding_request_id: request.id,
         branch_id: branchId,
         selected_by: user?.id
       }));
 
-      const { error } = await supabase
-        .from('onboarding_branch_selections')
-        .insert(selections);
+      const { error: insertError } = await supabase
+        .from('temporary_branch_selections')
+        .insert(selectionsToInsert);
 
-      if (error) {
-        console.error('Error saving branch selections:', error);
-        throw new Error('Failed to save branch selections');
+      if (insertError) {
+        console.error('Error inserting temporary branch selections:', insertError);
+        throw insertError;
       }
 
       setExistingSelections(selectedBranches);
       toast({
         title: "Success",
-        description: "Branch selections saved successfully"
+        description: `Successfully selected ${selectedBranches.length} branch${selectedBranches.length > 1 ? 'es' : ''} - will be applied after approval`,
       });
       onComplete();
     } catch (error) {

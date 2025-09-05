@@ -28,5 +28,12 @@
     "connectedBuyers": "Compradores Conectados",
     "noRecentRequests": "No hay solicitudes de documentos recientes",
     "noConnectedBuyers": "Aún no hay compradores conectados"
+  },
+  "connectionStatus": {
+    "pending": "Conexión Pendiente",
+    "approved": "Conectado - Esperando Onboarding",
+    "onboardingPending": "Onboarding en Progreso",
+    "fullyConnected": "Completamente Conectado",
+    "rejected": "Conexión Rechazada"
   }
 }

@@ -445,6 +445,7 @@ export type Database = {
           id: string
           initiated_by: string | null
           notes: string | null
+          onboarding_request_id: string | null
           requested_at: string | null
           responded_at: string | null
           status: string
@@ -456,6 +457,7 @@ export type Database = {
           id?: string
           initiated_by?: string | null
           notes?: string | null
+          onboarding_request_id?: string | null
           requested_at?: string | null
           responded_at?: string | null
           status?: string
@@ -467,6 +469,7 @@ export type Database = {
           id?: string
           initiated_by?: string | null
           notes?: string | null
+          onboarding_request_id?: string | null
           requested_at?: string | null
           responded_at?: string | null
           status?: string
@@ -485,6 +488,13 @@ export type Database = {
             columns: ["buyer_id"]
             isOneToOne: false
             referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_supplier_connections_onboarding_request_id_fkey"
+            columns: ["onboarding_request_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_onboarding_requests"
             referencedColumns: ["id"]
           },
           {
@@ -2012,6 +2022,45 @@ export type Database = {
           },
         ]
       }
+      temporary_branch_selections: {
+        Row: {
+          branch_id: string
+          created_at: string
+          id: string
+          onboarding_request_id: string
+          selected_by: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          id?: string
+          onboarding_request_id: string
+          selected_by: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          id?: string
+          onboarding_request_id?: string
+          selected_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "temporary_branch_selections_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temporary_branch_selections_onboarding_request_id_fkey"
+            columns: ["onboarding_request_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_onboarding_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_activity_logs: {
         Row: {
           activity_details: Json | null
@@ -2352,6 +2401,10 @@ export type Database = {
         }
         Returns: Json
       }
+      finalize_onboarding_approval: {
+        Args: { p_notes?: string; p_onboarding_request_id: string }
+        Returns: Json
+      }
       get_admin_user_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -2411,6 +2464,10 @@ export type Database = {
       halfvec_typmod_in: {
         Args: { "": unknown[] }
         Returns: number
+      }
+      handle_unified_connection_approval: {
+        Args: { p_action: string; p_connection_id: string; p_notes?: string }
+        Returns: Json
       }
       hnsw_bit_support: {
         Args: { "": unknown }

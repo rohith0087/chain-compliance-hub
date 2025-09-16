@@ -289,7 +289,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {step === 1 ? 'Select Supplier Type & Compliance Documents' : 'Create Document Requests'}
+            {step === 1 ? 'Select Entity Type & Compliance Documents' : 'Create Document Requests'}
             {currentBranch && (
               <span className="text-sm font-normal text-muted-foreground ml-2">
                 for {currentBranch.branch_name}
@@ -298,12 +298,12 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
           </DialogTitle>
           <DialogDescription>
             {step === 1 
-              ? `Select the supplier type and compliance documents for industry standards`
+              ? `Select the entity type and compliance documents required for audit or compliance purposes`
               : `Configure the batch request details for ${selectedDocuments.length} document(s)`
             }
             {currentBranch && step === 2 && (
               <span className="block mt-1 text-sm">
-                Requests will be sent to suppliers assigned to {currentBranch.branch_name}
+                Requests will be sent to entities assigned to {currentBranch.branch_name}
               </span>
             )}
           </DialogDescription>
@@ -311,21 +311,22 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
 
         {step === 1 && (
           <div className="space-y-6">
-            {/* Supplier Type Selection */}
+            {/* Entity Type Selection */}
             <div className="space-y-2">
-              <Label htmlFor="supplier-type">Supplier Type</Label>
+              <Label htmlFor="entity-type">Entity Type</Label>
               <Select 
                 value={selectedSupplierType} 
                 onValueChange={(value) => {
                   setSelectedSupplierType(value);
-                  setSelectedDocuments([]); // Clear selected documents when supplier type changes
+                  setSelectedDocuments([]); // Clear selected documents when entity type changes
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select supplier type" />
+                  <SelectValue placeholder="Select entity type" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="General Supplier">General Supplier</SelectItem>
+                  <SelectItem value="Auditor">Auditor</SelectItem>
                   <SelectItem value="Chicken Processor Co">Chicken Processor</SelectItem>
                   <SelectItem value="Poultry - Egg Supplier">Poultry - Egg Supplier</SelectItem>
                   <SelectItem value="Poultry - Ingredient Supplier">Poultry - Ingredient Supplier</SelectItem>

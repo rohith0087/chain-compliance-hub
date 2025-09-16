@@ -35,6 +35,227 @@ export interface ComplianceDocument {
 }
 
 export const getComplianceDocuments = (userType: string): ComplianceDocument[] => {
+  // Auditor-specific document sets for India
+  if (userType === 'Auditor') {
+    return [
+      // Financial Compliance Documents
+      {
+        id: 'gst-certificate',
+        title: 'GST Registration Certificate',
+        category: 'Financial Compliance',
+        description: 'Goods and Services Tax registration certificate',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'GSTN',
+        template: { sections: [{ name: 'GST Details', required: true }] }
+      },
+      {
+        id: 'itr-returns',
+        title: 'Income Tax Returns (ITR)',
+        category: 'Financial Compliance',
+        description: 'Latest 3 years Income Tax Returns filed',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'Income Tax Department',
+        template: { sections: [{ name: 'Tax Filing History', required: true }] }
+      },
+      {
+        id: 'tds-certificate',
+        title: 'TDS Certificates',
+        category: 'Financial Compliance',
+        description: 'Tax Deducted at Source certificates for current FY',
+        icon: Award,
+        required: true,
+        regulatoryBody: 'Income Tax Department',
+        template: { sections: [{ name: 'TDS Details', required: true }] }
+      },
+      {
+        id: 'statutory-audit-report',
+        title: 'Statutory Audit Report',
+        category: 'Financial Compliance',
+        description: 'Latest statutory audit report from chartered accountant',
+        icon: CheckCircle,
+        required: true,
+        regulatoryBody: 'ICAI',
+        template: { sections: [{ name: 'Audit Findings', required: true }] }
+      },
+      {
+        id: 'bank-statements',
+        title: 'Bank Statements',
+        category: 'Financial Compliance',
+        description: 'Latest 12 months bank statements',
+        icon: Building2,
+        required: true,
+        regulatoryBody: 'RBI',
+        template: { sections: [{ name: 'Financial Health', required: true }] }
+      },
+      // Food Safety (FSSAI) Documents
+      {
+        id: 'fssai-license',
+        title: 'FSSAI License',
+        category: 'Food Safety',
+        description: 'Food Safety and Standards Authority of India license',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'FSSAI',
+        template: { sections: [{ name: 'Food Safety Compliance', required: true }] }
+      },
+      {
+        id: 'haccp-certification',
+        title: 'HACCP Certification',
+        category: 'Food Safety',
+        description: 'Hazard Analysis Critical Control Points certification',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'FSSAI',
+        template: { sections: [{ name: 'HACCP Implementation', required: true }] }
+      },
+      {
+        id: 'water-quality-report',
+        title: 'Water Quality Test Report',
+        category: 'Food Safety',
+        description: 'Laboratory water quality analysis report',
+        icon: CheckSquare,
+        required: true,
+        regulatoryBody: 'BIS',
+        template: { sections: [{ name: 'Water Analysis', required: true }] }
+      },
+      {
+        id: 'pest-control-records',
+        title: 'Pest Control Records',
+        category: 'Food Safety',
+        description: 'Monthly pest control treatment records',
+        icon: AlertTriangle,
+        required: true,
+        regulatoryBody: 'FSSAI',
+        template: { sections: [{ name: 'Pest Management', required: true }] }
+      },
+      // Regulatory Compliance Documents
+      {
+        id: 'factory-license',
+        title: 'Factory License',
+        category: 'Regulatory Compliance',
+        description: 'State Factory License under Factories Act',
+        icon: Factory,
+        required: true,
+        regulatoryBody: 'State Government',
+        template: { sections: [{ name: 'Factory Registration', required: true }] }
+      },
+      {
+        id: 'pollution-clearance',
+        title: 'Pollution Control Clearance',
+        category: 'Regulatory Compliance',
+        description: 'State Pollution Control Board clearance certificate',
+        icon: Leaf,
+        required: true,
+        regulatoryBody: 'SPCB',
+        template: { sections: [{ name: 'Environmental Compliance', required: true }] }
+      },
+      {
+        id: 'fire-safety-certificate',
+        title: 'Fire Safety Certificate',
+        category: 'Regulatory Compliance',
+        description: 'Fire department NOC and safety certificate',
+        icon: AlertTriangle,
+        required: true,
+        regulatoryBody: 'Fire Department',
+        template: { sections: [{ name: 'Fire Safety Measures', required: true }] }
+      },
+      {
+        id: 'labour-license',
+        title: 'Labour License',
+        category: 'Regulatory Compliance',
+        description: 'Contract Labour License and registrations',
+        icon: Users,
+        required: true,
+        regulatoryBody: 'Labour Department',
+        template: { sections: [{ name: 'Labour Compliance', required: true }] }
+      },
+      // Quality Management Documents
+      {
+        id: 'iso-9001-certificate',
+        title: 'ISO 9001:2015 Certificate',
+        category: 'Quality Management',
+        description: 'Quality Management System certification',
+        icon: Award,
+        required: false,
+        regulatoryBody: 'ISO',
+        template: { sections: [{ name: 'QMS Implementation', required: true }] }
+      },
+      {
+        id: 'iso-22000-certificate',
+        title: 'ISO 22000 Certificate',
+        category: 'Quality Management',
+        description: 'Food Safety Management System certification',
+        icon: Award,
+        required: false,
+        regulatoryBody: 'ISO',
+        template: { sections: [{ name: 'FSMS Implementation', required: true }] }
+      },
+      {
+        id: 'calibration-certificates',
+        title: 'Equipment Calibration Certificates',
+        category: 'Quality Management',
+        description: 'Calibration certificates for measuring instruments',
+        icon: Settings,
+        required: true,
+        regulatoryBody: 'NABL',
+        template: { sections: [{ name: 'Equipment Accuracy', required: true }] }
+      },
+      {
+        id: 'testing-reports',
+        title: 'Product Testing Reports',
+        category: 'Quality Management',
+        description: 'Third-party laboratory testing reports',
+        icon: CheckSquare,
+        required: true,
+        regulatoryBody: 'NABL',
+        template: { sections: [{ name: 'Product Quality', required: true }] }
+      },
+      // Legal & Corporate Documents
+      {
+        id: 'roc-filings',
+        title: 'ROC Annual Filings',
+        category: 'Legal & Corporate',
+        description: 'Registrar of Companies annual return filings',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'MCA',
+        template: { sections: [{ name: 'Corporate Compliance', required: true }] }
+      },
+      {
+        id: 'trade-license',
+        title: 'Trade License',
+        category: 'Legal & Corporate',
+        description: 'Municipal Corporation trade license',
+        icon: Building2,
+        required: true,
+        regulatoryBody: 'Municipal Corporation',
+        template: { sections: [{ name: 'Trade Authorization', required: true }] }
+      },
+      {
+        id: 'professional-registration',
+        title: 'Professional Registration',
+        category: 'Legal & Corporate',
+        description: 'CA/CS/CMA registration certificates',
+        icon: Award,
+        required: true,
+        regulatoryBody: 'ICAI/ICSI/ICMA',
+        template: { sections: [{ name: 'Professional Credentials', required: true }] }
+      },
+      {
+        id: 'indemnity-insurance',
+        title: 'Professional Indemnity Insurance',
+        category: 'Legal & Corporate',
+        description: 'Professional indemnity insurance policy',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'IRDAI',
+        template: { sections: [{ name: 'Insurance Coverage', required: true }] }
+      }
+    ];
+  }
+
   // Industry-specific document sets for Poultry
   if (userType === 'Poultry - Egg Supplier') {
     return [

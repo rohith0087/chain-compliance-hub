@@ -690,6 +690,65 @@ export const DEFAULT_ONBOARDING_TEMPLATES: DefaultOnboardingTemplate[] = [
         field_order: 56
       }
     ]
+  },
+  // Auditor template
+  {
+    industry: 'Auditor',
+    default_welcome_message: 'Welcome to our auditor onboarding process. Please provide the necessary compliance documents and professional credentials for verification.',
+    allow_branch_selection: true,
+    require_branch_selection: false,
+    auto_approve_standard_docs: false,
+    require_all_documents: true,
+    expires_days: 14,
+    document_requirements: [
+      ...COMMON_DOCUMENTS,
+      {
+        document_type: 'professional_registration',
+        document_name: 'Professional Registration Certificate',
+        description: 'CA/CS/CMA registration from respective professional body',
+        is_required: true,
+        display_order: 6
+      },
+      {
+        document_type: 'indemnity_insurance',
+        document_name: 'Professional Indemnity Insurance',
+        description: 'Valid professional indemnity insurance policy',
+        is_required: true,
+        display_order: 7
+      },
+      {
+        document_type: 'audit_experience',
+        document_name: 'Audit Experience Certificate',
+        description: 'Experience certificate in auditing field',
+        is_required: true,
+        display_order: 8
+      }
+    ],
+    form_fields: [
+      ...COMMON_FORM_FIELDS,
+      {
+        field_type: 'select',
+        field_label: 'Audit Specialization',
+        field_description: 'Primary area of audit expertise',
+        is_required: true,
+        field_order: 7,
+        field_options: ['Financial Audit', 'Food Safety Audit', 'Compliance Audit', 'Internal Audit', 'ISO Certification Audit']
+      },
+      {
+        field_type: 'text',
+        field_label: 'Professional Registration Number',
+        field_description: 'Your CA/CS/CMA registration number',
+        is_required: true,
+        field_order: 8
+      },
+      {
+        field_type: 'number',
+        field_label: 'Years of Experience',
+        field_description: 'Total years of auditing experience',
+        is_required: true,
+        field_order: 9
+      }
+    ]
   }
 ];
 

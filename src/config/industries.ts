@@ -15,7 +15,8 @@ export const INDUSTRIES = [
   'Pharmaceuticals',
   'Logistics & Transportation',
   'Real Estate',
-  'Poultry'
+  'Poultry',
+  'Auditor'
 ] as const;
 
 // Filter out any potential empty values at runtime

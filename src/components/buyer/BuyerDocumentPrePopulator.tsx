@@ -115,8 +115,8 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
               <SelectValue placeholder="Choose a connected supplier" />
             </SelectTrigger>
             <SelectContent>
-              {connections.map((connection) => (
-                <SelectItem key={connection.supplier?.id} value={connection.supplier?.id || ''}>
+              {connections.filter(connection => connection.supplier?.id).map((connection) => (
+                <SelectItem key={connection.supplier!.id} value={connection.supplier!.id}>
                   <div className="flex items-center gap-2">
                     <span>{connection.supplier?.company_name}</span>
                     <Badge variant="secondary" className="text-xs">

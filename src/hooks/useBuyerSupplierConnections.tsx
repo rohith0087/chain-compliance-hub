@@ -52,7 +52,7 @@ export const useBuyerSupplierConnections = (buyerId?: string) => {
         `)
         .eq('buyer_id', buyerId)
         .eq('status', 'approved')
-        .order('created_at', { ascending: false });
+        .order('requested_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching buyer supplier connections:', error);

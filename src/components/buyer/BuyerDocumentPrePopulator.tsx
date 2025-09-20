@@ -91,7 +91,9 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
     }
   };
 
-  const selectedSupplier = connections.find(conn => conn.supplier?.id === selectedSupplierId);
+  const selectedSupplier = connections.find(
+    (conn) => (conn.supplier?.id ?? conn.supplier_id) === selectedSupplierId
+  );
   const canUpload = selectedSupplierId && files.length > 0 && files.every(f => f.documentType);
 
   return (
@@ -115,13 +117,18 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
               <SelectValue placeholder="Choose a connected supplier" />
             </SelectTrigger>
             <SelectContent>
-              {connections.filter(connection => connection.supplier?.id).map((connection) => (
-                <SelectItem key={connection.supplier!.id} value={connection.supplier!.id}>
+              {connections.map((connection) => (
+                <SelectItem
+                  key={connection.supplier?.id ?? connection.supplier_id}
+                  value={connection.supplier?.id ?? connection.supplier_id}
+                >
                   <div className="flex items-center gap-2">
-                    <span>{connection.supplier?.company_name}</span>
-                    <Badge variant="secondary" className="text-xs">
-                      {connection.supplier?.industry}
-                    </Badge>
+                    <span>{connection.supplier?.company_name ?? `Supplier ${connection.supplier_id.slice(0, 8)}`}</span>
+                    {connection.supplier?.industry && (
+                      <Badge variant="secondary" className="text-xs">
+                        {connection.supplier.industry}
+                      </Badge>
+                    )}
                   </div>
                 </SelectItem>
               ))}
@@ -253,9 +260,9 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
         {selectedSupplier && (
           <div className="mt-4 p-4 bg-muted/50 rounded-lg">
             <p className="text-sm">
-              <strong>Selected Supplier:</strong> {selectedSupplier.supplier?.company_name}
+              <strong>Selected Supplier:</strong> {selectedSupplier.supplier?.company_name ?? `Supplier ${selectedSupplier.supplier_id.slice(0, 8)}`}
               <br />
-              <strong>Contact:</strong> {selectedSupplier.supplier?.contact_email}
+              <strong>Contact:</strong> {selectedSupplier.supplier?.contact_email ?? 'N/A'}
             </p>
           </div>
         )}

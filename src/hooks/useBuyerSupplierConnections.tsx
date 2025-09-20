@@ -40,15 +40,7 @@ export const useBuyerSupplierConnections = (buyerId?: string) => {
           id,
           buyer_id,
           supplier_id,
-          status,
-          suppliers (
-            id,
-            company_name,
-            contact_email,
-            industry,
-            phone,
-            address
-          )
+          status
         `)
         .eq('buyer_id', buyerId)
         .eq('status', 'approved')
@@ -60,7 +52,28 @@ export const useBuyerSupplierConnections = (buyerId?: string) => {
         return;
       }
 
-      setConnections(data || []);
+      // Fetch supplier details in a single query and attach as `supplier`
+      const supplierIds = (data || []).map((c) => c.supplier_id).filter(Boolean);
+      let connectionsWithSuppliers = data || [];
+
+      if (supplierIds.length > 0) {
+        const { data: suppliersData, error: suppliersError } = await supabase
+          .from('suppliers')
+          .select('id, company_name, contact_email, industry, phone, address')
+          .in('id', supplierIds);
+
+        if (suppliersError) {
+          console.error('Error fetching suppliers for connections:', suppliersError);
+        } else {
+          const suppliersMap = new Map((suppliersData || []).map((s) => [s.id, s]));
+          connectionsWithSuppliers = (data || []).map((conn) => ({
+            ...conn,
+            supplier: suppliersMap.get(conn.supplier_id) || null,
+          }));
+        }
+      }
+
+      setConnections(connectionsWithSuppliers);
     } catch (err) {
       console.error('Error in fetchConnections:', err);
       setError('Failed to load connected suppliers');

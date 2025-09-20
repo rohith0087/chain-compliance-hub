@@ -19,6 +19,7 @@ import CustomTemplateManager from '@/components/buyer/CustomTemplateManager';
 import { QuickOnboardingModal } from '@/components/buyer/QuickOnboardingModal';
 import { BulkInviteModal } from '@/components/buyer/BulkInviteModal';
 import { BuyerSidebarLayout } from '@/components/buyer/BuyerSidebarLayout';
+import { BuyerDocumentPrePopulator } from '@/components/buyer/BuyerDocumentPrePopulator';
 import { SidebarProvider } from '@/components/ui/sidebar';
 
 import { supabase } from '@/integrations/supabase/client';
@@ -389,6 +390,16 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         {/* Supplier Requests Content */}
         {activeTab === 'supplier-requests' && (
           <BuyerConnectionRequests />
+        )}
+
+        {/* Pre-populate Documents Content */}
+        {activeTab === 'pre-populate' && buyerProfile && (
+          <BuyerDocumentPrePopulator
+            buyerId={buyerProfile.id}
+            onComplete={() => {
+              // Optionally refresh data or show success message
+            }}
+          />
         )}
 
         {/* Company Content */}

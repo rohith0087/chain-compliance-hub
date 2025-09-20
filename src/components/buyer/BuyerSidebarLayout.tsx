@@ -18,7 +18,8 @@ import {
   Compass,
   UserCheck,
   Send,
-  UserPlus
+  UserPlus,
+  Upload
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from 'react-i18next';
@@ -127,7 +128,8 @@ export function BuyerSidebarLayout({
       submenu: [
         { title: 'Discovery', value: 'suppliers', icon: Search },
         { title: 'Connection Requests', value: 'supplier-requests', icon: UserCheck },
-        { title: 'Quick Onboarding', value: 'quick-onboarding', icon: UserPlus }
+        { title: 'Quick Onboarding', value: 'quick-onboarding', icon: UserPlus },
+        { title: 'Pre-populate Documents', value: 'pre-populate', icon: Upload }
       ]
     },
     {

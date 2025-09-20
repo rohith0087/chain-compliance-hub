@@ -388,6 +388,68 @@ export type Database = {
           },
         ]
       }
+      bulk_document_uploads: {
+        Row: {
+          buyer_id: string
+          completed_at: string | null
+          connection_id: string | null
+          created_at: string | null
+          created_by: string
+          error_details: Json | null
+          failed_uploads: number
+          id: string
+          metadata: Json | null
+          processed_files: number
+          status: string
+          successful_uploads: number
+          supplier_id: string
+          total_files: number
+          updated_at: string | null
+        }
+        Insert: {
+          buyer_id: string
+          completed_at?: string | null
+          connection_id?: string | null
+          created_at?: string | null
+          created_by: string
+          error_details?: Json | null
+          failed_uploads?: number
+          id?: string
+          metadata?: Json | null
+          processed_files?: number
+          status?: string
+          successful_uploads?: number
+          supplier_id: string
+          total_files?: number
+          updated_at?: string | null
+        }
+        Update: {
+          buyer_id?: string
+          completed_at?: string | null
+          connection_id?: string | null
+          created_at?: string | null
+          created_by?: string
+          error_details?: Json | null
+          failed_uploads?: number
+          id?: string
+          metadata?: Json | null
+          processed_files?: number
+          status?: string
+          successful_uploads?: number
+          supplier_id?: string
+          total_files?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulk_document_uploads_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "buyer_supplier_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       buyer_default_onboarding_settings: {
         Row: {
           allow_branch_selection: boolean
@@ -1303,6 +1365,7 @@ export type Database = {
       document_uploads: {
         Row: {
           branch_id: string | null
+          buyer_notes: string | null
           created_at: string | null
           expiration_date: string | null
           file_name: string
@@ -1310,15 +1373,19 @@ export type Database = {
           file_size: number | null
           id: string
           mime_type: string | null
+          original_uploader_type: string | null
+          pre_populated_at: string | null
           request_id: string | null
           reviewer_notes: string | null
           status: string | null
           updated_at: string | null
+          uploaded_by_buyer: boolean | null
           uploader_id: string | null
           version: number | null
         }
         Insert: {
           branch_id?: string | null
+          buyer_notes?: string | null
           created_at?: string | null
           expiration_date?: string | null
           file_name: string
@@ -1326,15 +1393,19 @@ export type Database = {
           file_size?: number | null
           id?: string
           mime_type?: string | null
+          original_uploader_type?: string | null
+          pre_populated_at?: string | null
           request_id?: string | null
           reviewer_notes?: string | null
           status?: string | null
           updated_at?: string | null
+          uploaded_by_buyer?: boolean | null
           uploader_id?: string | null
           version?: number | null
         }
         Update: {
           branch_id?: string | null
+          buyer_notes?: string | null
           created_at?: string | null
           expiration_date?: string | null
           file_name?: string
@@ -1342,10 +1413,13 @@ export type Database = {
           file_size?: number | null
           id?: string
           mime_type?: string | null
+          original_uploader_type?: string | null
+          pre_populated_at?: string | null
           request_id?: string | null
           reviewer_notes?: string | null
           status?: string | null
           updated_at?: string | null
+          uploaded_by_buyer?: boolean | null
           uploader_id?: string | null
           version?: number | null
         }
@@ -2513,7 +2587,7 @@ export type Database = {
       }
       l2_normalize: {
         Args: { "": string } | { "": unknown } | { "": unknown }
-        Returns: unknown
+        Returns: string
       }
       log_document_activity: {
         Args: {

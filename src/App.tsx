@@ -13,7 +13,8 @@ import InvitePage from "./pages/InvitePage";
 import DynamicDashboard from "./components/dashboard/DynamicDashboard";
 import ChatPage from "./pages/ChatPage";
 import AdminDashboard from "./pages/AdminDashboard";
-import SuperAdminDashboard from "./pages/SuperAdminDashboard";
+import PlatformAdminLogin from "./pages/PlatformAdminLogin";
+import PlatformAdminDashboard from "./pages/PlatformAdminDashboard";
 import SharedDocumentViewer from "./components/shared/SharedDocumentViewer";
 import NotFound from "./pages/NotFound";
 import "./i18n";
@@ -116,11 +117,8 @@ const AppRoutes = () => {
                 <AdminDashboard />
               </AdminRoute>
             } />
-            <Route path="/super-admin" element={
-              <SuperAdminRoute>
-                <SuperAdminDashboard />
-              </SuperAdminRoute>
-            } />
+            <Route path="/platform-admin/login" element={<PlatformAdminLogin />} />
+            <Route path="/platform-admin/dashboard" element={<PlatformAdminDashboard />} />
             <Route path="/shared-document/:token" element={<SharedDocumentViewer />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

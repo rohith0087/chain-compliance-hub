@@ -1701,6 +1701,65 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_administrators: {
+        Row: {
+          auth_user_id: string | null
+          created_at: string | null
+          created_by: string | null
+          email: string
+          full_name: string
+          id: string
+          ip_whitelist: string[] | null
+          is_active: boolean | null
+          last_login_at: string | null
+          locked_until: string | null
+          login_attempts: number | null
+          metadata: Json | null
+          platform_roles: Database["public"]["Enums"]["platform_role"][]
+          updated_at: string | null
+        }
+        Insert: {
+          auth_user_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email: string
+          full_name: string
+          id?: string
+          ip_whitelist?: string[] | null
+          is_active?: boolean | null
+          last_login_at?: string | null
+          locked_until?: string | null
+          login_attempts?: number | null
+          metadata?: Json | null
+          platform_roles?: Database["public"]["Enums"]["platform_role"][]
+          updated_at?: string | null
+        }
+        Update: {
+          auth_user_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          ip_whitelist?: string[] | null
+          is_active?: boolean | null
+          last_login_at?: string | null
+          locked_until?: string | null
+          login_attempts?: number | null
+          metadata?: Json | null
+          platform_roles?: Database["public"]["Enums"]["platform_role"][]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_administrators_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "platform_administrators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           company_name: string | null
@@ -2542,6 +2601,24 @@ export type Database = {
           roles: Database["public"]["Enums"]["user_role"][]
         }[]
       }
+      get_all_users_detailed_platform: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          company_name: string
+          email: string
+          full_name: string
+          id: string
+          last_activity_date: string
+          registration_date: string
+          roles: Database["public"]["Enums"]["user_role"][]
+          total_activities: number
+          total_chat_messages: number
+          total_chat_sessions: number
+          total_document_requests: number
+          total_document_uploads: number
+          user_type: string
+        }[]
+      }
       get_branch_suppliers: {
         Args: { p_branch_id: string }
         Returns: {
@@ -2563,6 +2640,19 @@ export type Database = {
           company_name: string
           company_type: string
           document_count: number
+        }[]
+      }
+      get_platform_admin_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          active_connections: number
+          pending_requests: number
+          recent_signups: number
+          total_buyers: number
+          total_chat_sessions: number
+          total_documents: number
+          total_suppliers: number
+          total_users: number
         }[]
       }
       get_super_admin_stats: {
@@ -2602,6 +2692,13 @@ export type Database = {
         Args: { p_action: string; p_connection_id: string; p_notes?: string }
         Returns: Json
       }
+      has_platform_role: {
+        Args: {
+          role: Database["public"]["Enums"]["platform_role"]
+          user_id: string
+        }
+        Returns: boolean
+      }
       hnsw_bit_support: {
         Args: { "": unknown }
         Returns: unknown
@@ -2619,6 +2716,10 @@ export type Database = {
         Returns: unknown
       }
       is_admin: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
+      is_platform_admin: {
         Args: { user_id: string }
         Returns: boolean
       }
@@ -2655,6 +2756,17 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      platform_admin_reset_password: {
+        Args: { user_id_param: string }
+        Returns: boolean
+      }
+      platform_admin_update_user_role: {
+        Args: {
+          new_roles: Database["public"]["Enums"]["user_role"][]
+          user_id_param: string
+        }
+        Returns: boolean
       }
       reject_document_request: {
         Args: { p_reason: string; p_request_id: string }
@@ -2772,6 +2884,7 @@ export type Database = {
         | "invite_users"
         | "manage_branches"
         | "export_data"
+      platform_role: "super_admin" | "platform_admin" | "support_admin"
       request_priority: "low" | "medium" | "high" | "urgent"
       request_status:
         | "pending"
@@ -2927,6 +3040,7 @@ export const Constants = {
         "manage_branches",
         "export_data",
       ],
+      platform_role: ["super_admin", "platform_admin", "support_admin"],
       request_priority: ["low", "medium", "high", "urgent"],
       request_status: [
         "pending",

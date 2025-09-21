@@ -36,15 +36,15 @@ const DocumentRequestsFilter = ({ filters, onFiltersChange, buyers }: DocumentRe
   const clearFilters = () => {
     onFiltersChange({
       search: '',
-      status: '',
-      priority: '',
-      buyer: '',
-      category: '',
-      documentType: ''
+      status: 'all',
+      priority: 'all',
+      buyer: 'all',
+      category: 'all',
+      documentType: 'all'
     });
   };
 
-  const activeFiltersCount = Object.values(filters).filter(value => value && value !== '').length;
+  const activeFiltersCount = Object.values(filters).filter(value => value && value !== '' && value !== 'all').length;
 
   const documentTypes = [
     'certificate',
@@ -109,7 +109,7 @@ const DocumentRequestsFilter = ({ filters, onFiltersChange, buyers }: DocumentRe
                     <SelectValue placeholder="All statuses" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All statuses</SelectItem>
+                    <SelectItem value="all">All statuses</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="submitted">Submitted</SelectItem>
                     <SelectItem value="approved">Approved</SelectItem>
@@ -125,7 +125,7 @@ const DocumentRequestsFilter = ({ filters, onFiltersChange, buyers }: DocumentRe
                     <SelectValue placeholder="All priorities" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All priorities</SelectItem>
+                    <SelectItem value="all">All priorities</SelectItem>
                     <SelectItem value="urgent">Urgent</SelectItem>
                     <SelectItem value="high">High</SelectItem>
                     <SelectItem value="medium">Medium</SelectItem>
@@ -141,7 +141,7 @@ const DocumentRequestsFilter = ({ filters, onFiltersChange, buyers }: DocumentRe
                     <SelectValue placeholder="All buyers" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All buyers</SelectItem>
+                    <SelectItem value="all">All buyers</SelectItem>
                     {buyers.map((buyer) => (
                       <SelectItem key={buyer.id} value={buyer.id}>
                         {buyer.company_name}
@@ -158,7 +158,7 @@ const DocumentRequestsFilter = ({ filters, onFiltersChange, buyers }: DocumentRe
                     <SelectValue placeholder="All categories" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All categories</SelectItem>
+                    <SelectItem value="all">All categories</SelectItem>
                     {categories.map((category) => (
                       <SelectItem key={category} value={category}>
                         {category.charAt(0).toUpperCase() + category.slice(1)}
@@ -175,7 +175,7 @@ const DocumentRequestsFilter = ({ filters, onFiltersChange, buyers }: DocumentRe
                     <SelectValue placeholder="All types" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All types</SelectItem>
+                    <SelectItem value="all">All types</SelectItem>
                     {documentTypes.map((type) => (
                       <SelectItem key={type} value={type}>
                         {type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}

@@ -68,11 +68,11 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
   // Filter state for document requests
   const [filters, setFilters] = useState({
     search: '',
-    status: '',
-    priority: '',
-    buyer: '',
-    category: '',
-    documentType: ''
+    status: 'all',
+    priority: 'all',
+    buyer: 'all',
+    category: 'all',
+    documentType: 'all'
   });
   
   const { user: authUser } = useAuth();
@@ -272,11 +272,11 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
       request.document_type.toLowerCase().includes(searchLower) ||
       request.buyers?.company_name?.toLowerCase().includes(searchLower);
     
-    const matchesStatus = !filters.status || request.status === filters.status;
-    const matchesPriority = !filters.priority || request.priority === filters.priority;
-    const matchesBuyer = !filters.buyer || request.buyer_id === filters.buyer;
-    const matchesCategory = !filters.category || request.category === filters.category;
-    const matchesDocumentType = !filters.documentType || request.document_type === filters.documentType;
+    const matchesStatus = !filters.status || filters.status === 'all' || request.status === filters.status;
+    const matchesPriority = !filters.priority || filters.priority === 'all' || request.priority === filters.priority;
+    const matchesBuyer = !filters.buyer || filters.buyer === 'all' || request.buyer_id === filters.buyer;
+    const matchesCategory = !filters.category || filters.category === 'all' || request.category === filters.category;
+    const matchesDocumentType = !filters.documentType || filters.documentType === 'all' || request.document_type === filters.documentType;
 
     return matchesSearch && matchesStatus && matchesPriority && matchesBuyer && matchesCategory && matchesDocumentType;
   });

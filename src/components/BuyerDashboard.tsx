@@ -215,25 +215,31 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid md:grid-cols-3 gap-4">
-                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={handleFindSuppliersClick}>
-                    <CardContent className="p-4 text-center">
-                      <Users className="w-8 h-8 mx-auto mb-2 text-primary" />
-                      <h3 className="font-medium">{t('dashboard:buyer.findSuppliers')}</h3>
+                <div className="grid md:grid-cols-3 gap-6">
+                  <Card className="group cursor-pointer hover:shadow-elegant transition-all duration-300 hover:scale-105 border-0 bg-gradient-card">
+                    <CardContent className="p-6 text-center" onClick={handleFindSuppliersClick}>
+                      <div className="h-16 w-16 mx-auto mb-4 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors duration-200">
+                        <Users className="w-8 h-8 text-primary" />
+                      </div>
+                      <h3 className="font-semibold text-lg mb-2">{t('dashboard:buyer.findSuppliers')}</h3>
                       <p className="text-sm text-muted-foreground">{t('dashboard:buyer.connectSuppliers')}</p>
                     </CardContent>
                   </Card>
-                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('requests')}>
-                    <CardContent className="p-4 text-center">
-                      <ListChecks className="w-8 h-8 mx-auto mb-2 text-accent" />
-                      <h3 className="font-medium">{t('dashboard:buyer.myRequests')}</h3>
+                  <Card className="group cursor-pointer hover:shadow-elegant transition-all duration-300 hover:scale-105 border-0 bg-gradient-card">
+                    <CardContent className="p-6 text-center" onClick={() => setActiveTab('requests')}>
+                      <div className="h-16 w-16 mx-auto mb-4 rounded-2xl bg-accent/10 flex items-center justify-center group-hover:bg-accent/20 transition-colors duration-200">
+                        <ListChecks className="w-8 h-8 text-accent" />
+                      </div>
+                      <h3 className="font-semibold text-lg mb-2">{t('dashboard:buyer.myRequests')}</h3>
                       <p className="text-sm text-muted-foreground">{t('dashboard:buyer.trackRequests')}</p>
                     </CardContent>
                   </Card>
-                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/chat')}>
-                    <CardContent className="p-4 text-center">
-                      <Compass className="w-8 h-8 mx-auto mb-2 text-secondary" />
-                      <h3 className="font-medium">Compliance Compass</h3>
+                  <Card className="group cursor-pointer hover:shadow-elegant transition-all duration-300 hover:scale-105 border-0 bg-gradient-card">
+                    <CardContent className="p-6 text-center" onClick={() => navigate('/chat')}>
+                      <div className="h-16 w-16 mx-auto mb-4 rounded-2xl bg-secondary/10 flex items-center justify-center group-hover:bg-secondary/20 transition-colors duration-200">
+                        <Compass className="w-8 h-8 text-secondary-foreground" />
+                      </div>
+                      <h3 className="font-semibold text-lg mb-2">Compliance Compass</h3>
                       <p className="text-sm text-muted-foreground">AI-powered compliance guidance</p>
                     </CardContent>
                   </Card>

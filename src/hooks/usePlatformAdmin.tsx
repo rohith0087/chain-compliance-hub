@@ -407,44 +407,52 @@ export const usePlatformAdmin = () => {
       fetchAllUsers();
       fetchInvitations();
     }
-  }, [isPlatformAdmin, fetchStats, fetchAllUsers, fetchInvitations]);
+  }, [isPlatformAdmin]); // Removed function dependencies to prevent re-subscriptions
 
-  // Set up real-time updates
+  // Set up real-time updates - simplified to prevent multiple subscriptions
   useEffect(() => {
     if (!isPlatformAdmin) return;
 
     // Create a unique channel name with timestamp to avoid conflicts
-    const channelName = `platform-admin-updates-${Date.now()}`;
+    const channelName = `platform-admin-updates-${Date.now()}-${Math.random()}`;
+    
+    console.log('Setting up platform admin real-time subscription:', channelName);
     
     // Subscribe to changes in key tables for real-time updates
     const channel = supabase
       .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
-        // Use the current functions directly to avoid dependency issues
+        console.log('Real-time update: profiles table changed');
         fetchStats();
         fetchAllUsers();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'buyers' }, () => {
+        console.log('Real-time update: buyers table changed');
         fetchStats();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'suppliers' }, () => {
+        console.log('Real-time update: suppliers table changed');
         fetchStats();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'buyer_supplier_connections' }, () => {
+        console.log('Real-time update: buyer_supplier_connections table changed');
         fetchStats();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'document_uploads' }, () => {
+        console.log('Real-time update: document_uploads table changed');
         fetchStats();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_sessions' }, () => {
+        console.log('Real-time update: chat_sessions table changed');
         fetchStats();
       })
       .subscribe();
 
     return () => {
+      console.log('Cleaning up platform admin real-time subscription:', channelName);
       supabase.removeChannel(channel);
     };
-  }, [isPlatformAdmin]); // Removed function dependencies to prevent re-subscriptions
+  }, [isPlatformAdmin]); // Only depend on isPlatformAdmin to prevent re-subscriptions
 
   return {
     stats,

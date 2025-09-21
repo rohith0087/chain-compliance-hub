@@ -32,7 +32,7 @@ const SupplierDocumentsDashboard = () => {
     status: '',
     category: '',
     documentType: '',
-    supplier: '',
+    buyer: '',
     expirationStatus: '',
     dateRange: ''
   });
@@ -110,6 +110,13 @@ const SupplierDocumentsDashboard = () => {
           doc.title.toLowerCase().includes(searchLower) ||
           doc.document_type.toLowerCase().includes(searchLower) ||
           doc.buyers?.company_name?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      // Apply buyer filter
+      if (filters.buyer) {
+        processedDocuments = processedDocuments.filter(doc =>
+          doc.buyers?.company_name?.toLowerCase().includes(filters.buyer.toLowerCase())
         );
       }
 
@@ -577,7 +584,7 @@ const SupplierDocumentsDashboard = () => {
                           status: '',
                           category: '',
                           documentType: '',
-                          supplier: '',
+                          buyer: '',
                           expirationStatus: '',
                           dateRange: ''
                         })}

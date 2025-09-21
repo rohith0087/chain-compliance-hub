@@ -94,7 +94,7 @@ export function PlatformAdminSidebar({ activeSection, onSectionChange }: Platfor
   return (
     <Sidebar
       className={`border-r transition-all duration-300 ${
-        collapsed ? 'w-[60px]' : 'w-[280px]'
+        collapsed ? 'w-[60px]' : 'w-[240px]'
       }`}
       style={{
         backgroundColor: 'hsl(var(--admin-sidebar))',
@@ -129,9 +129,6 @@ export function PlatformAdminSidebar({ activeSection, onSectionChange }: Platfor
             </div>
           )}
         </div>
-        {!collapsed && (
-          <SidebarTrigger className="ml-auto" style={{ color: 'hsl(var(--admin-text))' }} />
-        )}
       </SidebarHeader>
 
       <SidebarContent className="px-4 py-6" style={{ backgroundColor: 'hsl(var(--admin-sidebar))' }}>

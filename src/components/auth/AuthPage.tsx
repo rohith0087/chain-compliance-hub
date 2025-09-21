@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Shield, AlertCircle, Building2, ShoppingCart } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Shield, AlertCircle, Building2, ShoppingCart, Mail } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -17,7 +18,10 @@ const AuthPage = () => {
   const [companyName, setCompanyName] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<('buyer' | 'supplier')[]>(['supplier']);
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const { signIn, signUp, resetPassword } = useAuth();
   const { toast } = useToast();
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -83,6 +87,30 @@ const AuthPage = () => {
     });
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+
+    const { error } = await resetPassword(resetEmail);
+
+    if (error) {
+      toast({
+        title: "Reset Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Reset Email Sent",
+        description: "Please check your email for password reset instructions.",
+        variant: "default",
+      });
+      setResetEmail('');
+      setResetDialogOpen(false);
+    }
+    setResetLoading(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -127,6 +155,53 @@ const AuthPage = () => {
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Signing In..." : "Sign In"}
                 </Button>
+                
+                <div className="text-center mt-4">
+                  <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="link" className="text-sm text-muted-foreground hover:text-primary">
+                        Forgot your password?
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                          <Mail className="w-5 h-5" />
+                          Reset Password
+                        </DialogTitle>
+                        <DialogDescription>
+                          Enter your email address and we'll send you a link to reset your password.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <form onSubmit={handleForgotPassword} className="space-y-4">
+                        <div>
+                          <Label htmlFor="resetEmail">Email</Label>
+                          <Input
+                            id="resetEmail"
+                            type="email"
+                            value={resetEmail}
+                            onChange={(e) => setResetEmail(e.target.value)}
+                            placeholder="Enter your email"
+                            required
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            className="flex-1"
+                            onClick={() => setResetDialogOpen(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button type="submit" className="flex-1" disabled={resetLoading}>
+                            {resetLoading ? "Sending..." : "Send Reset Link"}
+                          </Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </form>
             </TabsContent>
             

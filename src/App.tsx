@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import Index from "./pages/Index";
 import AuthPage from "./components/auth/AuthPage";
+import ResetPassword from "./pages/ResetPassword";
 import InvitePage from "./pages/InvitePage";
 import DynamicDashboard from "./components/dashboard/DynamicDashboard";
 import ChatPage from "./pages/ChatPage";
@@ -103,6 +104,7 @@ const AppRoutes = () => {
                 <AuthPage />
               </PublicRoute>
             } />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/invite/:token" element={<InvitePage />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>

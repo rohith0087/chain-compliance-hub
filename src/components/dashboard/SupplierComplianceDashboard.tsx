@@ -37,56 +37,83 @@ const SupplierComplianceDashboard = () => {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
+      console.log('Loading compliance dashboard data for user:', user?.id);
+      
       // Load supplier profile first
-      const { data: supplierProfile } = await supabase
+      const { data: supplierProfile, error: supplierError } = await supabase
         .from('suppliers')
         .select('id')
         .eq('profile_id', user?.id)
-        .single();
+        .maybeSingle();
 
-      if (supplierProfile) {
-        // Load document requests with buyer info
-        const { data: requests } = await supabase
-          .from('document_requests')
-          .select(`
-            *,
-            buyers (
-              id,
-              company_name,
-              industry
-            )
-          `)
-          .eq('supplier_id', supplierProfile.id)
+      console.log('Supplier profile found:', supplierProfile);
+
+      if (supplierError) {
+        console.error('Error loading supplier profile:', supplierError);
+        return;
+      }
+
+      if (!supplierProfile) {
+        console.log('No supplier profile found for user');
+        return;
+      }
+
+      // Load document requests with buyer info
+      const { data: requests, error: requestsError } = await supabase
+        .from('document_requests')
+        .select(`
+          *,
+          buyers (
+            id,
+            company_name,
+            industry
+          )
+        `)
+        .eq('supplier_id', supplierProfile.id)
+        .order('created_at', { ascending: false });
+
+      console.log('Document requests loaded:', requests?.length || 0, 'requests');
+      if (requestsError) {
+        console.error('Error loading document requests:', requestsError);
+      } else {
+        setDocumentRequests(requests || []);
+      }
+
+      // Load document uploads
+      const requestIds = requests?.map(r => r.id) || [];
+      if (requestIds.length > 0) {
+        const { data: uploadsData, error: uploadsError } = await supabase
+          .from('document_uploads')
+          .select('*')
+          .in('request_id', requestIds)
           .order('created_at', { ascending: false });
 
-        setDocumentRequests(requests || []);
-
-        // Load document uploads
-        const requestIds = requests?.map(r => r.id) || [];
-        if (requestIds.length > 0) {
-          const { data: uploadsData } = await supabase
-            .from('document_uploads')
-            .select('*')
-            .in('request_id', requestIds)
-            .order('created_at', { ascending: false });
-
+        console.log('Document uploads loaded:', uploadsData?.length || 0, 'uploads');
+        if (uploadsError) {
+          console.error('Error loading document uploads:', uploadsError);
+        } else {
           setUploads(uploadsData || []);
         }
+      }
 
-        // Load connected buyers
-        const { data: connections } = await supabase
-          .from('buyer_supplier_connections')
-          .select(`
-            *,
-            buyers (
-              id,
-              company_name,
-              industry
-            )
-          `)
-          .eq('supplier_id', supplierProfile.id)
-          .eq('status', 'approved');
+      // Load connected buyers
+      const { data: connections, error: connectionsError } = await supabase
+        .from('buyer_supplier_connections')
+        .select(`
+          *,
+          buyers (
+            id,
+            company_name,
+            industry
+          )
+        `)
+        .eq('supplier_id', supplierProfile.id)
+        .eq('status', 'approved');
 
+      console.log('Connected buyers loaded:', connections?.length || 0, 'connections');
+      if (connectionsError) {
+        console.error('Error loading connected buyers:', connectionsError);
+      } else {
         setConnectedBuyers(connections || []);
       }
     } catch (error) {
@@ -316,7 +343,7 @@ const SupplierComplianceDashboard = () => {
         </TabsContent>
 
         <TabsContent value="analytics">
-          <ComplianceDashboard userRole="supplier" data={documentRequests} />
+          <ComplianceDashboard userRole="supplier" data={{ documentRequests }} />
         </TabsContent>
       </Tabs>
     </div>

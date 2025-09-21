@@ -25,11 +25,10 @@ import { SupplierSettingsModal } from '@/components/settings/SupplierSettingsMod
 import { SupplierSidebarLayout } from '@/components/supplier/SupplierSidebarLayout';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
-import ConnectionRequests from '@/components/supplier/ConnectionRequests';
-import ConnectedBuyersTab from '@/components/supplier/ConnectedBuyersTab';
 import DocumentRequestCard from '@/components/supplier/DocumentRequestCard';
 import DocumentRequestsFilter from '@/components/supplier/DocumentRequestsFilter';
 import SupplierComplianceDashboard from '@/components/dashboard/SupplierComplianceDashboard';
+import UnifiedBuyerConnections from '@/components/supplier/UnifiedBuyerConnections';
 import { useAuth } from '@/hooks/useAuth';
 import { useCompanySetup } from '@/hooks/useCompanySetup';
 import { supabase } from '@/integrations/supabase/client';
@@ -543,10 +542,8 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
         return <SupplierDocumentsDashboard />;
       case 'library':
         return <SupplierDocumentLibrary supplierId={supplierProfile?.id} />;
-      case 'buyers':
-        return <ConnectedBuyersTab connectedBuyers={connectedBuyers} />;
       case 'connections':
-        return <ConnectionRequests />;
+        return <UnifiedBuyerConnections onConnectionRequest={loadSupplierData} />;
       case 'compliance':
         return <SupplierComplianceDashboard />;
       case 'company':

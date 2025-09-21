@@ -143,15 +143,10 @@ export function SupplierSidebarLayout({
       value: 'library'
     },
     {
-      title: t('supplier:tabs.buyers'),
+      title: 'Buyer Connections',
       icon: Users,
-      value: 'buyers',
+      value: 'connections',
       badge: connectedBuyers > 0 ? connectedBuyers : undefined
-    },
-    {
-      title: t('supplier:tabs.connections'),
-      icon: UserCheck,
-      value: 'connections'
     },
     {
       title: t('supplier:tabs.compliance'),

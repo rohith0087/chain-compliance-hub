@@ -13,7 +13,7 @@ import { PlatformAdminInvitations } from '@/components/platform-admin/PlatformAd
 
 export default function PlatformAdminDashboard() {
   const navigate = useNavigate();
-  const { stats, loading, profileLoading, error, isPlatformAdmin, platformAdmin } = usePlatformAdmin();
+  const { stats, loading, profileLoading, error, isPlatformAdmin, platformAdmin, fetchStats } = usePlatformAdmin();
 
   useEffect(() => {
     // Redirect if not authenticated or not a platform admin
@@ -92,6 +92,18 @@ export default function PlatformAdminDashboard() {
       </header>
 
       <div className="container mx-auto px-6 py-8">
+        {error && (
+          <div className="mb-6 p-4 bg-destructive/15 border border-destructive/20 rounded-lg">
+            <p className="text-destructive text-sm">Error loading dashboard data: {error}</p>
+            <button 
+              onClick={fetchStats}
+              className="mt-2 text-xs text-destructive hover:underline"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>

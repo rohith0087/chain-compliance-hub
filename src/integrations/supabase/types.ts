@@ -2709,24 +2709,6 @@ export type Database = {
           roles: Database["public"]["Enums"]["user_role"][]
         }[]
       }
-      get_all_users_detailed_platform: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          company_name: string
-          email: string
-          full_name: string
-          id: string
-          last_activity_date: string
-          registration_date: string
-          roles: Database["public"]["Enums"]["user_role"][]
-          total_activities: number
-          total_chat_messages: number
-          total_chat_sessions: number
-          total_document_requests: number
-          total_document_uploads: number
-          user_type: string
-        }[]
-      }
       get_branch_suppliers: {
         Args: { p_branch_id: string }
         Returns: {
@@ -2757,7 +2739,8 @@ export type Database = {
           email: string
           expires_at: string
           id: string
-          invited_by_name: string
+          invited_by: string
+          inviter_name: string
           is_used: boolean
           platform_roles: Database["public"]["Enums"]["platform_role"][]
         }[]

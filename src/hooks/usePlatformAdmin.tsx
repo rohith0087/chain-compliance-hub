@@ -277,7 +277,17 @@ export const usePlatformAdmin = () => {
         return;
       }
       
-      setInvitations(data || []);
+      const formattedInvitations = (data || []).map((invitation: any) => ({
+        id: invitation.id,
+        email: invitation.email,
+        platform_roles: invitation.platform_roles,
+        invited_by_name: invitation.inviter_name || 'Unknown',
+        expires_at: invitation.expires_at,
+        created_at: invitation.created_at,
+        is_used: invitation.is_used,
+      }));
+      
+      setInvitations(formattedInvitations);
     } catch (err) {
       console.error('Error in fetchInvitations:', err);
       setError('Failed to fetch invitations');

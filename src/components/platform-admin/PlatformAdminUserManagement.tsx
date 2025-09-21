@@ -11,7 +11,7 @@ import { usePlatformAdmin, type DetailedUser } from '@/hooks/usePlatformAdmin';
 import { format } from 'date-fns';
 
 export function PlatformAdminUserManagement() {
-  const { users, loading, updateUserRole, resetUserPassword } = usePlatformAdmin();
+  const { users, loading, error, updateUserRole, resetUserPassword, fetchAllUsers } = usePlatformAdmin();
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [selectedUser, setSelectedUser] = useState<DetailedUser | null>(null);
@@ -74,6 +74,18 @@ export function PlatformAdminUserManagement() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {error && (
+            <div className="mb-4 p-4 bg-destructive/15 border border-destructive/20 rounded-lg">
+              <p className="text-destructive text-sm">Error: {error}</p>
+              <button 
+                onClick={fetchAllUsers}
+                className="mt-2 text-xs text-destructive hover:underline"
+              >
+                Try again
+              </button>
+            </div>
+          )}
+
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="relative flex-1">
@@ -139,12 +151,16 @@ export function PlatformAdminUserManagement() {
                           {user.user_type}
                         </Badge>
                       </td>
-                      <td className="p-4">
-                        <div className="text-sm">
-                          <div>{user.total_document_requests} requests</div>
-                          <div className="text-muted-foreground">{user.total_chat_sessions} chats</div>
-                        </div>
-                      </td>
+                       <td className="p-4">
+                         <div className="text-sm">
+                           <div className="text-muted-foreground">
+                             {user.last_activity_date ? 
+                               `Last seen: ${format(new Date(user.last_activity_date), 'MMM dd')}` :
+                               'No recent activity'
+                             }
+                           </div>
+                         </div>
+                       </td>
                       <td className="p-4">
                         <div className="text-sm">
                           {format(new Date(user.registration_date), 'MMM dd, yyyy')}

@@ -782,6 +782,45 @@ export type Database = {
         }
         Relationships: []
       }
+      credit_transactions: {
+        Row: {
+          created_at: string | null
+          credits_amount: number
+          description: string
+          id: string
+          metadata: Json | null
+          reference_id: string | null
+          reference_type: string | null
+          stripe_payment_intent_id: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          credits_amount: number
+          description: string
+          id?: string
+          metadata?: Json | null
+          reference_id?: string | null
+          reference_type?: string | null
+          stripe_payment_intent_id?: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          credits_amount?: number
+          description?: string
+          id?: string
+          metadata?: Json | null
+          reference_id?: string | null
+          reference_type?: string | null
+          stripe_payment_intent_id?: string | null
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       custom_document_templates: {
         Row: {
           buyer_id: string
@@ -1934,6 +1973,99 @@ export type Database = {
           },
         ]
       }
+      subscription_plan_configs: {
+        Row: {
+          created_at: string | null
+          features: Json
+          id: string
+          is_active: boolean | null
+          max_reports_per_month: number | null
+          monthly_credits: number
+          monthly_price_cents: number
+          plan_name: string
+          plan_type: Database["public"]["Enums"]["subscription_plan_type"]
+          stripe_price_id: string
+          stripe_product_id: string
+          target_audience: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          features?: Json
+          id?: string
+          is_active?: boolean | null
+          max_reports_per_month?: number | null
+          monthly_credits?: number
+          monthly_price_cents: number
+          plan_name: string
+          plan_type: Database["public"]["Enums"]["subscription_plan_type"]
+          stripe_price_id: string
+          stripe_product_id: string
+          target_audience: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          features?: Json
+          id?: string
+          is_active?: boolean | null
+          max_reports_per_month?: number | null
+          monthly_credits?: number
+          monthly_price_cents?: number
+          plan_name?: string
+          plan_type?: Database["public"]["Enums"]["subscription_plan_type"]
+          stripe_price_id?: string
+          stripe_product_id?: string
+          target_audience?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          created_at: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          monthly_credits: number
+          plan_type: Database["public"]["Enums"]["subscription_plan_type"]
+          price_id: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          monthly_credits?: number
+          plan_type: Database["public"]["Enums"]["subscription_plan_type"]
+          price_id: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          monthly_credits?: number
+          plan_type?: Database["public"]["Enums"]["subscription_plan_type"]
+          price_id?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       supplier_document_library: {
         Row: {
           ai_suggested_description: string | null
@@ -2338,6 +2470,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_credits: {
+        Row: {
+          available_credits: number
+          created_at: string | null
+          id: string
+          last_reset_date: string | null
+          total_consumed_credits: number
+          total_purchased_credits: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          available_credits?: number
+          created_at?: string | null
+          id?: string
+          last_reset_date?: string | null
+          total_consumed_credits?: number
+          total_purchased_credits?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          available_credits?: number
+          created_at?: string | null
+          id?: string
+          last_reset_date?: string | null
+          total_consumed_credits?: number
+          total_purchased_credits?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_invitations: {
         Row: {
           branch_id: string | null
@@ -2606,6 +2771,18 @@ export type Database = {
         Args: { p_full_name: string; p_token: string }
         Returns: Json
       }
+      add_credits: {
+        Args: {
+          p_credits_amount: number
+          p_description: string
+          p_reference_id?: string
+          p_reference_type?: string
+          p_stripe_payment_intent_id?: string
+          p_transaction_type: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       approve_document_request: {
         Args: { p_notes?: string; p_request_id: string }
         Returns: Json
@@ -2637,6 +2814,16 @@ export type Database = {
       cleanup_expired_knowledge_entries: {
         Args: Record<PropertyKey, never>
         Returns: number
+      }
+      consume_credits: {
+        Args: {
+          p_credits_amount: number
+          p_description: string
+          p_reference_id?: string
+          p_reference_type?: string
+          p_user_id: string
+        }
+        Returns: boolean
       }
       create_bootstrap_super_admin: {
         Args: {
@@ -3011,6 +3198,13 @@ export type Database = {
         | "rejected"
         | "expired"
         | "completed"
+      subscription_plan_type:
+        | "buyer_basic"
+        | "buyer_professional"
+        | "buyer_enterprise"
+        | "supplier_starter"
+        | "supplier_professional"
+        | "supplier_enterprise"
       user_role:
         | "buyer"
         | "supplier"
@@ -3167,6 +3361,14 @@ export const Constants = {
         "rejected",
         "expired",
         "completed",
+      ],
+      subscription_plan_type: [
+        "buyer_basic",
+        "buyer_professional",
+        "buyer_enterprise",
+        "supplier_starter",
+        "supplier_professional",
+        "supplier_enterprise",
       ],
       user_role: [
         "buyer",

@@ -445,7 +445,7 @@ const SupplierDocumentsDashboard = () => {
               
               {showFilters && (
                 <div className="space-y-4 pt-4 border-t">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* Status Filter */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Status</label>
@@ -460,7 +460,7 @@ const SupplierDocumentsDashboard = () => {
                           <SelectValue placeholder="All statuses" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All statuses</SelectItem>
+                          <SelectItem value="all">All Statuses</SelectItem>
                           <SelectItem value="pending">Pending</SelectItem>
                           <SelectItem value="submitted">Submitted</SelectItem>
                           <SelectItem value="approved">Approved</SelectItem>
@@ -483,7 +483,7 @@ const SupplierDocumentsDashboard = () => {
                           <SelectValue placeholder="All categories" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All categories</SelectItem>
+                          <SelectItem value="all">All Categories</SelectItem>
                           <SelectItem value="compliance">Compliance</SelectItem>
                           <SelectItem value="certification">Certification</SelectItem>
                           <SelectItem value="insurance">Insurance</SelectItem>
@@ -508,35 +508,13 @@ const SupplierDocumentsDashboard = () => {
                           <SelectValue placeholder="All types" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All types</SelectItem>
+                          <SelectItem value="all">All Types</SelectItem>
                           <SelectItem value="certificate">Certificate</SelectItem>
                           <SelectItem value="license">License</SelectItem>
                           <SelectItem value="permit">Permit</SelectItem>
                           <SelectItem value="policy">Policy</SelectItem>
                           <SelectItem value="report">Report</SelectItem>
                           <SelectItem value="invoice">Invoice</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Expiration Status Filter */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Expiration</label>
-                      <Select 
-                        value={filters.expirationStatus || 'all'} 
-                        onValueChange={(value) => setFilters(prev => ({ 
-                          ...prev, 
-                          expirationStatus: value === 'all' ? '' : value 
-                        }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="All documents" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All documents</SelectItem>
-                          <SelectItem value="expiring_soon">Expiring Soon</SelectItem>
-                          <SelectItem value="expired">Expired</SelectItem>
-                          <SelectItem value="valid">Valid</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -555,11 +533,35 @@ const SupplierDocumentsDashboard = () => {
                           <SelectValue placeholder="All time" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All time</SelectItem>
+                          <SelectItem value="all">All Time</SelectItem>
                           <SelectItem value="last_7_days">Last 7 Days</SelectItem>
                           <SelectItem value="last_30_days">Last 30 Days</SelectItem>
                           <SelectItem value="last_90_days">Last 90 Days</SelectItem>
                           <SelectItem value="this_year">This Year</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Expiration Status Filter - Separate row */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Expiration Status</label>
+                      <Select 
+                        value={filters.expirationStatus || 'all'} 
+                        onValueChange={(value) => setFilters(prev => ({ 
+                          ...prev, 
+                          expirationStatus: value === 'all' ? '' : value 
+                        }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="All documents" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Documents</SelectItem>
+                          <SelectItem value="expiring_soon">Expiring Soon (30 days)</SelectItem>
+                          <SelectItem value="expired">Expired</SelectItem>
+                          <SelectItem value="valid">Valid</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

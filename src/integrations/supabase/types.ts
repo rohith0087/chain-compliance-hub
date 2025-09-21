@@ -2599,7 +2599,7 @@ export type Database = {
     }
     Functions: {
       accept_bootstrap_admin: {
-        Args: { p_full_name?: string }
+        Args: { p_full_name: string }
         Returns: Json
       }
       accept_platform_admin_invitation: {

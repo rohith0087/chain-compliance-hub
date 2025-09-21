@@ -42,10 +42,21 @@ export interface PlatformAdmin {
   created_at: string;
 }
 
+export interface PlatformAdminInvitation {
+  id: string;
+  email: string;
+  platform_roles: PlatformRole[];
+  invited_by_name: string;
+  expires_at: string;
+  created_at: string;
+  is_used: boolean;
+}
+
 export const usePlatformAdmin = () => {
   const [stats, setStats] = useState<PlatformAdminStats | null>(null);
   const [users, setUsers] = useState<DetailedUser[]>([]);
   const [platformAdmin, setPlatformAdmin] = useState<PlatformAdmin | null>(null);
+  const [invitations, setInvitations] = useState<PlatformAdminInvitation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -219,6 +230,133 @@ export const usePlatformAdmin = () => {
     }
   }, []);
 
+  const fetchInvitations = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_platform_admin_invitations');
+      
+      if (error) {
+        console.error('Error fetching invitations:', error);
+        setError(error.message);
+        return;
+      }
+      
+      setInvitations(data || []);
+    } catch (err) {
+      console.error('Error in fetchInvitations:', err);
+      setError('Failed to fetch invitations');
+    }
+  }, []);
+
+  const createInvitation = useCallback(async (email: string, roles: PlatformRole[]) => {
+    try {
+      const { data, error } = await supabase.rpc('create_platform_admin_invitation', {
+        p_email: email,
+        p_roles: roles
+      });
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to create invitation",
+          variant: "destructive",
+        });
+        return { success: false, error };
+      }
+
+      const result = data as { success: boolean; error?: string; [key: string]: any };
+      if (!result?.success) {
+        toast({
+          title: "Error",
+          description: result?.error || "Failed to create invitation",
+          variant: "destructive",
+        });
+        return { success: false, error: result?.error };
+      }
+
+      toast({
+        title: "Success",
+        description: "Platform admin invitation created successfully",
+      });
+
+      // Refresh invitations list
+      await fetchInvitations();
+      return { success: true, data: result };
+    } catch (err) {
+      console.error('Error in createInvitation:', err);
+      toast({
+        title: "Error",
+        description: "Failed to create invitation",
+        variant: "destructive",
+      });
+      return { success: false, error: err };
+    }
+  }, [fetchInvitations, toast]);
+
+  const revokeInvitation = useCallback(async (invitationId: string) => {
+    try {
+      const { data, error } = await supabase.rpc('revoke_platform_admin_invitation', {
+        p_invitation_id: invitationId
+      });
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to revoke invitation",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const result = data as { success: boolean; error?: string };
+      if (!result?.success) {
+        toast({
+          title: "Error",
+          description: result?.error || "Failed to revoke invitation",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Success",
+        description: "Invitation revoked successfully",
+      });
+
+      // Refresh invitations list
+      await fetchInvitations();
+    } catch (err) {
+      console.error('Error in revokeInvitation:', err);
+      toast({
+        title: "Error",
+        description: "Failed to revoke invitation",
+        variant: "destructive",
+      });
+    }
+  }, [fetchInvitations, toast]);
+
+  const acceptInvitation = useCallback(async (token: string, fullName: string) => {
+    try {
+      const { data, error } = await supabase.rpc('accept_platform_admin_invitation', {
+        p_token: token,
+        p_full_name: fullName
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      const result = data as { success: boolean; error?: string };
+      if (!result?.success) {
+        return { success: false, error: result?.error || "Failed to accept invitation" };
+      }
+
+      return { success: true };
+    } catch (err) {
+      console.error('Error in acceptInvitation:', err);
+      return { success: false, error: "Failed to accept invitation" };
+    }
+  }, []);
+
   useEffect(() => {
     fetchPlatformAdminProfile();
   }, [fetchPlatformAdminProfile]);
@@ -227,13 +365,15 @@ export const usePlatformAdmin = () => {
     if (isPlatformAdmin) {
       fetchStats();
       fetchAllUsers();
+      fetchInvitations();
     }
-  }, [isPlatformAdmin, fetchStats, fetchAllUsers]);
+  }, [isPlatformAdmin, fetchStats, fetchAllUsers, fetchInvitations]);
 
   return {
     stats,
     users,
     platformAdmin,
+    invitations,
     loading,
     error,
     isPlatformAdmin,
@@ -242,5 +382,9 @@ export const usePlatformAdmin = () => {
     updateUserRole,
     resetUserPassword,
     signInPlatformAdmin,
+    fetchInvitations,
+    createInvitation,
+    revokeInvitation,
+    acceptInvitation,
   };
 };

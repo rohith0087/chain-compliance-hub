@@ -2595,6 +2595,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_platform_admin_invitation: {
+        Args: { p_full_name: string; p_token: string }
+        Returns: Json
+      }
       approve_document_request: {
         Args: { p_notes?: string; p_request_id: string }
         Returns: Json
@@ -2627,6 +2631,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      create_bootstrap_super_admin: {
+        Args: {
+          p_email: string
+          p_full_name?: string
+          p_temp_password?: string
+        }
+        Returns: Json
+      }
       create_notification: {
         Args: {
           p_message: string
@@ -2636,6 +2648,14 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      create_platform_admin_invitation: {
+        Args: {
+          p_email: string
+          p_invited_by?: string
+          p_roles?: Database["public"]["Enums"]["platform_role"][]
+        }
+        Returns: Json
       }
       create_supplier_to_buyer_connection: {
         Args: {
@@ -2721,6 +2741,18 @@ export type Database = {
           company_name: string
           company_type: string
           document_count: number
+        }[]
+      }
+      get_platform_admin_invitations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by_name: string
+          is_used: boolean
+          platform_roles: Database["public"]["Enums"]["platform_role"][]
         }[]
       }
       get_platform_admin_stats: {
@@ -2851,6 +2883,10 @@ export type Database = {
       }
       reject_document_request: {
         Args: { p_reason: string; p_request_id: string }
+        Returns: Json
+      }
+      revoke_platform_admin_invitation: {
+        Args: { p_invitation_id: string }
         Returns: Json
       }
       search_knowledge_entries: {

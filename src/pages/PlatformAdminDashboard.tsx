@@ -9,6 +9,7 @@ import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';
 import { PlatformAdminUserManagement } from '@/components/platform-admin/PlatformAdminUserManagement';
 import { PlatformAdminAnalytics } from '@/components/platform-admin/PlatformAdminAnalytics';
 import { PlatformAdminSystemSettings } from '@/components/platform-admin/PlatformAdminSystemSettings';
+import { PlatformAdminInvitations } from '@/components/platform-admin/PlatformAdminInvitations';
 
 export default function PlatformAdminDashboard() {
   const navigate = useNavigate();
@@ -143,14 +144,19 @@ export default function PlatformAdminDashboard() {
 
         {/* Main Content */}
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="users">User Management</TabsTrigger>
+            <TabsTrigger value="invitations">Invitations</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="settings">System Settings</TabsTrigger>
           </TabsList>
 
           <TabsContent value="users">
             <PlatformAdminUserManagement />
+          </TabsContent>
+
+          <TabsContent value="invitations">
+            <PlatformAdminInvitations />
           </TabsContent>
 
           <TabsContent value="analytics">

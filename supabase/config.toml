@@ -58,3 +58,19 @@ verify_jwt = false
 
 [functions.workflow-engine]
 verify_jwt = false
+
+# Stripe integration functions - all require JWT authentication
+[functions.create-subscription-checkout]
+verify_jwt = true
+
+[functions.check-subscription-status]
+verify_jwt = true
+
+[functions.create-credit-purchase]
+verify_jwt = true
+
+[functions.consume-credits]
+verify_jwt = true
+
+[functions.manage-subscription]
+verify_jwt = true

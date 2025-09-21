@@ -21,6 +21,7 @@ import { BulkInviteModal } from '@/components/buyer/BulkInviteModal';
 import { BuyerSidebarLayout } from '@/components/buyer/BuyerSidebarLayout';
 import { BuyerDocumentPrePopulator } from '@/components/buyer/BuyerDocumentPrePopulator';
 import { SidebarProvider } from '@/components/ui/sidebar';
+import SubscriptionPage from '@/pages/SubscriptionPage';
 
 import { supabase } from '@/integrations/supabase/client';
 
@@ -409,6 +410,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
             companyType="buyer"
             companyName={buyerProfile.company_name || 'Company'}
           />
+        )}
+
+        {/* Subscription & Billing */}
+        {activeTab === 'subscription' && (
+          <SubscriptionPage />
         )}
       </BuyerSidebarLayout>
 

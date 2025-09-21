@@ -103,7 +103,10 @@ export function PlatformAdminSidebar({ activeSection, onSectionChange }: Platfor
       }}
       collapsible="icon"
     >
-      <SidebarHeader className="border-b p-6" style={{ borderColor: 'hsl(var(--admin-border))' }}>
+      <SidebarHeader className="border-b p-6" style={{ 
+        borderColor: 'hsl(var(--admin-border))',
+        backgroundColor: 'hsl(var(--admin-sidebar))'
+      }}>
         <div className="flex items-center space-x-3">
           <div className="relative">
             <div 
@@ -127,11 +130,11 @@ export function PlatformAdminSidebar({ activeSection, onSectionChange }: Platfor
           )}
         </div>
         {!collapsed && (
-          <SidebarTrigger className="ml-auto" />
+          <SidebarTrigger className="ml-auto" style={{ color: 'hsl(var(--admin-text))' }} />
         )}
       </SidebarHeader>
 
-      <SidebarContent className="px-4 py-6">
+      <SidebarContent className="px-4 py-6" style={{ backgroundColor: 'hsl(var(--admin-sidebar))' }}>
         <SidebarGroup>
           <SidebarGroupLabel 
             className={`text-xs font-semibold uppercase tracking-wider mb-4 ${
@@ -156,16 +159,13 @@ export function PlatformAdminSidebar({ activeSection, onSectionChange }: Platfor
                     style={{
                       backgroundColor: isActive(item.section) 
                         ? 'hsl(var(--admin-sidebar-accent))' 
-                        : 'transparent',
-                      borderColor: isActive(item.section) 
-                        ? 'hsl(var(--admin-accent-blue))' 
                         : 'transparent'
                     }}
                   >
                     <NavLink
                       to={item.url}
                       onClick={() => onSectionChange(item.section)}
-                      className={`flex items-center w-full p-3 rounded-lg transition-colors ${
+                      className={`flex items-center w-full p-3 rounded-lg transition-colors hover:bg-[hsl(var(--admin-sidebar-accent))] ${
                         collapsed ? 'justify-center' : 'justify-start'
                       }`}
                     >
@@ -198,7 +198,10 @@ export function PlatformAdminSidebar({ activeSection, onSectionChange }: Platfor
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t p-4" style={{ borderColor: 'hsl(var(--admin-border))' }}>
+      <SidebarFooter className="border-t p-4" style={{ 
+        borderColor: 'hsl(var(--admin-border))',
+        backgroundColor: 'hsl(var(--admin-sidebar))'
+      }}>
         <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
           <div className={`flex items-center ${collapsed ? '' : 'space-x-3'}`}>
             <Avatar className="h-8 w-8">
@@ -230,8 +233,9 @@ export function PlatformAdminSidebar({ activeSection, onSectionChange }: Platfor
               size="sm"
               onClick={handleSignOut}
               className="h-8 w-8 p-0 hover:bg-red-500/10"
+              style={{ color: 'hsl(var(--admin-text-muted))' }}
             >
-              <LogOut className="h-4 w-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
+              <LogOut className="h-4 w-4" />
             </Button>
           )}
         </div>
@@ -242,8 +246,9 @@ export function PlatformAdminSidebar({ activeSection, onSectionChange }: Platfor
             size="sm"
             onClick={handleSignOut}
             className="h-8 w-8 p-0 mt-2 hover:bg-red-500/10"
+            style={{ color: 'hsl(var(--admin-text-muted))' }}
           >
-            <LogOut className="h-4 w-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
+            <LogOut className="h-4 w-4" />
           </Button>
         )}
       </SidebarFooter>

@@ -1,13 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { 
-  Shield, 
   AlertTriangle, 
   CheckCircle, 
   Clock, 
@@ -24,26 +21,26 @@ import {
   MessageSquare,
   FileText
 } from 'lucide-react';
-import RoleSwitcher from '@/components/RoleSwitcher';
 import { SupplierSettingsModal } from '@/components/settings/SupplierSettingsModal';
+import { SupplierSidebarLayout } from '@/components/supplier/SupplierSidebarLayout';
+import { SidebarProvider } from '@/components/ui/sidebar';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import ConnectionRequests from '@/components/supplier/ConnectionRequests';
 import ConnectedBuyersTab from '@/components/supplier/ConnectedBuyersTab';
 import DocumentRequestCard from '@/components/supplier/DocumentRequestCard';
 import DocumentRequestsFilter from '@/components/supplier/DocumentRequestsFilter';
 import SupplierComplianceDashboard from '@/components/dashboard/SupplierComplianceDashboard';
-import NotificationCenter from '@/components/notifications/NotificationCenter';
 import { useAuth } from '@/hooks/useAuth';
 import { useCompanySetup } from '@/hooks/useCompanySetup';
 import { supabase } from '@/integrations/supabase/client';
 import SupplierDocumentsDashboard from '@/components/documents/SupplierDocumentsDashboard';
 import { CompanyManagementDashboard } from '@/components/company/CompanyManagementDashboard';
-import { BranchSelector } from '@/components/company/BranchSelector';
-import { useCompanyBranches } from '@/hooks/useCompanyBranches';
 import { SupplierDocumentLibrary } from '@/components/supplier/SupplierDocumentLibrary';
 import { OnboardingNotification } from '@/components/supplier/OnboardingNotification';
 import { OnboardingProcess } from '@/components/supplier/OnboardingProcess';
 import { useOnboardingRequests } from '@/hooks/useOnboardingRequests';
+import { ConnectWithBuyerModal } from '@/components/supplier/ConnectWithBuyerModal';
+import { DocumentUploadModal } from '@/components/supplier/DocumentUploadModal';
 
 interface SupplierDashboardProps {
   user: { 
@@ -63,6 +60,8 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
   const [connectedBuyers, setConnectedBuyers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [highlightedTab, setHighlightedTab] = useState<string | null>(null);
   const [onboardingRequests, setOnboardingRequests] = useState<any[]>([]);
   
@@ -80,13 +79,30 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
   const { getSupplierProfile } = useCompanySetup();
   const { requests: allOnboardingRequests } = useOnboardingRequests();
 
-  // Company branches management
-  const {
-    branches,
-    currentBranch,
-    switchBranch,
-    loading: branchesLoading
-  } = useCompanyBranches(supplierProfile?.id, 'supplier');
+  // Notification navigation handler
+  const handleNotificationNavigation = (tab: string, notificationId?: string) => {
+    setActiveTab(tab);
+    setHighlightedTab(tab);
+    
+    // Update URL with tab parameter
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    url.searchParams.set('highlight', 'true');
+    if (notificationId) {
+      url.searchParams.set('notificationId', notificationId);
+    }
+    window.history.pushState({}, '', url.toString());
+    
+    // Clear highlight after 3 seconds
+    setTimeout(() => {
+      setHighlightedTab(null);
+      // Clean up URL params
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('highlight');
+      cleanUrl.searchParams.delete('notificationId');
+      window.history.replaceState({}, '', cleanUrl.toString());
+    }, 3000);
+  };
 
   // Calculate stats from real data
   const stats = {
@@ -133,30 +149,6 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
       }
     }
   }, []);
-
-  const handleNotificationNavigation = (tab: string, notificationId?: string) => {
-    setActiveTab(tab);
-    setHighlightedTab(tab);
-    
-    // Update URL with tab parameter
-    const url = new URL(window.location.href);
-    url.searchParams.set('tab', tab);
-    url.searchParams.set('highlight', 'true');
-    if (notificationId) {
-      url.searchParams.set('notificationId', notificationId);
-    }
-    window.history.pushState({}, '', url.toString());
-    
-    // Clear highlight after 3 seconds
-    setTimeout(() => {
-      setHighlightedTab(null);
-      // Clean up URL params
-      const cleanUrl = new URL(window.location.href);
-      cleanUrl.searchParams.delete('highlight');
-      cleanUrl.searchParams.delete('notificationId');
-      window.history.replaceState({}, '', cleanUrl.toString());
-    }, 3000);
-  };
 
   const loadSupplierData = async () => {
     setLoading(true);
@@ -337,462 +329,258 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
     );
   }
 
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
-                <Shield className="w-5 h-5 text-white" />
-              </div>
-              <h1 className="text-xl font-bold text-gray-900">ComplianceFlow</h1>
-              <Badge variant="secondary" className="bg-green-100 text-green-800">{t('supplier:title')}</Badge>
-            </div>
-            <div className="flex items-center space-x-4">
-              {user.roles.length > 1 && (
-                <RoleSwitcher 
-                  currentRole={user.currentRole}
-                  onRoleChange={onRoleSwitch}
-                />
-              )}
-              <Button variant="ghost" size="sm" onClick={() => setShowSettingsModal(true)}>
-                <Settings className="w-4 h-4 mr-2" />
-                {t('supplier:settings')}
-              </Button>
-              <NotificationCenter onNavigate={handleNotificationNavigation} />
-              <span className="text-sm text-gray-600">{t('supplier:welcome', { name: user.name })}</span>
-              <Button variant="outline" size="sm" onClick={onLogout}>
-                {t('supplier:logout')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Company Info Banner */}
-        {supplierProfile && (
-          <Card className="mb-8">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Building2 className="w-8 h-8 text-green-600" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-4 mb-2">
-                    <h2 className="text-2xl font-bold text-gray-900">{supplierProfile.company_name}</h2>
-                    {branches.length > 1 && (
-                      <BranchSelector
-                        branches={branches}
-                        currentBranch={currentBranch}
-                        onBranchChange={switchBranch}
-                        loading={branchesLoading}
-                      />
-                    )}
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'overview':
+        return (
+          <>
+            {/* Company Info Banner */}
+            {supplierProfile && (
+              <Card className="mb-8">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center">
+                      <Building2 className="w-8 h-8 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-4 mb-2">
+                        <h2 className="text-2xl font-bold text-gray-900">{supplierProfile.company_name}</h2>
+                      </div>
+                      <p className="text-gray-600">{supplierProfile.industry}</p>
+                      <p className="text-sm text-gray-500">{supplierProfile.contact_email}</p>
+                    </div>
                   </div>
-                  <p className="text-gray-600">{supplierProfile.industry}</p>
-                  <p className="text-sm text-gray-500">{supplierProfile.contact_email}</p>
-                </div>
-              </div>
-                <Button variant="outline" onClick={() => setShowSettingsModal(true)}>
-                  <Settings className="w-4 h-4 mr-2" />
-                  {t('supplier:settings')}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                    <Button variant="outline" onClick={() => setShowSettingsModal(true)}>
+                      <Settings className="w-4 h-4 mr-2" />
+                      {t('supplier:settings')}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t('supplier:stats.pendingRequests')}</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.pendingRequests}</div>
-              <p className="text-xs text-muted-foreground">{t('supplier:stats.awaitingSubmission')}</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t('supplier:stats.completionRate')}</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{completionRate}%</div>
-              <Progress value={completionRate} className="mt-2" />
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t('supplier:stats.documentsSubmitted')}</CardTitle>
-              <Upload className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.documentsSubmitted}</div>
-              <p className="text-xs text-muted-foreground">{t('supplier:stats.totalSubmitted')}</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Onboarding</CardTitle>
-              <Bell className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.pendingOnboarding}</div>
-              <p className="text-xs text-muted-foreground">New onboarding requests</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="overview">{t('supplier:tabs.overview')}</TabsTrigger>
-            <TabsTrigger 
-              value="onboarding"
-              className={highlightedTab === 'onboarding' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
-            >
-              <Bell className="w-4 h-4 mr-2" />
-              Onboarding
-              {stats.pendingOnboarding > 0 && (
-                <Badge variant="destructive" className="ml-2 px-1 py-0 text-xs">
-                  {stats.pendingOnboarding}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger 
-              value="compliance"
-              className={highlightedTab === 'compliance' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
-            >
-              <BarChart3 className="w-4 h-4 mr-2" />
-              {t('supplier:tabs.compliance')}
-            </TabsTrigger>
-            <TabsTrigger 
-              value="documents"
-              className={highlightedTab === 'documents' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
-            >
-              <FileCheck className="w-4 h-4 mr-2" />
-              {t('supplier:tabs.documents')}
-            </TabsTrigger>
-            <TabsTrigger value="library">
-              <FileText className="w-4 h-4 mr-2" />
-              Document Library
-            </TabsTrigger>
-            <TabsTrigger 
-              value="connections"
-              className={highlightedTab === 'connections' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
-            >
-              {t('supplier:tabs.connections')}
-            </TabsTrigger>
-            <TabsTrigger 
-              value="requests"
-              className={highlightedTab === 'requests' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
-            >
-              {t('supplier:tabs.requests')}
-            </TabsTrigger>
-            <TabsTrigger 
-              value="buyers"
-              className={highlightedTab === 'buyers' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
-            >
-              {t('supplier:tabs.buyers')}
-            </TabsTrigger>
-            <TabsTrigger 
-              value="company"
-              className={highlightedTab === 'company' ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''}
-            >
-              <Building2 className="w-4 h-4 mr-2" />
-              {t('supplier:tabs.company')}
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="onboarding" className="space-y-6">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold">Supplier Onboarding</h2>
-                <p className="text-muted-foreground">
-                  {onboardingRequests.length === 0 ? 'No onboarding requests' : `${onboardingRequests.length} requests`}
-                </p>
-              </div>
+            {/* Stats Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">{t('supplier:stats.pendingRequests')}</CardTitle>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.pendingRequests}</div>
+                  <p className="text-xs text-muted-foreground">{t('supplier:stats.awaitingSubmission')}</p>
+                </CardContent>
+              </Card>
               
-              {onboardingRequests.length > 0 ? (
-                <Accordion type="multiple" className="w-full">
-                  {onboardingRequests.map(request => {
-                    const headerTitle = request.supplier_company_name || 'Onboarding Request';
-                    const headerSubtitle = new Date(request.created_at).toLocaleString();
-                    return (
-                      <AccordionItem key={request.id} value={request.id} className="border rounded-md mb-3">
-                        <AccordionTrigger className="px-4 py-3">
-                          <div className="flex items-center justify-between w-full">
-                            <div className="text-left">
-                              <div className="font-medium">{headerTitle}</div>
-                              <div className="text-xs text-muted-foreground">{headerSubtitle}</div>
-                            </div>
-                            <Badge className={
-                              request.status === 'pending' ? 'bg-amber-100 text-amber-800' :
-                              request.status === 'onboarding_initiated' ? 'bg-blue-100 text-blue-800' :
-                              request.status === 'approved' ? 'bg-green-100 text-green-800' :
-                              'bg-red-100 text-red-800'
-                            }>
-                              {request.status.replace('_', ' ')}
-                            </Badge>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="px-4 pb-4">
-                          {request.status === 'onboarding_initiated' || request.status === 'under_review' ? (
-                            <OnboardingProcess
-                              request={request}
-                              onComplete={() => {
-                                loadSupplierData();
-                              }}
-                            />
-                          ) : (
-                            <OnboardingNotification
-                              request={request}
-                              onAccept={() => { loadSupplierData(); }}
-                              onDecline={() => { loadSupplierData(); }}
-                            />
-                          )}
-                        </AccordionContent>
-                      </AccordionItem>
-                    );
-                  })}
-                </Accordion>
-              ) : (
-                <Card>
-                  <CardContent className="text-center py-12">
-                    <Bell className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Onboarding Requests</h3>
-                    <p className="text-muted-foreground">
-                      You don't have any pending onboarding requests at the moment.
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">{t('supplier:stats.completionRate')}</CardTitle>
+                  <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{completionRate}%</div>
+                  <Progress value={completionRate} className="mt-2" />
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">{t('supplier:stats.documentsSubmitted')}</CardTitle>
+                  <Upload className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.documentsSubmitted}</div>
+                  <p className="text-xs text-muted-foreground">{t('supplier:stats.totalSubmitted')}</p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">{t('supplier:stats.connectedBuyers')}</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{connectedBuyers.length}</div>
+                  <p className="text-xs text-muted-foreground">{t('supplier:stats.activeConnections')}</p>
+                </CardContent>
+              </Card>
             </div>
-          </TabsContent>
 
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid lg:grid-cols-2 gap-6">
-              {/* Onboarding Requests */}
-              {onboardingRequests.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Pending Onboarding</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {onboardingRequests.slice(0, 3).map(request => (
+            {/* Recent Activity Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Recent Document Requests */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    {t('supplier:sections.recentRequests')}
+                    <Badge variant="outline">{documentRequests.length}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {documentRequests.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">{t('supplier:sections.noRecentRequests')}</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {documentRequests.slice(0, 5).map((request) => (
                         <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
                           <div className="flex items-center space-x-3">
-                            <Bell className="w-5 h-5 text-blue-500" />
+                            {getStatusIcon(request.status)}
                             <div>
-                              <p className="font-medium">Onboarding Request</p>
-                              <p className="text-sm text-gray-500">From: {request.supplier_company_name}</p>
-                              <p className="text-xs text-gray-400">
-                                {new Date(request.created_at).toLocaleDateString()}
-                              </p>
+                              <p className="font-medium">{request.title}</p>
+                              <p className="text-sm text-gray-500">{request.buyers?.company_name}</p>
                             </div>
                           </div>
-                          <Badge className={
-                            request.status === 'pending' ? 'bg-amber-100 text-amber-800' :
-                            request.status === 'onboarding_initiated' ? 'bg-blue-100 text-blue-800' :
-                            request.status === 'approved' ? 'bg-green-100 text-green-800' :
-                            'bg-red-100 text-red-800'
-                          }>
-                            {request.status.replace('_', ' ')}
+                          <Badge className={getStatusColor(request.status)}>
+                            {request.status}
                           </Badge>
                         </div>
                       ))}
                     </div>
-                    <Button variant="outline" className="w-full mt-4" onClick={() => setActiveTab('onboarding')}>
-                      View All Onboarding
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Recent Requests */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Document Requests</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {documentRequests.length > 0 ? (
-                    <div className="space-y-4">
-                      {documentRequests.slice(0, 3).map(request => {
-                        const buyerName = request.buyers?.company_name || 'Unknown Buyer';
-                        return (
-                          <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                              <div>
-                                <p className="font-medium">{request.title}</p>
-                                <p className="text-sm text-gray-500">{request.document_type}</p>
-                                <p className="text-xs text-gray-400">From: {buyerName}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Badge className={getPriorityColor(request.priority || 'medium')} variant="secondary">
-                                {request.priority || 'medium'}
-                              </Badge>
-                              <Badge className={getStatusColor(request.status)} variant="secondary">
-                                {getStatusIcon(request.status)}
-                                <span className="ml-1 capitalize">{request.status}</span>
-                              </Badge>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <FileCheck className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-500">No document requests yet</p>
-                    </div>
                   )}
-                  <Button variant="outline" className="w-full mt-4" onClick={() => setActiveTab('requests')}>
-                    View All Requests
-                  </Button>
                 </CardContent>
               </Card>
 
               {/* Connected Buyers */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Connected Buyers</CardTitle>
+                  <CardTitle className="flex items-center justify-between">
+                    {t('supplier:sections.connectedBuyers')}
+                    <Badge variant="outline">{connectedBuyers.length}</Badge>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {connectedBuyers.length > 0 ? (
-                    <div className="space-y-4">
-                      {connectedBuyers.slice(0, 3).map((connection) => {
-                        const buyerInfo = connection.buyers;
-                        const companyName = buyerInfo?.company_name || 'Unknown Company';
-                        const industry = buyerInfo?.industry || 'Industry not specified';
-                        const contactEmail = buyerInfo?.contact_email || 'Email not provided';
-                        
-                        return (
-                          <div key={connection.id} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div className="flex items-center space-x-3">
-                              <Building2 className="w-5 h-5 text-blue-500" />
-                              <div>
-                                <p className="font-medium">{companyName}</p>
-                                <p className="text-sm text-gray-500">{industry}</p>
-                                <p className="text-xs text-gray-400">{contactEmail}</p>
-                              </div>
-                            </div>
-                            <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
-                              Connected
-                            </Badge>
-                          </div>
-                        );
-                      })}
-                    </div>
+                  {connectedBuyers.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">{t('supplier:sections.noConnectedBuyers')}</p>
                   ) : (
-                    <div className="text-center py-8">
-                      <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-500">No connected buyers yet</p>
+                    <div className="space-y-3">
+                      {connectedBuyers.slice(0, 5).map((connection) => (
+                        <div key={connection.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <Building2 className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium">{connection.buyers?.company_name}</p>
+                              <p className="text-sm text-gray-500">{connection.buyers?.industry}</p>
+                            </div>
+                          </div>
+                          <Badge variant="outline">
+                            {t(`supplier:connectionStatus.${connection.unifiedStatus || 'pending'}`)}
+                          </Badge>
+                        </div>
+                      ))}
                     </div>
                   )}
-                  <Button variant="outline" className="w-full mt-4" onClick={() => setActiveTab('buyers')}>
-                    View All Buyers
-                  </Button>
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
-
-          <TabsContent value="compliance" className="space-y-6">
-            <SupplierComplianceDashboard />
-          </TabsContent>
-
-          <TabsContent value="documents" className="space-y-6">
-            <SupplierDocumentsDashboard />
-          </TabsContent>
-
-          <TabsContent value="library" className="space-y-6">
-            {supplierProfile && (
-              <SupplierDocumentLibrary supplierId={supplierProfile.id} />
-            )}
-          </TabsContent>
-
-          <TabsContent value="connections" className="space-y-6">
-            <ConnectionRequests />
-          </TabsContent>
-
-          <TabsContent value="requests" className="space-y-6">
-            {/* Filter Component */}
-            <DocumentRequestsFilter 
+          </>
+        );
+      case 'requests':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">{t('supplier:tabs.requests')}</h2>
+              <Badge variant="outline">{filteredRequests.length} requests</Badge>
+            </div>
+            
+            <DocumentRequestsFilter
               filters={filters}
               onFiltersChange={setFilters}
               buyers={uniqueBuyers}
             />
+            
+            <div className="grid gap-4">
+              {filteredRequests.length === 0 ? (
+                <Card>
+                  <CardContent className="text-center py-8">
+                    <FileCheck className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">{t('supplier:sections.noRecentRequests')}</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                filteredRequests.map((request) => (
+                  <DocumentRequestCard
+                    key={request.id}
+                    request={request}
+                    onUploadSuccess={loadSupplierData}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        );
+      case 'documents':
+        return <SupplierDocumentsDashboard />;
+      case 'library':
+        return <SupplierDocumentLibrary supplierId={supplierProfile?.id} />;
+      case 'buyers':
+        return <ConnectedBuyersTab connectedBuyers={connectedBuyers} />;
+      case 'connections':
+        return <ConnectionRequests />;
+      case 'compliance':
+        return <SupplierComplianceDashboard />;
+      case 'company':
+        return (
+          <CompanyManagementDashboard 
+            companyId={supplierProfile?.id}
+            companyType="supplier"
+            companyName={supplierProfile?.company_name || 'Supplier'}
+          />
+        );
+      default:
+        return null;
+    }
+  };
 
-            {/* Document Requests List */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Document Requests ({filteredRequests.length})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {filteredRequests.length > 0 ? (
-                  <div className="space-y-4">
-                    {filteredRequests.map(request => (
-                      <DocumentRequestCard
-                        key={request.id}
-                        request={request}
-                        onUploadSuccess={loadSupplierData}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <FileCheck className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Document Requests Found</h3>
-                    <p className="text-gray-500">
-                      {documentRequests.length === 0 
-                        ? "You don't have any document requests yet." 
-                        : "No requests match your current filters."}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+  return (
+    <SidebarProvider>
+      <SupplierSidebarLayout
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        user={user}
+        onLogout={onLogout}
+        onRoleSwitch={onRoleSwitch}
+        onShowSettings={() => setShowSettingsModal(true)}
+        supplierProfile={supplierProfile}
+        onConnectWithBuyer={() => setShowConnectModal(true)}
+        onUploadDocument={() => setShowUploadModal(true)}
+        pendingRequests={stats.pendingRequests}
+        connectedBuyers={connectedBuyers.length}
+      >
+        {renderTabContent()}
+      </SupplierSidebarLayout>
 
-          <TabsContent value="buyers">
-            <ConnectedBuyersTab 
-              connectedBuyers={connectedBuyers} 
-              onConnectionRequest={loadSupplierData}
-            />
-          </TabsContent>
-
-          <TabsContent value="company" className="space-y-2">
-            {supplierProfile && (
-              <CompanyManagementDashboard
-                companyId={supplierProfile.id}
-                companyType="supplier"
-                companyName={supplierProfile.company_name}
-              />
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
-      
+      {/* Settings Modal */}
       <SupplierSettingsModal
         isOpen={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
-        onProfileUpdated={loadSupplierData}
+        onProfileUpdated={handleProfileUpdated}
       />
-    </div>
+
+      {/* Connect with Buyer Modal */}
+      {showConnectModal && (
+        <ConnectWithBuyerModal
+          onConnectionRequest={() => {
+            setShowConnectModal(false);
+            loadSupplierData();
+          }}
+        />
+      )}
+
+      {/* Document Upload Modal */}
+      {showUploadModal && supplierProfile && (
+        <DocumentUploadModal
+          supplierId={supplierProfile.id}
+          onClose={() => setShowUploadModal(false)}
+          onUploadComplete={() => {
+            setShowUploadModal(false);
+            loadSupplierData();
+          }}
+        />
+      )}
+    </SidebarProvider>
   );
 };
 

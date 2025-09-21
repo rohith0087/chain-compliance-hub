@@ -1796,6 +1796,7 @@ export type Database = {
           locked_until: string | null
           login_attempts: number | null
           metadata: Json | null
+          must_change_password: boolean | null
           platform_roles: Database["public"]["Enums"]["platform_role"][]
           updated_at: string | null
         }
@@ -1812,6 +1813,7 @@ export type Database = {
           locked_until?: string | null
           login_attempts?: number | null
           metadata?: Json | null
+          must_change_password?: boolean | null
           platform_roles?: Database["public"]["Enums"]["platform_role"][]
           updated_at?: string | null
         }
@@ -1828,6 +1830,7 @@ export type Database = {
           locked_until?: string | null
           login_attempts?: number | null
           metadata?: Json | null
+          must_change_password?: boolean | null
           platform_roles?: Database["public"]["Enums"]["platform_role"][]
           updated_at?: string | null
         }

@@ -200,6 +200,15 @@ const SupplierDocumentsDashboard = () => {
     }).length
   };
 
+  // Get unique buyers for filter options
+  const uniqueBuyers = Array.from(
+    new Set(
+      documents
+        .map(doc => doc.buyers?.company_name)
+        .filter(Boolean)
+    )
+  ).sort();
+
   // Handle stat card clicks to filter documents
   const handleStatClick = (filterType: string) => {
     switch (filterType) {
@@ -550,8 +559,31 @@ const SupplierDocumentsDashboard = () => {
                     </div>
                   </div>
 
-                  {/* Expiration Status Filter - Separate row */}
+                  {/* Buyer and Expiration Status Filters - Separate row */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Buyer</label>
+                      <Select 
+                        value={filters.buyer || 'all'} 
+                        onValueChange={(value) => setFilters(prev => ({ 
+                          ...prev, 
+                          buyer: value === 'all' ? '' : value 
+                        }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="All buyers" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Buyers</SelectItem>
+                          {uniqueBuyers.map((buyer) => (
+                            <SelectItem key={buyer} value={buyer}>
+                              {buyer}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Expiration Status</label>
                       <Select 

@@ -187,8 +187,8 @@ export function SupplierSidebarLayout({
 
   return (
     <div className="flex min-h-screen w-full">
-      <Sidebar className="border-r">
-        <SidebarHeader className="border-b px-3 py-4">
+      <Sidebar className="border-r bg-white/80 backdrop-blur-sm">
+        <SidebarHeader className="border-b border-gray-200/50 px-3 py-4 bg-white/50">
           <div className="flex items-center gap-3">
             {/* Company Logo - displays uploaded logo or default Shield icon */}
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-600 overflow-hidden">
@@ -289,7 +289,7 @@ export function SupplierSidebarLayout({
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter className="border-t p-3">
+        <SidebarFooter className="border-t border-gray-200/50 p-3 bg-white/50">
           <div className="flex items-center gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -336,7 +336,7 @@ export function SupplierSidebarLayout({
 
       <div className="flex-1 flex flex-col">
         {/* Top Header */}
-        <header className="h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+        <header className="h-14 border-b border-gray-200/50 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 sticky top-0 z-50">
           <div className="flex h-full items-center justify-between px-4">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="-ml-1" />

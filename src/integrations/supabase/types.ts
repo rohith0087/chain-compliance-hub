@@ -2030,6 +2030,30 @@ export type Database = {
           },
         ]
       }
+      system_metrics: {
+        Row: {
+          id: string
+          metadata: Json | null
+          metric_name: string
+          metric_value: number
+          recorded_at: string | null
+        }
+        Insert: {
+          id?: string
+          metadata?: Json | null
+          metric_name: string
+          metric_value: number
+          recorded_at?: string | null
+        }
+        Update: {
+          id?: string
+          metadata?: Json | null
+          metric_name?: string
+          metric_value?: number
+          recorded_at?: string | null
+        }
+        Relationships: []
+      }
       template_submissions: {
         Row: {
           created_at: string | null
@@ -2525,6 +2549,19 @@ export type Database = {
           document_count: number
         }[]
       }
+      get_super_admin_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          active_connections: number
+          pending_requests: number
+          recent_signups: number
+          total_buyers: number
+          total_chat_sessions: number
+          total_documents: number
+          total_suppliers: number
+          total_users: number
+        }[]
+      }
       grant_pg_net_access: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -2566,6 +2603,10 @@ export type Database = {
         Returns: unknown
       }
       is_admin: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
+      is_super_admin: {
         Args: { user_id: string }
         Returns: boolean
       }

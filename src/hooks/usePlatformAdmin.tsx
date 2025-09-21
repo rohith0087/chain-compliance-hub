@@ -58,11 +58,12 @@ export const usePlatformAdmin = () => {
   const [platformAdmin, setPlatformAdmin] = useState<PlatformAdmin | null>(null);
   const [invitations, setInvitations] = useState<PlatformAdminInvitation[]>([]);
   const [loading, setLoading] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true); // Add explicit profile loading state
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Check if current user is a platform admin
-  const isPlatformAdmin = platformAdmin?.is_active && platformAdmin.platform_roles.length > 0;
+  // Check if current user is a platform admin - only return true when we're sure
+  const isPlatformAdmin = !profileLoading && platformAdmin?.is_active && platformAdmin.platform_roles.length > 0;
 
   const fetchStats = useCallback(async () => {
     try {
@@ -108,8 +109,13 @@ export const usePlatformAdmin = () => {
 
   const fetchPlatformAdminProfile = useCallback(async () => {
     try {
+      setProfileLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setPlatformAdmin(null);
+        setProfileLoading(false);
+        return;
+      }
 
       const { data, error } = await supabase
         .from('platform_administrators')
@@ -119,12 +125,17 @@ export const usePlatformAdmin = () => {
 
       if (error) {
         console.error('Error fetching platform admin profile:', error);
+        setPlatformAdmin(null);
+        setProfileLoading(false);
         return;
       }
 
       setPlatformAdmin(data);
     } catch (err) {
       console.error('Error in fetchPlatformAdminProfile:', err);
+      setPlatformAdmin(null);
+    } finally {
+      setProfileLoading(false);
     }
   }, []);
 
@@ -375,6 +386,7 @@ export const usePlatformAdmin = () => {
     platformAdmin,
     invitations,
     loading,
+    profileLoading,
     error,
     isPlatformAdmin,
     fetchStats,

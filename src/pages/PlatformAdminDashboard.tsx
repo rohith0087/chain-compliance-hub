@@ -13,7 +13,7 @@ import { PlatformAdminInvitations } from '@/components/platform-admin/PlatformAd
 
 export default function PlatformAdminDashboard() {
   const navigate = useNavigate();
-  const { stats, loading, error, isPlatformAdmin, platformAdmin } = usePlatformAdmin();
+  const { stats, loading, profileLoading, error, isPlatformAdmin, platformAdmin } = usePlatformAdmin();
 
   useEffect(() => {
     // Redirect if not authenticated or not a platform admin
@@ -29,17 +29,18 @@ export default function PlatformAdminDashboard() {
   }, [navigate]);
 
   useEffect(() => {
-    if (!loading && !isPlatformAdmin) {
+    // Only redirect if profile loading is complete and user is not a platform admin
+    if (!profileLoading && !isPlatformAdmin) {
       navigate('/platform-admin/login');
     }
-  }, [loading, isPlatformAdmin, navigate]);
+  }, [profileLoading, isPlatformAdmin, navigate]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate('/platform-admin/login');
   };
 
-  if (loading) {
+  if (profileLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />

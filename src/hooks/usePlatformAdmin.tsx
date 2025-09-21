@@ -77,7 +77,17 @@ export const usePlatformAdmin = () => {
       }
       
       if (data && data.length > 0) {
-        setStats(data[0]);
+        const statsData = {
+          total_users: Number(data[0].total_users),
+          total_buyers: Number(data[0].total_buyers),
+          total_suppliers: Number(data[0].total_suppliers),
+          active_connections: Number(data[0].active_connections),
+          total_documents: Number(data[0].total_documents),
+          pending_requests: 0, // Not included in new function
+          total_chat_sessions: Number(data[0].total_chat_sessions),
+          recent_signups: 0 // Not included in new function
+        };
+        setStats(statsData);
       }
     } catch (err) {
       console.error('Error in fetchStats:', err);
@@ -90,7 +100,7 @@ export const usePlatformAdmin = () => {
   const fetchAllUsers = useCallback(async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.rpc('get_all_users_detailed_platform');
+      const { data, error } = await supabase.rpc('get_platform_admin_users');
       
       if (error) {
         console.error('Error fetching users:', error);
@@ -98,7 +108,23 @@ export const usePlatformAdmin = () => {
         return;
       }
       
-      setUsers(data || []);
+      const usersData: DetailedUser[] = (data || []).map((user: any) => ({
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        roles: user.roles || [],
+        company_name: user.company_name,
+        registration_date: user.created_at,
+        total_chat_sessions: 0, // Not available in simplified function
+        total_chat_messages: 0, // Not available in simplified function
+        total_document_requests: 0, // Not available in simplified function
+        total_document_uploads: 0, // Not available in simplified function
+        last_activity_date: user.last_sign_in_at || '',
+        total_activities: 0, // Not available in simplified function
+        user_type: user.is_buyer && user.is_supplier ? 'Both' : user.is_buyer ? 'Buyer' : user.is_supplier ? 'Supplier' : 'User'
+      }));
+      
+      setUsers(usersData);
     } catch (err) {
       console.error('Error in fetchAllUsers:', err);
       setError('Failed to fetch users');
@@ -379,6 +405,39 @@ export const usePlatformAdmin = () => {
       fetchInvitations();
     }
   }, [isPlatformAdmin, fetchStats, fetchAllUsers, fetchInvitations]);
+
+  // Set up real-time updates
+  useEffect(() => {
+    if (!isPlatformAdmin) return;
+
+    // Subscribe to changes in key tables for real-time updates
+    const channel = supabase
+      .channel('platform-admin-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+        fetchStats();
+        fetchAllUsers();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'buyers' }, () => {
+        fetchStats();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'suppliers' }, () => {
+        fetchStats();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'buyer_supplier_connections' }, () => {
+        fetchStats();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'document_uploads' }, () => {
+        fetchStats();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_sessions' }, () => {
+        fetchStats();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isPlatformAdmin, fetchStats, fetchAllUsers]);
 
   return {
     stats,

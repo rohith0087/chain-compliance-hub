@@ -2766,13 +2766,29 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: {
           active_connections: number
-          pending_requests: number
-          recent_signups: number
           total_buyers: number
           total_chat_sessions: number
           total_documents: number
           total_suppliers: number
           total_users: number
+        }[]
+      }
+      get_platform_admin_users: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          buyer_company: string
+          company_name: string
+          created_at: string
+          email: string
+          email_confirmed_at: string
+          full_name: string
+          id: string
+          is_buyer: boolean
+          is_supplier: boolean
+          last_sign_in_at: string
+          phone: string
+          roles: Database["public"]["Enums"]["user_role"][]
+          supplier_company: string
         }[]
       }
       get_super_admin_stats: {
@@ -2840,7 +2856,7 @@ export type Database = {
         Returns: boolean
       }
       is_platform_admin: {
-        Args: { user_id: string }
+        Args: { user_id?: string }
         Returns: boolean
       }
       is_super_admin: {

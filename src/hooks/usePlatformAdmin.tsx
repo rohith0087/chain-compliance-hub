@@ -420,10 +420,14 @@ export const usePlatformAdmin = () => {
   useEffect(() => {
     if (!isPlatformAdmin) return;
 
+    // Create a unique channel name with timestamp to avoid conflicts
+    const channelName = `platform-admin-updates-${Date.now()}`;
+    
     // Subscribe to changes in key tables for real-time updates
     const channel = supabase
-      .channel('platform-admin-updates')
+      .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+        // Use the current functions directly to avoid dependency issues
         fetchStats();
         fetchAllUsers();
       })
@@ -447,7 +451,7 @@ export const usePlatformAdmin = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isPlatformAdmin, fetchStats, fetchAllUsers]);
+  }, [isPlatformAdmin]); // Removed function dependencies to prevent re-subscriptions
 
   return {
     stats,

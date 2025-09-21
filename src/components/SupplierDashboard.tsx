@@ -340,9 +340,17 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
-                    <div className="w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center">
-                      <Building2 className="w-8 h-8 text-green-600" />
-                    </div>
+                    {supplierProfile.company_logo_url ? (
+                      <img
+                        src={supplierProfile.company_logo_url}
+                        alt={`${supplierProfile.company_name} logo`}
+                        className="w-16 h-16 object-contain rounded-lg border"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center">
+                        <Building2 className="w-8 h-8 text-green-600" />
+                      </div>
+                    )}
                     <div className="flex-1">
                       <div className="flex items-center gap-4 mb-2">
                         <h2 className="text-2xl font-bold text-gray-900">{supplierProfile.company_name}</h2>

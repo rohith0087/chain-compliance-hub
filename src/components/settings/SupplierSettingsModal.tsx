@@ -139,24 +139,28 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
   };
 
   const handleLogoUpdate = async (url: string | null) => {
-    setSupplierData(prev => ({ ...prev, company_logo_url: url || '' }));
-    
-    // Auto-save logo to database immediately
-    if (!user) return;
-    
     try {
+      // Update local state immediately
+      setSupplierData(prev => ({ ...prev, company_logo_url: url || '' }));
+      
+      if (!user) return;
+      
       const { error } = await supabase
         .from('suppliers')
-        .update({ company_logo_url: url || '' })
+        .update({ 
+          company_logo_url: url || '',
+          updated_at: new Date().toISOString()
+        })
         .eq('profile_id', user.id);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Logo updated and saved successfully",
+        description: "Logo updated successfully",
       });
       
+      // Trigger parent refresh
       onProfileUpdated?.();
     } catch (error: any) {
       toast({
@@ -164,6 +168,8 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
         description: error.message || "Failed to save logo",
         variant: "destructive",
       });
+      // Revert local state on error
+      setSupplierData(prev => ({ ...prev, company_logo_url: supplierData.company_logo_url }));
     }
   };
 

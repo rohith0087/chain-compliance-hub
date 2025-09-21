@@ -13,6 +13,7 @@ import InvitePage from "./pages/InvitePage";
 import DynamicDashboard from "./components/dashboard/DynamicDashboard";
 import ChatPage from "./pages/ChatPage";
 import AdminDashboard from "./pages/AdminDashboard";
+import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import SharedDocumentViewer from "./components/shared/SharedDocumentViewer";
 import NotFound from "./pages/NotFound";
 import "./i18n";
@@ -65,6 +66,24 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const SuperAdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, profile, loading } = useAuth();
+  
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+  
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+  
+  if (!profile?.roles?.includes('super_admin')) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
 const AppRoutes = () => {
   return (
     <BrowserRouter>
@@ -96,6 +115,11 @@ const AppRoutes = () => {
               <AdminRoute>
                 <AdminDashboard />
               </AdminRoute>
+            } />
+            <Route path="/super-admin" element={
+              <SuperAdminRoute>
+                <SuperAdminDashboard />
+              </SuperAdminRoute>
             } />
             <Route path="/shared-document/:token" element={<SharedDocumentViewer />} />
             <Route path="*" element={<NotFound />} />

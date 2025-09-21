@@ -2526,6 +2526,22 @@ export type Database = {
           total_document_uploads: number
         }[]
       }
+      get_all_users_detailed: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          chat_sessions_count: number
+          company_name: string
+          created_at: string
+          document_count: number
+          email: string
+          full_name: string
+          id: string
+          is_buyer: boolean
+          is_supplier: boolean
+          last_sign_in_at: string
+          roles: Database["public"]["Enums"]["user_role"][]
+        }[]
+      }
       get_branch_suppliers: {
         Args: { p_branch_id: string }
         Returns: {
@@ -2692,6 +2708,10 @@ export type Database = {
       sparsevec_typmod_in: {
         Args: { "": unknown[] }
         Returns: number
+      }
+      super_admin_reset_password: {
+        Args: { new_password: string; target_user_id: string }
+        Returns: boolean
       }
       supplier_can_view_buyer: {
         Args: { buyer_id: string }

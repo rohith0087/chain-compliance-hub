@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
+type UserRole = 'buyer' | 'supplier' | 'admin' | 'company_admin' | 'branch_manager' | 'document_manager' | 'viewer' | 'approver' | 'auditor' | 'super_admin';
+
 interface SuperAdminStats {
   total_users: number;
   total_buyers: number;
@@ -17,7 +19,7 @@ interface DetailedUser {
   id: string;
   email: string;
   full_name: string;
-  roles: string[];
+  roles: UserRole[];
   company_name: string;
   created_at: string;
   last_sign_in_at: string;
@@ -66,11 +68,11 @@ export const useSuperAdmin = () => {
     }
   };
 
-  const updateUserRole = async (userId: string, newRoles: string[]) => {
+  const updateUserRole = async (userId: string, newRoles: UserRole[]) => {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ roles: newRoles })
+        .update({ roles: newRoles as any })
         .eq('id', userId);
 
       if (error) throw error;

@@ -15,8 +15,6 @@ export function PlatformAdminHeader() {
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <SidebarTrigger />
-          
           <div className="hidden md:flex items-center space-x-2 text-sm">
             <span style={{ color: 'hsl(var(--admin-text-muted))' }}>Platform</span>
             <span style={{ color: 'hsl(var(--admin-text-muted))' }}>/</span>

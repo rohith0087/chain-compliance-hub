@@ -2759,19 +2759,14 @@ export type Database = {
       get_platform_admin_users: {
         Args: Record<PropertyKey, never>
         Returns: {
-          buyer_company: string
-          company_name: string
           created_at: string
           email: string
-          email_confirmed_at: string
           full_name: string
           id: string
           is_buyer: boolean
           is_supplier: boolean
           last_sign_in_at: string
-          phone: string
           roles: Database["public"]["Enums"]["user_role"][]
-          supplier_company: string
         }[]
       }
       get_super_admin_stats: {

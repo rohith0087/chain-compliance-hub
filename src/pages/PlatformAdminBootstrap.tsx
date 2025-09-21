@@ -60,6 +60,22 @@ export default function PlatformAdminBootstrap() {
         return;
       }
 
+      // Sign in the user immediately after signup
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password
+      });
+
+      if (signInError) {
+        setError('Failed to sign in: ' + signInError.message);
+        return;
+      }
+
+      if (!signInData.user) {
+        setError('Failed to authenticate user');
+        return;
+      }
+
       setStep('finalize');
     } catch (err) {
       console.error('Error creating user:', err);

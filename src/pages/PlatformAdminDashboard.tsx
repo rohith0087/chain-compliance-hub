@@ -69,21 +69,30 @@ export default function PlatformAdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-6 py-4">
+    <div className="min-h-screen bg-gradient-subtle">
+      {/* Professional Header */}
+      <header className="bg-gradient-primary border-b border-white/20 shadow-elegant">
+        <div className="container mx-auto px-8 py-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Shield className="h-8 w-8 text-primary" />
+            <div className="flex items-center space-x-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-white/20 rounded-xl blur-md"></div>
+                <Shield className="relative h-12 w-12 text-white drop-shadow-lg" />
+              </div>
               <div>
-                <h1 className="text-2xl font-bold">Platform Administration</h1>
-                <p className="text-sm text-muted-foreground">
+                <h1 className="text-3xl font-bold text-white tracking-tight">
+                  Platform Administration
+                </h1>
+                <p className="text-white/80 text-base font-medium mt-1">
                   Welcome back, {platformAdmin?.full_name}
                 </p>
               </div>
             </div>
-            <Button variant="outline" onClick={handleSignOut}>
+            <Button 
+              variant="outline" 
+              onClick={handleSignOut}
+              className="bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm shadow-lg"
+            >
               <LogOut className="h-4 w-4 mr-2" />
               Sign Out
             </Button>
@@ -91,78 +100,108 @@ export default function PlatformAdminDashboard() {
         </div>
       </header>
 
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-8 py-10">
         {error && (
-          <div className="mb-6 p-4 bg-destructive/15 border border-destructive/20 rounded-lg">
-            <p className="text-destructive text-sm">Error loading dashboard data: {error}</p>
+          <div className="mb-8 p-6 bg-destructive/10 border border-destructive/20 rounded-xl backdrop-blur-sm shadow-lg">
+            <p className="text-destructive font-medium">Error loading dashboard data: {error}</p>
             <button 
               onClick={fetchStats}
-              className="mt-2 text-xs text-destructive hover:underline"
+              className="mt-3 text-sm text-destructive hover:underline font-medium"
             >
               Retry
             </button>
           </div>
         )}
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+        {/* Professional Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+          <Card className="bg-gradient-to-br from-blue-accent/5 to-blue-accent/10 border-blue-accent/20 shadow-elegant hover:shadow-lg transition-all duration-300">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-semibold text-blue-accent">Total Users</CardTitle>
+              <div className="p-2 bg-blue-accent/10 rounded-lg">
+                <Users className="h-5 w-5 text-blue-accent" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.total_users || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                +{stats?.recent_signups || 0} this week
+              <div className="text-3xl font-bold text-blue-accent">{stats?.total_users || 0}</div>
+              <p className="text-sm text-muted-foreground mt-2">
+                <span className="text-green-accent font-medium">+{stats?.recent_signups || 0}</span> this week
               </p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Connections</CardTitle>
-              <Database className="h-4 w-4 text-muted-foreground" />
+          <Card className="bg-gradient-to-br from-purple-accent/5 to-purple-accent/10 border-purple-accent/20 shadow-elegant hover:shadow-lg transition-all duration-300">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-semibold text-purple-accent">Active Connections</CardTitle>
+              <div className="p-2 bg-purple-accent/10 rounded-lg">
+                <Database className="h-5 w-5 text-purple-accent" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.active_connections || 0}</div>
-              <p className="text-xs text-muted-foreground">Buyer-Supplier pairs</p>
+              <div className="text-3xl font-bold text-purple-accent">{stats?.active_connections || 0}</div>
+              <p className="text-sm text-muted-foreground mt-2">Buyer-Supplier pairs</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Documents</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
+          <Card className="bg-gradient-to-br from-green-accent/5 to-green-accent/10 border-green-accent/20 shadow-elegant hover:shadow-lg transition-all duration-300">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-semibold text-green-accent">Total Documents</CardTitle>
+              <div className="p-2 bg-green-accent/10 rounded-lg">
+                <FileText className="h-5 w-5 text-green-accent" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.total_documents || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats?.pending_requests || 0} pending
+              <div className="text-3xl font-bold text-green-accent">{stats?.total_documents || 0}</div>
+              <p className="text-sm text-muted-foreground mt-2">
+                <span className="text-amber-500 font-medium">{stats?.pending_requests || 0}</span> pending
               </p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Chat Sessions</CardTitle>
-              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+          <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 shadow-elegant hover:shadow-lg transition-all duration-300">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-semibold text-primary">Chat Sessions</CardTitle>
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <MessageSquare className="h-5 w-5 text-primary" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.total_chat_sessions || 0}</div>
-              <p className="text-xs text-muted-foreground">Total conversations</p>
+              <div className="text-3xl font-bold text-primary">{stats?.total_chat_sessions || 0}</div>
+              <p className="text-sm text-muted-foreground mt-2">Total conversations</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Main Content */}
-        <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="users">User Management</TabsTrigger>
-            <TabsTrigger value="invitations">Invitations</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="settings">System Settings</TabsTrigger>
-          </TabsList>
+        {/* Professional Tabs Interface */}
+        <Tabs defaultValue="users" className="space-y-8">
+          <div className="flex justify-center">
+            <TabsList className="grid w-full max-w-4xl grid-cols-4 bg-white/50 backdrop-blur-sm border shadow-elegant p-2 h-auto">
+              <TabsTrigger 
+                value="users" 
+                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white font-semibold py-3 px-6 transition-all duration-300"
+              >
+                User Management
+              </TabsTrigger>
+              <TabsTrigger 
+                value="invitations"
+                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white font-semibold py-3 px-6 transition-all duration-300"
+              >
+                Invitations
+              </TabsTrigger>
+              <TabsTrigger 
+                value="analytics"
+                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white font-semibold py-3 px-6 transition-all duration-300"
+              >
+                Analytics
+              </TabsTrigger>
+              <TabsTrigger 
+                value="settings"
+                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white font-semibold py-3 px-6 transition-all duration-300"
+              >
+                System Settings
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="users">
             <PlatformAdminUserManagement />

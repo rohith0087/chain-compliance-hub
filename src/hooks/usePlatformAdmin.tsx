@@ -202,32 +202,25 @@ export const usePlatformAdmin = () => {
   const resetUserPassword = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase.rpc('platform_admin_reset_password', {
-        user_id_param: userId
+        user_id: userId
       });
 
       if (error) {
         console.error('Error resetting password:', error);
-        toast({
-          title: "Error",
-          description: "Failed to reset password",
-          variant: "destructive",
-        });
-        return;
+        return { success: false, error: error.message };
       }
 
-      toast({
-        title: "Success",
-        description: "Password reset logged successfully",
-      });
+      const result = data as any; // Type assertion for the JSON response
+      if (result?.success) {
+        return { success: true, message: result.message };
+      } else {
+        return { success: false, error: result?.error || 'Unknown error occurred' };
+      }
     } catch (err) {
       console.error('Error in resetUserPassword:', err);
-      toast({
-        title: "Error",
-        description: "Failed to reset password",
-        variant: "destructive",
-      });
+      return { success: false, error: 'Failed to reset password' };
     }
-  }, [toast]);
+  }, []);
 
   const signInPlatformAdmin = useCallback(async (email: string, password: string) => {
     try {

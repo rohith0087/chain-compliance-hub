@@ -188,6 +188,61 @@ const SupplierDocumentsDashboard = () => {
     }).length
   };
 
+  // Handle stat card clicks to filter documents
+  const handleStatClick = (filterType: string) => {
+    switch (filterType) {
+      case 'total':
+        setFilters(prev => ({
+          ...prev,
+          status: '',
+          expirationStatus: ''
+        }));
+        break;
+      case 'pending':
+        setFilters(prev => ({
+          ...prev,
+          status: 'pending',
+          expirationStatus: ''
+        }));
+        break;
+      case 'submitted':
+        setFilters(prev => ({
+          ...prev,
+          status: 'submitted',
+          expirationStatus: ''
+        }));
+        break;
+      case 'approved':
+        setFilters(prev => ({
+          ...prev,
+          status: 'approved',
+          expirationStatus: ''
+        }));
+        break;
+      case 'rejected':
+        setFilters(prev => ({
+          ...prev,
+          status: 'rejected',
+          expirationStatus: ''
+        }));
+        break;
+      case 'expiring_soon':
+        setFilters(prev => ({
+          ...prev,
+          status: '',
+          expirationStatus: 'expiring_soon'
+        }));
+        break;
+      case 'expired':
+        setFilters(prev => ({
+          ...prev,
+          status: '',
+          expirationStatus: 'expired'
+        }));
+        break;
+    }
+  };
+
   // Generate timeline events
   const timelineEvents = documents.slice(0, 10).map(doc => ({
     id: doc.id,
@@ -244,7 +299,10 @@ const SupplierDocumentsDashboard = () => {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
-        <Card>
+        <Card 
+          className="cursor-pointer hover:bg-accent transition-colors" 
+          onClick={() => handleStatClick('total')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
@@ -254,7 +312,10 @@ const SupplierDocumentsDashboard = () => {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card 
+          className="cursor-pointer hover:bg-accent transition-colors" 
+          onClick={() => handleStatClick('pending')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
@@ -264,7 +325,10 @@ const SupplierDocumentsDashboard = () => {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card 
+          className="cursor-pointer hover:bg-accent transition-colors" 
+          onClick={() => handleStatClick('submitted')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Submitted</CardTitle>
             <Upload className="h-4 w-4 text-muted-foreground" />
@@ -274,7 +338,10 @@ const SupplierDocumentsDashboard = () => {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card 
+          className="cursor-pointer hover:bg-accent transition-colors" 
+          onClick={() => handleStatClick('approved')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Approved</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
@@ -284,7 +351,10 @@ const SupplierDocumentsDashboard = () => {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card 
+          className="cursor-pointer hover:bg-accent transition-colors" 
+          onClick={() => handleStatClick('rejected')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Rejected</CardTitle>
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
@@ -294,7 +364,10 @@ const SupplierDocumentsDashboard = () => {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card 
+          className="cursor-pointer hover:bg-accent transition-colors" 
+          onClick={() => handleStatClick('expiring_soon')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Expiring Soon</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -304,7 +377,10 @@ const SupplierDocumentsDashboard = () => {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card 
+          className="cursor-pointer hover:bg-accent transition-colors" 
+          onClick={() => handleStatClick('expired')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Expired</CardTitle>
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />

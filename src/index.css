@@ -47,20 +47,30 @@
     --shadow-subtle: 0 4px 20px -8px hsl(0 0% 0% / 0.1);
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Modern SaaS Dark Theme for Platform Admin */
+    --admin-background: 10 10% 3%;
+    --admin-surface: 240 3.7% 8%;
+    --admin-card: 240 3.7% 6%;
+    --admin-border: 240 3.7% 15%;
+    --admin-text: 210 40% 95%;
+    --admin-text-muted: 210 40% 70%;
+    --admin-accent-blue: 217 91% 70%;
+    --admin-accent-purple: 270 95% 80%;
+    --admin-accent-green: 142 76% 56%;
+    --admin-gradient: linear-gradient(135deg, hsl(240 3.7% 6%), hsl(240 3.7% 8%));
+    --admin-sidebar: 240 5.9% 5%;
+    --admin-sidebar-accent: 240 3.7% 12%;
+    --admin-glass: 240 3.7% 8% / 0.6;
+    --admin-shadow: 0 4px 20px hsl(0 0% 0% / 0.3);
+    --admin-glow: 0 0 40px hsl(217 91% 70% / 0.15);
   }
 
   .dark {

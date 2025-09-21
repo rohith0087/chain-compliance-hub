@@ -38,30 +38,24 @@ export function SubscriptionStatusWidget({ compact = false }: SubscriptionStatus
 
   if (compact) {
     return (
-      <Card className="w-full">
-        <CardContent className="p-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {isSubscribed ? (
-                <Crown className="h-4 w-4 text-primary" />
-              ) : (
-                <CreditCard className="h-4 w-4 text-muted-foreground" />
-              )}
-              <span className="text-sm font-medium">{planDisplayName}</span>
-              <Badge variant={isSubscribed ? "default" : "secondary"} className="text-xs">
-                {isSubscribed ? "Active" : "Free"}
-              </Badge>
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-lg border">
+        {!isEnterprise ? (
+          <>
+            <CreditCard className="h-4 w-4 text-primary" />
+            <div className="flex items-center gap-1">
+              <span className="text-sm font-medium text-foreground">
+                {subscriptionData?.credits || 0}
+              </span>
+              <span className="text-xs text-muted-foreground">credits</span>
             </div>
-            <div className="text-right">
-              {!isEnterprise && (
-                <p className="text-xs text-muted-foreground">
-                  {subscriptionData?.credits || 0} credits
-                </p>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </>
+        ) : (
+          <>
+            <Crown className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-foreground">Unlimited</span>
+          </>
+        )}
+      </div>
     );
   }
 

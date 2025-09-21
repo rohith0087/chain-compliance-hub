@@ -55,6 +55,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
+import { SubscriptionStatusWidget } from '@/components/subscription/SubscriptionStatusWidget';
 import { BranchSelector } from '@/components/company/BranchSelector';
 
 interface NavigationItem {
@@ -391,6 +392,7 @@ export function BuyerSidebarLayout({
             </div>
             
             <div className="flex items-center gap-2">
+              <SubscriptionStatusWidget compact />
               <NotificationCenter />
             </div>
           </div>

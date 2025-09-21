@@ -11,11 +11,44 @@ interface SubscriptionPlansProps {
 }
 
 export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ userType }) => {
-  const { subscriptionPlans, subscriptionData, createSubscriptionCheckout } = useSubscription();
+  const { subscriptionPlans, subscriptionData, createSubscriptionCheckout, loading } = useSubscription();
 
   const filteredPlans = subscriptionPlans.filter(plan => 
     plan.target_audience === userType
   );
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[1, 2, 3].map((i) => (
+          <Card key={i} className="animate-pulse">
+            <CardHeader>
+              <div className="h-6 bg-muted rounded w-3/4"></div>
+              <div className="h-4 bg-muted rounded w-1/2"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="h-4 bg-muted rounded"></div>
+                <div className="h-4 bg-muted rounded"></div>
+                <div className="h-4 bg-muted rounded"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (filteredPlans.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center">
+          <p className="text-muted-foreground">No subscription plans available for {userType}s at the moment.</p>
+          <p className="text-sm text-muted-foreground mt-2">Check back later or contact support.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const handleSubscribe = async (plan: SubscriptionPlan) => {
     const result = await createSubscriptionCheckout(plan.stripe_price_id, plan.plan_type);

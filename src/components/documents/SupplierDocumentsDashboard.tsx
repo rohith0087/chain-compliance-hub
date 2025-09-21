@@ -1,8 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { 
   FileText, 
   TrendingUp, 
@@ -10,11 +12,13 @@ import {
   CheckCircle,
   Clock,
   Calendar,
-  Upload
+  Upload,
+  Search,
+  Filter,
+  X
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import DocumentsFilter from './DocumentsFilter';
 import DocumentCard from './DocumentCard';
 import DocumentTimeline from './DocumentTimeline';
 import DocumentRoadmap from './DocumentRoadmap';
@@ -22,6 +26,7 @@ import DocumentRoadmap from './DocumentRoadmap';
 const SupplierDocumentsDashboard = () => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     search: '',
     status: '',
@@ -243,6 +248,14 @@ const SupplierDocumentsDashboard = () => {
     }
   };
 
+  // Calculate active filters count for badge
+  const activeFiltersCount = Object.values(filters).filter(value => value !== '').length - (filters.search ? 1 : 0); // Exclude search from count
+
+  // Handle search input separately from other filters
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFilters(prev => ({ ...prev, search: e.target.value }));
+  };
+
   // Generate timeline events
   const timelineEvents = documents.slice(0, 10).map(doc => ({
     id: doc.id,
@@ -401,11 +414,181 @@ const SupplierDocumentsDashboard = () => {
         </TabsList>
 
         <TabsContent value="documents" className="space-y-6">
-          <DocumentsFilter 
-            filters={filters}
-            onFiltersChange={setFilters}
-            showExpirationFilter={true}
-          />
+          {/* Collapsible Filters Section */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground pointer-events-none" />
+                  <Input
+                    type="text"
+                    placeholder="Search document requests..."
+                    value={filters.search}
+                    onChange={handleSearchChange}
+                    className="pl-10"
+                    autoComplete="off"
+                  />
+                </div>
+                <Button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filters
+                  {activeFiltersCount > 0 && (
+                    <Badge variant="secondary" className="ml-2 bg-white text-green-600">
+                      {activeFiltersCount}
+                    </Badge>
+                  )}
+                </Button>
+              </div>
+              
+              {showFilters && (
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    {/* Status Filter */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Status</label>
+                      <Select 
+                        value={filters.status || 'all'} 
+                        onValueChange={(value) => setFilters(prev => ({ 
+                          ...prev, 
+                          status: value === 'all' ? '' : value 
+                        }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="All statuses" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All statuses</SelectItem>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="submitted">Submitted</SelectItem>
+                          <SelectItem value="approved">Approved</SelectItem>
+                          <SelectItem value="rejected">Rejected</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Category Filter */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Category</label>
+                      <Select 
+                        value={filters.category || 'all'} 
+                        onValueChange={(value) => setFilters(prev => ({ 
+                          ...prev, 
+                          category: value === 'all' ? '' : value 
+                        }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="All categories" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All categories</SelectItem>
+                          <SelectItem value="compliance">Compliance</SelectItem>
+                          <SelectItem value="certification">Certification</SelectItem>
+                          <SelectItem value="insurance">Insurance</SelectItem>
+                          <SelectItem value="quality">Quality</SelectItem>
+                          <SelectItem value="safety">Safety</SelectItem>
+                          <SelectItem value="financial">Financial</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Document Type Filter */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Document Type</label>
+                      <Select 
+                        value={filters.documentType || 'all'} 
+                        onValueChange={(value) => setFilters(prev => ({ 
+                          ...prev, 
+                          documentType: value === 'all' ? '' : value 
+                        }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="All types" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All types</SelectItem>
+                          <SelectItem value="certificate">Certificate</SelectItem>
+                          <SelectItem value="license">License</SelectItem>
+                          <SelectItem value="permit">Permit</SelectItem>
+                          <SelectItem value="policy">Policy</SelectItem>
+                          <SelectItem value="report">Report</SelectItem>
+                          <SelectItem value="invoice">Invoice</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Expiration Status Filter */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Expiration</label>
+                      <Select 
+                        value={filters.expirationStatus || 'all'} 
+                        onValueChange={(value) => setFilters(prev => ({ 
+                          ...prev, 
+                          expirationStatus: value === 'all' ? '' : value 
+                        }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="All documents" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All documents</SelectItem>
+                          <SelectItem value="expiring_soon">Expiring Soon</SelectItem>
+                          <SelectItem value="expired">Expired</SelectItem>
+                          <SelectItem value="valid">Valid</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Date Range Filter */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Date Range</label>
+                      <Select 
+                        value={filters.dateRange || 'all'} 
+                        onValueChange={(value) => setFilters(prev => ({ 
+                          ...prev, 
+                          dateRange: value === 'all' ? '' : value 
+                        }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="All time" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All time</SelectItem>
+                          <SelectItem value="last_7_days">Last 7 Days</SelectItem>
+                          <SelectItem value="last_30_days">Last 30 Days</SelectItem>
+                          <SelectItem value="last_90_days">Last 90 Days</SelectItem>
+                          <SelectItem value="this_year">This Year</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {activeFiltersCount > 0 && (
+                    <div className="flex justify-end pt-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setFilters({
+                          search: filters.search, // Keep search value
+                          status: '',
+                          category: '',
+                          documentType: '',
+                          supplier: '',
+                          expirationStatus: '',
+                          dateRange: ''
+                        })}
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Clear Filters
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
           
           <Card>
             <CardHeader>

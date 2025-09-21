@@ -56,7 +56,7 @@ serve(async (req) => {
     const buyerName = upload.document_requests.buyers.company_name;
 
     const emailResponse = await resend.emails.send({
-      from: "Compliance System <compliance@resend.dev>",
+      from: "Compliance System <compliance@tracer2c.com>",
       to: [supplier.contact_email],
       subject: `Document Rejected: ${upload.file_name}`,
       html: `

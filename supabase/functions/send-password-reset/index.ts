@@ -29,7 +29,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`Sending password reset email to ${email}`);
 
     const emailResponse = await resend.emails.send({
-      from: "Platform Admin <no-reply@lovableproject.com>",
+      from: "Compliance Platform <no-reply@tracer2c.com>",
       to: [email],
       subject: "Your temporary password has been reset",
       html: `

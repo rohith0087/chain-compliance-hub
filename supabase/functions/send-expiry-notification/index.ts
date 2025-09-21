@@ -24,7 +24,7 @@ serve(async (req) => {
     } = await req.json();
 
     const emailResponse = await resend.emails.send({
-      from: "Compliance System <compliance@resend.dev>",
+      from: "Compliance System <compliance@tracer2c.com>",
       to: [supplier_email],
       cc: [buyer_email],
       subject: `Document Expiry Alert: ${document_name}`,

@@ -120,7 +120,7 @@ async function sendFollowUpEmail(params: Record<string, any>): Promise<ActionRes
   
   try {
     const emailResponse = await resend.emails.send({
-      from: "Compliance System <compliance@resend.dev>",
+      from: "Compliance System <compliance@tracer2c.com>",
       to: [supplier_email],
       subject: `Follow-up: ${document_type} Document Request`,
       html: `
@@ -253,7 +253,7 @@ async function requestAdditionalDocuments(params: Record<string, any>): Promise<
 
     // Send notification email
     await resend.emails.send({
-      from: "Compliance System <compliance@resend.dev>",
+      from: "Compliance System <compliance@tracer2c.com>",
       to: [supplier.contact_email],
       subject: `New Document Request from Your Buyer`,
       html: `
@@ -369,7 +369,7 @@ async function sendSupplierNotification(params: Record<string, any>): Promise<Ac
     // Send email if urgent
     if (urgent) {
       await resend.emails.send({
-        from: "Compliance System <compliance@resend.dev>",
+        from: "Compliance System <compliance@tracer2c.com>",
         to: [supplier.contact_email],
         subject: `URGENT: ${notification_type}`,
         html: `

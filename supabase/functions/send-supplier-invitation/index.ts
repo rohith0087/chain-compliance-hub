@@ -127,7 +127,7 @@ const handler = async (req: Request): Promise<Response> => {
     for (const email of emails) {
       try {
         const emailResponse = await resend.emails.send({
-          from: "Supplier Platform <onboarding@resend.dev>",
+          from: "Compliance Platform <no-reply@tracer2c.com>",
           to: [email],
           subject: subject,
           html: htmlContent,

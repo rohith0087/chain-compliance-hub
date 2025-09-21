@@ -22,7 +22,8 @@ import {
   Upload,
   Shield,
   Clock,
-  CheckCircle
+  CheckCircle,
+  CreditCard
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from 'react-i18next';
@@ -157,6 +158,11 @@ export function SupplierSidebarLayout({
       title: t('supplier:tabs.company'),
       icon: Building2,
       value: 'company'
+    },
+    {
+      title: 'Subscription & Billing',
+      icon: CreditCard,
+      value: 'subscription'
     }
   ];
 
@@ -176,6 +182,9 @@ export function SupplierSidebarLayout({
         break;
       case 'chat':
         navigate('/chat');
+        break;
+      case 'subscription':
+        navigate('/subscription');
         break;
     }
   };

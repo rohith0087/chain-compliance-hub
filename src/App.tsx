@@ -20,6 +20,7 @@ import PlatformAdminInvitationAccept from "./pages/PlatformAdminInvitationAccept
 import PlatformAdminBootstrap from "./pages/PlatformAdminBootstrap";
 import SharedDocumentViewer from "./components/shared/SharedDocumentViewer";
 import NotFound from "./pages/NotFound";
+import SubscriptionPage from "./pages/SubscriptionPage";
 import "./i18n";
 
 const queryClient = new QueryClient();
@@ -114,6 +115,11 @@ const AppRoutes = () => {
             <Route path="/chat" element={
               <ProtectedRoute>
                 <ChatPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/subscription" element={
+              <ProtectedRoute>
+                <SubscriptionPage />
               </ProtectedRoute>
             } />
             <Route path="/admin" element={

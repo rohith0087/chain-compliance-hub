@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PDFExportData {
   supplier: {
@@ -37,7 +38,26 @@ export class PDFExportService {
     this.margin = 20;
   }
 
-  async generateSupplierReport(data: PDFExportData): Promise<void> {
+  async generateSupplierReport(data: PDFExportData, reportType: 'standard' | 'detailed' = 'standard'): Promise<void> {
+    // Consume credits before generating report
+    const { data: creditResult, error } = await supabase.functions.invoke('consume-credits', {
+      body: { 
+        reportType,
+        description: `${reportType} compliance report for ${data.supplier?.company_name}`,
+        referenceId: data.buyerId,
+        referenceType: 'buyer'
+      }
+    });
+
+    if (error) {
+      console.error('Error consuming credits:', error);
+      throw new Error('Failed to process credit payment for report generation');
+    }
+
+    if (!creditResult?.success) {
+      throw new Error(creditResult?.error || 'Insufficient credits for report generation');
+    }
+
     // Page 1: Executive Summary & Overview
     await this.addExecutiveSummary(data);
     this.addSupplierOverview(data);

@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { SupplierComplianceData, ComparisonData } from './ComplianceDataService';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface AIInsights {
   riskAssessment: string;
@@ -38,6 +39,30 @@ export class AdvancedPDFExportService {
     aiInsights: AIInsights,
     options: any
   ): Promise<void> {
+    // Determine report type based on options
+    const reportType: 'standard' | 'detailed' | 'ai_enhanced' = 
+      options.includeRiskAssessment && options.includeRecommendations ? 'ai_enhanced' :
+      options.includeDocumentHistory ? 'detailed' : 'standard';
+
+    // Consume credits before generating report
+    const { data: creditResult, error } = await supabase.functions.invoke('consume-credits', {
+      body: { 
+        reportType,
+        description: `${reportType} compliance report for ${data.supplier.company_name}`,
+        referenceId: data.supplier.id,
+        referenceType: 'supplier'
+      }
+    });
+
+    if (error) {
+      console.error('Error consuming credits:', error);
+      throw new Error('Failed to process credit payment for report generation');
+    }
+
+    if (!creditResult?.success) {
+      throw new Error(creditResult?.error || 'Insufficient credits for report generation');
+    }
+
     this.resetDocument();
     
     // Page 1: Executive Dashboard
@@ -79,6 +104,25 @@ export class AdvancedPDFExportService {
     aiInsights: AIInsights,
     options: any
   ): Promise<void> {
+    // Consume credits for comparison report
+    const { data: creditResult, error } = await supabase.functions.invoke('consume-credits', {
+      body: { 
+        reportType: 'comparison',
+        description: `Multi-supplier comparison report`,
+        referenceId: comparisonData.suppliers?.[0]?.supplier?.id || '',
+        referenceType: 'buyer'
+      }
+    });
+
+    if (error) {
+      console.error('Error consuming credits:', error);
+      throw new Error('Failed to process credit payment for report generation');
+    }
+
+    if (!creditResult?.success) {
+      throw new Error(creditResult?.error || 'Insufficient credits for report generation');
+    }
+
     this.resetDocument();
     
     // Page 1: Executive Summary

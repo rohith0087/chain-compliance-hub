@@ -19,7 +19,8 @@ import {
   UserCheck,
   Send,
   UserPlus,
-  Upload
+  Upload,
+  CreditCard
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from 'react-i18next';
@@ -151,6 +152,11 @@ export function BuyerSidebarLayout({
       title: t('dashboard:company.title'),
       icon: Building2,
       value: 'company'
+    },
+    {
+      title: 'Subscription & Billing',
+      icon: CreditCard,
+      value: 'subscription'
     }
   ];
 
@@ -178,6 +184,9 @@ export function BuyerSidebarLayout({
         break;
       case 'chat':
         navigate('/chat');
+        break;
+      case 'subscription':
+        navigate('/subscription');
         break;
     }
   };

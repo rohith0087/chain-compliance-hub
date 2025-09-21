@@ -2877,8 +2877,8 @@ export type Database = {
         Returns: string
       }
       platform_admin_reset_password: {
-        Args: { user_id_param: string }
-        Returns: boolean
+        Args: { user_id: string }
+        Returns: Json
       }
       platform_admin_update_user_role: {
         Args: {

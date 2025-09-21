@@ -46,6 +46,16 @@ export const useSubscription = () => {
       if (error) {
         console.error('Error checking subscription status:', error);
         setError('Failed to check subscription status');
+        // Set safe fallback data
+        setSubscriptionData({
+          subscribed: false,
+          plan_type: null,
+          subscription_end: null,
+          credits: 0,
+          stripe_customer_exists: false,
+          total_purchased_credits: 0,
+          total_consumed_credits: 0
+        });
         return;
       }
 
@@ -53,6 +63,16 @@ export const useSubscription = () => {
     } catch (err) {
       console.error('Error in checkSubscriptionStatus:', err);
       setError('Failed to check subscription status');
+      // Set safe fallback data
+      setSubscriptionData({
+        subscribed: false,
+        plan_type: null,
+        subscription_end: null,
+        credits: 0,
+        stripe_customer_exists: false,
+        total_purchased_credits: 0,
+        total_consumed_credits: 0
+      });
     } finally {
       setLoading(false);
     }

@@ -38,21 +38,29 @@ export const CreditPackages: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[1, 2, 3].map((i) => (
-          <Card key={i} className="animate-pulse">
-            <CardHeader>
-              <div className="h-6 bg-muted rounded w-3/4"></div>
-              <div className="h-4 bg-muted rounded w-1/2"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-8 bg-muted rounded w-full"></div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="space-y-6">
+        <div className="text-center">
+          <h3 className="text-2xl font-bold mb-2">Loading Credit Packages...</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="h-6 bg-muted rounded w-3/4"></div>
+                <div className="h-4 bg-muted rounded w-1/2"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 bg-muted rounded w-full"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
+
+  // Show credit packages even without full subscription data
+  const currentCredits = subscriptionData?.credits || 0;
 
   const handlePurchase = async (priceId: string, credits: number) => {
     const result = await createCreditPurchase(priceId, 1);
@@ -75,7 +83,7 @@ export const CreditPackages: React.FC = () => {
       <div className="text-center">
         <h3 className="text-2xl font-bold mb-2">Purchase Additional Credits</h3>
         <p className="text-muted-foreground">
-          Buy extra credits for report generation. Current balance: <span className="font-semibold">{subscriptionData?.credits || 0} credits</span>
+          Buy extra credits for report generation. Current balance: <span className="font-semibold">{currentCredits} credits</span>
         </p>
       </div>
 

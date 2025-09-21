@@ -43,7 +43,7 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+    const stripe = new Stripe(stripeKey, { apiVersion: "2024-06-20" });
 
     // Get user's current subscription from database
     const { data: dbSubscription, error: dbError } = await supabaseClient
@@ -98,7 +98,17 @@ serve(async (req) => {
     if (hasActiveSubscription) {
       const subscription = subscriptions.data[0];
       stripeSubscriptionId = subscription.id;
-      subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      
+      // Safely handle timestamp conversion
+      try {
+        subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      } catch (timeError) {
+        logStep("Warning: Could not parse subscription end date", { 
+          timestamp: subscription.current_period_end,
+          error: timeError 
+        });
+        subscriptionEnd = null;
+      }
       
       // Get plan type from subscription metadata or price ID
       const priceId = subscription.items.data[0].price.id;
@@ -119,33 +129,46 @@ serve(async (req) => {
         priceId
       });
 
-      // Update or create subscription record in database
-      if (dbSubscription) {
-        await supabaseClient
-          .from('subscriptions')
-          .update({
-            stripe_customer_id: customerId,
-            stripe_subscription_id: stripeSubscriptionId,
-            plan_type: planType,
-            status: subscription.status,
-            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-            current_period_end: subscriptionEnd,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('user_id', user.id);
-      } else {
-        await supabaseClient
-          .from('subscriptions')
-          .insert({
-            user_id: user.id,
-            stripe_customer_id: customerId,
-            stripe_subscription_id: stripeSubscriptionId,
-            plan_type: planType,
-            status: subscription.status,
-            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-            current_period_end: subscriptionEnd,
-            price_id: priceId,
+      // Update or create subscription record in database (only if we have valid dates)
+      if (subscriptionEnd) {
+        let currentPeriodStart;
+        try {
+          currentPeriodStart = new Date(subscription.current_period_start * 1000).toISOString();
+        } catch (timeError) {
+          logStep("Warning: Could not parse subscription start date", { 
+            timestamp: subscription.current_period_start,
+            error: timeError 
           });
+          currentPeriodStart = new Date().toISOString();
+        }
+
+        if (dbSubscription) {
+          await supabaseClient
+            .from('subscriptions')
+            .update({
+              stripe_customer_id: customerId,
+              stripe_subscription_id: stripeSubscriptionId,
+              plan_type: planType,
+              status: subscription.status,
+              current_period_start: currentPeriodStart,
+              current_period_end: subscriptionEnd,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('user_id', user.id);
+        } else {
+          await supabaseClient
+            .from('subscriptions')
+            .insert({
+              user_id: user.id,
+              stripe_customer_id: customerId,
+              stripe_subscription_id: stripeSubscriptionId,
+              plan_type: planType,
+              status: subscription.status,
+              current_period_start: currentPeriodStart,
+              current_period_end: subscriptionEnd,
+              price_id: priceId,
+            });
+        }
       }
     } else {
       logStep("No active subscription found");
@@ -177,9 +200,19 @@ serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR in check-subscription-status", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    
+    // Return safe fallback data instead of error
+    return new Response(JSON.stringify({
+      subscribed: false,
+      plan_type: null,
+      subscription_end: null,
+      credits: 0,
+      stripe_customer_exists: false,
+      total_purchased_credits: 0,
+      total_consumed_credits: 0
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
+      status: 200,
     });
   }
 });

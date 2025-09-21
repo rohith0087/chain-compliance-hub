@@ -19,34 +19,65 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ userType }
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[1, 2, 3].map((i) => (
-          <Card key={i} className="animate-pulse">
-            <CardHeader>
-              <div className="h-6 bg-muted rounded w-3/4"></div>
-              <div className="h-4 bg-muted rounded w-1/2"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="h-4 bg-muted rounded"></div>
-                <div className="h-4 bg-muted rounded"></div>
-                <div className="h-4 bg-muted rounded"></div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="space-y-6">
+        <div className="text-center">
+          <h3 className="text-2xl font-bold mb-2">Subscription Plans</h3>
+          <p className="text-muted-foreground">Loading available plans...</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="h-6 bg-muted rounded w-3/4"></div>
+                <div className="h-4 bg-muted rounded w-1/2"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted rounded"></div>
+                  <div className="h-4 bg-muted rounded"></div>
+                  <div className="h-4 bg-muted rounded"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!subscriptionPlans || subscriptionPlans.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h3 className="text-2xl font-bold mb-2">Subscription Plans</h3>
+        </div>
+        <Card>
+          <CardContent className="p-8 text-center">
+            <p className="text-muted-foreground">
+              No subscription plans are currently available. 
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Plans are being configured. Please check back later or contact support.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   if (filteredPlans.length === 0) {
     return (
-      <Card>
-        <CardContent className="p-8 text-center">
-          <p className="text-muted-foreground">No subscription plans available for {userType}s at the moment.</p>
-          <p className="text-sm text-muted-foreground mt-2">Check back later or contact support.</p>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <div className="text-center">
+          <h3 className="text-2xl font-bold mb-2">Subscription Plans</h3>
+        </div>
+        <Card>
+          <CardContent className="p-8 text-center">
+            <p className="text-muted-foreground">No subscription plans available for {userType}s at the moment.</p>
+            <p className="text-sm text-muted-foreground mt-2">Check back later or contact support.</p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -81,16 +112,13 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ userType }
       });
   };
 
-  if (!filteredPlans.length) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">No subscription plans available for {userType}s.</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="space-y-6">
+      <div className="text-center">
+        <h3 className="text-2xl font-bold mb-2">Subscription Plans</h3>
+        <p className="text-muted-foreground">Choose the perfect plan for your {userType} needs</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       {filteredPlans.map((plan) => {
         const isCurrentPlan = subscriptionData?.plan_type === plan.plan_type;
         const isEnterprise = plan.plan_type.includes('enterprise');
@@ -151,6 +179,7 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ userType }
           </Card>
         );
       })}
+      </div>
     </div>
   );
 };

@@ -98,7 +98,8 @@ export function PlatformAdminSidebar({ activeSection, onSectionChange }: Platfor
       }`}
       style={{
         backgroundColor: 'hsl(var(--admin-sidebar))',
-        borderColor: 'hsl(var(--admin-border))'
+        borderColor: 'hsl(var(--admin-border))',
+        color: 'hsl(var(--admin-text))'
       }}
       collapsible="icon"
     >

@@ -62,39 +62,43 @@ export function PlatformAdminUserManagement() {
     }
   };
 
-  const getRoleColor = (userType: string) => {
-    switch (userType) {
-      case 'buyer': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'supplier': return 'bg-green-100 text-green-800 border-green-200';
-      case 'admin': return 'bg-purple-100 text-purple-800 border-purple-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'hsl(var(--admin-text))' }} />
       </div>
     );
   }
 
   return (
     <>
-      <Card className="bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-sm border-white/20 shadow-elegant">
-        <CardHeader className="bg-gradient-primary text-white rounded-t-lg">
-          <CardTitle className="text-2xl font-bold">User Management</CardTitle>
-          <CardDescription className="text-white/90 text-base">
+      <Card className="border" style={{ 
+        backgroundColor: 'hsl(var(--admin-surface))',
+        borderColor: 'hsl(var(--admin-border))'
+      }}>
+        <CardHeader className="border-b p-6" style={{ 
+          borderColor: 'hsl(var(--admin-border))',
+          backgroundColor: 'hsl(var(--admin-card))'
+        }}>
+          <CardTitle className="text-2xl font-bold" style={{ color: 'hsl(var(--admin-text))' }}>
+            User Management
+          </CardTitle>
+          <CardDescription className="text-base" style={{ color: 'hsl(var(--admin-text-muted))' }}>
             Manage user accounts, roles, and permissions across the platform
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-8">
+        <CardContent className="p-8" style={{ backgroundColor: 'hsl(var(--admin-surface))' }}>
           {error && (
-            <div className="mb-6 p-6 bg-destructive/10 border border-destructive/20 rounded-xl backdrop-blur-sm shadow-lg">
-              <p className="text-destructive font-medium">Error: {error}</p>
+            <div className="mb-6 p-6 border rounded-xl" 
+              style={{
+                backgroundColor: 'hsl(var(--admin-card))',
+                borderColor: 'hsl(var(--admin-border))'
+              }}>
+              <p style={{ color: 'hsl(var(--admin-text))' }}>Error: {error}</p>
               <button 
                 onClick={fetchAllUsers}
-                className="mt-3 text-sm text-destructive hover:underline font-medium"
+                className="mt-3 text-sm hover:underline"
+                style={{ color: 'hsl(var(--admin-accent-blue))' }}
               >
                 Try again
               </button>
@@ -102,21 +106,40 @@ export function PlatformAdminUserManagement() {
           )}
 
           {/* Enhanced Filters */}
-          <div className="flex flex-col sm:flex-row gap-6 mb-8 p-6 bg-gradient-to-r from-primary/5 to-secondary/5 rounded-xl border border-primary/10">
+          <div className="flex flex-col sm:flex-row gap-6 mb-8 p-6 rounded-xl border" 
+            style={{
+              backgroundColor: 'hsl(var(--admin-card))',
+              borderColor: 'hsl(var(--admin-border))'
+            }}>
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-primary/60" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5" 
+                style={{ color: 'hsl(var(--admin-text-muted))' }} />
               <Input
                 placeholder="Search users by name, email, or company..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 h-12 bg-white/70 border-primary/20 focus:border-primary shadow-lg backdrop-blur-sm"
+                className="pl-12 h-12 border"
+                style={{
+                  backgroundColor: 'hsl(var(--admin-background))',
+                  borderColor: 'hsl(var(--admin-border))',
+                  color: 'hsl(var(--admin-text))'
+                }}
               />
             </div>
             <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-full sm:w-64 h-12 bg-white/70 border-primary/20 shadow-lg backdrop-blur-sm">
+              <SelectTrigger className="w-full sm:w-64 h-12 border"
+                style={{
+                  backgroundColor: 'hsl(var(--admin-background))',
+                  borderColor: 'hsl(var(--admin-border))',
+                  color: 'hsl(var(--admin-text))'
+                }}>
                 <SelectValue placeholder="Filter by role" />
               </SelectTrigger>
-              <SelectContent className="bg-white/95 backdrop-blur-sm">
+              <SelectContent className="border"
+                style={{
+                  backgroundColor: 'hsl(var(--admin-surface))',
+                  borderColor: 'hsl(var(--admin-border))'
+                }}>
                 <SelectItem value="all">All Roles</SelectItem>
                 <SelectItem value="buyer">Buyers</SelectItem>
                 <SelectItem value="supplier">Suppliers</SelectItem>
@@ -126,63 +149,113 @@ export function PlatformAdminUserManagement() {
           </div>
 
           {/* Professional Users Table */}
-          <div className="rounded-xl border border-primary/10 shadow-elegant overflow-hidden bg-white/80 backdrop-blur-sm">
+          <div className="rounded-xl border overflow-hidden" 
+            style={{
+              backgroundColor: 'hsl(var(--admin-surface))',
+              borderColor: 'hsl(var(--admin-border))'
+            }}>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-gradient-primary">
-                    <th className="text-left p-6 font-semibold text-white">User</th>
-                    <th className="text-left p-6 font-semibold text-white">Company</th>
-                    <th className="text-left p-6 font-semibold text-white">Roles</th>
-                    <th className="text-left p-6 font-semibold text-white">Type</th>
-                    <th className="text-left p-6 font-semibold text-white">Activity</th>
-                    <th className="text-left p-6 font-semibold text-white">Joined</th>
-                    <th className="text-right p-6 font-semibold text-white">Actions</th>
+                  <tr style={{ backgroundColor: 'hsl(var(--admin-card))' }}>
+                    <th className="text-left p-6 font-semibold border-b" 
+                      style={{ 
+                        color: 'hsl(var(--admin-text))',
+                        borderColor: 'hsl(var(--admin-border))'
+                      }}>User</th>
+                    <th className="text-left p-6 font-semibold border-b" 
+                      style={{ 
+                        color: 'hsl(var(--admin-text))',
+                        borderColor: 'hsl(var(--admin-border))'
+                      }}>Company</th>
+                    <th className="text-left p-6 font-semibold border-b" 
+                      style={{ 
+                        color: 'hsl(var(--admin-text))',
+                        borderColor: 'hsl(var(--admin-border))'
+                      }}>Roles</th>
+                    <th className="text-left p-6 font-semibold border-b" 
+                      style={{ 
+                        color: 'hsl(var(--admin-text))',
+                        borderColor: 'hsl(var(--admin-border))'
+                      }}>Type</th>
+                    <th className="text-left p-6 font-semibold border-b" 
+                      style={{ 
+                        color: 'hsl(var(--admin-text))',
+                        borderColor: 'hsl(var(--admin-border))'
+                      }}>Activity</th>
+                    <th className="text-left p-6 font-semibold border-b" 
+                      style={{ 
+                        color: 'hsl(var(--admin-text))',
+                        borderColor: 'hsl(var(--admin-border))'
+                      }}>Joined</th>
+                    <th className="text-right p-6 font-semibold border-b" 
+                      style={{ 
+                        color: 'hsl(var(--admin-text))',
+                        borderColor: 'hsl(var(--admin-border))'
+                      }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredUsers.map((user, index) => (
-                    <tr key={user.id} className={`border-b border-primary/5 hover:bg-gradient-to-r hover:from-primary/5 hover:to-secondary/5 transition-all duration-300 ${index % 2 === 0 ? 'bg-white/50' : 'bg-primary/[0.02]'}`}>
+                    <tr key={user.id} className="border-b transition-all duration-300 hover:bg-[hsl(var(--admin-sidebar-accent))]"
+                      style={{ 
+                        borderColor: 'hsl(var(--admin-border))'
+                      }}>
                       <td className="p-6">
                         <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white font-bold text-lg">
+                          <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                            style={{ backgroundColor: 'hsl(var(--admin-accent-blue))' }}>
                             {user.full_name.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <div className="font-semibold text-lg">{user.full_name}</div>
-                            <div className="text-sm text-muted-foreground">{user.email}</div>
+                            <div className="font-semibold text-lg" style={{ color: 'hsl(var(--admin-text))' }}>
+                              {user.full_name}
+                            </div>
+                            <div className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                              {user.email}
+                            </div>
                           </div>
                         </div>
                       </td>
                       <td className="p-6">
-                        <div className="font-medium">{user.company_name || 'N/A'}</div>
+                        <div className="font-medium" style={{ color: 'hsl(var(--admin-text))' }}>
+                          {user.company_name || 'N/A'}
+                        </div>
                       </td>
                       <td className="p-6">
                         <div className="flex flex-wrap gap-2">
                           {user.roles.map((role) => (
-                            <Badge key={role} variant="outline" className="text-xs font-medium border-primary/20">
+                            <Badge key={role} variant="outline" className="text-xs font-medium border"
+                              style={{
+                                borderColor: 'hsl(var(--admin-border))',
+                                color: 'hsl(var(--admin-text))',
+                                backgroundColor: 'hsl(var(--admin-card))'
+                              }}>
                               {role}
                             </Badge>
                           ))}
                         </div>
                       </td>
                       <td className="p-6">
-                        <Badge className={`${getRoleColor(user.user_type)} font-medium`}>
+                        <Badge className="font-medium border"
+                          style={{
+                            borderColor: 'hsl(var(--admin-border))',
+                            color: 'white',
+                            backgroundColor: 'hsl(var(--admin-accent-blue))'
+                          }}>
                           {user.user_type}
                         </Badge>
                       </td>
                        <td className="p-6">
-                         <div className="text-sm">
-                           <div className="text-muted-foreground">
-                             {user.last_activity_date ? 
-                               `Last seen: ${format(new Date(user.last_activity_date), 'MMM dd')}` :
-                               'No recent activity'
-                             }
-                           </div>
+                         <div className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                           {user.last_activity_date ? 
+                             `Last seen: ${format(new Date(user.last_activity_date), 'MMM dd')}` :
+                             'No recent activity'
+                           }
                          </div>
                        </td>
                       <td className="p-6">
-                        <div className="text-sm font-medium">
+                        <div className="text-sm font-medium" style={{ color: 'hsl(var(--admin-text))' }}>
                           {format(new Date(user.registration_date), 'MMM dd, yyyy')}
                         </div>
                       </td>
@@ -192,27 +265,40 @@ export function PlatformAdminUserManagement() {
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              className="h-10 w-10 rounded-full hover:bg-primary/10 transition-colors duration-300"
+                              className="h-10 w-10 rounded-full transition-colors duration-300 hover:bg-[hsl(var(--admin-sidebar-accent))]"
+                              style={{ 
+                                color: 'hsl(var(--admin-text-muted))'
+                              }}
                             >
-                              <MoreHorizontal className="h-5 w-5 text-primary" />
+                              <MoreHorizontal className="h-5 w-5" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-white/95 backdrop-blur-sm border-primary/20">
+                          <DropdownMenuContent align="end" className="border"
+                            style={{
+                              backgroundColor: 'hsl(var(--admin-surface))',
+                              borderColor: 'hsl(var(--admin-border))'
+                            }}>
                             <DropdownMenuItem
                               onClick={() => {
                                 setSelectedUser(user);
                                 setShowRoleDialog(true);
                               }}
-                              className="hover:bg-primary/10"
+                              className="transition-colors hover:bg-[hsl(var(--admin-sidebar-accent))]"
+                              style={{ 
+                                color: 'hsl(var(--admin-text))'
+                              }}
                             >
-                              <Settings className="h-4 w-4 mr-3 text-primary" />
+                              <Settings className="h-4 w-4 mr-3" style={{ color: 'hsl(var(--admin-accent-blue))' }} />
                               Manage Roles
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handlePasswordReset(user.id)}
-                              className="hover:bg-primary/10"
+                              className="transition-colors hover:bg-[hsl(var(--admin-sidebar-accent))]"
+                              style={{ 
+                                color: 'hsl(var(--admin-text))'
+                              }}
                             >
-                              <RotateCcw className="h-4 w-4 mr-3 text-primary" />
+                              <RotateCcw className="h-4 w-4 mr-3" style={{ color: 'hsl(var(--admin-accent-blue))' }} />
                               Reset Password
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -226,8 +312,8 @@ export function PlatformAdminUserManagement() {
           </div>
 
           {filteredUsers.length === 0 && (
-            <div className="text-center py-16 text-muted-foreground">
-              <Users className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
+            <div className="text-center py-16" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+              <Users className="h-16 w-16 mx-auto mb-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
               <p className="text-lg font-medium">No users found matching the current criteria.</p>
             </div>
           )}
@@ -236,11 +322,18 @@ export function PlatformAdminUserManagement() {
 
       {/* Professional Role Management Dialog */}
       <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
-        <DialogContent className="bg-gradient-to-br from-white to-primary/5 border-primary/20 shadow-elegant">
+        <DialogContent className="border" style={{
+          backgroundColor: 'hsl(var(--admin-surface))',
+          borderColor: 'hsl(var(--admin-border))'
+        }}>
           <DialogHeader className="space-y-4">
-            <DialogTitle className="text-2xl font-bold text-primary">Manage User Roles</DialogTitle>
-            <DialogDescription className="text-base">
-              Update roles for <span className="font-semibold text-primary">{selectedUser?.full_name}</span> ({selectedUser?.email})
+            <DialogTitle className="text-2xl font-bold" style={{ color: 'hsl(var(--admin-text))' }}>
+              Manage User Roles
+            </DialogTitle>
+            <DialogDescription className="text-base" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+              Update roles for <span className="font-semibold" style={{ color: 'hsl(var(--admin-accent-blue))' }}>
+                {selectedUser?.full_name}
+              </span> ({selectedUser?.email})
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6">
@@ -248,7 +341,12 @@ export function PlatformAdminUserManagement() {
               <Button
                 variant="outline"
                 onClick={() => handleRoleUpdate('buyer')}
-                className="justify-start h-12 border-blue-accent/30 hover:bg-blue-accent/10 hover:border-blue-accent transition-all duration-300"
+                className="justify-start h-12 border transition-all duration-300 hover:bg-[hsl(var(--admin-sidebar-accent))]"
+                style={{
+                  borderColor: 'hsl(var(--admin-border))',
+                  color: 'hsl(var(--admin-text))',
+                  backgroundColor: 'hsl(var(--admin-card))'
+                }}
               >
                 <Users className="h-4 w-4 mr-2" />
                 Buyer
@@ -256,7 +354,12 @@ export function PlatformAdminUserManagement() {
               <Button
                 variant="outline"
                 onClick={() => handleRoleUpdate('supplier')}
-                className="justify-start h-12 border-green-accent/30 hover:bg-green-accent/10 hover:border-green-accent transition-all duration-300"
+                className="justify-start h-12 border transition-all duration-300 hover:bg-[hsl(var(--admin-sidebar-accent))]"
+                style={{
+                  borderColor: 'hsl(var(--admin-border))',
+                  color: 'hsl(var(--admin-text))',
+                  backgroundColor: 'hsl(var(--admin-card))'
+                }}
               >
                 <Database className="h-4 w-4 mr-2" />
                 Supplier
@@ -264,7 +367,12 @@ export function PlatformAdminUserManagement() {
               <Button
                 variant="outline"
                 onClick={() => handleRoleUpdate('admin')}
-                className="justify-start h-12 border-purple-accent/30 hover:bg-purple-accent/10 hover:border-purple-accent transition-all duration-300"
+                className="justify-start h-12 border transition-all duration-300 hover:bg-[hsl(var(--admin-sidebar-accent))]"
+                style={{
+                  borderColor: 'hsl(var(--admin-border))',
+                  color: 'hsl(var(--admin-text))',
+                  backgroundColor: 'hsl(var(--admin-card))'
+                }}
               >
                 <Shield className="h-4 w-4 mr-2" />
                 Admin
@@ -272,7 +380,12 @@ export function PlatformAdminUserManagement() {
               <Button
                 variant="outline"
                 onClick={() => handleRoleUpdate('buyer_admin')}
-                className="justify-start h-12 border-primary/30 hover:bg-primary/10 hover:border-primary transition-all duration-300"
+                className="justify-start h-12 border transition-all duration-300 hover:bg-[hsl(var(--admin-sidebar-accent))]"
+                style={{
+                  borderColor: 'hsl(var(--admin-border))',
+                  color: 'hsl(var(--admin-text))',
+                  backgroundColor: 'hsl(var(--admin-card))'
+                }}
               >
                 <Settings className="h-4 w-4 mr-2" />
                 Buyer + Admin
@@ -280,7 +393,12 @@ export function PlatformAdminUserManagement() {
               <Button
                 variant="outline"
                 onClick={() => handleRoleUpdate('supplier_admin')}
-                className="justify-start h-12 border-secondary/30 hover:bg-secondary/10 hover:border-secondary transition-all duration-300"
+                className="justify-start h-12 border transition-all duration-300 hover:bg-[hsl(var(--admin-sidebar-accent))]"
+                style={{
+                  borderColor: 'hsl(var(--admin-border))',
+                  color: 'hsl(var(--admin-text))',
+                  backgroundColor: 'hsl(var(--admin-card))'
+                }}
               >
                 <Settings className="h-4 w-4 mr-2" />
                 Supplier + Admin

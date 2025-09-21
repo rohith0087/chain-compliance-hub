@@ -38,17 +38,24 @@ export const LogoUploadWidget: React.FC<LogoUploadWidgetProps> = ({
         throw new Error('File size must be less than 5MB');
       }
 
-      // Create file path
+      // Create file path with timestamp to avoid caching issues
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/logo.${fileExt}`;
+      const timestamp = Date.now();
+      const fileName = `${user.id}/logo-${timestamp}.${fileExt}`;
 
       // Delete existing logo if it exists
       if (currentLogoUrl) {
-        const oldPath = currentLogoUrl.split('/').pop();
-        if (oldPath) {
+        try {
+          // Extract the old file path from the URL
+          const urlParts = currentLogoUrl.split('/');
+          const oldFileName = urlParts[urlParts.length - 1];
+          const oldPath = `${user.id}/${oldFileName}`;
+          
           await supabase.storage
             .from('company-logos')
-            .remove([`${user.id}/${oldPath}`]);
+            .remove([oldPath]);
+        } catch (error) {
+          console.warn('Failed to delete old logo:', error);
         }
       }
 
@@ -61,13 +68,14 @@ export const LogoUploadWidget: React.FC<LogoUploadWidgetProps> = ({
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
+      // Get public URL with cache busting
       const { data: { publicUrl } } = supabase.storage
         .from('company-logos')
         .getPublicUrl(fileName);
 
-      setPreviewUrl(publicUrl);
-      onLogoUpdate(publicUrl);
+      const newLogoUrl = `${publicUrl}?t=${timestamp}`;
+      setPreviewUrl(newLogoUrl);
+      onLogoUpdate(newLogoUrl);
 
       toast({
         title: "Success",
@@ -90,12 +98,14 @@ export const LogoUploadWidget: React.FC<LogoUploadWidgetProps> = ({
     try {
       setUploading(true);
 
-      // Delete from storage
-      const fileName = currentLogoUrl.split('/').pop();
+      // Extract the file path from the URL
+      const urlParts = currentLogoUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1].split('?')[0]; // Remove query parameters
       if (fileName) {
+        const filePath = `${user.id}/${fileName}`;
         const { error } = await supabase.storage
           .from('company-logos')
-          .remove([`${user.id}/${fileName}`]);
+          .remove([filePath]);
 
         if (error) throw error;
       }

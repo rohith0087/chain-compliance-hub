@@ -4,35 +4,79 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Shield, CheckCircle, AlertTriangle } from "lucide-react";
+import { Loader2, Shield, CheckCircle, AlertTriangle, UserPlus, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function PlatformAdminBootstrap() {
-  const [isCreating, setIsCreating] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [step, setStep] = useState<'initial' | 'signup' | 'finalize' | 'success'>('initial');
+  const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     email: "",
     fullName: "",
-    tempPassword: "ChangeMe2024!"
+    password: ""
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleInitialStep = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.email || !formData.fullName) {
-      setError('Please fill in all fields');
+      setError('Please fill in email and full name');
       return;
     }
 
-    setIsCreating(true);
+    setStep('signup');
+    setError(null);
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.password || formData.password.length < 8) {
+      setError('Password must be at least 8 characters long');
+      return;
+    }
+
+    setIsProcessing(true);
     setError(null);
 
     try {
-      const { data, error } = await supabase.rpc('create_bootstrap_super_admin', {
-        p_email: formData.email,
-        p_full_name: formData.fullName,
-        p_temp_password: formData.tempPassword
+      // Create auth user first
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/platform-admin/bootstrap`
+        }
+      });
+
+      if (authError) {
+        setError(authError.message);
+        return;
+      }
+
+      if (!authData.user) {
+        setError('Failed to create user account');
+        return;
+      }
+
+      setStep('finalize');
+    } catch (err) {
+      console.error('Error creating user:', err);
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleFinalize = async () => {
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      // Accept bootstrap admin role
+      const { data, error } = await supabase.rpc('accept_bootstrap_admin', {
+        p_full_name: formData.fullName
       });
 
       if (error) {
@@ -40,22 +84,22 @@ export default function PlatformAdminBootstrap() {
         return;
       }
 
-      const result = data as { success: boolean; error?: string; temp_password?: string };
+      const result = data as { success: boolean; error?: string };
       if (!result?.success) {
         setError(result?.error || 'Failed to create bootstrap admin');
         return;
       }
 
-      setSuccess(true);
+      setStep('success');
     } catch (err) {
-      console.error('Error creating bootstrap admin:', err);
+      console.error('Error finalizing bootstrap admin:', err);
       setError('An unexpected error occurred. Please try again.');
     } finally {
-      setIsCreating(false);
+      setIsProcessing(false);
     }
   };
 
-  if (success) {
+  if (step === 'success') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="w-full max-w-md">
@@ -68,22 +112,137 @@ export default function PlatformAdminBootstrap() {
           </CardHeader>
           <CardContent className="space-y-4">
             <Alert>
-              <AlertTriangle className="h-4 w-4" />
+              <CheckCircle className="h-4 w-4" />
               <AlertDescription>
-                <strong>Important:</strong> Please change your password immediately after logging in.
+                <strong>Success!</strong> You can now use the platform admin dashboard.
                 <br />
                 <br />
                 <strong>Email:</strong> {formData.email}
-                <br />
-                <strong>Temp Password:</strong> {formData.tempPassword}
               </AlertDescription>
             </Alert>
             <Button 
               className="w-full" 
-              onClick={() => window.location.href = '/platform-admin/login'}
+              onClick={() => window.location.href = '/platform-admin/dashboard'}
             >
-              Go to Platform Admin Login
+              Go to Platform Admin Dashboard
             </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (step === 'finalize') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <UserPlus className="h-12 w-12 text-primary mx-auto mb-4" />
+            <CardTitle>Finalize Bootstrap Admin</CardTitle>
+            <CardDescription>
+              Complete the setup by accepting the platform admin role.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert>
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>
+                User account created successfully for <strong>{formData.email}</strong>.
+                Click below to complete the bootstrap admin setup.
+              </AlertDescription>
+            </Alert>
+
+            {error && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <Button onClick={handleFinalize} className="w-full" disabled={isProcessing}>
+              {isProcessing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Complete Bootstrap Admin Setup
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (step === 'signup') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <UserPlus className="h-12 w-12 text-primary mx-auto mb-4" />
+            <CardTitle>Create Admin Account</CardTitle>
+            <CardDescription>
+              Create a secure password for {formData.email}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSignup} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  value={formData.fullName}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Create a secure password"
+                  value={formData.password}
+                  onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                  required
+                  minLength={8}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Must be at least 8 characters long
+                </p>
+              </div>
+
+              {error && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setStep('initial')}
+                  className="flex-1"
+                >
+                  Back
+                </Button>
+                <Button type="submit" className="flex-1" disabled={isProcessing}>
+                  {isProcessing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Create Account
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+            </form>
           </CardContent>
         </Card>
       </div>
@@ -101,7 +260,7 @@ export default function PlatformAdminBootstrap() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleInitialStep} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
               <Input
@@ -126,20 +285,6 @@ export default function PlatformAdminBootstrap() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="tempPassword">Temporary Password</Label>
-              <Input
-                id="tempPassword"
-                type="text"
-                value={formData.tempPassword}
-                onChange={(e) => setFormData(prev => ({ ...prev, tempPassword: e.target.value }))}
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                This password MUST be changed immediately after first login
-              </p>
-            </div>
-
             {error && (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
@@ -155,9 +300,9 @@ export default function PlatformAdminBootstrap() {
               </AlertDescription>
             </Alert>
 
-            <Button type="submit" className="w-full" disabled={isCreating}>
-              {isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Create Bootstrap Admin
+            <Button type="submit" className="w-full">
+              Continue
+              <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </form>
 

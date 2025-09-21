@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Crown, CreditCard, AlertTriangle } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useNavigate } from 'react-router-dom';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface SubscriptionStatusWidgetProps {
   compact?: boolean;
@@ -37,25 +38,41 @@ export function SubscriptionStatusWidget({ compact = false }: SubscriptionStatus
     subscriptionData.plan_type.charAt(0).toUpperCase() + subscriptionData.plan_type.slice(1) : 'Free';
 
   if (compact) {
+    const tooltipText = isEnterprise 
+      ? "You have unlimited credits" 
+      : `${subscriptionData?.credits || 0} credits remaining`;
+
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-lg border">
-        {!isEnterprise ? (
-          <>
-            <CreditCard className="h-4 w-4 text-primary" />
-            <div className="flex items-center gap-1">
-              <span className="text-sm font-medium text-foreground">
-                {subscriptionData?.credits || 0}
-              </span>
-              <span className="text-xs text-muted-foreground">credits</span>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div 
+              className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-lg border cursor-pointer hover:bg-muted/70 transition-colors"
+              onClick={() => navigate('/subscription')}
+            >
+              {!isEnterprise ? (
+                <>
+                  <CreditCard className="h-4 w-4 text-primary" />
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm font-medium text-foreground">
+                      {subscriptionData?.credits || 0}
+                    </span>
+                    <span className="text-xs text-muted-foreground">credits</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Crown className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium text-foreground">Unlimited</span>
+                </>
+              )}
             </div>
-          </>
-        ) : (
-          <>
-            <Crown className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-foreground">Unlimited</span>
-          </>
-        )}
-      </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{tooltipText}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   }
 

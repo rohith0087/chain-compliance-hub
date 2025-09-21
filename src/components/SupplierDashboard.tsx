@@ -369,59 +369,63 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
 
             {/* Stats Overview */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <Card 
-                className="cursor-pointer hover:shadow-md transition-all duration-200 hover:scale-105"
-                onClick={() => handleNotificationNavigation('requests', undefined)}
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">{t('supplier:stats.pendingRequests')}</CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.pendingRequests}</div>
-                  <p className="text-xs text-muted-foreground">{t('supplier:stats.awaitingSubmission')}</p>
+              <Card className="group overflow-hidden">
+                <CardContent className="p-6" onClick={() => handleNotificationNavigation('requests', undefined)}>
+                  <div className="flex items-center justify-between cursor-pointer">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">{t('supplier:stats.pendingRequests')}</p>
+                      <p className="text-3xl font-bold text-yellow-500">{stats.pendingRequests}</p>
+                      <p className="text-xs text-muted-foreground">{t('supplier:stats.awaitingSubmission')}</p>
+                    </div>
+                    <div className="h-12 w-12 rounded-xl bg-yellow-500/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                      <Clock className="h-6 w-6 text-yellow-500" />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
               
-              <Card 
-                className="cursor-pointer hover:shadow-md transition-all duration-200 hover:scale-105"
-                onClick={() => handleNotificationNavigation('compliance', undefined)}
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">{t('supplier:stats.completionRate')}</CardTitle>
-                  <CheckCircle className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{completionRate}%</div>
-                  <Progress value={completionRate} className="mt-2" />
+              <Card className="group overflow-hidden">
+                <CardContent className="p-6" onClick={() => handleNotificationNavigation('compliance', undefined)}>
+                  <div className="flex items-center justify-between cursor-pointer">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">{t('supplier:stats.completionRate')}</p>
+                      <p className="text-3xl font-bold bg-gradient-to-r from-green-accent to-emerald-accent bg-clip-text text-transparent">{completionRate}%</p>
+                      <Progress value={completionRate} className="mt-2 h-2" />
+                    </div>
+                    <div className="h-12 w-12 rounded-xl bg-green-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                      <CheckCircle className="h-6 w-6 text-green-accent" />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
               
-              <Card 
-                className="cursor-pointer hover:shadow-md transition-all duration-200 hover:scale-105"
-                onClick={() => handleNotificationNavigation('documents', undefined)}
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">{t('supplier:stats.documentsSubmitted')}</CardTitle>
-                  <Upload className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.documentsSubmitted}</div>
-                  <p className="text-xs text-muted-foreground">{t('supplier:stats.totalSubmitted')}</p>
+              <Card className="group overflow-hidden">
+                <CardContent className="p-6" onClick={() => handleNotificationNavigation('documents', undefined)}>
+                  <div className="flex items-center justify-between cursor-pointer">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">{t('supplier:stats.documentsSubmitted')}</p>
+                      <p className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">{stats.documentsSubmitted}</p>
+                      <p className="text-xs text-muted-foreground">{t('supplier:stats.totalSubmitted')}</p>
+                    </div>
+                    <div className="h-12 w-12 rounded-xl bg-blue-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                      <Upload className="h-6 w-6 text-blue-accent" />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
               
-              <Card 
-                className="cursor-pointer hover:shadow-md transition-all duration-200 hover:scale-105"
-                onClick={() => handleNotificationNavigation('buyers', undefined)}
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">{t('supplier:stats.connectedBuyers')}</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{connectedBuyers.length}</div>
-                  <p className="text-xs text-muted-foreground">{t('supplier:stats.activeConnections')}</p>
+              <Card className="group overflow-hidden">
+                <CardContent className="p-6" onClick={() => handleNotificationNavigation('buyers', undefined)}>
+                  <div className="flex items-center justify-between cursor-pointer">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">{t('supplier:stats.connectedBuyers')}</p>
+                      <p className="text-3xl font-bold bg-gradient-to-r from-purple-accent to-primary bg-clip-text text-transparent">{connectedBuyers.length}</p>
+                      <p className="text-xs text-muted-foreground">{t('supplier:stats.activeConnections')}</p>
+                    </div>
+                    <div className="h-12 w-12 rounded-xl bg-purple-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                      <Users className="h-6 w-6 text-purple-accent" />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -444,14 +448,14 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
                       {documentRequests.slice(0, 5).map((request) => (
                         <div 
                           key={request.id} 
-                          className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors duration-200"
+                          className="flex items-center justify-between p-4 border border-border/50 rounded-xl cursor-pointer hover:bg-gradient-glass backdrop-blur-sm hover:shadow-modern transition-all duration-200 hover:scale-[1.02]"
                           onClick={() => handleNotificationNavigation('requests', request.id)}
                         >
                           <div className="flex items-center space-x-3">
                             {getStatusIcon(request.status)}
                             <div>
                               <p className="font-medium">{request.title}</p>
-                              <p className="text-sm text-gray-500">{request.buyers?.company_name}</p>
+                              <p className="text-sm text-muted-foreground">{request.buyers?.company_name}</p>
                             </div>
                           </div>
                           <Badge className={getStatusColor(request.status)}>
@@ -480,19 +484,19 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
                       {connectedBuyers.slice(0, 5).map((connection) => (
                         <div 
                           key={connection.id} 
-                          className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors duration-200"
+                          className="flex items-center justify-between p-4 border border-border/50 rounded-xl cursor-pointer hover:bg-gradient-glass backdrop-blur-sm hover:shadow-modern transition-all duration-200 hover:scale-[1.02]"
                           onClick={() => handleNotificationNavigation('buyers', connection.id)}
                         >
                           <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                              <Building2 className="w-5 h-5 text-blue-600" />
+                            <div className="w-12 h-12 bg-gradient-primary/10 rounded-xl flex items-center justify-center">
+                              <Building2 className="w-6 h-6 text-primary" />
                             </div>
                             <div>
                               <p className="font-medium">{connection.buyers?.company_name}</p>
-                              <p className="text-sm text-gray-500">{connection.buyers?.industry}</p>
+                              <p className="text-sm text-muted-foreground">{connection.buyers?.industry}</p>
                             </div>
                           </div>
-                          <Badge variant="outline">
+                          <Badge variant="outline" className="bg-gradient-glass border-border/50">
                             {t(`supplier:connectionStatus.${connection.unifiedStatus || 'pending'}`)}
                           </Badge>
                         </div>

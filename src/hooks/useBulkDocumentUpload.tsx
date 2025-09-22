@@ -60,21 +60,58 @@ export const useBulkDocumentUpload = () => {
         errors: []
       });
 
+      // Upload files to storage first
+      const uploadPromises = files.map(async (f, index) => {
+        const fileName = `${Date.now()}-${f.file.name}`;
+        const filePath = `buyer-${buyerId}/supplier-${supplierId}/${fileName}`;
+        
+        // Upload file to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('compliance-documents')
+          .upload(filePath, f.file, {
+            cacheControl: '3600',
+            upsert: false,
+            metadata: {
+              documentType: f.documentType,
+              documentName: f.documentName,
+              category: f.category || 'compliance',
+              uploadedBy: 'buyer',
+              originalFileName: f.file.name
+            }
+          });
+
+        if (uploadError) {
+          console.error(`Error uploading file ${f.file.name}:`, uploadError);
+          throw uploadError;
+        }
+
+        // Update progress
+        setProgress(prev => prev ? { 
+          ...prev, 
+          processedFiles: prev.processedFiles + 1 
+        } : null);
+
+        return {
+          fileName: f.file.name,
+          fileSize: f.file.size,
+          mimeType: f.file.type,
+          documentType: f.documentType,
+          documentName: f.documentName,
+          category: f.category,
+          description: f.description,
+          filePath: uploadData.path
+        };
+      });
+
+      const fileData = await Promise.all(uploadPromises);
+
       // Process files using edge function
       const { data, error } = await supabase.functions.invoke('bulk-document-processor', {
         body: {
           bulkUploadId: bulkUpload.id,
           supplierId,
           buyerId,
-          files: files.map(f => ({
-            fileName: f.file.name,
-            fileSize: f.file.size,
-            mimeType: f.file.type,
-            documentType: f.documentType,
-            documentName: f.documentName,
-            category: f.category,
-            description: f.description
-          })),
+          files: fileData,
           notes
         }
       });
@@ -82,8 +119,8 @@ export const useBulkDocumentUpload = () => {
       if (error) throw error;
 
       toast({
-        title: "Bulk Upload Started",
-        description: `Processing ${files.length} documents for supplier`,
+        title: "Bulk Upload Completed",
+        description: `Successfully processed ${fileData.length} documents`,
       });
 
       return bulkUpload.id;

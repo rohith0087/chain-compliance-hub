@@ -18,6 +18,7 @@ interface BulkUploadRequest {
     documentName: string;
     category?: string;
     description?: string;
+    filePath?: string;
   }[];
   notes?: string;
 }
@@ -68,7 +69,7 @@ serve(async (req) => {
           continue;
         }
 
-        // Create document upload entry (without actual file for now - buyer will upload separately)
+        // Create document upload entry with actual file path
         const { data: docUpload, error: uploadError } = await supabase
           .from('document_uploads')
           .insert({
@@ -76,10 +77,10 @@ serve(async (req) => {
             uploader_id: null, // Will be set when actual file is uploaded
             document_name: fileInfo.documentName,
             file_name: fileInfo.fileName,
-            file_path: `pre-populated/${bulkUploadId}/${fileInfo.fileName}`, // Placeholder path for pre-populated docs
+            file_path: fileInfo.filePath || `pre-populated/${bulkUploadId}/${fileInfo.fileName}`,
             file_size: fileInfo.fileSize,
             mime_type: fileInfo.mimeType,
-            status: 'submitted', // Change from pending_review to submitted for pre-populated docs
+            status: 'submitted',
             uploaded_by_buyer: true,
             original_uploader_type: 'buyer',
             buyer_notes: notes,
@@ -87,7 +88,8 @@ serve(async (req) => {
             metadata: {
               bulk_upload_id: bulkUploadId,
               pre_populated: true,
-              original_file_info: fileInfo
+              original_file_info: fileInfo,
+              uploaded_to_storage: !!fileInfo.filePath
             }
           })
           .select()

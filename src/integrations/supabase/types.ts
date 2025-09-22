@@ -1412,6 +1412,7 @@ export type Database = {
           file_path: string
           file_size: number | null
           id: string
+          metadata: Json | null
           mime_type: string | null
           original_uploader_type: string | null
           pre_populated_at: string | null
@@ -1433,6 +1434,7 @@ export type Database = {
           file_path: string
           file_size?: number | null
           id?: string
+          metadata?: Json | null
           mime_type?: string | null
           original_uploader_type?: string | null
           pre_populated_at?: string | null
@@ -1454,6 +1456,7 @@ export type Database = {
           file_path?: string
           file_size?: number | null
           id?: string
+          metadata?: Json | null
           mime_type?: string | null
           original_uploader_type?: string | null
           pre_populated_at?: string | null

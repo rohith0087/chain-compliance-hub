@@ -339,9 +339,9 @@ async function processDocumentRequest(request: DocumentRequest) {
   }
 }
 
-async function checkExpiringDocuments() {
+async function checkExpiringDocuments(company_id?: string, company_type?: string) {
   try {
-    console.log('Checking for expiring documents...');
+    console.log(`Checking for expiring documents for company ${company_id} (${company_type})...`);
 
     // Find documents expiring in the next 30-60 days
     const thirtyDaysFromNow = new Date();
@@ -350,7 +350,7 @@ async function checkExpiringDocuments() {
     const sixtyDaysFromNow = new Date();
     sixtyDaysFromNow.setDate(sixtyDaysFromNow.getDate() + 60);
 
-    const { data: expiringDocs, error } = await supabase
+    let expiringQuery = supabase
       .from('document_uploads')
       .select(`
         id, 
@@ -367,6 +367,15 @@ async function checkExpiringDocuments() {
       .gte('expiration_date', thirtyDaysFromNow.toISOString())
       .lte('expiration_date', sixtyDaysFromNow.toISOString())
       .eq('status', 'approved');
+
+    // Filter by company if specified
+    if (company_id && company_type === 'supplier') {
+      expiringQuery = expiringQuery.eq('document_requests.supplier_id', company_id);
+    } else if (company_id && company_type === 'buyer') {
+      expiringQuery = expiringQuery.eq('document_requests.buyer_id', company_id);
+    }
+
+    const { data: expiringDocs, error } = await expiringQuery;
 
     if (error) {
       console.error('Error fetching expiring documents:', error);
@@ -418,17 +427,32 @@ serve(async (req) => {
   }
 
   try {
-    const { action, data } = await req.json();
+    const requestBody = await req.json();
+    console.log('Supplier agent received request:', requestBody);
+    
+    // Handle both old format ({ action, data }) and new format ({ action, company_id, company_type })
+    const { action, data, company_id, company_type } = requestBody;
 
     switch (action) {
       case 'process_requests':
-        // Get pending document requests for suppliers
-        const { data: requests, error } = await supabase
+        // Build query with optional company filtering
+        let requestsQuery = supabase
           .from('document_requests')
           .select('*')
           .eq('status', 'pending')
           .order('created_at', { ascending: true })
           .limit(10);
+
+        // If company_id and company_type are provided, filter by them
+        if (company_id && company_type === 'supplier') {
+          requestsQuery = requestsQuery.eq('supplier_id', company_id);
+        } else if (company_id && company_type === 'buyer') {
+          requestsQuery = requestsQuery.eq('buyer_id', company_id);
+        }
+
+        const { data: requests, error } = await requestsQuery;
+
+        console.log(`Found ${requests?.length || 0} pending requests for company ${company_id} (${company_type})`);
 
         if (!error && requests) {
           for (const request of requests) {
@@ -438,7 +462,12 @@ serve(async (req) => {
         break;
 
       case 'check_expiring':
-        await checkExpiringDocuments();
+        // Filter expiring documents by company if specified
+        if (company_id && company_type) {
+          await checkExpiringDocuments(company_id, company_type);
+        } else {
+          await checkExpiringDocuments();
+        }
         break;
 
       case 'process_single':
@@ -463,14 +492,42 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ 
+        success: true, 
+        action_performed: action,
+        company_id: company_id,
+        company_type: company_type,
+        message: `Supplier agent ${action} completed successfully`
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('Supplier agent error:', error);
+    
+    await logAgentActivity(
+      'agent_error',
+      'unknown',
+      'system',
+      { 
+        error: error.message,
+        action,
+        company_id,
+        company_type
+      },
+      false,
+      undefined,
+      error.message
+    );
+
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        success: false,
+        error: error.message,
+        action,
+        company_id,
+        company_type
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

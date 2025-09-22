@@ -483,17 +483,39 @@ serve(async (req) => {
   }
 
   try {
-    const { action, data } = await req.json();
+    const requestBody = await req.json();
+    console.log('Buyer agent received request:', requestBody);
+    
+    // Handle both old format ({ action, data }) and new format ({ action, company_id, company_type })
+    const { action, data, company_id, company_type } = requestBody;
 
     switch (action) {
       case 'process_uploads':
-        // Get pending document uploads
-        const { data: uploads, error } = await supabase
+        // Build query with optional company filtering
+        let uploadsQuery = supabase
           .from('document_uploads')
-          .select('*')
+          .select(`
+            *,
+            document_requests!inner(
+              buyer_id,
+              supplier_id,
+              document_type
+            )
+          `)
           .eq('status', 'pending_review')
           .order('created_at', { ascending: true })
           .limit(10);
+
+        // If company_id and company_type are provided, filter by them
+        if (company_id && company_type === 'buyer') {
+          uploadsQuery = uploadsQuery.eq('document_requests.buyer_id', company_id);
+        } else if (company_id && company_type === 'supplier') {
+          uploadsQuery = uploadsQuery.eq('document_requests.supplier_id', company_id);
+        }
+
+        const { data: uploads, error } = await uploadsQuery;
+
+        console.log(`Found ${uploads?.length || 0} pending uploads for company ${company_id} (${company_type})`);
 
         if (!error && uploads) {
           for (const upload of uploads) {
@@ -534,14 +556,42 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ 
+        success: true, 
+        action_performed: action,
+        company_id: company_id,
+        company_type: company_type,
+        message: `Buyer agent ${action} completed successfully`
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('Buyer agent error:', error);
+    
+    await logAgentActivity(
+      'agent_error',
+      'unknown',
+      'system',
+      { 
+        error: error.message,
+        action,
+        company_id,
+        company_type
+      },
+      false,
+      undefined,
+      error.message
+    );
+
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        success: false,
+        error: error.message,
+        action,
+        company_id,
+        company_type
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

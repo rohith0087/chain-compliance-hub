@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,12 +7,13 @@ import {
   Filter,
   RefreshCw
 } from 'lucide-react';
-import DocumentsFilter from './DocumentsFilter';
-import DocumentCard from './DocumentCard';
+import EnhancedDocumentsFilter from './EnhancedDocumentsFilter';
+import DocumentCardWithSelection from './DocumentCardWithSelection';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { DocumentLinkModal } from './DocumentLinkModal';
 import { resolveStoragePath } from '@/utils/storagePath';
+
 interface BuyerDocumentsManagerProps {
   documents: any[];
   onApprove: (documentId: string) => Promise<void>;
@@ -38,26 +38,132 @@ const BuyerDocumentsManager = ({
     documentType: '',
     supplier: '',
     expirationStatus: '',
-    dateRange: ''
+    dateRange: '',
+    uploadDateRange: '',
+    specificYear: ''
   });
   const [downloading, setDownloading] = useState<string | null>(null);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(new Set());
+  const [isBulkDownloading, setIsBulkDownloading] = useState(false);
   const { toast } = useToast();
 
-  // Filter documents based on current filters
+  // Enhanced filter logic with new filter options
   const filteredDocuments = documents.filter(doc => {
-    const matchesSearch = !filters.search || 
-      doc.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-      doc.document_type.toLowerCase().includes(filters.search.toLowerCase()) ||
-      doc.suppliers?.company_name?.toLowerCase().includes(filters.search.toLowerCase());
+    // Search filter
+    const searchTerm = filters.search.toLowerCase();
+    const matchesSearch = !searchTerm || 
+      doc.title?.toLowerCase().includes(searchTerm) ||
+      doc.document_type.toLowerCase().includes(searchTerm) ||
+      doc.category?.toLowerCase().includes(searchTerm) ||
+      doc.suppliers?.company_name?.toLowerCase().includes(searchTerm);
 
+    // Status filter
     const matchesStatus = !filters.status || doc.status === filters.status;
+
+    // Category filter
     const matchesCategory = !filters.category || doc.category === filters.category;
+
+    // Document type filter
     const matchesDocumentType = !filters.documentType || doc.document_type === filters.documentType;
 
-    return matchesSearch && matchesStatus && matchesCategory && matchesDocumentType;
+    // Supplier filter
+    const matchesSupplier = !filters.supplier || doc.supplier_id === filters.supplier;
+
+    // Upload date range filter
+    let matchesUploadDateRange = true;
+    if (filters.uploadDateRange) {
+      const docDate = new Date(doc.created_at);
+      const now = new Date();
+      
+      switch (filters.uploadDateRange) {
+        case 'last_7_days':
+          matchesUploadDateRange = docDate >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'last_30_days':
+          matchesUploadDateRange = docDate >= new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case 'last_90_days':
+          matchesUploadDateRange = docDate >= new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+        case 'this_year':
+          matchesUploadDateRange = docDate.getFullYear() === now.getFullYear();
+          break;
+        default:
+          matchesUploadDateRange = true;
+      }
+    }
+
+    // Specific year filter
+    let matchesSpecificYear = true;
+    if (filters.specificYear) {
+      const docDate = new Date(doc.created_at);
+      const docYear = docDate.getFullYear();
+      
+      switch (filters.specificYear) {
+        case '2025':
+          matchesSpecificYear = docYear === 2025;
+          break;
+        case '2024':
+          matchesSpecificYear = docYear === 2024;
+          break;
+        case '2023':
+          matchesSpecificYear = docYear === 2023;
+          break;
+        case '2024-2025':
+          matchesSpecificYear = docYear === 2024 || docYear === 2025;
+          break;
+        case '2023-2024':
+          matchesSpecificYear = docYear === 2023 || docYear === 2024;
+          break;
+        default:
+          matchesSpecificYear = true;
+      }
+    }
+
+    // Expiration status filter
+    let matchesExpirationStatus = true;
+    if (filters.expirationStatus) {
+      const upload = doc.document_uploads?.[0];
+      if (upload?.expiration_date) {
+        const expirationDate = new Date(upload.expiration_date);
+        const now = new Date();
+        const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        
+        switch (filters.expirationStatus) {
+          case 'expiring_soon':
+            matchesExpirationStatus = expirationDate <= thirtyDaysFromNow && expirationDate >= now;
+            break;
+          case 'expired':
+            matchesExpirationStatus = expirationDate < now;
+            break;
+          case 'valid':
+            matchesExpirationStatus = expirationDate >= now;
+            break;
+          default:
+            matchesExpirationStatus = true;
+        }
+      }
+    }
+
+    return matchesSearch && matchesStatus && matchesCategory && 
+           matchesDocumentType && matchesSupplier && matchesUploadDateRange && 
+           matchesSpecificYear && matchesExpirationStatus;
   });
+
+  // Create available suppliers list for filter
+  const availableSuppliers = Array.from(
+    new Map(
+      documents
+        .filter(doc => doc.suppliers)
+        .map(doc => [doc.suppliers.id, {
+          id: doc.suppliers.id,
+          company_name: doc.suppliers.company_name,
+          documentCount: documents.filter(d => d.suppliers?.id === doc.suppliers.id).length
+        }])
+    ).values()
+  );
 
   const handleView = async (doc: any) => {
     console.log('View document:', doc.id);
@@ -138,6 +244,7 @@ const BuyerDocumentsManager = ({
       });
     }
   };
+
   const handleDownload = async (doc: any) => {
     console.log('Download document:', doc.id);
     console.log('Document uploads:', doc.document_uploads);
@@ -246,6 +353,141 @@ const BuyerDocumentsManager = ({
     setSelectedDocument(doc);
     setLinkModalOpen(true);
   };
+
+  // Bulk selection functions
+  const handleSelectAll = () => {
+    const newSelection = new Set<string>();
+    filteredDocuments.forEach(doc => {
+      const upload = doc.document_uploads?.[0];
+      if (upload?.file_path) { // Only select documents with files
+        newSelection.add(doc.id);
+      }
+    });
+    setSelectedDocuments(newSelection);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedDocuments(new Set());
+  };
+
+  const handleDocumentSelectionChange = (documentId: string, selected: boolean) => {
+    const newSelection = new Set(selectedDocuments);
+    if (selected) {
+      newSelection.add(documentId);
+    } else {
+      newSelection.delete(documentId);
+    }
+    setSelectedDocuments(newSelection);
+  };
+
+  // Bulk download function
+  const handleBulkDownload = async () => {
+    if (selectedDocuments.size === 0) {
+      toast({
+        title: "Error",
+        description: "No documents selected",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsBulkDownloading(true);
+      
+      // Create filter description for filename
+      const filterParts = [];
+      
+      if (filters.supplier) {
+        const supplier = availableSuppliers.find(s => s.id === filters.supplier);
+        if (supplier) filterParts.push(supplier.company_name);
+      } else {
+        filterParts.push("All_Suppliers");
+      }
+      
+      if (filters.expirationStatus) {
+        filterParts.push(filters.expirationStatus.replace('_', ' '));
+      }
+      
+      if (filters.specificYear) {
+        filterParts.push(filters.specificYear);
+      } else if (filters.uploadDateRange) {
+        filterParts.push(filters.uploadDateRange.replace('_', ' '));
+      }
+      
+      if (filters.status) {
+        filterParts.push(filters.status);
+      }
+
+      const filterDescription = filterParts.join('_') || 'Documents';
+
+      // Get document upload IDs for selected documents
+      const uploadIds = Array.from(selectedDocuments).map(docId => {
+        const doc = documents.find(d => d.id === docId);
+        return doc?.document_uploads?.[0]?.id;
+      }).filter(Boolean);
+
+      if (uploadIds.length === 0) {
+        throw new Error('No valid document uploads found for selected documents');
+      }
+
+      // Call bulk download edge function
+      const { data, error } = await supabase.functions.invoke('bulk-document-downloader', {
+        body: {
+          documentIds: uploadIds,
+          filterDescription
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // Since the edge function returns a blob response, we need to handle it differently
+      const response = await fetch('https://edwerzutsknhuplidhsj.supabase.co/functions/v1/bulk-document-downloader', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkd2VyenV0c2tuaHVwbGlkaHNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwOTU3MzYsImV4cCI6MjA2NTY3MTczNn0.zlfoc_V7IyFzmseOgfuew9Mjks_U6hrlO8XwNc_GXbI`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          documentIds: uploadIds,
+          filterDescription
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Download the ZIP file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${filterDescription}_${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download Started",
+        description: `ZIP download started with ${selectedDocuments.size} documents`,
+      });
+      setSelectedDocuments(new Set()); // Clear selection after download
+
+    } catch (error) {
+      console.error('Bulk download error:', error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to download documents",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBulkDownloading(false);
+    }
+  };
+
   const stats = {
     total: filteredDocuments.length,
     pending: filteredDocuments.filter(doc => doc.status === 'pending').length,
@@ -259,7 +501,7 @@ const BuyerDocumentsManager = ({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Document Manager</h2>
-          <p className="text-gray-600">Manage and review all supplier documents</p>
+          <p className="text-muted-foreground">Manage and review all supplier documents</p>
         </div>
         <Button onClick={onRefresh} variant="outline" size="sm">
           <RefreshCw className="w-4 h-4 mr-2" />
@@ -282,7 +524,7 @@ const BuyerDocumentsManager = ({
             <CardTitle className="text-sm">Pending</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+            <div className="text-2xl font-bold text-warning">{stats.pending}</div>
           </CardContent>
         </Card>
         <Card>
@@ -290,7 +532,7 @@ const BuyerDocumentsManager = ({
             <CardTitle className="text-sm">Submitted</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.submitted}</div>
+            <div className="text-2xl font-bold text-primary">{stats.submitted}</div>
           </CardContent>
         </Card>
         <Card>
@@ -298,7 +540,7 @@ const BuyerDocumentsManager = ({
             <CardTitle className="text-sm">Approved</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
+            <div className="text-2xl font-bold text-success">{stats.approved}</div>
           </CardContent>
         </Card>
         <Card>
@@ -306,16 +548,23 @@ const BuyerDocumentsManager = ({
             <CardTitle className="text-sm">Rejected</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
+            <div className="text-2xl font-bold text-destructive">{stats.rejected}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <DocumentsFilter 
+      {/* Enhanced Filters */}
+      <EnhancedDocumentsFilter
         filters={filters}
         onFiltersChange={setFilters}
-        showExpirationFilter={false}
+        showExpirationFilter={true}
+        availableSuppliers={availableSuppliers}
+        selectedDocuments={selectedDocuments}
+        onSelectAll={handleSelectAll}
+        onClearSelection={handleClearSelection}
+        onBulkDownload={handleBulkDownload}
+        filteredDocumentsCount={filteredDocuments.length}
+        totalDocumentsCount={documents.length}
       />
 
       {/* Documents List */}
@@ -327,7 +576,7 @@ const BuyerDocumentsManager = ({
           {filteredDocuments.length > 0 ? (
             <div className="space-y-6">
               {filteredDocuments.map(doc => (
-                <DocumentCard
+                <DocumentCardWithSelection
                   key={doc.id}
                   document={{
                     ...doc,
@@ -348,14 +597,17 @@ const BuyerDocumentsManager = ({
                   onCreateLink={() => handleCreateLink(doc)}
                   approveLoading={approveLoading === doc.id}
                   declineLoading={declineLoading === doc.id}
+                  showSelection={true}
+                  isSelected={selectedDocuments.has(doc.id)}
+                  onSelectionChange={(selected) => handleDocumentSelectionChange(doc.id, selected)}
                 />
               ))}
             </div>
           ) : (
             <div className="text-center py-12">
-              <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Documents Found</h3>
-              <p className="text-gray-500">
+              <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No Documents Found</h3>
+              <p className="text-muted-foreground">
                 {Object.values(filters).some(f => f !== '') 
                   ? "No documents match your current filters." 
                   : "No documents available."}

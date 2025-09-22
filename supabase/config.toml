@@ -77,3 +77,13 @@ verify_jwt = true
 
 [functions.manage-subscription]
 verify_jwt = true
+
+# Agent functions - make public for easier coordination/testing (ensure they validate input)
+[functions.agent-coordinator]
+verify_jwt = false
+
+[functions.supplier-agent]
+verify_jwt = false
+
+[functions.buyer-agent]
+verify_jwt = false

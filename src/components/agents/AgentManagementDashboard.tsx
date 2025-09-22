@@ -178,7 +178,7 @@ const AgentManagementDashboard: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase.functions.invoke('agent-coordinator', {
+      const { data, error } = await supabase.functions.invoke('agent-coordinator', {
         body: { 
           action: `trigger_${agentType}`,
           company_id: companyInfo.id,
@@ -190,13 +190,13 @@ const AgentManagementDashboard: React.FC = () => {
 
       toast({
         title: "Success",
-        description: `${agentType} agent triggered successfully`,
+        description: data?.result?.data?.message || `${agentType} agent triggered successfully`,
       });
 
       // Reload activities after a brief delay
       setTimeout(loadAgentData, 2000);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error triggering agent:', error);
       toast({
         title: "Error",
@@ -217,7 +217,7 @@ const AgentManagementDashboard: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase.functions.invoke('agent-coordinator', {
+      const { data, error } = await supabase.functions.invoke('agent-coordinator', {
         body: { 
           action: 'run_cycle',
           company_id: companyInfo.id,
@@ -229,12 +229,12 @@ const AgentManagementDashboard: React.FC = () => {
 
       toast({
         title: "Success",
-        description: "Agent coordination cycle started",
+        description: data?.result?.success ? "Agent coordination cycle completed" : (data?.result?.error || "Cycle started"),
       });
 
       setTimeout(loadAgentData, 3000);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error running agent cycle:', error);
       toast({
         title: "Error",

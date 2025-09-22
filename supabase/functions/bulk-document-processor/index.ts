@@ -51,7 +51,7 @@ serve(async (req) => {
             description: fileInfo.description || `Pre-populated by buyer`,
             document_type: fileInfo.documentType,
             category: fileInfo.category || 'compliance',
-            status: 'pending',
+            status: 'submitted', // Set as submitted since document is pre-populated
             priority: 'medium',
             created_at: new Date().toISOString()
           })
@@ -76,9 +76,10 @@ serve(async (req) => {
             uploader_id: null, // Will be set when actual file is uploaded
             document_name: fileInfo.documentName,
             file_name: fileInfo.fileName,
+            file_path: `pre-populated/${bulkUploadId}/${fileInfo.fileName}`, // Placeholder path for pre-populated docs
             file_size: fileInfo.fileSize,
             mime_type: fileInfo.mimeType,
-            status: 'pending_review',
+            status: 'submitted', // Change from pending_review to submitted for pre-populated docs
             uploaded_by_buyer: true,
             original_uploader_type: 'buyer',
             buyer_notes: notes,

@@ -3,9 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Upload, FileText, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Upload, FileText, CheckCircle, XCircle, AlertCircle, Filter } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { useBuyerSupplierConnections } from '@/hooks/useBuyerSupplierConnections';
 import { useBulkDocumentUpload, BulkUploadFile } from '@/hooks/useBulkDocumentUpload';
@@ -13,15 +14,89 @@ import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
 const DOCUMENT_TYPES = [
-  { value: 'business_license', label: 'Business License' },
-  { value: 'tax_certificate', label: 'Tax Certificate' },
-  { value: 'insurance_certificate', label: 'Insurance Certificate' },
-  { value: 'bank_statement', label: 'Bank Statement' },
-  { value: 'financial_statement', label: 'Financial Statement' },
-  { value: 'compliance_certificate', label: 'Compliance Certificate' },
-  { value: 'quality_certificate', label: 'Quality Certificate' },
-  { value: 'safety_certificate', label: 'Safety Certificate' },
-  { value: 'other', label: 'Other Document' }
+  // Basic Business Documents
+  { value: 'business_license', label: 'Business License', category: 'basic' },
+  { value: 'tax_certificate', label: 'Tax Certificate', category: 'basic' },
+  { value: 'insurance_certificate', label: 'Insurance Certificate', category: 'basic' },
+  { value: 'bank_statement', label: 'Bank Statement', category: 'basic' },
+  { value: 'financial_statement', label: 'Financial Statement', category: 'basic' },
+  { value: 'articles_of_incorporation', label: 'Articles of Incorporation', category: 'basic' },
+  { value: 'dba_certificate', label: 'DBA Certificate', category: 'basic' },
+  { value: 'worker_compensation_insurance', label: 'Workers Compensation Insurance', category: 'basic' },
+  { value: 'supplier_agreement', label: 'Supplier Agreement', category: 'basic' },
+  
+  // Food Safety & Compliance
+  { value: 'fda_registration', label: 'FDA Registration', category: 'food_safety' },
+  { value: 'fsis_documentation', label: 'FSIS Documentation', category: 'food_safety' },
+  { value: 'haccp_plan', label: 'HACCP Plan', category: 'food_safety' },
+  { value: 'ssop_documentation', label: 'SSOP Documentation', category: 'food_safety' },
+  { value: 'gmp_documentation', label: 'GMP Documentation', category: 'food_safety' },
+  { value: 'food_safety_modernization_act', label: 'Food Safety Modernization Act (FSMA)', category: 'food_safety' },
+  { value: 'allergen_control_plan', label: 'Allergen Control Plan', category: 'food_safety' },
+  
+  // Quality & Certifications
+  { value: 'sqf_certificate', label: 'SQF Certificate', category: 'quality' },
+  { value: 'brc_certificate', label: 'BRC Certificate', category: 'quality' },
+  { value: 'iso_9001', label: 'ISO 9001 Certificate', category: 'quality' },
+  { value: 'iso_14001', label: 'ISO 14001 Certificate', category: 'quality' },
+  { value: 'iso_22000', label: 'ISO 22000 Certificate', category: 'quality' },
+  { value: 'gfsi_certificate', label: 'GFSI Certificate', category: 'quality' },
+  { value: 'organic_certification', label: 'Organic Certification', category: 'quality' },
+  { value: 'non_gmo_certification', label: 'Non-GMO Certification', category: 'quality' },
+  { value: 'kosher_certification', label: 'Kosher Certification', category: 'quality' },
+  { value: 'halal_certification', label: 'Halal Certification', category: 'quality' },
+  
+  // Poultry Egg Supplier
+  { value: 'egg_quality_documentation', label: 'Egg Quality Documentation', category: 'poultry_egg' },
+  { value: 'layer_management_records', label: 'Layer Management Records', category: 'poultry_egg' },
+  { value: 'egg_safety_records', label: 'Egg Safety Records', category: 'poultry_egg' },
+  { value: 'npip_certification', label: 'NPIP Certification', category: 'poultry_egg' },
+  { value: 'egg_grading_standards', label: 'Egg Grading Standards', category: 'poultry_egg' },
+  { value: 'cage_free_certification', label: 'Cage-Free Certification', category: 'poultry_egg' },
+  { value: 'pasture_raised_certification', label: 'Pasture-Raised Certification', category: 'poultry_egg' },
+  { value: 'shell_egg_storage_conditions', label: 'Shell Egg Storage Conditions', category: 'poultry_egg' },
+  
+  // Poultry Ingredient Supplier
+  { value: 'ingredient_specifications', label: 'Ingredient Specifications', category: 'poultry_ingredient' },
+  { value: 'nutritional_analysis', label: 'Nutritional Analysis', category: 'poultry_ingredient' },
+  { value: 'feed_safety_documentation', label: 'Feed Safety Documentation', category: 'poultry_ingredient' },
+  { value: 'supply_chain_documentation', label: 'Supply Chain Documentation', category: 'poultry_ingredient' },
+  { value: 'antibiotic_free_certification', label: 'Antibiotic-Free Certification', category: 'poultry_ingredient' },
+  { value: 'mycotoxin_testing_reports', label: 'Mycotoxin Testing Reports', category: 'poultry_ingredient' },
+  { value: 'salmonella_testing_reports', label: 'Salmonella Testing Reports', category: 'poultry_ingredient' },
+  
+  // Poultry Packaging Supplier
+  { value: 'packaging_specifications', label: 'Packaging Specifications', category: 'poultry_packaging' },
+  { value: 'material_certifications', label: 'Material Certifications', category: 'poultry_packaging' },
+  { value: 'food_contact_compliance', label: 'Food Contact Compliance', category: 'poultry_packaging' },
+  { value: 'migration_testing_reports', label: 'Migration Testing Reports', category: 'poultry_packaging' },
+  { value: 'recyclable_certification', label: 'Recyclable Certification', category: 'poultry_packaging' },
+  { value: 'bpa_free_certification', label: 'BPA-Free Certification', category: 'poultry_packaging' },
+  
+  // Processing & Manufacturing
+  { value: 'processing_procedures', label: 'Processing Procedures', category: 'processing' },
+  { value: 'product_specifications', label: 'Product Specifications', category: 'processing' },
+  { value: 'shelf_life_studies', label: 'Shelf Life Studies', category: 'processing' },
+  { value: 'cold_chain_documentation', label: 'Cold Chain Documentation', category: 'processing' },
+  { value: 'trace_back_procedures', label: 'Trace Back Procedures', category: 'processing' },
+  { value: 'recall_procedures', label: 'Recall Procedures', category: 'processing' },
+  
+  // Laboratory & Testing
+  { value: 'laboratory_accreditation', label: 'Laboratory Accreditation', category: 'testing' },
+  { value: 'microbiology_testing_reports', label: 'Microbiology Testing Reports', category: 'testing' },
+  { value: 'pathogen_testing_reports', label: 'Pathogen Testing Reports', category: 'testing' },
+  { value: 'nutritional_testing_reports', label: 'Nutritional Testing Reports', category: 'testing' },
+  { value: 'pesticide_residue_testing', label: 'Pesticide Residue Testing', category: 'testing' },
+  { value: 'heavy_metals_testing', label: 'Heavy Metals Testing', category: 'testing' },
+  
+  // Audit & Compliance
+  { value: 'third_party_audit_reports', label: 'Third Party Audit Reports', category: 'audit' },
+  { value: 'customer_audit_reports', label: 'Customer Audit Reports', category: 'audit' },
+  { value: 'corrective_action_reports', label: 'Corrective Action Reports', category: 'audit' },
+  { value: 'supplier_verification_records', label: 'Supplier Verification Records', category: 'audit' },
+  { value: 'environmental_monitoring', label: 'Environmental Monitoring', category: 'audit' },
+  
+  { value: 'other', label: 'Other Document', category: 'other' }
 ];
 
 interface BuyerDocumentPrePopulatorProps {
@@ -40,6 +115,9 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>('');
   const [files, setFiles] = useState<BulkUploadFile[]>([]);
   const [notes, setNotes] = useState('');
+  const [customDocumentTypes, setCustomDocumentTypes] = useState<{[index: number]: string}>({});
+  const [searchFilter, setSearchFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const newFiles: BulkUploadFile[] = acceptedFiles.map(file => ({
@@ -64,12 +142,40 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
 
   const updateFileDocumentType = (index: number, documentType: string) => {
     setFiles(prev => prev.map((file, i) => 
-      i === index ? { ...file, documentType } : file
+      i === index ? { 
+        ...file, 
+        documentType: documentType === 'other' && customDocumentTypes[index] 
+          ? customDocumentTypes[index] 
+          : documentType 
+      } : file
+    ));
+  };
+
+  const updateCustomDocumentType = (index: number, customType: string) => {
+    setCustomDocumentTypes(prev => ({ ...prev, [index]: customType }));
+    setFiles(prev => prev.map((file, i) => 
+      i === index ? { ...file, documentType: customType } : file
     ));
   };
 
   const removeFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
+    // Clean up custom document type for this index
+    setCustomDocumentTypes(prev => {
+      const updated = { ...prev };
+      delete updated[index];
+      // Reindex remaining entries
+      const reindexed: {[index: number]: string} = {};
+      Object.entries(updated).forEach(([key, value]) => {
+        const oldIndex = parseInt(key);
+        if (oldIndex > index) {
+          reindexed[oldIndex - 1] = value;
+        } else {
+          reindexed[oldIndex] = value;
+        }
+      });
+      return reindexed;
+    });
   };
 
   const handleUpload = async () => {
@@ -95,6 +201,27 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
     (conn) => (conn.supplier?.id ?? conn.supplier_id) === selectedSupplierId
   );
   const canUpload = selectedSupplierId && files.length > 0 && files.every(f => f.documentType);
+
+  // Filter document types based on search and category
+  const filteredDocumentTypes = DOCUMENT_TYPES.filter(type => {
+    const matchesSearch = type.label.toLowerCase().includes(searchFilter.toLowerCase());
+    const matchesCategory = categoryFilter === 'all' || type.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
+  const categories = [
+    { value: 'all', label: 'All Categories' },
+    { value: 'basic', label: 'Basic Business' },
+    { value: 'food_safety', label: 'Food Safety & Compliance' },
+    { value: 'quality', label: 'Quality & Certifications' },
+    { value: 'poultry_egg', label: 'Poultry Egg Supplier' },
+    { value: 'poultry_ingredient', label: 'Poultry Ingredient Supplier' },
+    { value: 'poultry_packaging', label: 'Poultry Packaging Supplier' },
+    { value: 'processing', label: 'Processing & Manufacturing' },
+    { value: 'testing', label: 'Laboratory & Testing' },
+    { value: 'audit', label: 'Audit & Compliance' },
+    { value: 'other', label: 'Other' }
+  ];
 
   return (
     <Card className="w-full max-w-4xl">
@@ -168,21 +295,62 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
                       {(file.file.size / 1024 / 1024).toFixed(2)} MB
                     </p>
                   </div>
-                  <Select 
-                    value={file.documentType} 
-                    onValueChange={(value) => updateFileDocumentType(index, value)}
-                  >
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder="Document type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DOCUMENT_TYPES.map(type => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-2">
+                    <Select 
+                      value={file.documentType === customDocumentTypes[index] ? 'other' : file.documentType} 
+                      onValueChange={(value) => updateFileDocumentType(index, value)}
+                    >
+                      <SelectTrigger className="w-64">
+                        <SelectValue placeholder="Document type" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-96">
+                        <div className="p-2 space-y-2 border-b">
+                          <div className="flex items-center gap-2">
+                            <Filter className="h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="Search document types..."
+                              value={searchFilter}
+                              onChange={(e) => setSearchFilter(e.target.value)}
+                              className="h-8"
+                            />
+                          </div>
+                          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                            <SelectTrigger className="h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categories.map(cat => (
+                                <SelectItem key={cat.value} value={cat.value}>
+                                  {cat.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="max-h-64 overflow-y-auto">
+                          {filteredDocumentTypes.map(type => (
+                            <SelectItem key={type.value} value={type.value}>
+                              <div className="flex items-center justify-between w-full">
+                                <span>{type.label}</span>
+                                <Badge variant="outline" className="text-xs ml-2">
+                                  {categories.find(c => c.value === type.category)?.label}
+                                </Badge>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </div>
+                      </SelectContent>
+                    </Select>
+                    
+                    {(file.documentType === 'other' || file.documentType === customDocumentTypes[index]) && (
+                      <Input
+                        placeholder="Enter custom document type..."
+                        value={customDocumentTypes[index] || ''}
+                        onChange={(e) => updateCustomDocumentType(index, e.target.value)}
+                        className="w-64"
+                      />
+                    )}
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -243,6 +411,9 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
               setFiles([]);
               setSelectedSupplierId('');
               setNotes('');
+              setCustomDocumentTypes({});
+              setSearchFilter('');
+              setCategoryFilter('all');
             }}
             disabled={isUploading}
           >

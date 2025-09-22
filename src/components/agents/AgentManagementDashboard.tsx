@@ -110,6 +110,15 @@ const AgentManagementDashboard: React.FC = () => {
   }, [user]);
 
   const toggleAgent = async (agentType: 'supplier' | 'buyer', enabled: boolean) => {
+    if (!companyInfo) {
+      toast({
+        title: "Error",
+        description: "Company information not loaded",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const existingConfig = configs.find(c => c.agent_type === agentType);
 
@@ -119,20 +128,26 @@ const AgentManagementDashboard: React.FC = () => {
           .update({ enabled })
           .eq('id', existingConfig.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Update error:', error);
+          throw error;
+        }
       } else {
-        // Create new configuration
+        // Create new configuration using proper company ID
         const { error } = await supabase
           .from('agent_configurations')
           .insert({
-            company_id: user?.id,
-            company_type: agentType === 'supplier' ? 'supplier' : 'buyer',
+            company_id: companyInfo.id,
+            company_type: companyInfo.type,
             agent_type: agentType,
             enabled,
             settings: {}
           });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Insert error:', error);
+          throw error;
+        }
       }
 
       await loadAgentData();
@@ -146,16 +161,29 @@ const AgentManagementDashboard: React.FC = () => {
       console.error('Error toggling agent:', error);
       toast({
         title: "Error",
-        description: "Failed to update agent configuration",
+        description: `Failed to update agent configuration: ${error.message}`,
         variant: "destructive",
       });
     }
   };
 
   const triggerAgent = async (agentType: 'supplier' | 'buyer') => {
+    if (!companyInfo) {
+      toast({
+        title: "Error",
+        description: "Company information not loaded",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase.functions.invoke('agent-coordinator', {
-        body: { action: `trigger_${agentType}` }
+        body: { 
+          action: `trigger_${agentType}`,
+          company_id: companyInfo.id,
+          company_type: companyInfo.type
+        }
       });
 
       if (error) throw error;
@@ -172,16 +200,29 @@ const AgentManagementDashboard: React.FC = () => {
       console.error('Error triggering agent:', error);
       toast({
         title: "Error",
-        description: `Failed to trigger ${agentType} agent`,
+        description: `Failed to trigger ${agentType} agent: ${error.message}`,
         variant: "destructive",
       });
     }
   };
 
   const runFullCycle = async () => {
+    if (!companyInfo) {
+      toast({
+        title: "Error",
+        description: "Company information not loaded",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase.functions.invoke('agent-coordinator', {
-        body: { action: 'run_cycle' }
+        body: { 
+          action: 'run_cycle',
+          company_id: companyInfo.id,
+          company_type: companyInfo.type
+        }
       });
 
       if (error) throw error;
@@ -197,7 +238,7 @@ const AgentManagementDashboard: React.FC = () => {
       console.error('Error running agent cycle:', error);
       toast({
         title: "Error",
-        description: "Failed to run agent coordination cycle",
+        description: `Failed to run agent coordination cycle: ${error.message}`,
         variant: "destructive",
       });
     }

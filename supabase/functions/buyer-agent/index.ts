@@ -489,7 +489,21 @@ serve(async (req) => {
     // Handle both old format ({ action, data }) and new format ({ action, company_id, company_type })
     const { action, data, company_id, company_type } = requestBody;
 
-    switch (action) {
+    // Normalize action and provide sensible defaults
+    const normalizedAction = (() => {
+      const map: Record<string, string> = {
+        process_uploads: 'process_uploads',
+        analyze_and_act: 'process_uploads', // legacy alias
+        trigger_buyer: 'process_uploads',   // coordinator alias
+        process_single: 'process_single',
+        generate_feedback: 'generate_feedback',
+      };
+      if (action && map[action]) return map[action];
+      if (!action && company_id && company_type) return 'process_uploads';
+      return action;
+    })();
+
+    switch (normalizedAction) {
       case 'process_uploads':
         // Build query with optional company filtering
         let uploadsQuery = supabase
@@ -550,7 +564,7 @@ serve(async (req) => {
 
       default:
         return new Response(
-          JSON.stringify({ error: 'Invalid action' }),
+          JSON.stringify({ error: 'Invalid action', received: requestBody }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
     }
@@ -558,10 +572,10 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        action_performed: action,
+        action_performed: normalizedAction,
         company_id: company_id,
         company_type: company_type,
-        message: `Buyer agent ${action} completed successfully`
+        message: `Buyer agent ${normalizedAction} completed successfully`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

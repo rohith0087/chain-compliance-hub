@@ -116,30 +116,72 @@ serve(async (req) => {
   }
 
   try {
-    const { action, company_id, company_type } = await req.json();
+    const requestBody = await req.json();
+    const { action, company_id, company_type } = requestBody;
 
     let result: any = { success: true };
 
     switch (action) {
-      case 'run_cycle':
+      case 'run_cycle': {
         result = await runAgentCycle(company_id, company_type);
+        if (!result?.success) {
+          return new Response(
+            JSON.stringify({ success: false, error: result?.error || 'run_cycle failed', result }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
         break;
+      }
 
-      case 'trigger_supplier':
-        result = await supabase.functions.invoke('supplier-agent', {
-          body: { action: 'process_requests', company_id, company_type },
-        });
+      case 'trigger_supplier': {
+        const body = { action: 'process_requests', company_id, company_type };
+        const invokeRes = await supabase.functions.invoke('supplier-agent', { body });
+        if (invokeRes.error) {
+          console.error('Supplier agent invoke error:', invokeRes.error);
+          await supabase.from('agent_activities').insert({
+            agent_type: 'coordinator',
+            action_type: 'coordination_error',
+            entity_id: crypto.randomUUID(),
+            entity_type: 'system',
+            details: { stage: 'invoke_supplier', body, error: invokeRes.error.message },
+            success: false,
+            error_message: invokeRes.error.message,
+          });
+          return new Response(
+            JSON.stringify({ success: false, error: invokeRes.error.message, request: body }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        result = invokeRes;
         break;
+      }
 
-      case 'trigger_buyer':
-        result = await supabase.functions.invoke('buyer-agent', {
-          body: { action: 'process_uploads', company_id, company_type },
-        });
+      case 'trigger_buyer': {
+        const body = { action: 'process_uploads', company_id, company_type };
+        const invokeRes = await supabase.functions.invoke('buyer-agent', { body });
+        if (invokeRes.error) {
+          console.error('Buyer agent invoke error:', invokeRes.error);
+          await supabase.from('agent_activities').insert({
+            agent_type: 'coordinator',
+            action_type: 'coordination_error',
+            entity_id: crypto.randomUUID(),
+            entity_type: 'system',
+            details: { stage: 'invoke_buyer', body, error: invokeRes.error.message },
+            success: false,
+            error_message: invokeRes.error.message,
+          });
+          return new Response(
+            JSON.stringify({ success: false, error: invokeRes.error.message, request: body }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        result = invokeRes;
         break;
+      }
 
       default:
         return new Response(
-          JSON.stringify({ error: 'Invalid action' }),
+          JSON.stringify({ error: 'Invalid action', received: requestBody }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
     }

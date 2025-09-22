@@ -21,9 +21,9 @@ const AgentTestPanel: React.FC<AgentTestPanelProps> = ({ companyType, companyId 
     setIsTestingSupplier(true);
     try {
       console.log('Testing supplier agent...');
-      const { data, error } = await supabase.functions.invoke('supplier-agent', {
+      const { data, error } = await supabase.functions.invoke('agent-coordinator', {
         body: { 
-          action: 'process_requests',
+          action: 'trigger_supplier',
           company_id: companyId,
           company_type: companyType 
         }
@@ -36,7 +36,7 @@ const AgentTestPanel: React.FC<AgentTestPanelProps> = ({ companyType, companyId 
       console.log('Supplier agent response:', data);
       toast({
         title: "Supplier Agent Test",
-        description: data?.message || "Agent test completed successfully",
+        description: data?.result?.data?.message || data?.result?.error || "Agent test completed successfully",
       });
     } catch (error: any) {
       console.error('Supplier agent test error:', error);
@@ -54,9 +54,9 @@ const AgentTestPanel: React.FC<AgentTestPanelProps> = ({ companyType, companyId 
     setIsTestingBuyer(true);
     try {
       console.log('Testing buyer agent...');
-      const { data, error } = await supabase.functions.invoke('buyer-agent', {
+      const { data, error } = await supabase.functions.invoke('agent-coordinator', {
         body: { 
-          action: 'process_uploads',
+          action: 'trigger_buyer',
           company_id: companyId,
           company_type: companyType 
         }
@@ -69,7 +69,7 @@ const AgentTestPanel: React.FC<AgentTestPanelProps> = ({ companyType, companyId 
       console.log('Buyer agent response:', data);
       toast({
         title: "Buyer Agent Test",
-        description: data?.message || "Agent test completed successfully",
+        description: data?.result?.data?.message || data?.result?.error || "Agent test completed successfully",
       });
     } catch (error: any) {
       console.error('Buyer agent test error:', error);

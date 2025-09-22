@@ -27,6 +27,15 @@ interface DetailedUser {
   is_supplier: boolean;
   document_count: number;
   chat_sessions_count: number;
+  // Subscription fields
+  subscription_status: string;
+  subscription_plan_type: string;
+  subscription_end_date: string | null;
+  available_credits: number;
+  total_purchased_credits: number;
+  total_consumed_credits: number;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
 }
 
 export const useSuperAdmin = () => {

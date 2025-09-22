@@ -8,8 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { Search, Shield, User, Building2, Key, MoreHorizontal, Calendar } from 'lucide-react';
+import { Search, Shield, User, Building2, Key, MoreHorizontal, Calendar, CreditCard, Zap } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type UserRole = 'buyer' | 'supplier' | 'admin' | 'company_admin' | 'branch_manager' | 'document_manager' | 'viewer' | 'approver' | 'auditor' | 'super_admin';
 
@@ -75,6 +76,21 @@ export const SuperAdminUserManagement = () => {
     return colors[role] || 'outline';
   };
 
+  const getSubscriptionStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'default';
+      case 'canceled': return 'secondary';
+      case 'none': return 'outline';
+      default: return 'outline';
+    }
+  };
+
+  const getCreditLevelColor = (credits: number) => {
+    if (credits === 0) return 'destructive';
+    if (credits < 10) return 'secondary';
+    return 'default';
+  };
+
   if (loading) {
     return (
       <Card>
@@ -134,7 +150,7 @@ export const SuperAdminUserManagement = () => {
                   <TableHead>User</TableHead>
                   <TableHead>Company</TableHead>
                   <TableHead>Roles</TableHead>
-                  <TableHead>Type</TableHead>
+                  <TableHead>Subscription</TableHead>
                   <TableHead>Activity</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -165,10 +181,46 @@ export const SuperAdminUserManagement = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-1">
-                        {user.is_buyer && <Badge variant="outline" className="text-xs">Buyer</Badge>}
-                        {user.is_supplier && <Badge variant="outline" className="text-xs">Supplier</Badge>}
-                      </div>
+                      <TooltipProvider>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              variant={getSubscriptionStatusColor(user.subscription_status) as any} 
+                              className="text-xs flex items-center gap-1"
+                            >
+                              <CreditCard className="w-3 h-3" />
+                              {user.subscription_plan_type === 'none' ? 'Free' : user.subscription_plan_type}
+                            </Badge>
+                          </div>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-1">
+                                <Badge 
+                                  variant={getCreditLevelColor(user.available_credits) as any} 
+                                  className="text-xs flex items-center gap-1"
+                                >
+                                  <Zap className="w-3 h-3" />
+                                  {user.available_credits}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">credits</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="space-y-1 text-xs">
+                                <p>Available: {user.available_credits}</p>
+                                <p>Purchased: {user.total_purchased_credits}</p>
+                                <p>Consumed: {user.total_consumed_credits}</p>
+                                {user.subscription_end_date && (
+                                  <p>Ends: {new Date(user.subscription_end_date).toLocaleDateString()}</p>
+                                )}
+                                {user.stripe_customer_id && (
+                                  <p>Customer: {user.stripe_customer_id.slice(-8)}</p>
+                                )}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </TooltipProvider>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">

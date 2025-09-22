@@ -2,10 +2,25 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
 
-const supabase = createClient(
-  Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-);
+// Initialize environment variables
+const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://edwerzutsknhuplidhsj.supabase.co';
+const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+
+console.log('Buyer Agent starting...');
+console.log('Supabase URL:', supabaseUrl);
+console.log('Service Role Key available:', !!supabaseServiceRoleKey);
+console.log('OpenAI Key available:', !!openAIApiKey);
+
+if (!supabaseServiceRoleKey) {
+  console.error('SUPABASE_SERVICE_ROLE_KEY is not set');
+}
+
+if (!openAIApiKey) {
+  console.error('OPENAI_API_KEY is not set');
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey!);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

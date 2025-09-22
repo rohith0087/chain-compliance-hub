@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Bot, Activity, Settings, TrendingUp, AlertTriangle } from 'lucide-react';
+import AgentTestPanel from './AgentTestPanel';
 
 interface AgentConfig {
   id: string;
@@ -36,6 +37,7 @@ const AgentManagementDashboard: React.FC = () => {
   const [configs, setConfigs] = useState<AgentConfig[]>([]);
   const [activities, setActivities] = useState<AgentActivity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [companyInfo, setCompanyInfo] = useState<{id: string, type: 'buyer' | 'supplier'} | null>(null);
 
   const loadAgentData = async () => {
     if (!user) return;
@@ -43,10 +45,38 @@ const AgentManagementDashboard: React.FC = () => {
     try {
       setLoading(true);
 
+      // First, determine company info
+      const { data: supplierData } = await supabase
+        .from('suppliers')
+        .select('id')
+        .eq('profile_id', user.id)
+        .single();
+
+      const { data: buyerData } = await supabase
+        .from('buyers')
+        .select('id')
+        .eq('profile_id', user.id)
+        .single();
+
+      let companyId = '';
+      let companyType: 'buyer' | 'supplier' = 'supplier';
+      
+      if (supplierData) {
+        companyId = supplierData.id;
+        companyType = 'supplier';
+      } else if (buyerData) {
+        companyId = buyerData.id;
+        companyType = 'buyer';
+      }
+
+      setCompanyInfo({ id: companyId, type: companyType });
+
       // Load agent configurations
       const { data: configData, error: configError } = await supabase
         .from('agent_configurations')
         .select('*')
+        .eq('company_id', companyId)
+        .eq('company_type', companyType)
         .order('created_at', { ascending: false });
 
       if (configError) throw configError;
@@ -290,6 +320,7 @@ const AgentManagementDashboard: React.FC = () => {
         <TabsList>
           <TabsTrigger value="configuration">Configuration</TabsTrigger>
           <TabsTrigger value="activities">Recent Activities</TabsTrigger>
+          <TabsTrigger value="testing">Testing</TabsTrigger>
           <TabsTrigger value="settings">Advanced Settings</TabsTrigger>
         </TabsList>
 
@@ -437,6 +468,21 @@ const AgentManagementDashboard: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="testing" className="space-y-4">
+          {companyInfo ? (
+            <AgentTestPanel 
+              companyType={companyInfo.type} 
+              companyId={companyInfo.id}
+            />
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-muted-foreground text-center">Loading company information...</p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">

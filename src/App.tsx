@@ -14,6 +14,7 @@ import InvitePage from "./pages/InvitePage";
 import DynamicDashboard from "./components/dashboard/DynamicDashboard";
 import ChatPage from "./pages/ChatPage";
 import AdminDashboard from "./pages/AdminDashboard";
+import AgentManagementDashboard from "./components/agents/AgentManagementDashboard";
 import PlatformAdminLogin from "./pages/PlatformAdminLogin";
 import PlatformAdminDashboard from "./pages/PlatformAdminDashboard";
 import PlatformAdminInvitationAccept from "./pages/PlatformAdminInvitationAccept";
@@ -110,6 +111,11 @@ const AppRoutes = () => {
             <Route path="/chat" element={
               <ProtectedRoute>
                 <ChatPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/agents" element={
+              <ProtectedRoute>
+                <AgentManagementDashboard />
               </ProtectedRoute>
             } />
             <Route path="/subscription" element={

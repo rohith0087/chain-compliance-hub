@@ -1,56 +1,56 @@
 
 {
   "hero": {
-    "title": "Streamline Supply Chain",
+    "title": "Enterprise-Grade Supply Chain",
     "subtitle": "Compliance Management",
-    "description": "End-to-end document management platform for buyers and suppliers. Track compliance, automate workflows, and maintain audit-ready documentation across your entire supply chain.",
+    "description": "AI-powered compliance platform that transforms how enterprises manage supplier documentation, automate workflows, and ensure regulatory adherence at scale.",
     "badges": {
-      "realTimeTracking": "Real-time Tracking",
-      "auditReady": "Audit-Ready",
-      "multiIndustry": "Multi-Industry"
+      "realTimeTracking": "AI-Powered Analytics",
+      "auditReady": "Enterprise-Ready",
+      "multiIndustry": "Multi-Tenant Architecture"
     }
   },
   "features": {
-    "title": "Everything You Need for Compliance Management",
-    "subtitle": "Comprehensive tools designed for modern supply chain compliance",
+    "title": "Enterprise Compliance Platform",
+    "subtitle": "Comprehensive tools designed for large-scale supply chain compliance management",
     "documentManagement": {
-      "title": "Document Management",
-      "description": "Streamlined document requests, uploads, and validation with automated metadata capture"
+      "title": "AI-Powered Document Management",
+      "description": "Advanced document processing with AI-driven validation, automated metadata extraction, and intelligent categorization"
     },
     "complianceTracking": {
-      "title": "Compliance Tracking",
-      "description": "Real-time monitoring of compliance status across your entire supply chain"
+      "title": "Real-Time Compliance Monitoring",
+      "description": "Continuous monitoring with predictive analytics, risk scoring, and automated compliance reporting"
     },
     "roleBasedAccess": {
-      "title": "Role-Based Access",
-      "description": "Separate dashboards for buyers, suppliers, and internal reviewers with granular permissions"
+      "title": "Multi-Tenant Access Control",
+      "description": "Enterprise-grade permissions with branch management, role hierarchies, and audit-ready access controls"
     },
     "analytics": {
-      "title": "Analytics & Reporting",
-      "description": "Comprehensive reports and dashboards with exportable compliance data"
+      "title": "Advanced Analytics & BI",
+      "description": "Executive dashboards, compliance insights, trend analysis, and comprehensive reporting with export capabilities"
     },
     "smartAlerts": {
-      "title": "Smart Alerts",
-      "description": "Automated reminders for expiring documents and missing critical compliance items"
+      "title": "Intelligent Alert System",
+      "description": "AI-driven notifications for compliance risks, document expiry, and proactive risk management"
     },
     "auditTrail": {
-      "title": "Audit Trail",
-      "description": "Complete version control and audit logs for all document activities"
+      "title": "Complete Audit Trail",
+      "description": "Immutable audit logs, regulatory compliance tracking, and forensic-level document history"
     }
   },
   "industries": {
-    "title": "Trusted Across Industries",
-    "subtitle": "Scalable compliance solutions for diverse industry requirements",
-    "foodService": "Food Service",
+    "title": "Trusted by Industry Leaders",
+    "subtitle": "Enterprise-grade compliance solutions tailored for complex regulatory environments",
+    "foodService": "Food & Beverage",
     "pharmaceuticals": "Pharmaceuticals",
     "manufacturing": "Manufacturing",
-    "retail": "Retail",
-    "logistics": "Logistics",
-    "construction": "Construction"
+    "retail": "Retail & Consumer",
+    "logistics": "Logistics & Supply Chain",
+    "construction": "Construction & Engineering"
   },
   "cta": {
-    "title": "Ready to Transform Your Compliance Management?",
-    "subtitle": "Join leading organizations that trust ComplianceFlow for their supply chain documentation"
+    "title": "Ready to Scale Your Compliance Operations?",
+    "subtitle": "Join 500+ enterprise organizations that have transformed their supply chain compliance with our platform"
   },
   "regionSelector": {
     "title": "Select Your Region",

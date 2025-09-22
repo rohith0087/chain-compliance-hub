@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { LanguageProvider } from "@/contexts/LanguageContext";
-import Index from "./pages/Index";
+
 import AuthPage from "./components/auth/AuthPage";
 import ResetPassword from "./pages/ResetPassword";
 import InvitePage from "./pages/InvitePage";
@@ -33,7 +33,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/" replace />;
   }
   
   return <>{children}</>;
@@ -61,7 +61,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/" replace />;
   }
   
   if (!profile?.roles?.includes('admin')) {
@@ -79,7 +79,7 @@ const SuperAdminRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/" replace />;
   }
   
   if (!profile?.roles?.includes('super_admin')) {
@@ -96,11 +96,6 @@ const AppRoutes = () => {
         <AuthProvider>
           <Routes>
             <Route path="/" element={
-              <PublicRoute>
-                <Index />
-              </PublicRoute>
-            } />
-            <Route path="/auth" element={
               <PublicRoute>
                 <AuthPage />
               </PublicRoute>

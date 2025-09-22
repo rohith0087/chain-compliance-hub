@@ -11,6 +11,61 @@ interface BulkDownloadRequest {
   filterDescription: string;
 }
 
+interface ResolvedStoragePath {
+  bucket: string;
+  key: string;
+}
+
+// Resolve various forms of stored file paths into a bucket + key pair
+function resolveStoragePath(input: string | null | undefined): ResolvedStoragePath | null {
+  if (!input) return null;
+  let value = input.trim();
+
+  // If it's a full URL, try to parse bucket and key
+  try {
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      const url = new URL(value);
+      const parts = url.pathname.split('/').filter(Boolean);
+      // Patterns we may see:
+      // /storage/v1/object/public/<bucket>/<key>
+      // /storage/v1/object/sign/<bucket>/<key>
+      const idx = parts.findIndex((p) => p === 'object');
+      if (idx !== -1 && parts[idx + 1]) {
+        // object/<visibility>/<bucket>/<...key>
+        const visibilityOrBucket = parts[idx + 1];
+        if (visibilityOrBucket === 'public' || visibilityOrBucket === 'sign' || visibilityOrBucket === 'auth') {
+          const bucket = parts[idx + 2];
+          const key = parts.slice(idx + 3).join('/');
+          if (bucket && key) return { bucket, key };
+        } else {
+          // object/<bucket>/<...key>
+          const bucket = visibilityOrBucket;
+          const key = parts.slice(idx + 2).join('/');
+          if (bucket && key) return { bucket, key };
+        }
+      }
+    }
+  } catch {
+    // fallthrough to key normalization
+  }
+
+  // Normalize leading slashes
+  value = value.replace(/^\/+/, '');
+
+  // If the value includes the bucket name as a prefix, strip it
+  if (value.startsWith('compliance-documents/')) {
+    return { bucket: 'compliance-documents', key: value.replace(/^compliance-documents\//, '') };
+  }
+
+  // Check for other known bucket patterns
+  if (value.startsWith('pre-populated/')) {
+    return { bucket: 'pre-populated', key: value.replace(/^pre-populated\//, '') };
+  }
+
+  // Default to compliance-documents bucket for raw keys
+  return { bucket: 'compliance-documents', key: value };
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -96,26 +151,47 @@ serve(async (req) => {
 
         for (const doc of documents) {
           try {
-            console.log(`Processing document: ${doc.file_name}`);
+            console.log(`Processing document: ${doc.file_name} with path: ${doc.file_path}`);
             
-            // Get signed URL for the file
-            const { data: signedUrlData, error: urlError } = await supabase.storage
-              .from('documents')
-              .createSignedUrl(doc.file_path, 300); // 5 minutes
-
-            if (urlError || !signedUrlData) {
-              console.error(`Failed to get signed URL for ${doc.file_path}:`, urlError);
+            // Resolve storage path to get correct bucket and key
+            const resolvedPath = resolveStoragePath(doc.file_path);
+            if (!resolvedPath) {
+              console.error(`Could not resolve storage path for ${doc.file_path}`);
               continue;
             }
 
+            console.log(`Resolved path - bucket: ${resolvedPath.bucket}, key: ${resolvedPath.key}`);
+            
+            // Get signed URL for the file using resolved bucket and key
+            const { data: signedUrlData, error: urlError } = await supabase.storage
+              .from(resolvedPath.bucket)
+              .createSignedUrl(resolvedPath.key, 300); // 5 minutes
+
+            if (urlError || !signedUrlData) {
+              console.error(`Failed to get signed URL for ${resolvedPath.bucket}/${resolvedPath.key}:`, urlError);
+              // Try fallback with original path in compliance-documents bucket
+              console.log(`Trying fallback with compliance-documents bucket...`);
+              const { data: fallbackUrlData, error: fallbackError } = await supabase.storage
+                .from('compliance-documents')
+                .createSignedUrl(doc.file_path, 300);
+              
+              if (fallbackError || !fallbackUrlData) {
+                console.error(`Fallback also failed for ${doc.file_path}:`, fallbackError);
+                continue;
+              }
+              signedUrlData = fallbackUrlData;
+            }
+
             // Fetch file content
+            console.log(`Fetching file content from: ${signedUrlData.signedUrl}`);
             const fileResponse = await fetch(signedUrlData.signedUrl);
             if (!fileResponse.ok) {
-              console.error(`Failed to fetch file ${doc.file_path}: ${fileResponse.status}`);
+              console.error(`Failed to fetch file ${doc.file_path}: ${fileResponse.status} ${fileResponse.statusText}`);
               continue;
             }
 
             const fileContent = new Uint8Array(await fileResponse.arrayBuffer());
+            console.log(`Successfully fetched file content, size: ${fileContent.length} bytes`);
             
             // Create safe filename with supplier prefix
             const supplierName = doc.document_requests.suppliers.company_name
@@ -160,7 +236,7 @@ serve(async (req) => {
         await writer.write(endRecord);
 
         await writer.close();
-        console.log('ZIP file creation completed');
+        console.log(`ZIP file creation completed. Successfully processed ${centralDirectory.length}/${documents.length} documents`);
 
       } catch (error) {
         console.error('Error creating ZIP:', error);

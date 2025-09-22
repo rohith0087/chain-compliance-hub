@@ -37,6 +37,7 @@ const AgentManagementDashboard: React.FC = () => {
   const [configs, setConfigs] = useState<AgentConfig[]>([]);
   const [activities, setActivities] = useState<AgentActivity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activitiesRefreshing, setActivitiesRefreshing] = useState(false);
   const [companyInfo, setCompanyInfo] = useState<{id: string, type: 'buyer' | 'supplier'} | null>(null);
 
   const loadAgentData = async () => {
@@ -81,10 +82,11 @@ const AgentManagementDashboard: React.FC = () => {
 
       if (configError) throw configError;
 
-      // Load recent agent activities
+      // Load recent agent activities filtered by company
       const { data: activityData, error: activityError } = await supabase
         .from('agent_activities')
         .select('*')
+        .eq('entity_id', companyId)
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -102,6 +104,28 @@ const AgentManagementDashboard: React.FC = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshActivities = async () => {
+    if (!companyInfo) return;
+    
+    setActivitiesRefreshing(true);
+    try {
+      const { data: activityData, error: activityError } = await supabase
+        .from('agent_activities')
+        .select('*')
+        .eq('entity_id', companyInfo.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (!activityError) {
+        setActivities(activityData || []);
+      }
+    } catch (error) {
+      console.error('Error refreshing activities:', error);
+    } finally {
+      setActivitiesRefreshing(false);
     }
   };
 
@@ -194,7 +218,7 @@ const AgentManagementDashboard: React.FC = () => {
       });
 
       // Reload activities after a brief delay
-      setTimeout(loadAgentData, 2000);
+      setTimeout(refreshActivities, 2000);
 
     } catch (error: any) {
       console.error('Error triggering agent:', error);
@@ -232,7 +256,7 @@ const AgentManagementDashboard: React.FC = () => {
         description: data?.result?.success ? "Agent coordination cycle completed" : (data?.result?.error || "Cycle started"),
       });
 
-      setTimeout(loadAgentData, 3000);
+      setTimeout(refreshActivities, 3000);
 
     } catch (error: any) {
       console.error('Error running agent cycle:', error);
@@ -464,9 +488,14 @@ const AgentManagementDashboard: React.FC = () => {
         <TabsContent value="activities" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Recent Agent Activities</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                Recent Agent Activities
+                {activitiesRefreshing && (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                )}
+              </CardTitle>
               <CardDescription>
-                Monitor what your AI agents have been doing
+                Monitor what your AI agents have been doing for your company
               </CardDescription>
             </CardHeader>
             <CardContent>

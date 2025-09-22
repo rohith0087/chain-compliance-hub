@@ -76,12 +76,12 @@ async function runAgentCycle(companyId?: string, companyType?: 'buyer' | 'suppli
 
     console.log('Agent coordination cycle completed');
 
-    // Log coordination activity
+    // Log coordination activity with proper entity_id
     await supabase.from('agent_activities').insert({
       agent_type: 'coordinator',
       action_type: 'coordination_cycle',
-      entity_id: crypto.randomUUID(),
-      entity_type: 'system',
+      entity_id: companyId || crypto.randomUUID(),
+      entity_type: companyType || 'system',
       details: {
         enabled_agents: Array.from(enabledAgents),
         company_id: companyId,
@@ -99,9 +99,9 @@ async function runAgentCycle(companyId?: string, companyType?: 'buyer' | 'suppli
     await supabase.from('agent_activities').insert({
       agent_type: 'coordinator',
       action_type: 'coordination_error',
-      entity_id: crypto.randomUUID(),
-      entity_type: 'system',
-      details: { error: error.message },
+      entity_id: companyId || crypto.randomUUID(),
+      entity_type: companyType || 'system',
+      details: { error: error.message, company_id: companyId, company_type: companyType },
       success: false,
       error_message: error.message,
     });
@@ -141,8 +141,8 @@ serve(async (req) => {
           await supabase.from('agent_activities').insert({
             agent_type: 'coordinator',
             action_type: 'coordination_error',
-            entity_id: crypto.randomUUID(),
-            entity_type: 'system',
+            entity_id: company_id || crypto.randomUUID(),
+            entity_type: company_type || 'system',
             details: { stage: 'invoke_supplier', body, error: invokeRes.error.message },
             success: false,
             error_message: invokeRes.error.message,
@@ -164,8 +164,8 @@ serve(async (req) => {
           await supabase.from('agent_activities').insert({
             agent_type: 'coordinator',
             action_type: 'coordination_error',
-            entity_id: crypto.randomUUID(),
-            entity_type: 'system',
+            entity_id: company_id || crypto.randomUUID(),
+            entity_type: company_type || 'system',
             details: { stage: 'invoke_buyer', body, error: invokeRes.error.message },
             success: false,
             error_message: invokeRes.error.message,

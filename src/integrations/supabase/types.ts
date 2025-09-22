@@ -1406,6 +1406,7 @@ export type Database = {
           branch_id: string | null
           buyer_notes: string | null
           created_at: string | null
+          document_name: string | null
           expiration_date: string | null
           file_name: string
           file_path: string
@@ -1426,6 +1427,7 @@ export type Database = {
           branch_id?: string | null
           buyer_notes?: string | null
           created_at?: string | null
+          document_name?: string | null
           expiration_date?: string | null
           file_name: string
           file_path: string
@@ -1446,6 +1448,7 @@ export type Database = {
           branch_id?: string | null
           buyer_notes?: string | null
           created_at?: string | null
+          document_name?: string | null
           expiration_date?: string | null
           file_name?: string
           file_path?: string

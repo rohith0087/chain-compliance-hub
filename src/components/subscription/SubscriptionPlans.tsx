@@ -113,62 +113,67 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ userType }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h3 className="text-2xl font-bold mb-2">Subscription Plans</h3>
-        <p className="text-muted-foreground">Choose the perfect plan for your {userType} needs</p>
+    <div className="space-y-8">
+      <div className="text-center space-y-2">
+        <h2 className="text-3xl font-semibold tracking-tight">Subscription Plans</h2>
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          Choose the perfect plan for your {userType} needs. All plans include our core features with varying levels of advanced capabilities.
+        </p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
       {filteredPlans.map((plan) => {
         const isCurrentPlan = subscriptionData?.plan_type === plan.plan_type;
         const isEnterprise = plan.plan_type.includes('enterprise');
         const features = getFeatureList(plan.features);
 
         return (
-          <Card key={plan.id} className={`relative ${isCurrentPlan ? 'ring-2 ring-primary' : ''}`}>
+          <Card key={plan.id} className={`relative border-border shadow-sm hover:shadow-md transition-shadow ${isCurrentPlan ? 'ring-2 ring-primary shadow-md' : ''} ${isEnterprise ? 'border-primary/20' : ''}`}>
             {isCurrentPlan && (
-              <Badge className="absolute -top-2 left-4 bg-primary">
+              <Badge className="absolute -top-3 left-4 bg-primary text-primary-foreground px-3 py-1">
                 Current Plan
               </Badge>
             )}
-            {isEnterprise && (
-              <Badge className="absolute -top-2 right-4 bg-gradient-to-r from-purple-500 to-pink-500">
+            {isEnterprise && !isCurrentPlan && (
+              <Badge className="absolute -top-3 right-4 bg-slate-900 text-white px-3 py-1">
                 Most Popular
               </Badge>
             )}
             
-            <CardHeader>
-              <CardTitle className="text-xl">{plan.plan_name}</CardTitle>
-              <CardDescription>
-                <span className="text-3xl font-bold">{formatPrice(plan.monthly_price_cents)}</span>
-                <span className="text-muted-foreground">/month</span>
+            <CardHeader className="pb-6">
+              <CardTitle className="text-xl font-semibold">{plan.plan_name}</CardTitle>
+              <CardDescription className="space-y-1">
+                <div className="flex items-baseline">
+                  <span className="text-4xl font-bold text-foreground">{formatPrice(plan.monthly_price_cents)}</span>
+                  <span className="text-muted-foreground ml-2">/month</span>
+                </div>
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">Monthly Credits:</p>
-                <p className="text-lg font-semibold">
-                  {plan.monthly_credits === 999999 ? 'Unlimited' : plan.monthly_credits}
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Monthly Credits</p>
+                <p className="text-2xl font-semibold text-foreground">
+                  {plan.monthly_credits === 999999 ? 'Unlimited' : plan.monthly_credits.toLocaleString()}
                 </p>
               </div>
 
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">Features:</p>
-                <ul className="space-y-2">
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-muted-foreground">Features</p>
+                <ul className="space-y-3">
                   {features.map((feature, index) => (
-                    <li key={index} className="flex items-center text-sm">
-                      <Check className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                      {feature}
+                    <li key={index} className="flex items-start text-sm">
+                      <Check className="h-4 w-4 text-emerald-600 mr-3 mt-0.5 flex-shrink-0" />
+                      <span>{feature}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             </CardContent>
 
-            <CardFooter>
+            <CardFooter className="pt-6">
               <Button 
-                className="w-full" 
+                className="w-full h-11" 
                 onClick={() => handleSubscribe(plan)}
                 disabled={isCurrentPlan}
                 variant={isEnterprise ? 'default' : 'outline'}

@@ -79,59 +79,68 @@ export const CreditPackages: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h3 className="text-2xl font-bold mb-2">Purchase Additional Credits</h3>
-        <p className="text-muted-foreground">
-          Buy extra credits for report generation. Current balance: <span className="font-semibold">{currentCredits} credits</span>
+    <div className="space-y-8">
+      <div className="text-center space-y-2">
+        <h2 className="text-3xl font-semibold tracking-tight">Purchase Additional Credits</h2>
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          Buy extra credits for report generation. Current balance: <span className="font-semibold text-foreground">{currentCredits.toLocaleString()} credits</span>
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
         {CREDIT_PACKAGES.map((pkg) => (
-          <Card key={pkg.priceId} className={`relative ${pkg.popular ? 'ring-2 ring-primary' : ''}`}>
+          <Card key={pkg.priceId} className={`relative border-border shadow-sm hover:shadow-md transition-shadow ${pkg.popular ? 'ring-2 ring-primary border-primary/20' : ''}`}>
             {pkg.popular && (
-              <Badge className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-primary">
+              <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white px-3 py-1">
                 {pkg.value}
               </Badge>
             )}
             
-            <CardHeader className="text-center">
-              <div className="flex justify-center mb-2">
-                <div className="p-3 bg-primary/10 rounded-full">
-                  <Coins className="h-8 w-8 text-primary" />
+            <CardHeader className="text-center pb-6">
+              <div className="flex justify-center mb-4">
+                <div className="p-4 bg-slate-100 rounded-full">
+                  <Coins className="h-8 w-8 text-slate-600" />
                 </div>
               </div>
-              <CardTitle className="text-xl">{pkg.name}</CardTitle>
-              <CardDescription>{pkg.description}</CardDescription>
+              <CardTitle className="text-xl font-semibold">{pkg.name}</CardTitle>
+              <CardDescription className="text-base">{pkg.description}</CardDescription>
             </CardHeader>
 
-            <CardContent className="text-center space-y-4">
-              <div>
-                <p className="text-3xl font-bold">{formatPrice(pkg.price)}</p>
+            <CardContent className="text-center space-y-6">
+              <div className="space-y-1">
+                <p className="text-4xl font-bold text-foreground">{formatPrice(pkg.price)}</p>
                 <p className="text-sm text-muted-foreground">
                   ${getPricePerCredit(pkg.price, pkg.credits)} per credit
                 </p>
               </div>
 
-              <div className="flex items-center justify-center space-x-2 text-sm">
-                <Zap className="h-4 w-4 text-yellow-500" />
-                <span>{pkg.credits} credits</span>
+              <div className="flex items-center justify-center space-x-2 py-2 px-4 bg-muted/30 rounded-md">
+                <Zap className="h-4 w-4 text-slate-600" />
+                <span className="font-medium">{pkg.credits.toLocaleString()} credits</span>
               </div>
 
-              <div className="text-sm text-muted-foreground">
-                <p>Generate approximately:</p>
-                <ul className="mt-1 space-y-1">
-                  <li>• {Math.floor(pkg.credits / 5)} standard reports</li>
-                  <li>• {Math.floor(pkg.credits / 10)} detailed reports</li>
-                  <li>• {Math.floor(pkg.credits / 15)} comparison reports</li>
-                </ul>
+              <div className="text-sm text-muted-foreground space-y-2">
+                <p className="font-medium">Generate approximately:</p>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span>Standard reports:</span>
+                    <span className="font-medium">{Math.floor(pkg.credits / 5)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Detailed reports:</span>
+                    <span className="font-medium">{Math.floor(pkg.credits / 10)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Comparison reports:</span>
+                    <span className="font-medium">{Math.floor(pkg.credits / 15)}</span>
+                  </div>
+                </div>
               </div>
             </CardContent>
 
-            <CardFooter>
+            <CardFooter className="pt-6">
               <Button 
-                className="w-full" 
+                className="w-full h-11" 
                 onClick={() => handlePurchase(pkg.priceId, pkg.credits)}
                 variant={pkg.popular ? 'default' : 'outline'}
               >
@@ -142,27 +151,35 @@ export const CreditPackages: React.FC = () => {
         ))}
       </div>
 
-      <div className="bg-muted/50 rounded-lg p-4">
-        <h4 className="font-semibold mb-2">Credit Usage Guide:</h4>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div>
-            <span className="font-medium">Standard Report:</span>
-            <span className="text-muted-foreground ml-1">5 credits</span>
+      <Card className="max-w-4xl mx-auto border-border">
+        <CardHeader>
+          <CardTitle className="text-lg">Credit Usage Guide</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-4 bg-muted/30 rounded-md">
+              <p className="font-semibold text-foreground">Standard Report</p>
+              <p className="text-sm text-muted-foreground">5 credits</p>
+              <p className="text-xs text-muted-foreground mt-1">Basic compliance summary</p>
+            </div>
+            <div className="text-center p-4 bg-muted/30 rounded-md">
+              <p className="font-semibold text-foreground">Detailed Report</p>
+              <p className="text-sm text-muted-foreground">10 credits</p>
+              <p className="text-xs text-muted-foreground mt-1">Advanced analytics</p>
+            </div>
+            <div className="text-center p-4 bg-muted/30 rounded-md">
+              <p className="font-semibold text-foreground">Comparison Report</p>
+              <p className="text-sm text-muted-foreground">15 credits</p>
+              <p className="text-xs text-muted-foreground mt-1">Multi-supplier analysis</p>
+            </div>
+            <div className="text-center p-4 bg-muted/30 rounded-md">
+              <p className="font-semibold text-foreground">AI-Enhanced Report</p>
+              <p className="text-sm text-muted-foreground">20 credits</p>
+              <p className="text-xs text-muted-foreground mt-1">AI insights & recommendations</p>
+            </div>
           </div>
-          <div>
-            <span className="font-medium">Detailed Report:</span>
-            <span className="text-muted-foreground ml-1">10 credits</span>
-          </div>
-          <div>
-            <span className="font-medium">Comparison Report:</span>
-            <span className="text-muted-foreground ml-1">15 credits</span>
-          </div>
-          <div>
-            <span className="font-medium">AI-Enhanced Report:</span>
-            <span className="text-muted-foreground ml-1">20 credits</span>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

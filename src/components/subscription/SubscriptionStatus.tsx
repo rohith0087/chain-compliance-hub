@@ -80,15 +80,14 @@ export const SubscriptionStatus: React.FC = () => {
   };
 
   const getPlanIcon = () => {
-    if (isEnterprise) return <Crown className="h-5 w-5 text-purple-500" />;
-    if (isProfessional) return <TrendingUp className="h-5 w-5 text-blue-500" />;
-    return <Zap className="h-5 w-5 text-green-500" />;
+    if (isEnterprise) return <Crown className="h-5 w-5 text-slate-600" />;
+    if (isProfessional) return <TrendingUp className="h-5 w-5 text-slate-600" />;
+    return <Zap className="h-5 w-5 text-slate-600" />;
   };
 
   const getPlanBadgeVariant = () => {
-    if (isEnterprise) return 'default';
-    if (isProfessional) return 'secondary';
-    return 'outline';
+    if (subscriptionData.subscribed) return 'default';
+    return 'secondary';
   };
 
   const getCreditUsagePercentage = () => {
@@ -99,27 +98,27 @@ export const SubscriptionStatus: React.FC = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
       {/* Current Plan Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
+      <Card className="border-border shadow-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center justify-between text-lg">
+            <div className="flex items-center space-x-3">
               {getPlanIcon()}
               <span>Current Plan</span>
             </div>
-            <Badge variant={getPlanBadgeVariant()}>
-              {subscriptionData.subscribed ? 'Active' : 'Free'}
+            <Badge variant={getPlanBadgeVariant()} className="px-2 py-1 text-xs font-medium">
+              {subscriptionData.subscribed ? 'Active' : 'Free Plan'}
             </Badge>
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-base">
             {getPlanDisplayName(subscriptionData.plan_type)}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {subscriptionData.subscribed && subscriptionData.subscription_end && (
-            <div className="flex items-center space-x-2 text-sm">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Calendar className="h-4 w-4" />
               <span>Renews on {format(new Date(subscriptionData.subscription_end), 'MMM dd, yyyy')}</span>
             </div>
           )}
@@ -127,7 +126,7 @@ export const SubscriptionStatus: React.FC = () => {
           {subscriptionData.stripe_customer_exists && (
             <Button 
               variant="outline" 
-              size="sm" 
+              size="default"
               onClick={handleManageSubscription}
               className="w-full"
             >
@@ -139,44 +138,44 @@ export const SubscriptionStatus: React.FC = () => {
       </Card>
 
       {/* Credits Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Zap className="h-5 w-5 text-yellow-500" />
+      <Card className="border-border shadow-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center space-x-3 text-lg">
+            <Zap className="h-5 w-5 text-slate-600" />
             <span>Credit Balance</span>
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-base">
             Available credits for report generation
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="text-center">
-            <p className="text-3xl font-bold">
-              {isEnterprise ? '∞' : subscriptionData.credits}
+          <div className="text-center py-2">
+            <p className="text-4xl font-semibold text-foreground">
+              {isEnterprise ? '∞' : subscriptionData.credits.toLocaleString()}
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground mt-1">
               {isEnterprise ? 'Unlimited credits' : 'Available credits'}
             </p>
           </div>
 
           {!isEnterprise && (
             <>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span>Usage</span>
-                  <span>{subscriptionData.total_consumed_credits} used</span>
+                  <span className="text-muted-foreground">Credits Used</span>
+                  <span className="font-medium">{subscriptionData.total_consumed_credits.toLocaleString()}</span>
                 </div>
                 <Progress value={getCreditUsagePercentage()} className="h-2" />
               </div>
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Purchased</p>
-                  <p className="font-semibold">{subscriptionData.total_purchased_credits}</p>
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="text-center p-3 bg-muted/30 rounded-md">
+                  <p className="text-xs text-muted-foreground">Total Purchased</p>
+                  <p className="text-lg font-semibold">{subscriptionData.total_purchased_credits.toLocaleString()}</p>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">Consumed</p>
-                  <p className="font-semibold">{subscriptionData.total_consumed_credits}</p>
+                <div className="text-center p-3 bg-muted/30 rounded-md">
+                  <p className="text-xs text-muted-foreground">Total Consumed</p>
+                  <p className="text-lg font-semibold">{subscriptionData.total_consumed_credits.toLocaleString()}</p>
                 </div>
               </div>
             </>

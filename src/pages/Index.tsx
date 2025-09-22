@@ -137,12 +137,12 @@ const Index = () => {
   ];
 
   const trustedBy = [
-    { name: 'Fortune 500 Manufacturer', logo: '🏭' },
-    { name: 'Global Logistics Leader', logo: '🚛' },
-    { name: 'Pharmaceutical Giant', logo: '💊' },
-    { name: 'Food Service Chain', logo: '🍽️' },
-    { name: 'Construction Corp', logo: '🏗️' },
-    { name: 'Retail Network', logo: '🛍️' }
+    { name: 'Global Manufacturing Corp', logo: '🏭' },
+    { name: 'International Logistics', logo: '🚛' },
+    { name: 'Healthcare Solutions Inc', logo: '🏥' },
+    { name: 'Food Safety Alliance', logo: '🍽️' },
+    { name: 'Construction Partners', logo: '🏗️' },
+    { name: 'Retail Solutions Group', logo: '🛍️' }
   ];
 
   const industries = [
@@ -200,9 +200,9 @@ const Index = () => {
       <section className="relative bg-gradient-hero py-24 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="text-center mb-16">
-            <Badge className="mb-6 px-6 py-3 bg-gradient-primary text-white border-0 shadow-elegant animate-pulse-glow">
+            <Badge className="mb-6 px-6 py-3 bg-gradient-primary text-white border-0 shadow-elegant">
               <Award className="w-5 h-5 mr-2" />
-              Trusted by 500+ Enterprise Organizations Worldwide
+              Enterprise Compliance Platform
             </Badge>
             <h1 className="text-5xl md:text-7xl font-bold text-foreground mb-8 leading-tight">
               Enterprise-Grade
@@ -303,7 +303,7 @@ const Index = () => {
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
             {advancedFeatures.map((feature, index) => {
-              const colors = ['blue-accent', 'green-accent', 'purple-accent', 'orange-accent', 'teal-accent', 'pink-accent'];
+              const colors = ['blue-accent', 'green-accent', 'steel-accent', 'orange-accent', 'teal-accent', 'pink-accent'];
               const colorClass = colors[index % colors.length];
               
               return (
@@ -337,7 +337,7 @@ const Index = () => {
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {coreFeatures.map((feature, index) => {
-              const colors = ['blue-accent', 'green-accent', 'purple-accent'];
+              const colors = ['blue-accent', 'green-accent', 'steel-accent'];
               const colorClass = colors[index % colors.length];
               
               return (

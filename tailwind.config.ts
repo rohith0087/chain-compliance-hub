@@ -54,8 +54,11 @@ export default {
 				},
 				// Strategic accent colors
 				'blue-accent': 'hsl(var(--blue-accent))',
-				'purple-accent': 'hsl(var(--purple-accent))',
+				'steel-accent': 'hsl(var(--steel-accent))',
 				'green-accent': 'hsl(var(--green-accent))',
+				'orange-accent': 'hsl(var(--orange-accent))',
+				'teal-accent': 'hsl(var(--teal-accent))',
+				'pink-accent': 'hsl(var(--pink-accent))',
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',

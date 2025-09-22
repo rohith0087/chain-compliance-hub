@@ -25,9 +25,12 @@ import SupplierComplianceExportModal from '../exports/SupplierComplianceExportMo
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useSubscription } from '@/hooks/useSubscription';
 import { ComplianceDataService } from '@/services/ComplianceDataService';
 import { AdvancedPDFExportService } from '@/services/AdvancedPDFExportService';
 import { AIInsightsService } from '@/services/AIInsightsService';
+import { SubscriptionGuard } from '@/components/subscription/SubscriptionGuard';
+import { canGenerateReport, getReportCreditCost } from '@/utils/subscriptionGuards';
 
 const BuyerComplianceDashboard = () => {
   const [supplierStats, setSupplierStats] = useState<any[]>([]);
@@ -39,6 +42,7 @@ const BuyerComplianceDashboard = () => {
   const [buyerData, setBuyerData] = useState<any>(null);
   const [buyerId, setBuyerId] = useState<string>('');
   const { user } = useAuth();
+  const { subscriptionData, hasEnoughCredits } = useSubscription();
   const { t } = useTranslation(['dashboard', 'common']);
   const { toast } = useToast();
 
@@ -291,14 +295,26 @@ const BuyerComplianceDashboard = () => {
           <Button variant="outline" onClick={loadDashboardData}>
             {t('common:buttons.refresh')}
           </Button>
-          <Button 
-            variant="default" 
-            onClick={() => setShowExportModal(true)}
-            className="flex items-center gap-2"
+          <SubscriptionGuard
+            checkResult={canGenerateReport(subscriptionData, 'detailed')}
+            featureName="Report Export"
+            description="Generate detailed compliance reports and analytics for your suppliers."
           >
-            <Download className="w-4 h-4" />
-            Export Reports
-          </Button>
+            <Button 
+              variant="default" 
+              onClick={() => setShowExportModal(true)}
+              className="flex items-center gap-2"
+              disabled={!hasEnoughCredits(getReportCreditCost('standard'))}
+            >
+              <Download className="w-4 h-4" />
+              Export Reports
+              {subscriptionData && (
+                <span className="text-xs opacity-75 ml-1">
+                  ({subscriptionData.credits} credits)
+                </span>
+              )}
+            </Button>
+          </SubscriptionGuard>
         </div>
       </div>
 
@@ -488,6 +504,7 @@ const BuyerComplianceDashboard = () => {
         onClose={() => setShowExportModal(false)}
         suppliers={supplierStats}
         onExport={handleExportReports}
+        subscriptionData={subscriptionData}
       />
     </div>
   );

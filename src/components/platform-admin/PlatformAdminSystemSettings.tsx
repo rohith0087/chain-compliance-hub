@@ -24,17 +24,17 @@ export function PlatformAdminSystemSettings() {
       {/* Security Settings */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-black">
             <Shield className="h-5 w-5" />
             Security Settings
           </CardTitle>
-          <CardDescription>Configure platform security and access controls</CardDescription>
+          <CardDescription className="text-gray-600">Configure platform security and access controls</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label>Two-Factor Authentication</Label>
-              <p className="text-sm text-muted-foreground">Require 2FA for all platform administrators</p>
+              <Label className="text-black">Two-Factor Authentication</Label>
+              <p className="text-sm text-gray-600">Require 2FA for all platform administrators</p>
             </div>
             <Switch defaultChecked />
           </div>
@@ -63,28 +63,28 @@ export function PlatformAdminSystemSettings() {
       {/* Database Management */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-black">
             <Database className="h-5 w-5" />
             Database Management
           </CardTitle>
-          <CardDescription>Monitor and maintain database performance</CardDescription>
+          <CardDescription className="text-gray-600">Monitor and maintain database performance</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label>Database Size</Label>
-              <div className="text-2xl font-bold">2.4 GB</div>
-              <p className="text-sm text-muted-foreground">Current usage</p>
+              <Label className="text-black">Database Size</Label>
+              <div className="text-2xl font-bold text-black">2.4 GB</div>
+              <p className="text-sm text-gray-600">Current usage</p>
             </div>
             <div className="space-y-2">
-              <Label>Active Connections</Label>
-              <div className="text-2xl font-bold">47</div>
-              <p className="text-sm text-muted-foreground">Real-time connections</p>
+              <Label className="text-black">Active Connections</Label>
+              <div className="text-2xl font-bold text-black">47</div>
+              <p className="text-sm text-gray-600">Real-time connections</p>
             </div>
             <div className="space-y-2">
-              <Label>Query Performance</Label>
-              <div className="text-2xl font-bold">125ms</div>
-              <p className="text-sm text-muted-foreground">Average response time</p>
+              <Label className="text-black">Query Performance</Label>
+              <div className="text-2xl font-bold text-black">125ms</div>
+              <p className="text-sm text-gray-600">Average response time</p>
             </div>
           </div>
           

@@ -2954,6 +2954,8 @@ export type Database = {
       get_platform_admin_users: {
         Args: Record<PropertyKey, never>
         Returns: {
+          available_credits: number
+          company_name: string
           created_at: string
           email: string
           full_name: string
@@ -2962,6 +2964,13 @@ export type Database = {
           is_supplier: boolean
           last_sign_in_at: string
           roles: Database["public"]["Enums"]["user_role"][]
+          stripe_customer_id: string
+          stripe_subscription_id: string
+          subscription_end_date: string
+          subscription_plan_type: string
+          subscription_status: string
+          total_consumed_credits: number
+          total_purchased_credits: number
         }[]
       }
       get_super_admin_stats: {

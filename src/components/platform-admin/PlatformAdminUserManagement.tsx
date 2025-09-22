@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Loader2, MoreHorizontal, Search, Settings, RotateCcw, Users, Database, Shield } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Loader2, MoreHorizontal, Search, Settings, RotateCcw, Users, Database, Shield, CreditCard, DollarSign } from 'lucide-react';
 import { usePlatformAdmin, type DetailedUser } from '@/hooks/usePlatformAdmin';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -60,6 +61,27 @@ export function PlatformAdminUserManagement() {
         variant: "destructive",
       });
     }
+  };
+
+  const getSubscriptionStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'hsl(var(--admin-accent-green))';
+      case 'canceled':
+      case 'past_due':
+        return 'hsl(var(--admin-accent-red))';
+      case 'trialing':
+        return 'hsl(var(--admin-accent-yellow))';
+      default:
+        return 'hsl(var(--admin-text-muted))';
+    }
+  };
+
+  const getCreditLevelColor = (credits: number) => {
+    if (credits >= 100) return 'hsl(var(--admin-accent-green))';
+    if (credits >= 50) return 'hsl(var(--admin-accent-yellow))';
+    if (credits > 0) return 'hsl(var(--admin-accent-red))';
+    return 'hsl(var(--admin-text-muted))';
   };
 
   if (loading) {
@@ -173,11 +195,16 @@ export function PlatformAdminUserManagement() {
                         color: 'hsl(var(--admin-text))',
                         borderColor: 'hsl(var(--admin-border))'
                       }}>Roles</th>
-                    <th className="text-left p-6 font-semibold border-b" 
+                     <th className="text-left p-6 font-semibold border-b" 
                       style={{ 
                         color: 'hsl(var(--admin-text))',
                         borderColor: 'hsl(var(--admin-border))'
                       }}>Type</th>
+                    <th className="text-left p-6 font-semibold border-b" 
+                      style={{ 
+                        color: 'hsl(var(--admin-text))',
+                        borderColor: 'hsl(var(--admin-border))'
+                      }}>Subscription</th>
                     <th className="text-left p-6 font-semibold border-b" 
                       style={{ 
                         color: 'hsl(var(--admin-text))',
@@ -236,24 +263,76 @@ export function PlatformAdminUserManagement() {
                           ))}
                         </div>
                       </td>
-                      <td className="p-6">
-                        <Badge className="font-medium border"
-                          style={{
-                            borderColor: 'hsl(var(--admin-border))',
-                            color: 'white',
-                            backgroundColor: 'hsl(var(--admin-accent-blue))'
-                          }}>
-                          {user.user_type}
-                        </Badge>
-                      </td>
                        <td className="p-6">
-                         <div className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
-                           {user.last_activity_date ? 
-                             `Last seen: ${format(new Date(user.last_activity_date), 'MMM dd')}` :
-                             'No recent activity'
-                           }
-                         </div>
+                         <Badge className="font-medium border"
+                           style={{
+                             borderColor: 'hsl(var(--admin-border))',
+                             color: 'white',
+                             backgroundColor: 'hsl(var(--admin-accent-blue))'
+                           }}>
+                           {user.user_type}
+                         </Badge>
                        </td>
+                       <td className="p-6">
+                         <TooltipProvider>
+                           <div className="flex items-center space-x-3">
+                             <Tooltip>
+                               <TooltipTrigger>
+                                 <div className="flex items-center space-x-2">
+                                   <CreditCard className="h-4 w-4" 
+                                     style={{ color: getSubscriptionStatusColor(user.subscription_status) }} />
+                                   <Badge variant="outline" className="text-xs"
+                                     style={{
+                                       borderColor: getSubscriptionStatusColor(user.subscription_status),
+                                       color: getSubscriptionStatusColor(user.subscription_status)
+                                     }}>
+                                     {user.subscription_plan_type}
+                                   </Badge>
+                                 </div>
+                               </TooltipTrigger>
+                               <TooltipContent>
+                                 <div className="text-sm">
+                                   <p><strong>Status:</strong> {user.subscription_status}</p>
+                                   <p><strong>Plan:</strong> {user.subscription_plan_type}</p>
+                                   {user.subscription_end_date && (
+                                     <p><strong>Ends:</strong> {format(new Date(user.subscription_end_date), 'MMM dd, yyyy')}</p>
+                                   )}
+                                   {user.stripe_customer_id && (
+                                     <p><strong>Stripe ID:</strong> {user.stripe_customer_id.slice(0, 8)}...</p>
+                                   )}
+                                 </div>
+                               </TooltipContent>
+                             </Tooltip>
+                             <Tooltip>
+                               <TooltipTrigger>
+                                 <div className="flex items-center space-x-1">
+                                   <DollarSign className="h-4 w-4" 
+                                     style={{ color: getCreditLevelColor(user.available_credits) }} />
+                                   <span className="text-xs font-medium"
+                                     style={{ color: getCreditLevelColor(user.available_credits) }}>
+                                     {user.available_credits}
+                                   </span>
+                                 </div>
+                               </TooltipTrigger>
+                               <TooltipContent>
+                                 <div className="text-sm">
+                                   <p><strong>Available:</strong> {user.available_credits}</p>
+                                   <p><strong>Purchased:</strong> {user.total_purchased_credits}</p>
+                                   <p><strong>Consumed:</strong> {user.total_consumed_credits}</p>
+                                 </div>
+                               </TooltipContent>
+                             </Tooltip>
+                           </div>
+                         </TooltipProvider>
+                       </td>
+                        <td className="p-6">
+                          <div className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                            {user.last_activity_date ? 
+                              `Last seen: ${format(new Date(user.last_activity_date), 'MMM dd')}` :
+                              'No recent activity'
+                            }
+                          </div>
+                        </td>
                       <td className="p-6">
                         <div className="text-sm font-medium" style={{ color: 'hsl(var(--admin-text))' }}>
                           {format(new Date(user.registration_date), 'MMM dd, yyyy')}

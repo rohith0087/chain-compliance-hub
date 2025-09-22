@@ -29,6 +29,15 @@ export interface DetailedUser {
   last_activity_date: string;
   total_activities: number;
   user_type: string;
+  // Subscription fields
+  subscription_status: string;
+  subscription_plan_type: string;
+  subscription_end_date: string | null;
+  available_credits: number;
+  total_purchased_credits: number;
+  total_consumed_credits: number;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
 }
 
 export interface PlatformAdmin {
@@ -121,7 +130,16 @@ export const usePlatformAdmin = () => {
         total_document_uploads: 0, // Not available in simplified function
         last_activity_date: user.last_sign_in_at || '',
         total_activities: 0, // Not available in simplified function
-        user_type: user.is_buyer && user.is_supplier ? 'Both' : user.is_buyer ? 'Buyer' : user.is_supplier ? 'Supplier' : 'User'
+        user_type: user.is_buyer && user.is_supplier ? 'Both' : user.is_buyer ? 'Buyer' : user.is_supplier ? 'Supplier' : 'User',
+        // Subscription fields
+        subscription_status: user.subscription_status || 'none',
+        subscription_plan_type: user.subscription_plan_type || 'free',
+        subscription_end_date: user.subscription_end_date,
+        available_credits: user.available_credits || 0,
+        total_purchased_credits: user.total_purchased_credits || 0,
+        total_consumed_credits: user.total_consumed_credits || 0,
+        stripe_customer_id: user.stripe_customer_id,
+        stripe_subscription_id: user.stripe_subscription_id
       }));
       
       setUsers(usersData);

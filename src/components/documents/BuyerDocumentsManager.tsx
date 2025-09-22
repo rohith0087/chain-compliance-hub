@@ -488,13 +488,6 @@ const BuyerDocumentsManager = ({
     }
   };
 
-  const stats = {
-    total: filteredDocuments.length,
-    pending: filteredDocuments.filter(doc => doc.status === 'pending').length,
-    submitted: filteredDocuments.filter(doc => doc.status === 'submitted').length,
-    approved: filteredDocuments.filter(doc => doc.status === 'approved').length,
-    rejected: filteredDocuments.filter(doc => doc.status === 'rejected').length
-  };
 
   return (
     <div className="space-y-6">
@@ -509,49 +502,6 @@ const BuyerDocumentsManager = ({
         </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Total</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Pending</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-warning">{stats.pending}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Submitted</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">{stats.submitted}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Approved</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-success">{stats.approved}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Rejected</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">{stats.rejected}</div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Enhanced Filters */}
       <EnhancedDocumentsFilter

@@ -14,6 +14,21 @@ export interface FeatureCheckResult {
 }
 
 /**
+ * Extract base plan type from prefixed plan names
+ */
+function extractBasePlanType(planType: string): string {
+  // Remove buyer_ or supplier_ prefix
+  const basePlan = planType.replace(/^(buyer_|supplier_)/, '');
+  
+  // Map supplier_starter to basic for hierarchy comparison
+  if (basePlan === 'starter') {
+    return 'basic';
+  }
+  
+  return basePlan.toLowerCase();
+}
+
+/**
  * Check if a user has access to a specific feature based on their subscription
  */
 export function checkFeatureAccess(
@@ -39,7 +54,8 @@ export function checkFeatureAccess(
     }
 
     const planHierarchy = ['basic', 'professional', 'enterprise'];
-    const userPlanIndex = planHierarchy.indexOf(subscriptionData.plan_type.toLowerCase());
+    const userBasePlan = extractBasePlanType(subscriptionData.plan_type);
+    const userPlanIndex = planHierarchy.indexOf(userBasePlan);
     const requiredPlanIndex = planHierarchy.indexOf(requirement.planRequired.toLowerCase());
 
     if (userPlanIndex < requiredPlanIndex) {

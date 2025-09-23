@@ -89,8 +89,8 @@ export function PlatformAdminInvitations() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Platform Admin Invitations</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-2xl font-bold tracking-tight" style={{ color: 'hsl(var(--admin-text))' }}>Platform Admin Invitations</h2>
+          <p style={{ color: 'hsl(var(--admin-text-muted))' }}>
             Manage invitations for new platform administrators
           </p>
         </div>
@@ -151,18 +151,21 @@ export function PlatformAdminInvitations() {
         </Dialog>
       </div>
 
-      <Card>
+      <Card style={{ 
+        backgroundColor: 'hsl(var(--admin-card))', 
+        borderColor: 'hsl(var(--admin-border))' 
+      }}>
         <CardHeader>
-          <CardTitle>All Invitations</CardTitle>
-          <CardDescription>
+          <CardTitle style={{ color: 'hsl(var(--admin-text))' }}>All Invitations</CardTitle>
+          <CardDescription style={{ color: 'hsl(var(--admin-text-muted))' }}>
             View and manage all platform admin invitations
           </CardDescription>
         </CardHeader>
         <CardContent>
           {invitations.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">No invitations found</p>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p style={{ color: 'hsl(var(--admin-text-muted))' }}>No invitations found</p>
+              <p className="text-sm mt-1" style={{ color: 'hsl(var(--admin-text-muted))' }}>
                 Create your first invitation to get started
               </p>
             </div>

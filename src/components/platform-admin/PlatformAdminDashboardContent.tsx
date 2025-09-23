@@ -117,10 +117,10 @@ export function PlatformAdminDashboardContent() {
 
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold mb-2 text-black">
+        <h1 className="text-3xl font-bold mb-2" style={{ color: 'hsl(var(--admin-text))' }}>
           Platform Overview
         </h1>
-        <p className="text-gray-600">
+        <p style={{ color: 'hsl(var(--admin-text-muted))' }}>
           Monitor your platform's performance and key metrics
         </p>
       </div>
@@ -139,7 +139,8 @@ export function PlatformAdminDashboardContent() {
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle 
-                className="text-sm font-medium text-gray-600"
+                className="text-sm font-medium"
+                style={{ color: 'hsl(var(--admin-text-muted))' }}
               >
                 {stat.title}
               </CardTitle>
@@ -151,11 +152,11 @@ export function PlatformAdminDashboardContent() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold mb-1 text-black">
+              <div className="text-2xl font-bold mb-1" style={{ color: 'hsl(var(--admin-text))' }}>
                 {stat.value.toLocaleString()}
               </div>
               <div className="flex items-center justify-between">
-                <p className="text-xs text-gray-600">
+                <p className="text-xs" style={{ color: 'hsl(var(--admin-text-muted))' }}>
                   {stat.description}
                 </p>
                 <div className="flex items-center space-x-1">
@@ -180,32 +181,32 @@ export function PlatformAdminDashboardContent() {
           borderColor: 'hsl(var(--admin-border))' 
         }}>
           <CardHeader>
-            <CardTitle className="text-black">System Health</CardTitle>
-            <CardDescription className="text-gray-600">
+            <CardTitle style={{ color: 'hsl(var(--admin-text))' }}>System Health</CardTitle>
+            <CardDescription style={{ color: 'hsl(var(--admin-text-muted))' }}>
               Current system status and performance
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Database</span>
+                <span style={{ color: 'hsl(var(--admin-text-muted))' }}>Database</span>
                 <div className="flex items-center space-x-2">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'hsl(var(--admin-accent-green))' }}></div>
-                  <span className="text-sm text-black">Operational</span>
+                  <span className="text-sm" style={{ color: 'hsl(var(--admin-text))' }}>Operational</span>
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">API Services</span>
+                <span style={{ color: 'hsl(var(--admin-text-muted))' }}>API Services</span>
                 <div className="flex items-center space-x-2">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'hsl(var(--admin-accent-green))' }}></div>
-                  <span className="text-sm text-black">Operational</span>
+                  <span className="text-sm" style={{ color: 'hsl(var(--admin-text))' }}>Operational</span>
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">File Storage</span>
+                <span style={{ color: 'hsl(var(--admin-text-muted))' }}>File Storage</span>
                 <div className="flex items-center space-x-2">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'hsl(var(--admin-accent-green))' }}></div>
-                  <span className="text-sm text-black">Operational</span>
+                  <span className="text-sm" style={{ color: 'hsl(var(--admin-text))' }}>Operational</span>
                 </div>
               </div>
             </div>
@@ -217,18 +218,19 @@ export function PlatformAdminDashboardContent() {
           borderColor: 'hsl(var(--admin-border))' 
         }}>
           <CardHeader>
-            <CardTitle className="text-black">Quick Actions</CardTitle>
-            <CardDescription className="text-gray-600">
+            <CardTitle style={{ color: 'hsl(var(--admin-text))' }}>Quick Actions</CardTitle>
+            <CardDescription style={{ color: 'hsl(var(--admin-text-muted))' }}>
               Common administrative tasks
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3">
               <button 
-                className="p-3 rounded-lg border transition-colors hover:bg-opacity-80 text-black"
+                className="p-3 rounded-lg border transition-colors hover:bg-opacity-80"
                 style={{
                   backgroundColor: 'hsl(var(--admin-sidebar-accent))',
-                  borderColor: 'hsl(var(--admin-border))'
+                  borderColor: 'hsl(var(--admin-border))',
+                  color: 'hsl(var(--admin-text))'
                 }}
               >
                 <Users className="h-4 w-4 mb-1" />

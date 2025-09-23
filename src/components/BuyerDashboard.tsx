@@ -9,6 +9,7 @@ import SupplierDiscovery from '@/components/buyer/SupplierDiscovery';
 import NewRequestModal from '@/components/NewRequestModal';
 import BuyerComplianceDashboard from '@/components/dashboard/BuyerComplianceDashboard';
 import { Building2, Users, ListChecks, Plus, BarChart3, FileCheck, UserCheck, Settings, Calendar, AlertTriangle, Clock, MessageSquare, Compass, FileText, Send } from 'lucide-react';
+import AgentManagementDashboard from '@/components/agents/AgentManagementDashboard';
 import BuyerDocumentsDashboard from '@/components/documents/BuyerDocumentsDashboard';
 import { BuyerIdCard } from '@/components/buyer/BuyerIdCard';
 import BuyerConnectionRequests from '@/components/buyer/BuyerConnectionRequests';
@@ -372,6 +373,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         {/* Compliance Content */}
         {activeTab === 'compliance' && (
           <BuyerComplianceDashboard />
+        )}
+
+        {/* Agents Content */}
+        {activeTab === 'agents' && (
+          <AgentManagementDashboard />
         )}
 
         {/* Requests Content */}

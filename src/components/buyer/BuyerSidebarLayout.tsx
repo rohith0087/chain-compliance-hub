@@ -20,7 +20,8 @@ import {
   Send,
   UserPlus,
   Upload,
-  CreditCard
+  CreditCard,
+  Bot
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from 'react-i18next';
@@ -148,6 +149,11 @@ export function BuyerSidebarLayout({
       title: t('common:navigation.compliance'),
       icon: BarChart3,
       value: 'compliance'
+    },
+    {
+      title: 'Agents',
+      icon: Bot,
+      value: 'agents'
     },
     {
       title: t('dashboard:company.title'),

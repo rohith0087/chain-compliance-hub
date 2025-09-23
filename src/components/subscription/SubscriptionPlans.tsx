@@ -114,66 +114,78 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ userType }
 
   return (
     <div className="space-y-8">
-      <div className="text-center space-y-2">
-        <h2 className="text-3xl font-semibold tracking-tight">Subscription Plans</h2>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Choose the perfect plan for your {userType} needs. All plans include our core features with varying levels of advanced capabilities.
+      <div className="text-center space-y-4">
+        <h2 className="text-4xl font-bold tracking-tight bg-gradient-primary bg-clip-text text-transparent">
+          Subscription Plans
+        </h2>
+        <p className="text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+          Choose the perfect plan for your {userType} needs. All plans include our core features with varying levels of advanced capabilities and AI-powered insights.
         </p>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
       {filteredPlans.map((plan) => {
         const isCurrentPlan = subscriptionData?.plan_type === plan.plan_type;
         const isEnterprise = plan.plan_type.includes('enterprise');
         const features = getFeatureList(plan.features);
 
         return (
-          <Card key={plan.id} className={`relative border-border shadow-sm hover:shadow-md transition-shadow ${isCurrentPlan ? 'ring-2 ring-primary shadow-md' : ''} ${isEnterprise ? 'border-primary/20' : ''}`}>
+          <Card key={plan.id} className={`relative overflow-hidden border-0 bg-gradient-card shadow-elegant hover:shadow-modern transition-all duration-300 ${isCurrentPlan ? 'ring-2 ring-primary/30 shadow-modern scale-105' : ''} ${isEnterprise ? 'bg-gradient-primary/5' : ''}`}>
+            <div className="absolute inset-0 bg-gradient-primary opacity-5"></div>
+            
             {isCurrentPlan && (
-              <Badge className="absolute -top-3 left-4 bg-primary text-primary-foreground px-3 py-1">
+              <Badge className="absolute -top-3 left-4 bg-green-accent text-white px-4 py-1.5 shadow-subtle">
                 Current Plan
               </Badge>
             )}
             {isEnterprise && !isCurrentPlan && (
-              <Badge className="absolute -top-3 right-4 bg-slate-900 text-white px-3 py-1">
+              <Badge className="absolute -top-3 right-4 bg-gradient-primary text-white px-4 py-1.5 shadow-elegant">
                 Most Popular
               </Badge>
             )}
             
-            <CardHeader className="pb-6">
-              <CardTitle className="text-xl font-semibold">{plan.plan_name}</CardTitle>
-              <CardDescription className="space-y-1">
+            <CardHeader className="relative pb-6 bg-gradient-subtle/30">
+              <CardTitle className="text-2xl font-bold text-foreground">{plan.plan_name}</CardTitle>
+              <CardDescription className="space-y-2">
                 <div className="flex items-baseline">
-                  <span className="text-4xl font-bold text-foreground">{formatPrice(plan.monthly_price_cents)}</span>
-                  <span className="text-muted-foreground ml-2">/month</span>
+                  <span className="text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent">{formatPrice(plan.monthly_price_cents)}</span>
+                  <span className="text-foreground/70 ml-2 text-lg font-medium">/month</span>
                 </div>
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Monthly Credits</p>
-                <p className="text-2xl font-semibold text-foreground">
-                  {plan.monthly_credits === 999999 ? 'Unlimited' : plan.monthly_credits.toLocaleString()}
+            <CardContent className="relative space-y-6">
+              <div className="space-y-3 bg-accent/5 rounded-xl p-4 border border-accent/10">
+                <p className="text-sm font-semibold text-foreground/80 uppercase tracking-wide">Monthly Credits</p>
+                <p className="text-3xl font-bold text-foreground">
+                  {plan.monthly_credits === 999999 ? (
+                    <span className="bg-gradient-primary bg-clip-text text-transparent">Unlimited</span>
+                  ) : (
+                    plan.monthly_credits.toLocaleString()
+                  )}
                 </p>
               </div>
 
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-muted-foreground">Features</p>
+              <div className="space-y-4">
+                <p className="text-sm font-semibold text-foreground/80 uppercase tracking-wide">Features Included</p>
                 <ul className="space-y-3">
                   {features.map((feature, index) => (
                     <li key={index} className="flex items-start text-sm">
-                      <Check className="h-4 w-4 text-emerald-600 mr-3 mt-0.5 flex-shrink-0" />
-                      <span>{feature}</span>
+                      <Check className="h-5 w-5 text-green-accent mr-3 mt-0.5 flex-shrink-0" />
+                      <span className="text-foreground/90 font-medium">{feature}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             </CardContent>
 
-            <CardFooter className="pt-6">
+            <CardFooter className="relative pt-6">
               <Button 
-                className="w-full h-11" 
+                className={`w-full h-12 text-sm font-semibold transition-all duration-200 ${
+                  isEnterprise 
+                    ? 'bg-gradient-primary hover:shadow-elegant text-white' 
+                    : 'border-accent/30 hover:bg-accent/10 hover:border-accent/50'
+                } ${isCurrentPlan ? 'opacity-75 cursor-not-allowed' : ''}`}
                 onClick={() => handleSubscribe(plan)}
                 disabled={isCurrentPlan}
                 variant={isEnterprise ? 'default' : 'outline'}

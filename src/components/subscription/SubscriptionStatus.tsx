@@ -98,27 +98,35 @@ export const SubscriptionStatus: React.FC = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
       {/* Current Plan Card */}
-      <Card className="border-border shadow-sm">
-        <CardHeader className="pb-4">
+      <Card className="relative overflow-hidden border-0 bg-gradient-card shadow-elegant">
+        <div className="absolute inset-0 bg-gradient-primary opacity-5"></div>
+        <CardHeader className="relative pb-4">
           <CardTitle className="flex items-center justify-between text-lg">
             <div className="flex items-center space-x-3">
               {getPlanIcon()}
-              <span>Current Plan</span>
+              <span className="text-foreground">Current Plan</span>
             </div>
-            <Badge variant={getPlanBadgeVariant()} className="px-2 py-1 text-xs font-medium">
+            <Badge 
+              variant={getPlanBadgeVariant()} 
+              className={`px-3 py-1.5 text-xs font-medium ${
+                subscriptionData.subscribed 
+                  ? 'bg-green-accent/15 text-green-accent border-green-accent/20' 
+                  : 'bg-muted text-muted-foreground'
+              }`}
+            >
               {subscriptionData.subscribed ? 'Active' : 'Free Plan'}
             </Badge>
           </CardTitle>
-          <CardDescription className="text-base">
+          <CardDescription className="text-base text-foreground/80">
             {getPlanDisplayName(subscriptionData.plan_type)}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="relative space-y-4">
           {subscriptionData.subscribed && subscriptionData.subscription_end && (
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
+            <div className="flex items-center space-x-2 text-sm text-foreground/70 bg-accent/10 rounded-lg p-3">
+              <Calendar className="h-4 w-4 text-accent" />
               <span>Renews on {format(new Date(subscriptionData.subscription_end), 'MMM dd, yyyy')}</span>
             </div>
           )}
@@ -128,7 +136,7 @@ export const SubscriptionStatus: React.FC = () => {
               variant="outline" 
               size="default"
               onClick={handleManageSubscription}
-              className="w-full"
+              className="w-full border-accent/20 hover:bg-accent/10 hover:border-accent/30 transition-all duration-200"
             >
               <Settings className="h-4 w-4 mr-2" />
               Manage Subscription
@@ -138,44 +146,53 @@ export const SubscriptionStatus: React.FC = () => {
       </Card>
 
       {/* Credits Card */}
-      <Card className="border-border shadow-sm">
-        <CardHeader className="pb-4">
+      <Card className="relative overflow-hidden border-0 bg-gradient-card shadow-elegant">
+        <div className="absolute inset-0 bg-gradient-primary opacity-5"></div>
+        <CardHeader className="relative pb-4">
           <CardTitle className="flex items-center space-x-3 text-lg">
-            <Zap className="h-5 w-5 text-slate-600" />
-            <span>Credit Balance</span>
+            <Zap className="h-5 w-5 text-blue-accent" />
+            <span className="text-foreground">Credit Balance</span>
           </CardTitle>
-          <CardDescription className="text-base">
+          <CardDescription className="text-base text-foreground/80">
             Available credits for report generation
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="text-center py-2">
-            <p className="text-4xl font-semibold text-foreground">
-              {isEnterprise ? '∞' : subscriptionData.credits.toLocaleString()}
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">
+        <CardContent className="relative space-y-6">
+          <div className="text-center py-4">
+            <div className="relative inline-block">
+              <p className="text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                {isEnterprise ? '∞' : subscriptionData.credits.toLocaleString()}
+              </p>
+              {!isEnterprise && subscriptionData.credits < 10 && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-accent rounded-full animate-pulse"></div>
+              )}
+            </div>
+            <p className="text-sm text-foreground/70 mt-2 font-medium">
               {isEnterprise ? 'Unlimited credits' : 'Available credits'}
             </p>
           </div>
 
           {!isEnterprise && (
             <>
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Credits Used</span>
-                  <span className="font-medium">{subscriptionData.total_consumed_credits.toLocaleString()}</span>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center text-sm bg-accent/5 rounded-lg p-3">
+                  <span className="text-foreground/80">Credits Used</span>
+                  <span className="font-semibold text-foreground">{subscriptionData.total_consumed_credits.toLocaleString()}</span>
                 </div>
-                <Progress value={getCreditUsagePercentage()} className="h-2" />
+                <Progress 
+                  value={getCreditUsagePercentage()} 
+                  className="h-3 bg-muted/50" 
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-2">
-                <div className="text-center p-3 bg-muted/30 rounded-md">
-                  <p className="text-xs text-muted-foreground">Total Purchased</p>
-                  <p className="text-lg font-semibold">{subscriptionData.total_purchased_credits.toLocaleString()}</p>
+                <div className="text-center p-4 bg-gradient-subtle rounded-xl border border-border/50">
+                  <p className="text-xs text-foreground/60 uppercase tracking-wide font-medium">Total Purchased</p>
+                  <p className="text-2xl font-bold text-foreground mt-1">{subscriptionData.total_purchased_credits.toLocaleString()}</p>
                 </div>
-                <div className="text-center p-3 bg-muted/30 rounded-md">
-                  <p className="text-xs text-muted-foreground">Total Consumed</p>
-                  <p className="text-lg font-semibold">{subscriptionData.total_consumed_credits.toLocaleString()}</p>
+                <div className="text-center p-4 bg-gradient-subtle rounded-xl border border-border/50">
+                  <p className="text-xs text-foreground/60 uppercase tracking-wide font-medium">Total Consumed</p>
+                  <p className="text-2xl font-bold text-foreground mt-1">{subscriptionData.total_consumed_credits.toLocaleString()}</p>
                 </div>
               </div>
             </>

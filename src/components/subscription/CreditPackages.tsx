@@ -80,43 +80,51 @@ export const CreditPackages: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      <div className="text-center space-y-2">
-        <h2 className="text-3xl font-semibold tracking-tight">Purchase Additional Credits</h2>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Buy extra credits for report generation. Current balance: <span className="font-semibold text-foreground">{currentCredits.toLocaleString()} credits</span>
+      <div className="text-center space-y-4">
+        <h2 className="text-4xl font-bold tracking-tight bg-gradient-primary bg-clip-text text-transparent">
+          Purchase Additional Credits
+        </h2>
+        <p className="text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+          Buy extra credits for report generation and unlock advanced features. 
         </p>
+        <div className="inline-flex items-center gap-2 bg-gradient-card px-6 py-3 rounded-xl border border-border/50 shadow-subtle">
+          <Zap className="h-5 w-5 text-blue-accent" />
+          <span className="text-base">Current balance: <span className="font-bold text-foreground">{currentCredits.toLocaleString()} credits</span></span>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
         {CREDIT_PACKAGES.map((pkg) => (
-          <Card key={pkg.priceId} className={`relative border-border shadow-sm hover:shadow-md transition-shadow ${pkg.popular ? 'ring-2 ring-primary border-primary/20' : ''}`}>
+          <Card key={pkg.priceId} className={`relative overflow-hidden border-0 bg-gradient-card shadow-elegant hover:shadow-modern transition-all duration-300 ${pkg.popular ? 'ring-2 ring-primary/30 shadow-modern scale-105' : ''}`}>
+            <div className="absolute inset-0 bg-gradient-primary opacity-5"></div>
+            
             {pkg.popular && (
-              <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white px-3 py-1">
+              <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-primary text-white px-4 py-1.5 shadow-elegant">
                 {pkg.value}
               </Badge>
             )}
             
-            <CardHeader className="text-center pb-6">
+            <CardHeader className="relative text-center pb-6 bg-gradient-subtle/30">
               <div className="flex justify-center mb-4">
-                <div className="p-4 bg-slate-100 rounded-full">
-                  <Coins className="h-8 w-8 text-slate-600" />
+                <div className="p-5 bg-gradient-card rounded-2xl shadow-subtle border border-border/30">
+                  <Coins className="h-10 w-10 text-blue-accent" />
                 </div>
               </div>
-              <CardTitle className="text-xl font-semibold">{pkg.name}</CardTitle>
-              <CardDescription className="text-base">{pkg.description}</CardDescription>
+              <CardTitle className="text-2xl font-bold text-foreground">{pkg.name}</CardTitle>
+              <CardDescription className="text-base text-foreground/80">{pkg.description}</CardDescription>
             </CardHeader>
 
-            <CardContent className="text-center space-y-6">
-              <div className="space-y-1">
-                <p className="text-4xl font-bold text-foreground">{formatPrice(pkg.price)}</p>
-                <p className="text-sm text-muted-foreground">
+            <CardContent className="relative text-center space-y-6">
+              <div className="space-y-2">
+                <p className="text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent">{formatPrice(pkg.price)}</p>
+                <p className="text-sm text-foreground/70 font-medium">
                   ${getPricePerCredit(pkg.price, pkg.credits)} per credit
                 </p>
               </div>
 
-              <div className="flex items-center justify-center space-x-2 py-2 px-4 bg-muted/30 rounded-md">
-                <Zap className="h-4 w-4 text-slate-600" />
-                <span className="font-medium">{pkg.credits.toLocaleString()} credits</span>
+              <div className="flex items-center justify-center space-x-3 py-3 px-5 bg-accent/10 rounded-xl border border-accent/20">
+                <Zap className="h-5 w-5 text-blue-accent" />
+                <span className="font-bold text-foreground text-lg">{pkg.credits.toLocaleString()} credits</span>
               </div>
 
               <div className="text-sm text-muted-foreground space-y-2">
@@ -138,9 +146,13 @@ export const CreditPackages: React.FC = () => {
               </div>
             </CardContent>
 
-            <CardFooter className="pt-6">
+            <CardFooter className="relative pt-6">
               <Button 
-                className="w-full h-11" 
+                className={`w-full h-12 text-sm font-semibold transition-all duration-200 ${
+                  pkg.popular 
+                    ? 'bg-gradient-primary hover:shadow-elegant text-white' 
+                    : 'border-accent/30 hover:bg-accent/10 hover:border-accent/50'
+                }`}
                 onClick={() => handlePurchase(pkg.priceId, pkg.credits)}
                 variant={pkg.popular ? 'default' : 'outline'}
               >
@@ -151,31 +163,33 @@ export const CreditPackages: React.FC = () => {
         ))}
       </div>
 
-      <Card className="max-w-4xl mx-auto border-border">
-        <CardHeader>
-          <CardTitle className="text-lg">Credit Usage Guide</CardTitle>
+      <Card className="max-w-5xl mx-auto border-0 bg-gradient-card shadow-elegant overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-primary opacity-5"></div>
+        <CardHeader className="relative bg-gradient-subtle/30">
+          <CardTitle className="text-2xl font-bold text-foreground">Credit Usage Guide</CardTitle>
+          <CardDescription className="text-foreground/80">Understand how credits are consumed for different report types</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-muted/30 rounded-md">
-              <p className="font-semibold text-foreground">Standard Report</p>
-              <p className="text-sm text-muted-foreground">5 credits</p>
-              <p className="text-xs text-muted-foreground mt-1">Basic compliance summary</p>
+        <CardContent className="relative p-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="text-center p-6 bg-gradient-subtle rounded-xl border border-border/50 shadow-subtle">
+              <p className="font-bold text-foreground text-lg">Standard Report</p>
+              <p className="text-blue-accent font-bold text-xl mt-2">5 credits</p>
+              <p className="text-sm text-foreground/70 mt-2">Basic compliance summary</p>
             </div>
-            <div className="text-center p-4 bg-muted/30 rounded-md">
-              <p className="font-semibold text-foreground">Detailed Report</p>
-              <p className="text-sm text-muted-foreground">10 credits</p>
-              <p className="text-xs text-muted-foreground mt-1">Advanced analytics</p>
+            <div className="text-center p-6 bg-gradient-subtle rounded-xl border border-border/50 shadow-subtle">
+              <p className="font-bold text-foreground text-lg">Detailed Report</p>
+              <p className="text-green-accent font-bold text-xl mt-2">10 credits</p>
+              <p className="text-sm text-foreground/70 mt-2">Advanced analytics</p>
             </div>
-            <div className="text-center p-4 bg-muted/30 rounded-md">
-              <p className="font-semibold text-foreground">Comparison Report</p>
-              <p className="text-sm text-muted-foreground">15 credits</p>
-              <p className="text-xs text-muted-foreground mt-1">Multi-supplier analysis</p>
+            <div className="text-center p-6 bg-gradient-subtle rounded-xl border border-border/50 shadow-subtle">
+              <p className="font-bold text-foreground text-lg">Comparison Report</p>
+              <p className="text-orange-accent font-bold text-xl mt-2">15 credits</p>
+              <p className="text-sm text-foreground/70 mt-2">Multi-supplier analysis</p>
             </div>
-            <div className="text-center p-4 bg-muted/30 rounded-md">
-              <p className="font-semibold text-foreground">AI-Enhanced Report</p>
-              <p className="text-sm text-muted-foreground">20 credits</p>
-              <p className="text-xs text-muted-foreground mt-1">AI insights & recommendations</p>
+            <div className="text-center p-6 bg-gradient-subtle rounded-xl border border-border/50 shadow-subtle">
+              <p className="font-bold text-foreground text-lg">AI-Enhanced Report</p>
+              <p className="text-pink-accent font-bold text-xl mt-2">20 credits</p>
+              <p className="text-sm text-foreground/70 mt-2">AI insights & recommendations</p>
             </div>
           </div>
         </CardContent>

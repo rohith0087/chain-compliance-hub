@@ -8,7 +8,13 @@ export function PlatformAdminLayout() {
   const [activeSection, setActiveSection] = useState('dashboard');
 
   return (
-    <div className="platform-admin min-h-screen bg-white text-black">
+    <div 
+      className="platform-admin min-h-screen" 
+      style={{ 
+        backgroundColor: 'hsl(var(--admin-background))', 
+        color: 'hsl(var(--admin-text))' 
+      }}
+    >
       <SidebarProvider>
         <div className="flex min-h-screen w-full">
           <PlatformAdminSidebar 

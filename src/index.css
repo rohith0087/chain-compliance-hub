@@ -170,21 +170,3 @@
     display: none; /* Chrome, Safari and Opera */
   }
 }
-
-/* Platform Admin Text Override */
-.platform-admin * {
-  color: #000000 !important;
-}
-
-.platform-admin .text-muted-foreground,
-.platform-admin .text-gray-600 {
-  color: #666666 !important;
-}
-
-.platform-admin .text-destructive {
-  color: #dc2626 !important;
-}
-
-.platform-admin .text-green-600 {
-  color: #16a34a !important;
-}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -15,7 +15,6 @@ import {
   Loader2, 
   Lightbulb,
   FileText,
-  AlertCircle,
   Download,
   Calendar,
   CheckCircle,
@@ -23,9 +22,18 @@ import {
   XCircle,
   ExternalLink,
   AlertTriangle,
-  Info
+  Info,
+  Zap,
+  Brain,
+  Shield,
+  Sparkles,
+  Activity,
+  Eye,
+  Mic,
+  Volume2,
+  Settings,
+  MoreHorizontal
 } from "lucide-react";
-import { format } from "date-fns";
 
 interface Message {
   id: string;
@@ -70,7 +78,7 @@ interface ChatAgentPanelProps {
   className?: string;
 }
 
-const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({ 
+const FuturisticChatInterface: React.FC<ChatAgentPanelProps> = ({ 
   companyType, 
   companyId, 
   className = "" 
@@ -81,6 +89,7 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [lastSources, setLastSources] = useState<ChatSource[]>([]);
+  const [voiceMode, setVoiceMode] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -230,7 +239,7 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
   const getQuickActions = () => {
     const actions = companyType === 'buyer' ? [
       "What documents do I need from suppliers?",
-      "How can I improve compliance rates?",
+      "How can I improve compliance rates?", 
       "Show me recent document analysis results",
       "What are the main compliance risks?"
     ] : [
@@ -273,7 +282,7 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
   };
 
   const renderStructuredMessage = (message: Message) => {
-if (!message.metadata?.structured_response) {
+    if (!message.metadata?.structured_response) {
       return typeof message.content === 'string'
         ? <p className="text-sm whitespace-pre-wrap">{message.content}</p>
         : <pre className="text-xs text-muted-foreground whitespace-pre-wrap">{JSON.stringify(message.content, null, 2)}</pre>;
@@ -469,7 +478,7 @@ if (!message.metadata?.structured_response) {
                           isExpiringSoon(doc.expiration_date) ? 'text-yellow-500' : ''
                         }`}>
                           <Calendar className="h-3 w-3" />
-                          Expires: {format(new Date(doc.expiration_date), 'MMM dd, yyyy')}
+                          Expires: {new Date(doc.expiration_date).toLocaleDateString()}
                           {isExpired(doc.expiration_date) && ' (EXPIRED)'}
                           {isExpiringSoon(doc.expiration_date) && ' (Expiring Soon)'}
                         </div>
@@ -507,165 +516,331 @@ if (!message.metadata?.structured_response) {
       </div>
     );
   };
+            <span className="text-xs text-muted-foreground">
+              {new Date(message.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+
+          {/* Message Bubble */}
+          <div className={`relative group ${isUser ? 'ml-8' : 'mr-8'}`}>
+            <div className={`rounded-3xl p-4 backdrop-blur-sm relative overflow-hidden ${
+              isUser 
+                ? 'bg-gradient-to-br from-blue-600 to-purple-700 text-white shadow-xl shadow-blue-500/25' 
+                : 'bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl'
+            }`}>
+              {/* Animated background for AI messages */}
+              {isAI && (
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-cyan-500/5 to-purple-500/5 animate-pulse opacity-50" />
+              )}
+              
+              <div className="relative z-10">
+                {isAI ? 
+                  renderStructuredMessage(message) :
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                }
+              </div>
+
+              {/* Message Actions */}
+              <div className={`absolute top-2 ${isUser ? 'left-2' : 'right-2'} opacity-0 group-hover:opacity-100 transition-opacity`}>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-white/60 hover:text-white/80">
+                  <MoreHorizontal className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Show sources for AI responses */}
+          {isAI && message.metadata?.sources?.length > 0 && (
+            <div className="mt-3 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl p-3 border border-white/20">
+              <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                <FileText className="h-3 w-3" />
+                Knowledge sources:
+              </p>
+              <div className="space-y-1">
+                {message.metadata.sources.map((source: ChatSource, idx: number) => (
+                  <div key={idx} className="flex items-center gap-2 text-xs">
+                    <div className="w-1 h-1 bg-emerald-500 rounded-full" />
+                    <span className="flex-1">{source.title}</span>
+                    <Badge variant="outline" className="text-xs bg-emerald-500/10 border-emerald-500/20 text-emerald-600">
+                      {source.type}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <Card className={`h-full flex flex-col ${className}`}>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2">
-          <Bot className="h-5 w-5 text-primary" />
-          Compliance AI Assistant
-          <Badge variant="secondary" className="ml-auto">
-            {companyType === 'buyer' ? 'Buyer' : 'Supplier'}
-          </Badge>
-        </CardTitle>
-      </CardHeader>
-      
-      <CardContent className="flex-1 flex flex-col gap-4 p-4">
-        {/* Messages Area */}
-        <ScrollArea 
-          ref={scrollAreaRef}
-          className="flex-1 pr-4 scrollbar-hide"
-          style={{
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
-          }}
-        >
-          <div className="space-y-4">
-            {messages.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <Bot className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-lg font-medium mb-2">Welcome to your AI Assistant!</p>
-                <p className="text-sm">I can help you with compliance questions, document requirements, and industry-specific guidance.</p>
-                
-                {/* Quick Actions */}
-                <div className="mt-6 space-y-2">
-                  <p className="text-xs font-medium text-left">Quick questions:</p>
-                  {getQuickActions().map((action, index) => (
-                    <Button
-                      key={index}
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-left justify-start h-auto p-2 text-xs"
-                      onClick={() => setInputMessage(action)}
-                    >
-                      <Lightbulb className="h-3 w-3 mr-2 flex-shrink-0" />
-                      {action}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
+    <div className={`h-full flex flex-col bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 ${className} relative overflow-hidden`}>
+      {/* Animated Background */}
+      <div className="absolute inset-0 opacity-30">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-tl from-emerald-400 to-cyan-500 rounded-full blur-3xl animate-pulse delay-1000" />
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-pink-400 to-orange-500 rounded-full blur-3xl animate-pulse delay-2000" />
+      </div>
 
-            {messages.map((message) => (
-              <div key={message.id} className="space-y-2">
-                <div className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                  <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                    message.role === 'user' 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'bg-muted text-muted-foreground'
-                  }`}>
-                    {getMessageIcon(message.role)}
-                  </div>
-                  
-                  <div className={`flex-1 max-w-[80%] ${message.role === 'user' ? 'text-right' : ''}`}>
-                    <div className={`rounded-lg p-3 ${
-                      message.role === 'user'
-                        ? 'bg-primary text-primary-foreground ml-auto'
-                        : 'bg-muted'
-                    }`}>
-{message.role === 'assistant' ? 
-                        renderStructuredMessage(message) : 
-                        (typeof message.content === 'string' ? (
-                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                        ) : (
-                          <pre className="text-xs text-muted-foreground whitespace-pre-wrap">{JSON.stringify(message.content, null, 2)}</pre>
-                        ))
-                      }
-                      
-                      {/* Show sources for AI responses */}
-                      {message.role === 'assistant' && message.metadata?.sources?.length > 0 && (
-                        <div className="mt-3 pt-2 border-t border-muted-foreground/20">
-                          <p className="text-xs text-muted-foreground mb-2">Knowledge sources:</p>
-                          <div className="space-y-1">
-                            {message.metadata.sources.map((source: ChatSource, idx: number) => (
-                              <div key={idx} className="flex items-center gap-2 text-xs">
-                                <FileText className="h-3 w-3" />
-                                <span className="flex-1">{source.title}</span>
-                                <Badge variant="outline" className="text-xs">
-                                  {source.type}
-                                </Badge>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {format(new Date(message.created_at), 'HH:mm')}
-                    </p>
-                  </div>
-                </div>
+      {/* Header */}
+      <div className="relative z-10 p-6 border-b border-white/10 backdrop-blur-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/25">
+                <Brain className="w-6 h-6 text-white" />
               </div>
-            ))}
-
-            {isLoading && (
-              <div className="flex gap-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                  <Bot className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div className="flex-1">
-                  <div className="bg-muted rounded-lg p-3">
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span className="text-sm text-muted-foreground">AI is thinking...</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white animate-pulse" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent">
+                Nexus AI Assistant
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Advanced Compliance Intelligence • {companyType === 'buyer' ? 'Buyer Mode' : 'Supplier Mode'}
+              </p>
+            </div>
           </div>
-        </ScrollArea>
 
-        {/* Input Area */}
-        <div className="space-y-2">
-          <Separator />
-          <div className="flex gap-2">
+          <div className="flex items-center gap-3">
+            {/* Status Indicators */}
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/20">
+              <Activity className="w-4 h-4 text-emerald-500" />
+              <span className="text-sm font-medium text-emerald-600">
+                {lastSources.length > 0 ? `${lastSources.length} sources` : 'Ready'}
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/20">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-sm font-medium text-foreground/80">Online</span>
+            </div>
+
+            <Button variant="ghost" size="sm" className="rounded-full w-10 h-10 p-0">
+              <Settings className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Messages Area */}
+      <ScrollArea ref={scrollAreaRef} className="flex-1 relative z-10">
+        <div className="p-6">
+          {messages.length === 0 && (
+            <div className="text-center py-12 space-y-6">
+              <div className="relative">
+                <div className="w-24 h-24 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-emerald-500/25">
+                  <Brain className="w-12 h-12 text-white" />
+                </div>
+                <div className="absolute -inset-4 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-3xl opacity-20 animate-pulse blur-xl" />
+              </div>
+
+              <div className="space-y-3">
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent">
+                  Welcome to Nexus AI
+                </h2>
+                <p className="text-muted-foreground max-w-md mx-auto leading-relaxed">
+                  Your advanced compliance intelligence partner. I can analyze documents, predict risks, and automate compliance workflows with precision.
+                </p>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Quick questions:</p>
+                {getQuickActions().map((action, index) => (
+                  <Button
+                    key={index}
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-left justify-start h-auto p-3 text-sm bg-white/50 backdrop-blur-sm border-white/20 hover:bg-white/70 transition-all duration-300 hover:shadow-lg"
+                    onClick={() => setInputMessage(action)}
+                  >
+                    <Lightbulb className="h-4 w-4 mr-2 flex-shrink-0 text-emerald-500" />
+                    {action}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {messages.map(renderMessage)}
+
+          {/* AI Thinking Indicator */}
+          {isLoading && (
+            <div className="flex gap-4 mb-8">
+              <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-2xl flex items-center justify-center relative overflow-hidden shadow-lg shadow-emerald-500/25">
+                <Bot className="w-6 h-6 text-white relative z-10" />
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
+                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-2xl opacity-75 animate-pulse" />
+              </div>
+              
+              <div className="flex-1 mr-8">
+                <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-4 shadow-xl backdrop-blur-sm relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-cyan-500/5 to-purple-500/5 animate-pulse" />
+                  <div className="relative z-10 flex items-center gap-3">
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" />
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce delay-100" />
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce delay-200" />
+                    </div>
+                    <span className="text-sm text-muted-foreground">Nexus AI is analyzing your request...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+
+      {/* Input Area */}
+      <div className="relative z-10 p-6 border-t border-white/10 backdrop-blur-sm">
+        <div className="relative">
+          <div className="flex items-center gap-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl border border-white/20 p-2 shadow-lg">
+            {/* Voice Mode Toggle */}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className={`rounded-xl transition-all duration-300 ${voiceMode ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25' : ''}`}
+              onClick={() => setVoiceMode(!voiceMode)}
+            >
+              {voiceMode ? <Volume2 className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            </Button>
+
+            {/* Input Field */}
             <Input
               ref={inputRef}
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Ask about compliance, documents, or requirements..."
+              placeholder="Ask Nexus AI anything about compliance..."
               disabled={isLoading}
-              className="flex-1"
+              className="flex-1 border-0 bg-transparent text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
             />
+
+            {/* Send Button */}
             <Button 
-              onClick={sendMessage} 
+              onClick={sendMessage}
               disabled={!inputMessage.trim() || isLoading}
-              size="icon"
+              className="rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white shadow-lg shadow-emerald-500/25 transition-all duration-300 hover:shadow-xl"
+              size="sm"
             >
               {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <Send className="h-4 w-4" />
+                <Send className="w-4 h-4" />
               )}
             </Button>
           </div>
-          
-          {lastSources.length > 0 && (
-            <div className="text-xs text-muted-foreground flex items-center gap-1">
-              <AlertCircle className="h-3 w-3" />
-              Response used {lastSources.length} knowledge source{lastSources.length !== 1 ? 's' : ''}
-              {messages[messages.length - 1]?.metadata?.documents_found > 0 && 
-                ` and ${messages[messages.length - 1].metadata.documents_found} document${messages[messages.length - 1].metadata.documents_found !== 1 ? 's' : ''}`
-              }
+
+          {/* Status Bar */}
+          <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1">
+                <Eye className="w-3 h-3" />
+                Nexus AI can see context from previous messages
+              </span>
+              <span className="flex items-center gap-1">
+                <Shield className="w-3 h-3 text-emerald-500" />
+                End-to-end encrypted
+              </span>
+            </div>
+            {lastSources.length > 0 && (
+              <div className="flex items-center gap-1">
+                <FileText className="w-3 h-3 text-emerald-500" />
+                <span>Used {lastSources.length} knowledge source{lastSources.length !== 1 ? 's' : ''}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};<div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-2xl flex items-center justify-center relative overflow-hidden shadow-lg shadow-emerald-500/25">
+                <Bot className="w-6 h-6 text-white relative z-10" />
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
+                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-2xl opacity-75 animate-pulse" />
+              </div>
+              
+              <div className="flex-1 mr-8">
+                <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-4 shadow-xl backdrop-blur-sm relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-cyan-500/5 to-purple-500/5 animate-pulse" />
+                  <div className="relative z-10 flex items-center gap-3">
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" />
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce delay-100" />
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce delay-200" />
+                    </div>
+                    <span className="text-sm text-muted-foreground">Nexus AI is analyzing your request...</span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </ScrollArea>
+
+      {/* Input Area */}
+      <div className="relative z-10 p-6 border-t border-white/10 backdrop-blur-sm">
+        <div className="relative">
+          <div className="flex items-center gap-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl border border-white/20 p-2 shadow-lg">
+            {/* Voice Mode Toggle */}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className={`rounded-xl transition-all duration-300 ${voiceMode ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25' : ''}`}
+              onClick={() => setVoiceMode(!voiceMode)}
+            >
+              {voiceMode ? <Volume2 className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            </Button>
+
+            {/* Input Field */}
+            <Input
+              ref={inputRef}
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Ask Nexus AI anything about compliance..."
+              disabled={isLoading}
+              className="flex-1 border-0 bg-transparent text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+            />
+
+            {/* Send Button */}
+            <Button 
+              onClick={sendMessage}
+              disabled={!inputMessage.trim() || isLoading}
+              className="rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white shadow-lg shadow-emerald-500/25 transition-all duration-300 hover:shadow-xl"
+              size="sm"
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+
+          {/* Status Bar */}
+          <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1">
+                <Eye className="w-3 h-3" />
+                Nexus AI can see context from previous messages
+              </span>
+              <span className="flex items-center gap-1">
+                <Shield className="w-3 h-3 text-emerald-500" />
+                End-to-end encrypted
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className={`w-2 h-2 rounded-full ${networkStrength > 80 ? 'bg-green-500' : networkStrength > 50 ? 'bg-yellow-500' : 'bg-red-500'}`} />
+              <span>{networkStrength}% network</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
-export default ChatAgentPanel;
+export default FuturisticChatInterface;

@@ -568,12 +568,12 @@ if (!message.metadata?.structured_response) {
                   </div>
                   
                   <div className={`flex-1 max-w-[80%] ${message.role === 'user' ? 'text-right' : ''}`}>
-                    <div className={`rounded-lg p-3 ${
+                     <div className={`rounded-lg p-3 ${
                       message.role === 'user'
                         ? 'bg-primary text-primary-foreground ml-auto'
                         : 'bg-muted'
                     }`}>
-{message.role === 'assistant' ? 
+                      {message.role === 'assistant' ? 
                         renderStructuredMessage(message) : 
                         (typeof message.content === 'string' ? (
                           <p className="text-sm whitespace-pre-wrap">{message.content}</p>

@@ -81,6 +81,7 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [lastSources, setLastSources] = useState<ChatSource[]>([]);
+  const [documentStatusUpdates, setDocumentStatusUpdates] = useState<Map<string, string>>(new Map());
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -94,6 +95,54 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
   // Focus input on mount
   useEffect(() => {
     inputRef.current?.focus();
+  }, []);
+
+  // Set up real-time subscriptions for document status updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('document-status-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'document_uploads'
+        },
+        (payload) => {
+          if (payload.new && typeof payload.new === 'object' && payload.new !== null && 'id' in payload.new && 'status' in payload.new) {
+            setDocumentStatusUpdates(prev => new Map(prev.set((payload.new as any).id as string, (payload.new as any).status as string)));
+            // Trigger a refresh of the last message if it contains documents
+            setMessages(prev => prev.map((msg, index) => 
+              index === prev.length - 1 && msg.role === 'assistant' 
+                ? { ...msg, metadata: { ...msg.metadata, _refreshTrigger: Date.now() } }
+                : msg
+            ));
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'document_requests'
+        },
+        (payload) => {
+          if (payload.new && typeof payload.new === 'object') {
+            // Refresh compliance data when request status changes
+            setMessages(prev => prev.map((msg, index) => 
+              index === prev.length - 1 && msg.role === 'assistant' 
+                ? { ...msg, metadata: { ...msg.metadata, _refreshTrigger: Date.now() } }
+                : msg
+            ));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Load chat history
@@ -243,12 +292,18 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
     return actions;
   };
 
-  const getDocumentStatusIcon = (status: string) => {
-    switch (status?.toLowerCase()) {
+  const getDocumentStatusIcon = (status: string, documentId?: string) => {
+    // Use real-time status if available
+    const currentStatus = documentId && documentStatusUpdates.has(documentId) 
+      ? documentStatusUpdates.get(documentId) 
+      : status;
+      
+    switch (currentStatus?.toLowerCase()) {
       case 'approved':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
       case 'pending':
       case 'pending_review':
+      case 'submitted':
         return <Clock className="h-4 w-4 text-yellow-500" />;
       case 'expired':
       case 'rejected':
@@ -455,7 +510,7 @@ if (!message.metadata?.structured_response) {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      {getDocumentStatusIcon(doc.status)}
+                      {getDocumentStatusIcon(doc.status, doc.id)}
                       <span className="font-medium text-sm truncate">{doc.title}</span>
                     </div>
                     <div className="text-xs text-muted-foreground space-y-1">

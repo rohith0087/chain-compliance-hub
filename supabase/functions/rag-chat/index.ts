@@ -145,7 +145,8 @@ async function getComplianceMetrics(companyId: string, companyType: string): Pro
   const metrics = docs.reduce((acc, doc) => {
     acc.total_documents++;
     
-    if (doc.status === 'pending_review') acc.pending_documents++;
+    // Fix status mapping to match actual database values
+    if (doc.status === 'pending_review' || doc.status === 'submitted') acc.pending_documents++;
     else if (doc.status === 'approved') acc.approved_documents++;
     else if (doc.status === 'rejected') acc.rejected_documents++;
     

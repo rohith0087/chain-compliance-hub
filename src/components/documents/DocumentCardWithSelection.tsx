@@ -74,12 +74,12 @@ const DocumentCardWithSelection = ({
 }: DocumentCardWithSelectionProps) => {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'approved': return 'bg-success/20 text-success-foreground';
-      case 'pending': return 'bg-warning/20 text-warning-foreground';
-      case 'submitted': return 'bg-primary/20 text-primary-foreground';
-      case 'rejected': return 'bg-destructive/20 text-destructive-foreground';
-      case 'expired': return 'bg-muted text-muted-foreground';
-      default: return 'bg-muted text-muted-foreground';
+      case 'approved': return 'bg-gradient-to-r from-[hsl(var(--green-accent))] to-[hsl(var(--emerald-accent))] text-white border-0';
+      case 'pending': return 'bg-gradient-to-r from-[hsl(var(--orange-accent))] to-amber-500 text-white border-0';
+      case 'submitted': return 'bg-gradient-to-r from-[hsl(var(--blue-accent))] to-[hsl(var(--accent))] text-white border-0';
+      case 'rejected': return 'bg-gradient-to-r from-destructive to-red-600 text-white border-0';
+      case 'expired': return 'bg-gradient-to-r from-gray-400 to-gray-500 text-white border-0';
+      default: return 'bg-gradient-to-r from-[hsl(var(--teal-accent))] to-cyan-600 text-white border-0';
     }
   };
 
@@ -130,8 +130,20 @@ const DocumentCardWithSelection = ({
     document.file_name && 
     onCreateLink;
 
+  const getCategoryColor = (category: string) => {
+    const colors: Record<string, string> = {
+      compliance: 'border-l-[hsl(var(--blue-accent))]',
+      certification: 'border-l-[hsl(var(--green-accent))]',
+      insurance: 'border-l-[hsl(var(--orange-accent))]',
+      quality: 'border-l-[hsl(var(--pink-accent))]',
+      safety: 'border-l-[hsl(var(--teal-accent))]',
+      financial: 'border-l-[hsl(var(--steel-accent))]',
+    };
+    return colors[category.toLowerCase()] || 'border-l-[hsl(var(--accent))]';
+  };
+
   return (
-    <Card className={`hover:shadow-md transition-all ${isSelected ? 'ring-2 ring-primary' : ''}`}>
+    <Card className={`hover:shadow-elegant transition-all duration-300 border-l-4 ${getCategoryColor(document.category)} ${isSelected ? 'ring-2 ring-[hsl(var(--blue-accent))] shadow-[0_0_20px_hsl(var(--blue-accent)/0.3)]' : ''}`}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
@@ -139,11 +151,11 @@ const DocumentCardWithSelection = ({
               <Checkbox
                 checked={isSelected}
                 onCheckedChange={onSelectionChange}
-                className="mt-1"
+                className="mt-1 data-[state=checked]:bg-[hsl(var(--blue-accent))] data-[state=checked]:border-[hsl(var(--blue-accent))]"
               />
             )}
-            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-              <FileText className="w-5 h-5 text-primary" />
+            <div className="w-10 h-10 bg-gradient-to-br from-[hsl(var(--blue-accent))]/20 to-[hsl(var(--accent))]/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+              <FileText className="w-5 h-5 text-[hsl(var(--blue-accent))]" />
             </div>
             <div>
               <CardTitle className="text-lg">{document.title || document.document_type}</CardTitle>
@@ -271,23 +283,35 @@ const DocumentCardWithSelection = ({
 
           {/* Expiration Date */}
           {document.expiration_date && (
-            <div className="p-3 rounded-lg border">
+            <div className={`p-3 rounded-lg backdrop-blur-sm ${
+              isExpired(document.expiration_date) 
+                ? 'bg-gradient-to-r from-red-500/10 to-red-600/10 border border-red-500/30' 
+                : isExpiringSoon(document.expiration_date)
+                ? 'bg-gradient-to-r from-[hsl(var(--orange-accent))]/10 to-amber-500/10 border border-[hsl(var(--orange-accent))]/30'
+                : 'bg-gradient-to-r from-[hsl(var(--green-accent))]/10 to-[hsl(var(--emerald-accent))]/10 border border-[hsl(var(--green-accent))]/30'
+            }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                  <Calendar className={`w-4 h-4 ${
+                    isExpired(document.expiration_date) ? 'text-red-600' :
+                    isExpiringSoon(document.expiration_date) ? 'text-[hsl(var(--orange-accent))]' :
+                    'text-[hsl(var(--green-accent))]'
+                  }`} />
                   <span className="text-sm font-medium">
                     {userRole === 'buyer' ? 'Document Expires:' : 'Expires:'}
                   </span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm">{formatDate(document.expiration_date)}</span>
+                  <span className="text-sm font-semibold">{formatDate(document.expiration_date)}</span>
                   {isExpired(document.expiration_date) && (
-                    <Badge variant="destructive" className="text-xs">
+                    <Badge className="text-xs bg-gradient-to-r from-red-500 to-red-600 text-white border-0">
+                      <AlertTriangle className="w-3 h-3 mr-1" />
                       Expired
                     </Badge>
                   )}
                   {isExpiringSoon(document.expiration_date) && !isExpired(document.expiration_date) && (
-                    <Badge variant="outline" className="text-xs bg-warning/20 text-warning-foreground">
+                    <Badge className="text-xs bg-gradient-to-r from-[hsl(var(--orange-accent))] to-amber-500 text-white border-0">
+                      <Clock className="w-3 h-3 mr-1" />
                       Expires Soon
                     </Badge>
                   )}

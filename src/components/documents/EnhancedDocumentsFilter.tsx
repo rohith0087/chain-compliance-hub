@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Filter, X, Calendar, Download } from 'lucide-react';
+import { Search, Filter, X, Calendar, Download, CheckCircle, AlertTriangle } from 'lucide-react';
 
 interface EnhancedDocumentsFilterProps {
   filters: {
@@ -117,38 +117,47 @@ const EnhancedDocumentsFilter = ({
   return (
     <div className="space-y-4">
       {/* Quick Filters */}
-      <Card>
+      <Card className="bg-gradient-to-br from-[hsl(var(--blue-accent))]/5 to-[hsl(var(--accent))]/5 border-[hsl(var(--blue-accent))]/20">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium">Quick Filters</CardTitle>
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[hsl(var(--blue-accent))] to-[hsl(var(--accent))] flex items-center justify-center">
+              <Filter className="w-4 h-4 text-white" />
+            </div>
+            Quick Filters
+          </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="flex flex-wrap gap-2">
             <Button 
-              variant="outline" 
               size="sm"
               onClick={() => applyQuickFilter('valid_2024_2025')}
+              className="bg-gradient-to-r from-[hsl(var(--green-accent))] to-[hsl(var(--emerald-accent))] hover:opacity-90 text-white border-0 shadow-[0_4px_12px_hsl(var(--green-accent)/0.3)]"
             >
+              <CheckCircle className="w-3 h-3 mr-2" />
               2024-2025 Valid
             </Button>
             <Button 
-              variant="outline" 
               size="sm"
               onClick={() => applyQuickFilter('expiring_soon')}
+              className="bg-gradient-to-r from-[hsl(var(--orange-accent))] to-amber-500 hover:opacity-90 text-white border-0 shadow-[0_4px_12px_hsl(var(--orange-accent)/0.3)]"
             >
+              <AlertTriangle className="w-3 h-3 mr-2" />
               Expiring Soon
             </Button>
             <Button 
-              variant="outline" 
               size="sm"
               onClick={() => applyQuickFilter('last_30_days')}
+              className="bg-gradient-to-r from-[hsl(var(--blue-accent))] to-[hsl(var(--accent))] hover:opacity-90 text-white border-0 shadow-[0_4px_12px_hsl(var(--blue-accent)/0.3)]"
             >
+              <Calendar className="w-3 h-3 mr-2" />
               Last 30 Days
             </Button>
             <Button 
-              variant="outline" 
               size="sm"
               onClick={() => applyQuickFilter('current_year')}
+              className="bg-gradient-to-r from-[hsl(var(--teal-accent))] to-cyan-600 hover:opacity-90 text-white border-0 shadow-[0_4px_12px_hsl(var(--teal-accent)/0.3)]"
             >
+              <Calendar className="w-3 h-3 mr-2" />
               Current Year
             </Button>
           </div>
@@ -306,21 +315,24 @@ const EnhancedDocumentsFilter = ({
       </Card>
 
       {/* Bulk Actions */}
-      <Card>
+      <Card className="bg-gradient-to-br from-[hsl(var(--pink-accent))]/5 to-purple-500/5 border-[hsl(var(--pink-accent))]/20">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
-            <Download className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[hsl(var(--pink-accent))] to-purple-500 flex items-center justify-center">
+              <Download className="w-4 h-4 text-white" />
+            </div>
             Bulk Actions
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <Button 
                 variant="outline" 
                 size="sm"
                 onClick={onSelectAll}
                 disabled={filteredDocumentsCount === 0}
+                className="border-[hsl(var(--blue-accent))]/30 hover:bg-[hsl(var(--blue-accent))]/10"
               >
                 Select All Filtered ({filteredDocumentsCount})
               </Button>
@@ -329,18 +341,20 @@ const EnhancedDocumentsFilter = ({
                   variant="outline" 
                   size="sm"
                   onClick={onClearSelection}
+                  className="border-destructive/30 hover:bg-destructive/10"
                 >
+                  <X className="w-3 h-3 mr-1" />
                   Clear Selection
                 </Button>
               )}
-              <Badge variant="secondary" className="ml-2">
+              <Badge className="bg-gradient-to-r from-[hsl(var(--pink-accent))] to-purple-500 text-white border-0">
                 {selectedDocuments.size} selected
               </Badge>
             </div>
             <Button 
               onClick={onBulkDownload}
               disabled={selectedDocuments.size === 0}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-gradient-to-r from-[hsl(var(--blue-accent))] to-[hsl(var(--accent))] hover:opacity-90 text-white border-0 shadow-[0_4px_12px_hsl(var(--blue-accent)/0.3)]"
             >
               <Download className="w-4 h-4" />
               Download ZIP ({selectedDocuments.size})

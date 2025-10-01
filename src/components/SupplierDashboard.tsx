@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   AlertTriangle, 
   CheckCircle, 
@@ -19,7 +21,8 @@ import {
   Building2,
   BarChart3,
   MessageSquare,
-  FileText
+  FileText,
+  Search
 } from 'lucide-react';
 import { SupplierSettingsModal } from '@/components/settings/SupplierSettingsModal';
 import { SupplierSidebarLayout } from '@/components/supplier/SupplierSidebarLayout';
@@ -72,6 +75,12 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
     buyer: 'all',
     category: 'all',
     documentType: 'all'
+  });
+  
+  const [overviewFilters, setOverviewFilters] = useState({
+    search: '',
+    buyer: 'all',
+    status: 'all'
   });
   
   const { user: authUser } = useAuth();
@@ -280,6 +289,20 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
     return matchesSearch && matchesStatus && matchesPriority && matchesBuyer && matchesCategory && matchesDocumentType;
   });
 
+  // Filter for overview tab
+  const overviewFilteredRequests = documentRequests.filter(request => {
+    const searchLower = overviewFilters.search.toLowerCase();
+    const matchesSearch = !overviewFilters.search || 
+      request.title.toLowerCase().includes(searchLower) ||
+      request.document_type.toLowerCase().includes(searchLower) ||
+      request.buyers?.company_name?.toLowerCase().includes(searchLower);
+    
+    const matchesStatus = !overviewFilters.status || overviewFilters.status === 'all' || request.status === overviewFilters.status;
+    const matchesBuyer = !overviewFilters.buyer || overviewFilters.buyer === 'all' || request.buyer_id === overviewFilters.buyer;
+
+    return matchesSearch && matchesStatus && matchesBuyer;
+  });
+
   // Get unique buyers for filter dropdown
   const uniqueBuyers = documentRequests
     .filter(req => req.buyers)
@@ -437,15 +460,71 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     {t('supplier:sections.recentRequests')}
-                    <Badge variant="outline">{documentRequests.length}</Badge>
+                    <Badge variant="outline">
+                      {overviewFilters.buyer !== 'all' || overviewFilters.status !== 'all' || overviewFilters.search 
+                        ? `${overviewFilteredRequests.slice(0, 5).length} of ${overviewFilteredRequests.length}`
+                        : `Recent (5 of ${documentRequests.length})`
+                      }
+                    </Badge>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {documentRequests.length === 0 ? (
-                    <p className="text-gray-500 text-center py-8">{t('supplier:sections.noRecentRequests')}</p>
+                  {/* Simple filters for overview */}
+                  <div className="mb-4 space-y-3">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                      <Input
+                        placeholder="Search requests..."
+                        value={overviewFilters.search}
+                        onChange={(e) => setOverviewFilters(prev => ({ ...prev, search: e.target.value }))}
+                        className="pl-10"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Select 
+                        value={overviewFilters.buyer} 
+                        onValueChange={(value) => setOverviewFilters(prev => ({ ...prev, buyer: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="All buyers" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Buyers</SelectItem>
+                          {uniqueBuyers.map((buyer) => (
+                            <SelectItem key={buyer.id} value={buyer.id}>
+                              {buyer.company_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select 
+                        value={overviewFilters.status} 
+                        onValueChange={(value) => setOverviewFilters(prev => ({ ...prev, status: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="All statuses" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Statuses</SelectItem>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="submitted">Submitted</SelectItem>
+                          <SelectItem value="approved">Approved</SelectItem>
+                          <SelectItem value="rejected">Rejected</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {overviewFilteredRequests.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">
+                      {overviewFilters.buyer !== 'all' || overviewFilters.status !== 'all' || overviewFilters.search
+                        ? 'No requests match your filters'
+                        : t('supplier:sections.noRecentRequests')
+                      }
+                    </p>
                   ) : (
                     <div className="space-y-3">
-                      {documentRequests.slice(0, 5).map((request) => (
+                      {overviewFilteredRequests.slice(0, 5).map((request) => (
                         <div 
                           key={request.id} 
                           className="flex items-center justify-between p-4 border border-border/50 rounded-xl cursor-pointer hover:bg-gradient-glass backdrop-blur-sm hover:shadow-modern transition-all duration-200 hover:scale-[1.02]"

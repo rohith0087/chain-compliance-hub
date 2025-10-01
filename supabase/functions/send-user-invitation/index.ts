@@ -132,9 +132,9 @@ const handler = async (req: Request): Promise<Response> => {
         });
 
       // Send different email for existing users
-      const baseUrl = "https://compliance.tracer2c.com";
+      const baseUrl = "https://chain-compliance-hub.lovable.app";
       const roleDisplayName = role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-      const joinUrl = `${baseUrl}/dashboard`;
+      const joinUrl = `${baseUrl}/invite/${inviteToken}`;
 
       const htmlContent = `
         <!DOCTYPE html>
@@ -175,13 +175,20 @@ const handler = async (req: Request): Promise<Response> => {
             <div style="text-align: center; margin: 30px 0;">
               <a href="${joinUrl}" 
                  style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
-                🏢 Log In to Access Your New Company
+                🏢 Accept Invitation & Join Company
               </a>
+              <br>
+              <small style="color: #666; font-size: 12px;">This link expires in 7 days</small>
             </div>
 
             <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; border-left: 4px solid #2196f3;">
               <h3 style="color: #1976d2; margin-top: 0;">What's next:</h3>
-              <p style="margin: 0; color: #1976d2;">Simply log in with your existing account credentials to access ${companyName} and start collaborating with your new team!</p>
+              <ol style="margin: 0; padding-left: 20px; color: #1976d2;">
+                <li>Click "Accept Invitation & Join Company" above</li>
+                <li>Sign in with your existing account credentials</li>
+                <li>Complete the setup process</li>
+                <li>Start collaborating with your new team!</li>
+              </ol>
             </div>
 
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #666;">
@@ -232,7 +239,7 @@ const handler = async (req: Request): Promise<Response> => {
     // User doesn't exist, create new account
     const tempPassword = generateSecurePassword(16);
     const inviteToken = await generateInviteToken();
-    const baseUrl = "https://compliance.tracer2c.com";
+    const baseUrl = "https://chain-compliance-hub.lovable.app";
 
     // Create user account in Supabase Auth
     const { data: authUser, error: authError } = await supabase.auth.admin.createUser({

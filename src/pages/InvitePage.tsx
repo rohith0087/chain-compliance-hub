@@ -42,39 +42,128 @@ const InvitePage = () => {
     try {
       setLoading(true);
       
-      // For now, use the invitation token to get user metadata
-      // This is a fallback until the user_invitations table types are available
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError) {
-        // Try to extract invitation info from URL or alternative approach
+      if (!token) {
+        toast.error('Invalid invitation link');
+        navigate('/auth');
+        return;
+      }
+
+      // Fetch invitation from database
+      const { data: invitationData, error: inviteError } = await supabase
+        .from('user_invitations')
+        .select('*')
+        .eq('token', token)
+        .single();
+
+      if (inviteError || !invitationData) {
+        console.error('Invitation lookup error:', inviteError);
         toast.error('Invalid or expired invitation link');
         navigate('/auth');
         return;
       }
 
-      // Create mock invitation data for demonstration
-      // In production, this would come from the user_invitations table
-      const mockInvitation: InvitationDetails = {
-        email: 'user@example.com',
-        company_name: 'Demo Company',
-        company_type: 'buyer',
-        branch_name: 'Main Branch',
-        role: 'viewer',
-        invited_by: 'admin@company.com',
-        temp_password: 'TempPass123!',
-        user_id: user?.id || '',
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      // Check if invitation has expired
+      if (new Date(invitationData.expires_at) < new Date()) {
+        toast.error('This invitation has expired. Please request a new one.');
+        navigate('/auth');
+        return;
+      }
+
+      // Check if invitation was already used
+      if (invitationData.used_at) {
+        toast.error('This invitation has already been used.');
+        navigate('/auth');
+        return;
+      }
+
+      // Get branch name
+      let branchName = 'Main Branch';
+      if (invitationData.branch_id) {
+        const { data: branch } = await supabase
+          .from('company_branches')
+          .select('branch_name')
+          .eq('id', invitationData.branch_id)
+          .single();
+        branchName = branch?.branch_name || 'Main Branch';
+      }
+
+      // Get company name based on company type
+      let companyName = '';
+      if (invitationData.company_type === 'buyer') {
+        const { data: buyer } = await supabase
+          .from('buyers')
+          .select('company_name')
+          .eq('id', invitationData.company_id)
+          .single();
+        companyName = buyer?.company_name || 'Unknown Company';
+      } else {
+        const { data: supplier } = await supabase
+          .from('suppliers')
+          .select('company_name')
+          .eq('id', invitationData.company_id)
+          .single();
+        companyName = supplier?.company_name || 'Unknown Company';
+      }
+
+      const invitation: InvitationDetails = {
+        email: invitationData.email,
+        company_name: companyName,
+        company_type: invitationData.company_type,
+        branch_name: branchName,
+        role: invitationData.role,
+        invited_by: invitationData.invited_by,
+        temp_password: invitationData.temp_password || '',
+        user_id: invitationData.user_id || '',
+        expires_at: invitationData.expires_at
       };
 
-      setInvitation(mockInvitation);
-      setStep('signin');
+      setInvitation(invitation);
+      
+      // Check if user already has a session (for existing users)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // User is already signed in, just accept the invitation
+        await acceptInvitation(invitationData);
+      } else {
+        setStep('signin');
+      }
     } catch (error) {
       console.error('Error verifying invitation:', error);
       toast.error('Failed to verify invitation');
       navigate('/auth');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const acceptInvitation = async (invitationData: any) => {
+    try {
+      // Update company_users status to active
+      const { error: companyUserError } = await supabase
+        .from('company_users')
+        .update({ status: 'active' })
+        .eq('invitation_token', token);
+
+      if (companyUserError) {
+        console.error('Error updating company_users:', companyUserError);
+      }
+
+      // Mark invitation as used
+      await supabase
+        .from('user_invitations')
+        .update({ used_at: new Date().toISOString() })
+        .eq('token', token);
+
+      setStep('complete');
+      
+      // Redirect to dashboard
+      setTimeout(() => {
+        navigate('/dashboard');
+        window.location.reload(); // Refresh to update auth context
+      }, 2000);
+    } catch (error) {
+      console.error('Error accepting invitation:', error);
+      toast.error('Failed to complete invitation acceptance');
     }
   };
 
@@ -113,7 +202,7 @@ const InvitePage = () => {
       return;
     }
 
-    if (!invitation) return;
+    if (!invitation || !token) return;
 
     setProcessing(true);
     try {
@@ -132,22 +221,29 @@ const InvitePage = () => {
         return;
       }
 
-      // Clean up invitation record (when table types are available)
-      try {
-        // await supabase
-        //   .from('user_invitations')
-        //   .delete()
-        //   .eq('token', token);
-        console.log('Invitation cleanup would happen here');
-      } catch (cleanupError) {
-        console.log('Invitation cleanup error (expected during development):', cleanupError);
+      // Update company_users status to active
+      const { error: companyUserError } = await supabase
+        .from('company_users')
+        .update({ status: 'active' })
+        .eq('invitation_token', token);
+
+      if (companyUserError) {
+        console.error('Error updating company_users:', companyUserError);
       }
 
+      // Mark invitation as used
+      await supabase
+        .from('user_invitations')
+        .update({ used_at: new Date().toISOString() })
+        .eq('token', token);
+
+      toast.success('Account setup complete!');
       setStep('complete');
       
       // Redirect to dashboard after success
       setTimeout(() => {
         navigate('/dashboard');
+        window.location.reload(); // Refresh to update auth context
       }, 2000);
       
     } catch (error) {

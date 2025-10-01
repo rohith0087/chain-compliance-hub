@@ -79,9 +79,9 @@ const BuyerDocumentsDashboard = () => {
 
       if (!buyerProfile) return;
 
-      // Load connected suppliers with document counts
-      const { data: suppliersData } = await supabase
-        .from('buyer_supplier_connections')
+      // Load ALL suppliers that have documents for this buyer
+      const { data: documentsData } = await supabase
+        .from('document_requests')
         .select(`
           supplier_id,
           suppliers!inner (
@@ -89,31 +89,36 @@ const BuyerDocumentsDashboard = () => {
             company_name
           )
         `)
-        .eq('buyer_id', buyerProfile.id)
-        .eq('status', 'approved');
+        .eq('buyer_id', buyerProfile.id);
 
-      if (!suppliersData) return;
+      if (!documentsData) return;
 
-      // Get document counts for each supplier
-      const suppliersWithCounts = await Promise.all(
-        suppliersData.map(async (connection) => {
-          const { count } = await supabase
-            .from('document_requests')
-            .select('*', { count: 'exact', head: true })
-            .eq('buyer_id', buyerProfile.id)
-            .eq('supplier_id', connection.supplier_id);
+      // Create a map to count documents per supplier
+      const supplierMap = new Map<string, { id: string; company_name: string; documentCount: number }>();
+      
+      documentsData.forEach((doc) => {
+        if (doc.suppliers) {
+          const existing = supplierMap.get(doc.supplier_id);
+          if (existing) {
+            existing.documentCount++;
+          } else {
+            supplierMap.set(doc.supplier_id, {
+              id: doc.supplier_id,
+              company_name: doc.suppliers.company_name,
+              documentCount: 1
+            });
+          }
+        }
+      });
 
-          return {
-            id: connection.supplier_id,
-            company_name: connection.suppliers.company_name,
-            documentCount: count || 0
-          };
-        })
+      // Convert map to array and sort by company name
+      const suppliersArray = Array.from(supplierMap.values()).sort((a, b) => 
+        a.company_name.localeCompare(b.company_name)
       );
 
-      setAvailableSuppliers(suppliersWithCounts);
+      setAvailableSuppliers(suppliersArray);
     } catch (error) {
-      console.error('Error loading connected suppliers:', error);
+      console.error('Error loading suppliers:', error);
     }
   };
 

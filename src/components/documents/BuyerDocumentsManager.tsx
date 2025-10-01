@@ -152,18 +152,18 @@ const BuyerDocumentsManager = ({
            matchesSpecificYear && matchesExpirationStatus;
   });
 
-  // Create available suppliers list for filter
+  // Create available suppliers list from documents - extract actual supplier data
   const availableSuppliers = Array.from(
     new Map(
       documents
-        .filter(doc => doc.suppliers)
-        .map(doc => [doc.suppliers.id, {
-          id: doc.suppliers.id,
+        .filter(doc => doc.suppliers && doc.supplier_id)
+        .map(doc => [doc.supplier_id, { // Use supplier_id as key for consistency
+          id: doc.supplier_id,
           company_name: doc.suppliers.company_name,
-          documentCount: documents.filter(d => d.suppliers?.id === doc.suppliers.id).length
+          documentCount: documents.filter(d => d.supplier_id === doc.supplier_id).length
         }])
     ).values()
-  );
+  ).sort((a, b) => a.company_name.localeCompare(b.company_name));
 
   const handleView = async (doc: any) => {
     console.log('View document:', doc.id);

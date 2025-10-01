@@ -23,6 +23,7 @@ import SharedDocumentViewer from "./components/shared/SharedDocumentViewer";
 import NotFound from "./pages/NotFound";
 import SubscriptionPage from "./pages/SubscriptionPage";
 import "./i18n";
+import { BranchProvider } from "@/contexts/BranchContext";
 
 const queryClient = new QueryClient();
 
@@ -95,46 +96,48 @@ const AppRoutes = () => {
     <BrowserRouter>
       <LanguageProvider>
         <AuthProvider>
-          <Routes>
-            <Route path="/" element={
-              <PublicRoute>
-                <AuthPage />
-              </PublicRoute>
-            } />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/invite/:token" element={<InvitePage />} />
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <DynamicDashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/chat" element={
-              <ProtectedRoute>
-                <ChatPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/agents" element={
-              <ProtectedRoute>
-                <AgentManagementDashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/subscription" element={
-              <ProtectedRoute>
-                <SubscriptionPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin" element={
-              <AdminRoute>
-                <AdminDashboard />
-              </AdminRoute>
-            } />
-            <Route path="/platform-admin/login" element={<PlatformAdminLogin />} />
-            <Route path="/platform-admin/dashboard" element={<PlatformAdminDashboard />} />
-            <Route path="/platform-admin/accept-invitation" element={<PlatformAdminInvitationAccept />} />
-            <Route path="/platform-admin/bootstrap" element={<PlatformAdminBootstrap />} />
-            <Route path="/shared-document/:token" element={<SharedDocumentViewer />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <BranchProvider>
+            <Routes>
+              <Route path="/" element={
+                <PublicRoute>
+                  <AuthPage />
+                </PublicRoute>
+              } />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/invite/:token" element={<InvitePage />} />
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <DynamicDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/chat" element={
+                <ProtectedRoute>
+                  <ChatPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/agents" element={
+                <ProtectedRoute>
+                  <AgentManagementDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/subscription" element={
+                <ProtectedRoute>
+                  <SubscriptionPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin" element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              } />
+              <Route path="/platform-admin/login" element={<PlatformAdminLogin />} />
+              <Route path="/platform-admin/dashboard" element={<PlatformAdminDashboard />} />
+              <Route path="/platform-admin/accept-invitation" element={<PlatformAdminInvitationAccept />} />
+              <Route path="/platform-admin/bootstrap" element={<PlatformAdminBootstrap />} />
+              <Route path="/shared-document/:token" element={<SharedDocumentViewer />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BranchProvider>
         </AuthProvider>
       </LanguageProvider>
     </BrowserRouter>

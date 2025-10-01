@@ -664,13 +664,6 @@ URL.revokeObjectURL(url);
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <DocumentsFilter 
-            filters={filters}
-            onFiltersChange={setFilters}
-            showExpirationFilter={false}
-            availableSuppliers={availableSuppliers}
-          />
-          
           <Card>
             <CardHeader>
               <CardTitle>Recent Document Requests ({documents.length})</CardTitle>

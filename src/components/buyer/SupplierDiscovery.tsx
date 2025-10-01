@@ -56,12 +56,24 @@ const SupplierDiscovery = () => {
       console.log('Buyer profile:', buyer);
       setBuyerProfile(buyer);
 
-      // Fetch existing connections if buyer profile exists
+      // Fetch existing branch-supplier connections if buyer profile exists
       if (buyer) {
         let connectionsQuery = supabase
-          .from('buyer_supplier_connections')
-          .select('*')
-          .eq('buyer_id', buyer.id);
+          .from('branch_supplier_connections')
+          .select(`
+            *,
+            suppliers (
+              id,
+              company_name,
+              contact_email,
+              industry,
+              phone,
+              address,
+              description
+            )
+          `)
+          .eq('buyer_id', buyer.id)
+          .eq('status', 'active');
 
         // Filter by branch if not viewing all branches
         if (!allBranchesView && currentBranch) {
@@ -75,34 +87,29 @@ const SupplierDiscovery = () => {
         }
 
         if (connectionsData) {
-          console.log('Connections found:', connectionsData);
+          console.log('Branch-supplier connections found:', connectionsData);
           setConnections(connectionsData);
+          
+          // Extract suppliers from branch connections
+          const connectedSuppliers = connectionsData
+            .map(conn => conn.suppliers)
+            .filter(Boolean);
+          
+          console.log('Connected suppliers:', connectedSuppliers);
+          setSuppliers(connectedSuppliers);
+          setFilteredSuppliers(connectedSuppliers);
           
           // If no connections exist, show industry setup
           if (connectionsData.length === 0) {
-            console.log('No connections found, showing industry setup');
+            console.log('No branch-supplier connections found, showing industry setup');
             setShowIndustrySetup(true);
           }
         } else {
-          console.log('No connections data, showing industry setup');
+          console.log('No branch-supplier connections data, showing industry setup');
           setShowIndustrySetup(true);
+          setSuppliers([]);
+          setFilteredSuppliers([]);
         }
-      }
-
-      // Fetch all suppliers
-      const { data: suppliersData, error: suppliersError } = await supabase
-        .from('suppliers')
-        .select('*')
-        .order('company_name');
-
-      if (suppliersError) {
-        console.error('Error fetching suppliers:', suppliersError);
-      }
-
-      if (suppliersData) {
-        console.log('Suppliers found:', suppliersData.length);
-        setSuppliers(suppliersData);
-        setFilteredSuppliers(suppliersData);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -184,12 +191,12 @@ const SupplierDiscovery = () => {
 
   const getConnectionStatus = (supplierId: string) => {
     const connection = connections.find(c => c.supplier_id === supplierId);
-    return connection?.status || null;
+    return connection?.status === 'active' ? 'approved' : connection?.status || null;
   };
 
   const getConnectionDate = (supplierId: string) => {
     const connection = connections.find(c => c.supplier_id === supplierId);
-    return connection?.requested_at || null;
+    return connection?.assigned_at || null;
   };
 
   const handleIndustrySetupComplete = () => {
@@ -210,10 +217,11 @@ const SupplierDiscovery = () => {
   };
 
   const categorizeSuppliers = () => {
-    const connected = filteredSuppliers.filter(s => getConnectionStatus(s.id) === 'approved');
-    const sent = filteredSuppliers.filter(s => getConnectionStatus(s.id) === 'pending');
-    const rejected = filteredSuppliers.filter(s => getConnectionStatus(s.id) === 'rejected');
-    const notConnected = filteredSuppliers.filter(s => !getConnectionStatus(s.id));
+    // All suppliers in this view are connected (from branch_supplier_connections)
+    const connected = filteredSuppliers;
+    const sent: any[] = [];
+    const rejected: any[] = [];
+    const notConnected: any[] = [];
 
     return { connected, sent, rejected, notConnected };
   };

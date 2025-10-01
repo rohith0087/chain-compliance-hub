@@ -134,12 +134,9 @@ export const BranchAwareDocumentRequest: React.FC<BranchAwareDocumentRequestProp
           due_date: formData.due_date || null,
           buyer_id: buyerProfile.id,
           supplier_id: supplierInfo.id,
+          branch_id: selectedBranch,
           requester_id: user?.id,
-          status: 'pending',
-          template_sections: {
-            branch_id: selectedBranch,
-            branch_specific: true
-          }
+          status: 'pending'
         });
 
       if (requestError) {

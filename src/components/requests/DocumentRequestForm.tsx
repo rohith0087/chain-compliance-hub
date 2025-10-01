@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useBranchContext } from '@/contexts/BranchContext';
 
 interface DocumentRequestFormProps {
   isOpen: boolean;
@@ -37,6 +38,7 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { currentBranch } = useBranchContext();
 
   useEffect(() => {
     if (isOpen && user) {
@@ -81,10 +83,14 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
 
         if (branches) {
           setAvailableBranches(branches);
-          // Set default branch if available
+          // Set default branch from context or first available branch
           if (branches.length > 0) {
-            const mainBranch = branches.find(b => b.branch_name === 'Main Office') || branches[0];
-            setSelectedBranch(mainBranch.id);
+            if (currentBranch && branches.some(b => b.id === currentBranch.id)) {
+              setSelectedBranch(currentBranch.id);
+            } else {
+              const mainBranch = branches.find(b => b.branch_name === 'Main Office') || branches[0];
+              setSelectedBranch(mainBranch.id);
+            }
           }
         }
 

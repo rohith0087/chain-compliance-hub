@@ -38,7 +38,15 @@ export const BranchProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 export const useBranchContext = () => {
   const context = useContext(BranchContext);
   if (context === undefined) {
-    throw new Error('useBranchContext must be used within a BranchProvider');
+    // Fallback to prevent runtime crashes if provider hasn't mounted yet
+    console.warn('useBranchContext used outside BranchProvider. Falling back to defaults.');
+    const noop = () => {};
+    return {
+      currentBranch: null,
+      setCurrentBranch: noop,
+      allBranchesView: false,
+      setAllBranchesView: noop,
+    } as BranchContextType;
   }
   return context;
 };

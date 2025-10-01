@@ -26,7 +26,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
-import { BranchProvider, useBranchContext } from '@/contexts/BranchContext';
+import { useBranchContext } from '@/contexts/BranchContext';
 
 import {
   Sidebar,
@@ -423,13 +423,4 @@ export function BuyerSidebarLayout({
   );
 }
 
-// Wrap the layout with BranchProvider
-const BuyerSidebarLayoutWithProvider: React.FC<BuyerSidebarLayoutProps> = (props) => {
-  return (
-    <BranchProvider>
-      <BuyerSidebarLayout {...props} />
-    </BranchProvider>
-  );
-};
-
-export default BuyerSidebarLayoutWithProvider;
+export default BuyerSidebarLayout;

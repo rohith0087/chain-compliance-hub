@@ -19,11 +19,11 @@ import ChatAgentPanel from '@/components/chat/ChatAgentPanel';
 import CustomTemplateManager from '@/components/buyer/CustomTemplateManager';
 import { QuickOnboardingModal } from '@/components/buyer/QuickOnboardingModal';
 import { BulkInviteModal } from '@/components/buyer/BulkInviteModal';
-import { BuyerSidebarLayout } from '@/components/buyer/BuyerSidebarLayout';
+import BuyerSidebarLayout from '@/components/buyer/BuyerSidebarLayout';
 import { BuyerDocumentPrePopulator } from '@/components/buyer/BuyerDocumentPrePopulator';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import SubscriptionPage from '@/pages/SubscriptionPage';
-import { useBranchContext } from '@/contexts/BranchContext';
+import { BranchProvider, useBranchContext } from '@/contexts/BranchContext';
 
 import { supabase } from '@/integrations/supabase/client';
 
@@ -204,19 +204,20 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
   };
 
   return (
-    <SidebarProvider>
-      <BuyerSidebarLayout
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        user={user}
-        onLogout={handleLogoutClick}
-        onRoleSwitch={onRoleSwitch}
-        onShowRequestForm={() => setShowRequestForm(true)}
-        onShowSettings={() => setShowSettings(true)}
-        onShowQuickOnboarding={() => setShowQuickOnboarding(true)}
-        onShowBulkInvite={() => setShowBulkInvite(true)}
-        buyerProfile={buyerProfile}
-      >
+    <BranchProvider>
+      <SidebarProvider>
+        <BuyerSidebarLayout
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          user={user}
+          onLogout={handleLogoutClick}
+          onRoleSwitch={onRoleSwitch}
+          onShowRequestForm={() => setShowRequestForm(true)}
+          onShowSettings={() => setShowSettings(true)}
+          onShowQuickOnboarding={() => setShowQuickOnboarding(true)}
+          onShowBulkInvite={() => setShowBulkInvite(true)}
+          buyerProfile={buyerProfile}
+        >
         {/* Dashboard Content */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
@@ -444,9 +445,8 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         {activeTab === 'subscription' && (
           <SubscriptionPage />
         )}
-      </BuyerSidebarLayout>
 
-      {/* Modals */}
+        {/* Modals */}
       <NewRequestModal
         isOpen={showRequestForm}
         onClose={() => setShowRequestForm(false)}
@@ -478,7 +478,9 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
           />
         </>
       )}
-    </SidebarProvider>
+    </BuyerSidebarLayout>
+  </SidebarProvider>
+</BranchProvider>
   );
 };
 

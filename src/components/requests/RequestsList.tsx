@@ -18,6 +18,7 @@ import {
   Eye,
   Plus
 } from 'lucide-react';
+import { useBranchContext } from '@/contexts/BranchContext';
 
 const RequestsList = () => {
   const [requests, setRequests] = useState<any[]>([]);
@@ -25,12 +26,13 @@ const RequestsList = () => {
   const [activeTab, setActiveTab] = useState('all');
   const { user, profile } = useAuth();
   const { toast } = useToast();
+  const { currentBranch, allBranchesView } = useBranchContext();
 
   useEffect(() => {
     if (profile) {
       loadRequests();
     }
-  }, [profile]);
+  }, [profile, currentBranch, allBranchesView]);
 
   const loadRequests = async () => {
     setLoading(true);
@@ -48,7 +50,7 @@ const RequestsList = () => {
       }
 
       // Load requests with supplier and upload information
-      const { data, error } = await supabase
+      let query = supabase
         .from('document_requests')
         .select(`
           *,
@@ -67,8 +69,16 @@ const RequestsList = () => {
             created_at
           )
         `)
-        .eq('buyer_id', buyerProfile.id)
-        .order('created_at', { ascending: false });
+        .eq('buyer_id', buyerProfile.id);
+
+      // Filter by branch if not viewing all branches
+      if (!allBranchesView && currentBranch) {
+        query = query.eq('branch_id', currentBranch.id);
+      }
+
+      query = query.order('created_at', { ascending: false });
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setRequests(data || []);

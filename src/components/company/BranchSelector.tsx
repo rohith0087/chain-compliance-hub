@@ -1,14 +1,16 @@
 import React from 'react';
-import { ChevronDown, Building2, MapPin } from 'lucide-react';
+import { ChevronDown, Building2, MapPin, Globe, Check } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CompanyBranch } from '@/hooks/useCompanyBranches';
+import { useBranchContext } from '@/contexts/BranchContext';
 
 interface BranchSelectorProps {
   branches: CompanyBranch[];
@@ -17,12 +19,14 @@ interface BranchSelectorProps {
   loading?: boolean;
 }
 
-export const BranchSelector: React.FC<BranchSelectorProps> = ({
-  branches,
-  currentBranch,
-  onBranchChange,
-  loading = false
+export const BranchSelector: React.FC<BranchSelectorProps> = ({ 
+  branches, 
+  currentBranch, 
+  onBranchChange, 
+  loading = false 
 }) => {
+  const { allBranchesView, setAllBranchesView } = useBranchContext();
+
   if (loading) {
     return (
       <div className="flex items-center space-x-2 animate-pulse">
@@ -41,22 +45,55 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
     );
   }
 
+  const handleAllBranchesToggle = () => {
+    setAllBranchesView(true);
+  };
+
+  const handleBranchSelect = (branch: CompanyBranch) => {
+    setAllBranchesView(false);
+    onBranchChange(branch);
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="h-8">
-          <Building2 className="h-4 w-4 mr-2" />
-          <span className="max-w-32 truncate">
-            {currentBranch?.branch_name || 'Select Branch'}
-          </span>
+          {allBranchesView ? (
+            <>
+              <Globe className="h-4 w-4 mr-2" />
+              <span className="max-w-32 truncate">All Branches</span>
+            </>
+          ) : (
+            <>
+              <Building2 className="h-4 w-4 mr-2" />
+              <span className="max-w-32 truncate">
+                {currentBranch?.branch_name || 'Select Branch'}
+              </span>
+            </>
+          )}
           <ChevronDown className="h-4 w-4 ml-2" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64">
+        <DropdownMenuItem
+          onClick={handleAllBranchesToggle}
+          className="flex items-center justify-between p-3"
+        >
+          <div className="flex items-center space-x-3">
+            <Globe className="h-4 w-4" />
+            <span className="font-medium">All Branches</span>
+          </div>
+          {allBranchesView && (
+            <Check className="h-4 w-4 text-primary" />
+          )}
+        </DropdownMenuItem>
+        
+        <DropdownMenuSeparator />
+        
         {branches.map((branch) => (
           <DropdownMenuItem
             key={branch.id}
-            onClick={() => onBranchChange(branch)}
+            onClick={() => handleBranchSelect(branch)}
             className="flex items-center justify-between p-3"
           >
             <div className="flex items-center space-x-3 flex-1">
@@ -71,10 +108,8 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
                 )}
               </div>
             </div>
-            {currentBranch?.id === branch.id && (
-              <Badge variant="secondary" className="text-xs">
-                Current
-              </Badge>
+            {!allBranchesView && currentBranch?.id === branch.id && (
+              <Check className="h-4 w-4 text-primary" />
             )}
           </DropdownMenuItem>
         ))}

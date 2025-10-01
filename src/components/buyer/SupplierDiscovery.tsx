@@ -18,8 +18,10 @@ import BuyerConnectionRequests from './BuyerConnectionRequests';
 import { SupplierDetailModal } from './SupplierDetailModal';
 import { BranchSupplierDashboard } from './BranchSupplierDashboard';
 import { SupplierOnboarding } from './SupplierOnboarding';
+import { useBranchContext } from '@/contexts/BranchContext';
 
 const SupplierDiscovery = () => {
+  const { currentBranch, allBranchesView } = useBranchContext();
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [filteredSuppliers, setFilteredSuppliers] = useState<any[]>([]);
   const [selectedIndustry, setSelectedIndustry] = useState('all');
@@ -43,7 +45,7 @@ const SupplierDiscovery = () => {
     if (user) {
       fetchData();
     }
-  }, [user]);
+  }, [user, currentBranch, allBranchesView]);
 
   const fetchData = async () => {
     console.log('Fetching supplier discovery data...');
@@ -56,10 +58,17 @@ const SupplierDiscovery = () => {
 
       // Fetch existing connections if buyer profile exists
       if (buyer) {
-        const { data: connectionsData, error: connectionsError } = await supabase
+        let connectionsQuery = supabase
           .from('buyer_supplier_connections')
           .select('*')
           .eq('buyer_id', buyer.id);
+
+        // Filter by branch if not viewing all branches
+        if (!allBranchesView && currentBranch) {
+          connectionsQuery = connectionsQuery.eq('branch_id', currentBranch.id);
+        }
+
+        const { data: connectionsData, error: connectionsError } = await connectionsQuery;
 
         if (connectionsError) {
           console.error('Error fetching connections:', connectionsError);

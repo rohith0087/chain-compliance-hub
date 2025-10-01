@@ -26,6 +26,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
+import { BranchProvider, useBranchContext } from '@/contexts/BranchContext';
 
 import {
   Sidebar,
@@ -117,6 +118,13 @@ export function BuyerSidebarLayout({
     switchBranch,
     loading: branchesLoading
   } = useCompanyBranches(buyerProfile?.id, 'buyer');
+
+  const { setCurrentBranch } = useBranchContext();
+
+  // Sync branch context with local branch state
+  useEffect(() => {
+    setCurrentBranch(currentBranch);
+  }, [currentBranch, setCurrentBranch]);
 
   const navigationItems: NavigationItem[] = [
     {
@@ -414,3 +422,14 @@ export function BuyerSidebarLayout({
     </div>
   );
 }
+
+// Wrap the layout with BranchProvider
+const BuyerSidebarLayoutWithProvider: React.FC<BuyerSidebarLayoutProps> = (props) => {
+  return (
+    <BranchProvider>
+      <BuyerSidebarLayout {...props} />
+    </BranchProvider>
+  );
+};
+
+export default BuyerSidebarLayoutWithProvider;

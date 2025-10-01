@@ -21,7 +21,10 @@ import DocumentRoadmap from './DocumentRoadmap';
 import BuyerDocumentsManager from './BuyerDocumentsManager';
 import DocumentDeclineDialog from './DocumentDeclineDialog';
 import { resolveStoragePath } from '@/utils/storagePath';
+import { useBranchContext } from '@/contexts/BranchContext';
+
 const BuyerDocumentsDashboard = () => {
+  const { currentBranch, allBranchesView } = useBranchContext();
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [approveLoading, setApproveLoading] = useState<string | null>(null);
@@ -66,7 +69,7 @@ const BuyerDocumentsDashboard = () => {
       loadConnectedSuppliers();
       debouncedLoadDocuments();
     }
-  }, [user, filters, debouncedLoadDocuments]);
+  }, [user, filters, currentBranch, allBranchesView, debouncedLoadDocuments]);
 
   const loadConnectedSuppliers = async () => {
     try {
@@ -164,8 +167,14 @@ const BuyerDocumentsDashboard = () => {
             )
           )
         `)
-        .eq('buyer_id', buyerProfile.id)
-        .order('created_at', { ascending: false });
+        .eq('buyer_id', buyerProfile.id);
+
+      // Filter by branch if not viewing all branches
+      if (!allBranchesView && currentBranch) {
+        query = query.eq('branch_id', currentBranch.id);
+      }
+
+      query = query.order('created_at', { ascending: false });
 
       // Apply filters with proper type checking
       const validStatuses = ['pending', 'submitted', 'approved', 'rejected'] as const;

@@ -23,6 +23,7 @@ import { BuyerSidebarLayout } from '@/components/buyer/BuyerSidebarLayout';
 import { BuyerDocumentPrePopulator } from '@/components/buyer/BuyerDocumentPrePopulator';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import SubscriptionPage from '@/pages/SubscriptionPage';
+import { useBranchContext } from '@/contexts/BranchContext';
 
 import { supabase } from '@/integrations/supabase/client';
 
@@ -49,6 +50,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const { user: authUser, profile } = useAuth();
   const { t } = useTranslation(['dashboard', 'common']);
+  const { currentBranch, allBranchesView } = useBranchContext();
 
   // Refresh buyer profile function  
   const refreshBuyerProfile = async () => {
@@ -99,7 +101,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
           const thirtyDaysFromNow = new Date();
           thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
-          const { data: deadlines, error: deadlineError } = await supabase
+          let deadlinesQuery = supabase
             .from('document_requests')
             .select(`
               id,
@@ -114,9 +116,16 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
             .eq('buyer_id', buyer.id)
             .not('due_date', 'is', null)
             .gte('due_date', new Date().toISOString().split('T')[0])
-            .lte('due_date', thirtyDaysFromNow.toISOString().split('T')[0])
-            .order('due_date', { ascending: true })
-            .limit(5);
+            .lte('due_date', thirtyDaysFromNow.toISOString().split('T')[0]);
+
+          // Filter by branch if not viewing all branches
+          if (!allBranchesView && currentBranch) {
+            deadlinesQuery = deadlinesQuery.eq('branch_id', currentBranch.id);
+          }
+
+          deadlinesQuery = deadlinesQuery.order('due_date', { ascending: true }).limit(5);
+
+          const { data: deadlines, error: deadlineError } = await deadlinesQuery;
 
           if (deadlineError) {
             console.error('Error fetching deadlines:', deadlineError);
@@ -125,7 +134,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
           }
 
           // Fetch action items - pending requests, overdue items, etc.
-          const { data: pendingRequests, error: pendingError } = await supabase
+          let pendingQuery = supabase
             .from('document_requests')
             .select(`
               id,
@@ -139,9 +148,16 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
               )
             `)
             .eq('buyer_id', buyer.id)
-            .in('status', ['pending', 'submitted'])
-            .order('created_at', { ascending: false })
-            .limit(5);
+            .in('status', ['pending', 'submitted']);
+
+          // Filter by branch if not viewing all branches
+          if (!allBranchesView && currentBranch) {
+            pendingQuery = pendingQuery.eq('branch_id', currentBranch.id);
+          }
+
+          pendingQuery = pendingQuery.order('created_at', { ascending: false }).limit(5);
+
+          const { data: pendingRequests, error: pendingError } = await pendingQuery;
 
           if (pendingError) {
             console.error('Error fetching pending requests:', pendingError);
@@ -166,7 +182,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
     };
 
     fetchDashboardData();
-  }, [authUser]);
+  }, [authUser, currentBranch, allBranchesView]);
 
   const handleFindSuppliersClick = () => {
     console.log('Find Suppliers button clicked, switching to suppliers tab');

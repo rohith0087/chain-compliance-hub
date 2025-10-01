@@ -492,28 +492,11 @@ const BuyerDocumentsManager = ({
   };
 
 
-  // Calculate statistics
-  const statsData = {
-    total: documents.length,
-    approved: documents.filter(d => d.status === 'approved').length,
-    pending: documents.filter(d => d.status === 'pending' || d.status === 'submitted').length,
-    expiringSoon: documents.filter(d => {
-      const upload = d.document_uploads?.[0];
-      if (upload?.expiration_date) {
-        const expirationDate = new Date(upload.expiration_date);
-        const now = new Date();
-        const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-        return expirationDate <= thirtyDaysFromNow && expirationDate >= now;
-      }
-      return false;
-    }).length
-  };
-
   return (
     <div className="space-y-6">
       {/* Header with Gradient */}
       <div className="rounded-xl bg-gradient-to-br from-[hsl(var(--blue-accent))]/10 via-[hsl(var(--accent))]/5 to-[hsl(var(--teal-accent))]/10 border border-[hsl(var(--blue-accent))]/20 p-6 backdrop-blur-sm">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold bg-gradient-to-r from-[hsl(var(--blue-accent))] to-[hsl(var(--accent))] bg-clip-text text-transparent">
               Document Manager
@@ -528,65 +511,6 @@ const BuyerDocumentsManager = ({
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
           </Button>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border-l-4 border-l-[hsl(var(--blue-accent))] bg-gradient-to-br from-[hsl(var(--blue-accent))]/10 to-transparent backdrop-blur-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">Total Documents</p>
-                  <p className="text-2xl font-bold text-[hsl(var(--blue-accent))]">{statsData.total}</p>
-                </div>
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[hsl(var(--blue-accent))] to-[hsl(var(--accent))] flex items-center justify-center shadow-lg">
-                  <FileText className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-[hsl(var(--green-accent))] bg-gradient-to-br from-[hsl(var(--green-accent))]/10 to-transparent backdrop-blur-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">Approved</p>
-                  <p className="text-2xl font-bold text-[hsl(var(--green-accent))]">{statsData.approved}</p>
-                </div>
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[hsl(var(--green-accent))] to-[hsl(var(--emerald-accent))] flex items-center justify-center shadow-lg">
-                  <CheckCircle className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-[hsl(var(--orange-accent))] bg-gradient-to-br from-[hsl(var(--orange-accent))]/10 to-transparent backdrop-blur-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">Pending Review</p>
-                  <p className="text-2xl font-bold text-[hsl(var(--orange-accent))]">{statsData.pending}</p>
-                </div>
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[hsl(var(--orange-accent))] to-amber-500 flex items-center justify-center shadow-lg">
-                  <Clock className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-red-500 bg-gradient-to-br from-red-500/10 to-transparent backdrop-blur-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">Expiring Soon</p>
-                  <p className="text-2xl font-bold text-red-600">{statsData.expiringSoon}</p>
-                </div>
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg">
-                  <AlertTriangle className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
 

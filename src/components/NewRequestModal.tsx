@@ -327,11 +327,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
                 <SelectContent>
                   <SelectItem value="General Supplier">General Supplier</SelectItem>
                   <SelectItem value="Auditor">Auditor</SelectItem>
-                  <SelectItem value="Chicken Processor Co">Chicken Processor</SelectItem>
-                  <SelectItem value="Poultry - Egg Supplier">Poultry - Egg Supplier</SelectItem>
-                  <SelectItem value="Poultry - Ingredient Supplier">Poultry - Ingredient Supplier</SelectItem>
-                  <SelectItem value="Poultry - Packaging Supplier">Poultry - Packaging Supplier</SelectItem>
-                  <SelectItem value="Poultry - Gas/Lube Supplier">Poultry - Gas/Lube Supplier</SelectItem>
+                  <SelectItem value="Egg Processing">Egg Processing</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -256,7 +256,330 @@ export const getComplianceDocuments = (userType: string): ComplianceDocument[] =
     ];
   }
 
-  // Industry-specific document sets for Poultry
+  // Consolidated Egg Processing document set
+  if (userType === 'Egg Processing') {
+    return [
+      // Core Documentation
+      {
+        id: 'supplier-questionnaire-egg',
+        title: 'Completed Supplier Questionnaire',
+        category: 'Egg Processing Documentation',
+        description: 'Comprehensive supplier information and capabilities questionnaire',
+        icon: ClipboardCheck,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Company Information', required: true }] }
+      },
+      {
+        id: 'supplier-agreement-egg',
+        title: 'Supplier Agreement',
+        category: 'Egg Processing Legal',
+        description: 'Contractual agreement between buyer and egg supplier',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'Legal',
+        template: { sections: [{ name: 'Terms and Conditions', required: true }] }
+      },
+      {
+        id: 'letter-guarantee-egg',
+        title: 'Dated Letter of Guarantee',
+        category: 'Egg Processing Legal',
+        description: 'Legal guarantee documentation with date verification',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'Legal',
+        template: { sections: [{ name: 'Guarantee Terms', required: true }] }
+      },
+      
+      // Food Safety & Compliance
+      {
+        id: 'haccp-plan-egg',
+        title: 'HACCP Plan with Flow Charts',
+        category: 'Egg Processing Food Safety',
+        description: 'Hazard Analysis Critical Control Points plan with visual flow charts',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'HACCP Documentation', required: true }] }
+      },
+      {
+        id: 'gfsi-certificate-egg',
+        title: 'Current & Valid GFSI Certificate',
+        category: 'Egg Processing Certification',
+        description: 'Global Food Safety Initiative certification',
+        icon: Award,
+        required: true,
+        regulatoryBody: 'GFSI',
+        template: { sections: [{ name: 'Certification Details', required: true }] }
+      },
+      {
+        id: 'allergen-survey-egg',
+        title: 'Completed Allergen Survey',
+        category: 'Egg Processing Food Safety',
+        description: 'Allergen control and management assessment',
+        icon: AlertTriangle,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Allergen Controls', required: true }] }
+      },
+      {
+        id: 'bioterrorism-statement-egg',
+        title: 'Bio-terrorism/Food Defense Program',
+        category: 'Egg Processing Security',
+        description: 'Bio-terrorism and food defense documentation',
+        icon: Lock,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Security Measures', required: true }] }
+      },
+      {
+        id: 'food-fraud-assessment-egg',
+        title: 'Food Fraud Vulnerability Assessment',
+        category: 'Egg Processing Risk',
+        description: 'Assessment of food fraud vulnerabilities',
+        icon: AlertTriangle,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Vulnerability Analysis', required: true }] }
+      },
+      
+      // Quality & Testing
+      {
+        id: 'specification-sheet-egg',
+        title: 'Specification Sheet with Nutritional Information',
+        category: 'Egg Processing Quality',
+        description: 'Product specifications including nutritional data',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Nutritional Information', required: true }] }
+      },
+      {
+        id: 'coa-example-egg',
+        title: 'Example Certificate of Analysis',
+        category: 'Egg Processing Quality',
+        description: 'Sample certificate of analysis for egg products',
+        icon: Award,
+        required: true,
+        regulatoryBody: 'Quality Control',
+        template: { sections: [{ name: 'Analysis Results', required: true }] }
+      },
+      {
+        id: 'pathogen-testing',
+        title: 'Pathogen Testing Records',
+        category: 'Egg Processing Testing',
+        description: 'Salmonella and other pathogen testing documentation',
+        icon: AlertTriangle,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Testing Schedule', required: true }] }
+      },
+      
+      // Egg-Specific Requirements
+      {
+        id: 'shell-egg-questionnaire',
+        title: 'Shell Egg Supplier Questionnaire',
+        category: 'Egg Processing Documentation',
+        description: 'Specific questionnaire for shell egg production and handling',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Production Details', required: true }] }
+      },
+      {
+        id: 'flock-certificate-egg',
+        title: 'Flock Certificate',
+        category: 'Egg Processing Health',
+        description: 'Flock health and certification documentation',
+        icon: Heart,
+        required: true,
+        regulatoryBody: 'USDA',
+        template: { sections: [{ name: 'Flock Health Status', required: true }] }
+      },
+      {
+        id: 'npip-certification',
+        title: 'NPIP Certification',
+        category: 'Egg Processing Certification',
+        description: 'National Poultry Improvement Plan certification',
+        icon: Award,
+        required: true,
+        regulatoryBody: 'USDA',
+        template: { sections: [{ name: 'NPIP Status', required: true }] }
+      },
+      {
+        id: 'cfr-118-letter-egg',
+        title: '21 CFR 118 Compliance Letter',
+        category: 'Egg Processing Compliance',
+        description: '21 CFR 118 compliance letter for shell egg producers',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'CFR 118 Compliance', required: true }] }
+      },
+      
+      // Traceability & Logistics
+      {
+        id: 'lot-code-definitions-egg',
+        title: 'Lot Code Definitions',
+        category: 'Egg Processing Traceability',
+        description: 'Definition and explanation of lot coding system',
+        icon: MapPin,
+        required: true,
+        regulatoryBody: 'Traceability',
+        template: { sections: [{ name: 'Coding System', required: true }] }
+      },
+      {
+        id: 'transport-storage-egg',
+        title: 'Transportation and Storage Requirements',
+        category: 'Egg Processing Logistics',
+        description: 'Transportation and storage requirement specifications',
+        icon: Truck,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Transport Requirements', required: true }] }
+      },
+      {
+        id: 'shelf-life-statement-egg',
+        title: 'Product Shelf Life Statement',
+        category: 'Egg Processing Quality',
+        description: 'Product shelf life and storage requirements',
+        icon: Clock,
+        required: true,
+        regulatoryBody: 'Internal',
+        template: { sections: [{ name: 'Shelf Life Data', required: true }] }
+      },
+      
+      // Ingredients & Feed
+      {
+        id: 'ingredient-specifications',
+        title: 'Ingredient Specifications',
+        category: 'Egg Processing Ingredients',
+        description: 'Feed ingredient specifications and documentation',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Ingredient Details', required: true }] }
+      },
+      {
+        id: 'feed-safety-documentation',
+        title: 'Feed Safety Documentation',
+        category: 'Egg Processing Ingredients',
+        description: 'Feed safety and quality documentation',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Feed Safety', required: true }] }
+      },
+      
+      // Packaging
+      {
+        id: 'packaging-specifications',
+        title: 'Packaging Specifications',
+        category: 'Egg Processing Packaging',
+        description: 'Packaging material specifications and compliance',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Packaging Details', required: true }] }
+      },
+      {
+        id: 'food-contact-compliance',
+        title: 'Food Contact Compliance',
+        category: 'Egg Processing Packaging',
+        description: 'Food contact material compliance documentation',
+        icon: CheckCircle,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: { sections: [{ name: 'Compliance Documentation', required: true }] }
+      },
+      
+      // Certifications (Optional)
+      {
+        id: 'cage-free-certification',
+        title: 'Cage-Free Certification',
+        category: 'Egg Processing Certification',
+        description: 'Cage-free production certification',
+        icon: Award,
+        required: false,
+        regulatoryBody: 'Certification Body',
+        template: { sections: [{ name: 'Certification Details', required: true }] }
+      },
+      {
+        id: 'organic-certification',
+        title: 'Organic Certification',
+        category: 'Egg Processing Certification',
+        description: 'Organic production certification',
+        icon: Leaf,
+        required: false,
+        regulatoryBody: 'USDA',
+        template: { sections: [{ name: 'Organic Compliance', required: true }] }
+      },
+      {
+        id: 'ca-prop12-egg',
+        title: 'California Egg Prop 12 Certificate',
+        category: 'Egg Processing Compliance',
+        description: 'California Proposition 12 compliance certification',
+        icon: MapPin,
+        required: false,
+        regulatoryBody: 'California',
+        template: { sections: [{ name: 'Compliance Documentation', required: true }] }
+      },
+      {
+        id: 'halal-certification-egg',
+        title: 'Halal Certification',
+        category: 'Egg Processing Religious',
+        description: 'Halal certification or compliance documentation',
+        icon: Award,
+        required: false,
+        regulatoryBody: 'Halal Authority',
+        template: { sections: [{ name: 'Halal Compliance', required: true }] }
+      },
+      {
+        id: 'kosher-certificate-egg',
+        title: 'Kosher Certificate',
+        category: 'Egg Processing Religious',
+        description: 'Kosher certification or compliance documentation',
+        icon: Award,
+        required: false,
+        regulatoryBody: 'Kosher Authority',
+        template: { sections: [{ name: 'Kosher Compliance', required: true }] }
+      },
+      
+      // Insurance & Ethics
+      {
+        id: 'insurance-certificate-egg',
+        title: 'Current Certificate of Insurance',
+        category: 'Egg Processing Insurance',
+        description: 'Current and valid insurance coverage certificate',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'Insurance Provider',
+        template: { sections: [{ name: 'Coverage Details', required: true }] }
+      },
+      {
+        id: 'ethical-conduct-egg',
+        title: 'Ethical Code of Conduct Agreement',
+        category: 'Egg Processing Ethics',
+        description: 'Ethical Trading Initiative code of conduct agreement',
+        icon: Users,
+        required: true,
+        regulatoryBody: 'ETI',
+        template: { sections: [{ name: 'Ethical Standards', required: true }] }
+      },
+      {
+        id: 'sds-sheet-egg',
+        title: 'Current SDS Sheet or Letter of Exemption',
+        category: 'Egg Processing Safety',
+        description: 'Safety Data Sheet or exemption letter',
+        icon: AlertTriangle,
+        required: true,
+        regulatoryBody: 'OSHA',
+        template: { sections: [{ name: 'Safety Information', required: true }] }
+      }
+    ];
+  }
+
+  // Legacy support - Keep existing poultry types for backward compatibility
   if (userType === 'Poultry - Egg Supplier') {
     return [
       {

@@ -398,7 +398,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
 
         {/* Requests Content */}
         {activeTab === 'requests' && (
-          <RequestsList />
+          <RequestsList onNewRequest={() => setShowRequestForm(true)} />
         )}
 
         {/* Documents Content */}

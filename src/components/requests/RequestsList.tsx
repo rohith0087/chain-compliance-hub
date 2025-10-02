@@ -20,7 +20,11 @@ import {
 } from 'lucide-react';
 import { useBranchContext } from '@/contexts/BranchContext';
 
-const RequestsList = () => {
+interface RequestsListProps {
+  onNewRequest?: () => void;
+}
+
+const RequestsList = ({ onNewRequest }: RequestsListProps) => {
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
@@ -178,7 +182,7 @@ const RequestsList = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Document Requests</h2>
-        <Button>
+        <Button onClick={onNewRequest}>
           <Plus className="w-4 h-4 mr-2" />
           New Request
         </Button>

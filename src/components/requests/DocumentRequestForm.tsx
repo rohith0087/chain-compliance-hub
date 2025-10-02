@@ -115,6 +115,16 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
     e.preventDefault();
     if (!user || !buyerProfile) return;
 
+    // Validate branch selection
+    if (!selectedBranch) {
+      toast({
+        title: "Branch Required",
+        description: "Please select a branch for this document request.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {

@@ -23,7 +23,9 @@ import {
   Shield,
   Clock,
   CheckCircle,
-  CreditCard
+  CreditCard,
+  Package,
+  UserCog
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from 'react-i18next';
@@ -143,6 +145,16 @@ export function SupplierSidebarLayout({
       title: 'Document Library',
       icon: FileText,
       value: 'library'
+    },
+    {
+      title: t('supplier:tabs.items'),
+      icon: Package,
+      value: 'items'
+    },
+    {
+      title: t('supplier:tabs.contacts'),
+      icon: UserCog,
+      value: 'contacts'
     },
     {
       title: 'Buyer Connections',

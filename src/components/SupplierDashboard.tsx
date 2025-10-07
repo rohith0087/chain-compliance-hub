@@ -22,7 +22,9 @@ import {
   BarChart3,
   MessageSquare,
   FileText,
-  Search
+  Search,
+  Package,
+  UserCog
 } from 'lucide-react';
 import { SupplierSettingsModal } from '@/components/settings/SupplierSettingsModal';
 import { SupplierSidebarLayout } from '@/components/supplier/SupplierSidebarLayout';
@@ -41,6 +43,8 @@ import { SupplierDocumentLibrary } from '@/components/supplier/SupplierDocumentL
 import { OnboardingNotification } from '@/components/supplier/OnboardingNotification';
 import { OnboardingProcess } from '@/components/supplier/OnboardingProcess';
 import { useOnboardingRequests } from '@/hooks/useOnboardingRequests';
+import { ItemManagementDashboard } from '@/components/supplier/ItemManagementDashboard';
+import { ContactRoleManager } from '@/components/supplier/ContactRoleManager';
 import { ConnectWithBuyerModal } from '@/components/supplier/ConnectWithBuyerModal';
 import { DocumentUploadModal } from '@/components/supplier/DocumentUploadModal';
 
@@ -555,6 +559,10 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
         return <SupplierDocumentsDashboard />;
       case 'library':
         return <SupplierDocumentLibrary supplierId={supplierProfile?.id} />;
+      case 'items':
+        return <ItemManagementDashboard supplierId={supplierProfile?.id!} />;
+      case 'contacts':
+        return <ContactRoleManager supplierId={supplierProfile?.id!} />;
       case 'connections':
         return <UnifiedBuyerConnections onConnectionRequest={loadSupplierData} />;
       case 'compliance':

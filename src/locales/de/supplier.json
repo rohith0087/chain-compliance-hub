@@ -12,7 +12,9 @@
     "requests": "Dokumentenanfragen",
     "buyers": "Verbundene Käufer",
     "company": "Unternehmensverwaltung",
-    "branchSuppliers": "Zweigstellen-Lieferanten"
+    "branchSuppliers": "Zweigstellen-Lieferanten",
+    "items": "Artikelverwaltung",
+    "contacts": "Kontaktverwaltung"
   },
   "stats": {
     "pendingRequests": "Ausstehende Anfragen",

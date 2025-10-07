@@ -12,7 +12,9 @@
     "requests": "Solicitudes de Documentos",
     "buyers": "Compradores Conectados",
     "company": "Gestión de Empresa",
-    "branchSuppliers": "Proveedores de Sucursal"
+    "branchSuppliers": "Proveedores de Sucursal",
+    "items": "Gestión de Artículos",
+    "contacts": "Gestión de Contactos"
   },
   "stats": {
     "pendingRequests": "Solicitudes Pendientes",

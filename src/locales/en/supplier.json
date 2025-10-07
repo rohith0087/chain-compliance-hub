@@ -12,7 +12,9 @@
     "requests": "Document Requests",
     "buyers": "Connected Buyers",
     "company": "Company Management",
-    "branchSuppliers": "Branch Suppliers"
+    "branchSuppliers": "Branch Suppliers",
+    "items": "Item Management",
+    "contacts": "Contact Management"
   },
   "stats": {
     "pendingRequests": "Pending Requests",

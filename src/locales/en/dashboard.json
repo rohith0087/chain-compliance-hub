@@ -48,6 +48,8 @@
       "allTypes": "All Types",
       "allSuppliers": "All Suppliers",
       "allTime": "All Time",
+      "allItemTypes": "All Item Types",
+      "filterByItems": "Filter by Items",
       "recentRequests": "Recent Document Requests"
     }
   },

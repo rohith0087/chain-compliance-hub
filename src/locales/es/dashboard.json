@@ -48,6 +48,8 @@
       "allTypes": "Todos los Tipos",
       "allSuppliers": "Todos los Proveedores",
       "allTime": "Todo el Tiempo",
+      "allItemTypes": "Todos los tipos de artículos",
+      "filterByItems": "Filtrar por artículos",
       "recentRequests": "Solicitudes de Documentos Recientes"
     }
   },

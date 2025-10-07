@@ -14,6 +14,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useBranchContext } from '@/contexts/BranchContext';
+import { ContactRoleSelector } from '@/components/buyer/ContactRoleSelector';
+import type { ContactRole } from '@/hooks/useSupplierContacts';
 
 interface DocumentRequestFormProps {
   isOpen: boolean;
@@ -31,6 +33,8 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
   const [selectedBranch, setSelectedBranch] = useState('');
   const [templateType, setTemplateType] = useState<'standard' | 'custom'>('standard');
   const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [selectedContactRoles, setSelectedContactRoles] = useState<ContactRole[]>([]);
+  const [contactCounts, setContactCounts] = useState<{ [key: string]: number }>({});
   const [connectedSuppliers, setConnectedSuppliers] = useState<any[]>([]);
   const [availableBranches, setAvailableBranches] = useState<any[]>([]);
   const [customTemplates, setCustomTemplates] = useState<any[]>([]);
@@ -45,6 +49,37 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
       fetchBuyerData();
     }
   }, [isOpen, user]);
+
+  useEffect(() => {
+    if (selectedSupplier) {
+      fetchContactCounts();
+    }
+  }, [selectedSupplier]);
+
+  const fetchContactCounts = async () => {
+    if (!selectedSupplier) return;
+
+    try {
+      const { data: contacts } = await supabase
+        .from('supplier_contacts')
+        .select('roles')
+        .eq('supplier_id', selectedSupplier);
+
+      if (contacts) {
+        const counts: { [key: string]: number } = {};
+        contacts.forEach((contact: any) => {
+          if (contact.roles && Array.isArray(contact.roles)) {
+            contact.roles.forEach((role: string) => {
+              counts[role] = (counts[role] || 0) + 1;
+            });
+          }
+        });
+        setContactCounts(counts);
+      }
+    } catch (error) {
+      console.error('Error fetching contact counts:', error);
+    }
+  };
 
   const fetchBuyerData = async () => {
     try {
@@ -144,6 +179,7 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
           requester_id: user.id,
           template_type: templateType,
           custom_template_id: templateType === 'custom' ? selectedTemplate : null,
+          target_contact_roles: selectedContactRoles.length > 0 ? selectedContactRoles : null,
         })
         .select()
         .single();
@@ -390,6 +426,14 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
               </PopoverContent>
             </Popover>
           </div>
+
+          {selectedSupplier && (
+            <ContactRoleSelector
+              selectedRoles={selectedContactRoles}
+              onChange={setSelectedContactRoles}
+              contactCounts={contactCounts}
+            />
+          )}
 
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={onClose}>

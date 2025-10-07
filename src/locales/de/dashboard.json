@@ -47,6 +47,8 @@
       "allTypes": "Alle Typen",
       "allSuppliers": "Alle Lieferanten",
       "allTime": "Alle Zeit",
+      "allItemTypes": "Alle Artikeltypen",
+      "filterByItems": "Nach Artikeln filtern",
       "recentRequests": "Aktuelle Dokumentenanfragen"
     }
   },

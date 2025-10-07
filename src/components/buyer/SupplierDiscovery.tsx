@@ -26,6 +26,7 @@ const SupplierDiscovery = () => {
   const [filteredSuppliers, setFilteredSuppliers] = useState<any[]>([]);
   const [selectedIndustry, setSelectedIndustry] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedItemCategory, setSelectedItemCategory] = useState('all');
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
   const [connections, setConnections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +57,7 @@ const SupplierDiscovery = () => {
       console.log('Buyer profile:', buyer);
       setBuyerProfile(buyer);
 
-      // Fetch existing branch-supplier connections if buyer profile exists
+        // Fetch existing branch-supplier connections if buyer profile exists
       if (buyer) {
         let connectionsQuery = supabase
           .from('branch_supplier_connections')
@@ -69,7 +70,12 @@ const SupplierDiscovery = () => {
               industry,
               phone,
               address,
-              description
+              description,
+              supplier_items (
+                id,
+                item_name,
+                item_category
+              )
             )
           `)
           .eq('buyer_id', buyer.id)
@@ -130,6 +136,13 @@ const SupplierDiscovery = () => {
       filtered = filtered.filter(supplier => supplier.industry === selectedIndustry);
     }
 
+    if (selectedItemCategory && selectedItemCategory !== 'all') {
+      filtered = filtered.filter(supplier => 
+        supplier.supplier_items && 
+        supplier.supplier_items.some((item: any) => item.item_category === selectedItemCategory)
+      );
+    }
+
     if (searchTerm) {
       filtered = filtered.filter(supplier =>
         supplier.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -138,7 +151,7 @@ const SupplierDiscovery = () => {
     }
 
     setFilteredSuppliers(filtered);
-  }, [suppliers, selectedIndustry, searchTerm]);
+  }, [suppliers, selectedIndustry, selectedItemCategory, searchTerm]);
 
   const sendConnectionRequest = async (supplierId: string) => {
     if (!buyerProfile) {
@@ -376,6 +389,24 @@ const SupplierDiscovery = () => {
             ))}
           </SafeSelect>
         </div>
+        <div>
+          <Label htmlFor="itemCategory">Filter by Items</Label>
+          <SafeSelect
+            value={selectedItemCategory}
+            onValueChange={(value) => setSelectedItemCategory(createSafeSelectValue(value, 'all'))}
+            placeholder="All Item Types"
+            className="w-48"
+          >
+            <SafeSelectItem value="all">All Item Types</SafeSelectItem>
+            <SafeSelectItem value="seafood">🐟 Seafood</SafeSelectItem>
+            <SafeSelectItem value="dairy">🥛 Dairy</SafeSelectItem>
+            <SafeSelectItem value="meat">🥩 Meat</SafeSelectItem>
+            <SafeSelectItem value="produce">🥬 Produce</SafeSelectItem>
+            <SafeSelectItem value="beverages">🥤 Beverages</SafeSelectItem>
+            <SafeSelectItem value="packaged_goods">📦 Packaged Goods</SafeSelectItem>
+            <SafeSelectItem value="other">Other</SafeSelectItem>
+          </SafeSelect>
+        </div>
       </div>
 
       {/* Supplier Categories */}
@@ -505,6 +536,19 @@ const SupplierSection: React.FC<SupplierSectionProps> = ({
           onSendRequest,
           getConnectionStatus
         }) => {
+  const getCategoryIcon = (category: string) => {
+    const icons: { [key: string]: string } = {
+      seafood: '🐟',
+      dairy: '🥛',
+      meat: '🥩',
+      produce: '🥬',
+      beverages: '🥤',
+      packaged_goods: '📦',
+      other: '📦'
+    };
+    return icons[category] || '📦';
+  };
+
   const handleQuickInvite = async (supplier: any) => {
     try {
       // Create onboarding request with defaults for this supplier
@@ -568,6 +612,22 @@ const SupplierSection: React.FC<SupplierSectionProps> = ({
                     <p className="text-sm text-muted-foreground">
                       {supplier.industry} • {supplier.contact_email}
                     </p>
+                    {supplier.supplier_items && supplier.supplier_items.length > 0 ? (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {supplier.supplier_items.slice(0, 3).map((item: any) => (
+                          <Badge key={item.id} variant="secondary" className="text-xs">
+                            {getCategoryIcon(item.item_category)} {item.item_name}
+                          </Badge>
+                        ))}
+                        {supplier.supplier_items.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{supplier.supplier_items.length - 3} more
+                          </Badge>
+                        )}
+                      </div>
+                    ) : (
+                      <Badge variant="outline" className="text-xs mt-1">No items added</Badge>
+                    )}
                   </div>
                 </div>
               </div>

@@ -1264,6 +1264,9 @@ export type Database = {
           requester_id: string | null
           status: Database["public"]["Enums"]["request_status"] | null
           supplier_id: string | null
+          target_contact_roles:
+            | Database["public"]["Enums"]["contact_role"][]
+            | null
           template_sections: Json | null
           template_type: string | null
           title: string
@@ -1284,6 +1287,9 @@ export type Database = {
           requester_id?: string | null
           status?: Database["public"]["Enums"]["request_status"] | null
           supplier_id?: string | null
+          target_contact_roles?:
+            | Database["public"]["Enums"]["contact_role"][]
+            | null
           template_sections?: Json | null
           template_type?: string | null
           title: string
@@ -1304,6 +1310,9 @@ export type Database = {
           requester_id?: string | null
           status?: Database["public"]["Enums"]["request_status"] | null
           supplier_id?: string | null
+          target_contact_roles?:
+            | Database["public"]["Enums"]["contact_role"][]
+            | null
           template_sections?: Json | null
           template_type?: string | null
           title?: string
@@ -1412,6 +1421,8 @@ export type Database = {
           file_path: string
           file_size: number | null
           id: string
+          linked_facility_ids: string[] | null
+          linked_item_ids: string[] | null
           metadata: Json | null
           mime_type: string | null
           original_uploader_type: string | null
@@ -1434,6 +1445,8 @@ export type Database = {
           file_path: string
           file_size?: number | null
           id?: string
+          linked_facility_ids?: string[] | null
+          linked_item_ids?: string[] | null
           metadata?: Json | null
           mime_type?: string | null
           original_uploader_type?: string | null
@@ -1456,6 +1469,8 @@ export type Database = {
           file_path?: string
           file_size?: number | null
           id?: string
+          linked_facility_ids?: string[] | null
+          linked_item_ids?: string[] | null
           metadata?: Json | null
           mime_type?: string | null
           original_uploader_type?: string | null
@@ -2072,6 +2087,56 @@ export type Database = {
         }
         Relationships: []
       }
+      supplier_contacts: {
+        Row: {
+          contact_email: string
+          contact_name: string
+          contact_phone: string | null
+          created_at: string
+          id: string
+          is_primary: boolean | null
+          metadata: Json | null
+          roles: Database["public"]["Enums"]["contact_role"][]
+          status: string | null
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          contact_email: string
+          contact_name: string
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_primary?: boolean | null
+          metadata?: Json | null
+          roles?: Database["public"]["Enums"]["contact_role"][]
+          status?: string | null
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          contact_email?: string
+          contact_name?: string
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_primary?: boolean | null
+          metadata?: Json | null
+          roles?: Database["public"]["Enums"]["contact_role"][]
+          status?: string | null
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_contacts_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_document_library: {
         Row: {
           ai_suggested_description: string | null
@@ -2155,6 +2220,60 @@ export type Database = {
           },
           {
             foreignKeyName: "supplier_document_library_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_items: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          item_category: string
+          item_name: string
+          metadata: Json | null
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          item_category: string
+          item_name: string
+          metadata?: Json | null
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          item_category?: string
+          item_name?: string
+          metadata?: Json | null
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_items_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_items_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
@@ -3204,6 +3323,7 @@ export type Database = {
       }
     }
     Enums: {
+      contact_role: "recall" | "sales" | "quality" | "compliance" | "general"
       permission_type:
         | "read"
         | "write"
@@ -3366,6 +3486,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      contact_role: ["recall", "sales", "quality", "compliance", "general"],
       permission_type: [
         "read",
         "write",

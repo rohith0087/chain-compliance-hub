@@ -1154,6 +1154,59 @@ export type Database = {
           },
         ]
       }
+      document_assignments: {
+        Row: {
+          assigned_by: string
+          assigned_to: string
+          assignment_type: string
+          completed_at: string | null
+          created_at: string | null
+          document_upload_id: string
+          due_date: string | null
+          id: string
+          notes: string | null
+          priority: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_by: string
+          assigned_to: string
+          assignment_type: string
+          completed_at?: string | null
+          created_at?: string | null
+          document_upload_id: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          priority?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_by?: string
+          assigned_to?: string
+          assignment_type?: string
+          completed_at?: string | null
+          created_at?: string | null
+          document_upload_id?: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          priority?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_assignments_document_upload_id_fkey"
+            columns: ["document_upload_id"]
+            isOneToOne: false
+            referencedRelation: "document_uploads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_libraries: {
         Row: {
           access_level: string | null
@@ -1545,6 +1598,60 @@ export type Database = {
           validation_rules?: Json | null
         }
         Relationships: []
+      }
+      item_facility_mappings: {
+        Row: {
+          certifications: Json | null
+          created_at: string | null
+          facility_id: string
+          id: string
+          is_primary_producer: boolean | null
+          item_id: string
+          lead_time_days: number | null
+          notes: string | null
+          production_capacity: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          certifications?: Json | null
+          created_at?: string | null
+          facility_id: string
+          id?: string
+          is_primary_producer?: boolean | null
+          item_id: string
+          lead_time_days?: number | null
+          notes?: string | null
+          production_capacity?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          certifications?: Json | null
+          created_at?: string | null
+          facility_id?: string
+          id?: string
+          is_primary_producer?: boolean | null
+          item_id?: string
+          lead_time_days?: number | null
+          notes?: string | null
+          production_capacity?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_facility_mappings_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_facility_mappings_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -2232,11 +2339,14 @@ export type Database = {
           branch_id: string | null
           created_at: string
           description: string | null
+          facility_ids: string[] | null
           id: string
           is_active: boolean | null
           item_category: string
           item_name: string
           metadata: Json | null
+          primary_facility_id: string | null
+          production_details: Json | null
           supplier_id: string
           updated_at: string
         }
@@ -2244,11 +2354,14 @@ export type Database = {
           branch_id?: string | null
           created_at?: string
           description?: string | null
+          facility_ids?: string[] | null
           id?: string
           is_active?: boolean | null
           item_category: string
           item_name: string
           metadata?: Json | null
+          primary_facility_id?: string | null
+          production_details?: Json | null
           supplier_id: string
           updated_at?: string
         }
@@ -2256,11 +2369,14 @@ export type Database = {
           branch_id?: string | null
           created_at?: string
           description?: string | null
+          facility_ids?: string[] | null
           id?: string
           is_active?: boolean | null
           item_category?: string
           item_name?: string
           metadata?: Json | null
+          primary_facility_id?: string | null
+          production_details?: Json | null
           supplier_id?: string
           updated_at?: string
         }
@@ -2268,6 +2384,13 @@ export type Database = {
           {
             foreignKeyName: "supplier_items_branch_id_fkey"
             columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_items_primary_facility_id_fkey"
+            columns: ["primary_facility_id"]
             isOneToOne: false
             referencedRelation: "company_branches"
             referencedColumns: ["id"]
@@ -2337,6 +2460,114 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      supplier_performance_metrics: {
+        Row: {
+          approved_requests: number | null
+          auto_calculated_risk: string | null
+          buyer_id: string
+          calculated_at: string | null
+          compliance_score: number
+          created_at: string | null
+          document_quality_score: number | null
+          expired_documents: number | null
+          id: string
+          manual_risk_override: string | null
+          metric_period_end: string
+          metric_period_start: string
+          on_time_submission_rate: number | null
+          overdue_requests: number | null
+          pending_requests: number | null
+          previous_compliance_score: number | null
+          rejected_requests: number | null
+          response_time_avg: number | null
+          risk_factors: Json | null
+          risk_level: string
+          risk_override_at: string | null
+          risk_override_by: string | null
+          risk_override_reason: string | null
+          risk_score: number
+          supplier_id: string
+          total_requests: number | null
+          trend_direction: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          approved_requests?: number | null
+          auto_calculated_risk?: string | null
+          buyer_id: string
+          calculated_at?: string | null
+          compliance_score: number
+          created_at?: string | null
+          document_quality_score?: number | null
+          expired_documents?: number | null
+          id?: string
+          manual_risk_override?: string | null
+          metric_period_end: string
+          metric_period_start: string
+          on_time_submission_rate?: number | null
+          overdue_requests?: number | null
+          pending_requests?: number | null
+          previous_compliance_score?: number | null
+          rejected_requests?: number | null
+          response_time_avg?: number | null
+          risk_factors?: Json | null
+          risk_level: string
+          risk_override_at?: string | null
+          risk_override_by?: string | null
+          risk_override_reason?: string | null
+          risk_score: number
+          supplier_id: string
+          total_requests?: number | null
+          trend_direction?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          approved_requests?: number | null
+          auto_calculated_risk?: string | null
+          buyer_id?: string
+          calculated_at?: string | null
+          compliance_score?: number
+          created_at?: string | null
+          document_quality_score?: number | null
+          expired_documents?: number | null
+          id?: string
+          manual_risk_override?: string | null
+          metric_period_end?: string
+          metric_period_start?: string
+          on_time_submission_rate?: number | null
+          overdue_requests?: number | null
+          pending_requests?: number | null
+          previous_compliance_score?: number | null
+          rejected_requests?: number | null
+          response_time_avg?: number | null
+          risk_factors?: Json | null
+          risk_level?: string
+          risk_override_at?: string | null
+          risk_override_by?: string | null
+          risk_override_reason?: string | null
+          risk_score?: number
+          supplier_id?: string
+          total_requests?: number | null
+          trend_direction?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_performance_metrics_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_performance_metrics_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       supplier_response_metrics: {
         Row: {

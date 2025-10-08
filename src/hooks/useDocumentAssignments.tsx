@@ -28,7 +28,10 @@ export const useDocumentAssignments = () => {
   const { user } = useAuth();
 
   const loadAssignments = async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -36,7 +39,13 @@ export const useDocumentAssignments = () => {
         .from('document_assignments')
         .select(`
           *,
-          document:document_uploads!document_assignments_document_upload_id_fkey(*),
+          document:document_uploads!document_assignments_document_upload_id_fkey(
+            *,
+            request:document_requests!document_uploads_request_id_fkey(
+              title,
+              document_type
+            )
+          ),
           assignee:profiles!assigned_to(full_name, email),
           assigner:profiles!assigned_by(full_name, email)
         `)

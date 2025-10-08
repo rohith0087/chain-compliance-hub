@@ -277,25 +277,34 @@ export function BuyerSidebarLayout({
                 <SidebarMenuItem>
                   <SidebarMenuButton 
                     onClick={() => handleSpecialAction('new-request')}
-                    className="text-primary hover:text-primary hover:bg-primary/10"
+                    className="relative group bg-gradient-to-r from-primary to-primary-hover text-white hover:shadow-lg transition-all duration-300"
                   >
-                    <Plus className="h-4 w-4" />
-                    <span>New Request</span>
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-white/30 blur-sm" />
+                      <Plus className="h-4 w-4 relative z-10" />
+                    </div>
+                    <span className="font-medium">New Request</span>
                     {currentBranch && !collapsed && (
-                      <Badge variant="secondary" className="ml-auto text-xs">
+                      <Badge className="ml-auto text-xs bg-white/20 text-white border-white/30">
                         {currentBranch.branch_name}
                       </Badge>
                     )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => handleSpecialAction('chat')}>
+                  <SidebarMenuButton 
+                    onClick={() => handleSpecialAction('chat')}
+                    className="hover:bg-secondary/10 hover:text-secondary transition-colors"
+                  >
                     <Compass className="h-4 w-4" />
                     <span>Compliance Compass</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => handleSpecialAction('bulk-invite')}>
+                  <SidebarMenuButton 
+                    onClick={() => handleSpecialAction('bulk-invite')}
+                    className="hover:bg-accent/10 hover:text-accent transition-colors"
+                  >
                     <Send className="h-4 w-4" />
                     <span>Bulk Invite</span>
                   </SidebarMenuButton>
@@ -310,23 +319,38 @@ export function BuyerSidebarLayout({
             <SidebarGroupContent>
               <SidebarMenu>
                 {navigationItems.map((item) => (
-                  <SidebarMenuItem key={item.value}>
+                <SidebarMenuItem key={item.value} className="relative">
+                    {/* Active indicator gradient bar */}
+                    {isActiveRoute(item.value) && (
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary to-secondary rounded-r-full" />
+                    )}
                     <SidebarMenuButton
                       isActive={isActiveRoute(item.value) || hasActiveSubmenu(item)}
                       onClick={() => handleMenuClick(item.value)}
-                      className="group"
+                      className={`group transition-all duration-300 ${
+                        isActiveRoute(item.value) 
+                          ? 'bg-primary/10 text-primary hover:bg-primary/15' 
+                          : 'hover:bg-muted/50'
+                      }`}
                     >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
+                      <div className="relative">
+                        {isActiveRoute(item.value) && (
+                          <div className="absolute inset-0 bg-primary/30 blur-lg" />
+                        )}
+                        <item.icon className="h-4 w-4 relative z-10" />
+                      </div>
+                      <span className={isActiveRoute(item.value) ? 'font-medium' : ''}>
+                        {item.title}
+                      </span>
                       {item.submenu && (
                         <ChevronDown 
-                          className={`ml-auto h-4 w-4 transition-transform ${
+                          className={`ml-auto h-4 w-4 transition-transform duration-300 ${
                             hasActiveSubmenu(item) ? 'rotate-180' : ''
                           }`} 
                         />
                       )}
                       {item.badge && (
-                        <Badge variant="secondary" className="ml-auto">
+                        <Badge className="ml-auto bg-primary text-white">
                           {item.badge}
                         </Badge>
                       )}
@@ -410,10 +434,25 @@ export function BuyerSidebarLayout({
 
       <div className="flex-1 flex flex-col">
         {/* Top Header */}
-        <header className="h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-          <div className="flex h-full items-center justify-between px-4">
+        <header className="h-16 border-b bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
+          <div className="flex h-full items-center justify-between px-6">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="-ml-1" />
+              
+              {/* Global Search Bar */}
+              <div className="hidden md:block">
+                <Button 
+                  variant="outline" 
+                  className="w-64 justify-start text-muted-foreground border-border/50 hover:border-primary/30 bg-muted/30"
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  Search...
+                  <kbd className="ml-auto pointer-events-none hidden xl:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100">
+                    ⌘K
+                  </kbd>
+                </Button>
+              </div>
+
               {branches.length > 1 && (
                 <BranchSelector
                   branches={branches}
@@ -424,7 +463,7 @@ export function BuyerSidebarLayout({
               )}
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <SubscriptionStatusWidget compact />
               <NotificationCenter />
             </div>

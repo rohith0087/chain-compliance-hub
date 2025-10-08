@@ -3,30 +3,41 @@ import { AlertTriangle, Clock, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PriorityBadgeProps {
-  priority: 'high' | 'medium' | 'low';
+  priority?: 'urgent' | 'high' | 'medium' | 'normal' | 'low' | string;
   className?: string;
 }
 
-export function PriorityBadge({ priority, className }: PriorityBadgeProps) {
+export function PriorityBadge({ priority = 'normal', className }: PriorityBadgeProps) {
   const config = {
+    urgent: {
+      icon: AlertTriangle,
+      label: 'Urgent',
+      className: 'bg-danger/10 text-danger border-danger/20 animate-pulse'
+    },
     high: {
       icon: AlertTriangle,
       label: 'High Priority',
-      className: 'bg-danger/10 text-danger border-danger/20 animate-pulse'
+      className: 'bg-danger/10 text-danger border-danger/20'
     },
     medium: {
       icon: Clock,
       label: 'Medium Priority',
       className: 'bg-warning/10 text-warning border-warning/20'
     },
+    normal: {
+      icon: Clock,
+      label: 'Normal Priority',
+      className: 'bg-accent/10 text-accent border-accent/20'
+    },
     low: {
       icon: CheckCircle,
       label: 'Low Priority',
       className: 'bg-success/10 text-success border-success/20'
     }
-  };
+  } as const;
 
-  const { icon: Icon, label, className: priorityClassName } = config[priority];
+  const cfg = (config as Record<string, typeof config[keyof typeof config]>)[priority] ?? config.normal;
+  const { icon: Icon, label, className: priorityClassName } = cfg;
 
   return (
     <Badge className={cn(

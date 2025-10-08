@@ -36,7 +36,7 @@ export const useDocumentAssignments = () => {
         .from('document_assignments')
         .select(`
           *,
-          document:document_uploads(*),
+          document:document_uploads!document_assignments_document_upload_id_fkey(*),
           assignee:profiles!assigned_to(full_name, email),
           assigner:profiles!assigned_by(full_name, email)
         `)

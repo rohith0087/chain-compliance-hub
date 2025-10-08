@@ -1219,13 +1219,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "fk_document_upload_id"
-            columns: ["document_upload_id"]
-            isOneToOne: false
-            referencedRelation: "document_uploads"
-            referencedColumns: ["id"]
-          },
         ]
       }
       document_libraries: {

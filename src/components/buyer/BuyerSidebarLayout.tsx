@@ -161,17 +161,11 @@ export function BuyerSidebarLayout({
     {
       title: t('common:navigation.compliance'),
       icon: BarChart3,
-      value: 'compliance'
-    },
-    {
-      title: 'Performance',
-      icon: TrendingUp,
-      value: 'performance'
-    },
-    {
-      title: 'Risk Management',
-      icon: AlertTriangle,
-      value: 'risk'
+      value: 'compliance',
+      submenu: [
+        { title: 'Overview', value: 'compliance', icon: BarChart3 },
+        { title: 'Item Compliance', value: 'item-compliance', icon: Package }
+      ]
     },
     {
       title: 'Assignments',
@@ -182,11 +176,6 @@ export function BuyerSidebarLayout({
       title: 'Onboarding Pipeline',
       icon: GitBranch,
       value: 'onboarding'
-    },
-    {
-      title: 'Item Compliance',
-      icon: Package,
-      value: 'item-compliance'
     },
     {
       title: 'Agents',

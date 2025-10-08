@@ -483,101 +483,165 @@ const BuyerComplianceDashboard = () => {
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          {/* Key Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t('dashboard:compliance.totalSuppliers')}</CardTitle>
-                <Building2 className="h-4 w-4 text-blue-500" />
+        <TabsContent value="overview" className="space-y-6 animate-fade-in">
+          {/* Key Metrics - Modern Card Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            {/* Total Suppliers - Featured Card */}
+            <Card className="group relative overflow-hidden border-0 bg-white shadow-subtle hover:shadow-elegant transition-all duration-500 hover:-translate-y-1 md:col-span-2">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-primary" />
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/10 blur-xl group-hover:blur-2xl transition-all" />
+                    <div className="relative h-14 w-14 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-modern">
+                      <Building2 className="h-7 w-7 text-white" />
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="rounded-full px-3 py-1.5">
+                    Active
+                  </Badge>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{overallStats.totalSuppliers}</div>
-                <p className="text-xs text-muted-foreground">Connected suppliers</p>
+                <div className="space-y-2">
+                  <p className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                    {overallStats.totalSuppliers}
+                  </p>
+                  <p className="text-sm font-medium text-muted-foreground">{t('dashboard:compliance.totalSuppliers')}</p>
+                </div>
+                <div className="mt-4 flex items-center gap-2 text-sm">
+                  <TrendingUp className="h-4 w-4 text-success" />
+                  <span className="text-success font-medium">Active</span>
+                  <span className="text-muted-foreground">connections</span>
+                </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t('dashboard:compliance.overallScore')}</CardTitle>
-                <Shield className="h-4 w-4 text-green-500" />
+            {/* Avg Compliance Score */}
+            <Card className="group relative overflow-hidden border-0 bg-white shadow-subtle hover:shadow-modern transition-all duration-300">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-success to-success/50" />
+              <CardHeader className="pb-3">
+                <div className="h-10 w-10 rounded-xl bg-success/10 flex items-center justify-center">
+                  <Shield className="h-5 w-5 text-success" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">{overallStats.avgComplianceScore}%</div>
-                <Progress value={overallStats.avgComplianceScore} className="mt-2" />
+                <div className="space-y-1">
+                  <p className="text-3xl font-bold">{overallStats.avgComplianceScore}%</p>
+                  <p className="text-sm font-medium text-muted-foreground">{t('dashboard:compliance.overallScore')}</p>
+                </div>
+                <Progress value={overallStats.avgComplianceScore} className="mt-3 h-2" />
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t('dashboard:compliance.pendingRequests')}</CardTitle>
-                <Clock className="h-4 w-4 text-yellow-500" />
+            {/* Pending Requests */}
+            <Card className="group relative overflow-hidden border-0 bg-white shadow-subtle hover:shadow-modern transition-all duration-300">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-warning to-warning/50" />
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="h-10 w-10 rounded-xl bg-warning/10 flex items-center justify-center">
+                    <Clock className="h-5 w-5 text-warning" />
+                  </div>
+                  {overallStats.pendingRequests > 5 && (
+                    <Badge variant="warning" className="animate-pulse">
+                      Urgent
+                    </Badge>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-yellow-600">{overallStats.pendingRequests}</div>
-                <p className="text-xs text-muted-foreground">Awaiting response</p>
+                <div className="space-y-1">
+                  <p className="text-3xl font-bold">{overallStats.pendingRequests}</p>
+                  <p className="text-sm font-medium text-muted-foreground">{t('dashboard:compliance.pendingRequests')}</p>
+                </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t('dashboard:compliance.highRisk')}</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-red-500" />
+            {/* High Risk Suppliers */}
+            <Card className="group relative overflow-hidden border-0 bg-white shadow-subtle hover:shadow-modern transition-all duration-300">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-danger to-danger/50" />
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="h-10 w-10 rounded-xl bg-danger/10 flex items-center justify-center">
+                    <AlertTriangle className="h-5 w-5 text-danger" />
+                  </div>
+                  {overallStats.highRiskSuppliers > 0 && (
+                    <Badge variant="danger">
+                      High Risk
+                    </Badge>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-600">{overallStats.highRiskSuppliers}</div>
-                <p className="text-xs text-muted-foreground">Suppliers below 70%</p>
+                <div className="space-y-1">
+                  <p className="text-3xl font-bold text-danger">{overallStats.highRiskSuppliers}</p>
+                  <p className="text-sm font-medium text-muted-foreground">{t('dashboard:compliance.highRisk')}</p>
+                </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t('dashboard:compliance.totalRequests')}</CardTitle>
-                <FileCheck className="h-4 w-4 text-blue-500" />
+            {/* Total Requests */}
+            <Card className="group relative overflow-hidden border-0 bg-white shadow-subtle hover:shadow-modern transition-all duration-300">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent to-accent/50" />
+              <CardHeader className="pb-3">
+                <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center">
+                  <FileCheck className="h-5 w-5 text-accent" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{overallStats.totalRequests}</div>
-                <p className="text-xs text-muted-foreground">All time requests</p>
+                <div className="space-y-1">
+                  <p className="text-3xl font-bold">{overallStats.totalRequests}</p>
+                  <p className="text-sm font-medium text-muted-foreground">{t('dashboard:compliance.totalRequests')}</p>
+                </div>
               </CardContent>
             </Card>
           </div>
 
           {/* Recent Activity */}
-          <Card>
+          <Card className="border-0 shadow-subtle">
             <CardHeader>
-              <CardTitle>{t('dashboard:compliance.recentActivity')}</CardTitle>
+              <CardTitle className="text-xl font-semibold">
+                {t('dashboard:compliance.recentActivity')}
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {filteredRequests.slice(0, 5).map((request) => (
-                  <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <FileCheck className="w-5 h-5 text-blue-500" />
+                  <div key={request.id} className="group flex items-center justify-between p-4 border border-border/50 rounded-xl hover:bg-accent/5 hover:border-primary/20 transition-all">
+                    <div className="flex items-center space-x-4">
+                      <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+                        request.status === 'approved' ? 'bg-success/10' :
+                        request.status === 'pending' ? 'bg-warning/10' : 'bg-danger/10'
+                      }`}>
+                        <FileCheck className={`w-5 h-5 ${
+                          request.status === 'approved' ? 'text-success' :
+                          request.status === 'pending' ? 'text-warning' : 'text-danger'
+                        }`} />
+                      </div>
                       <div>
                         <p className="font-medium">{request.title}</p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-muted-foreground">
                           {request.suppliers?.company_name} • {request.document_type}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-3">
                       <Badge 
                         variant={
-                          request.status === 'approved' ? 'default' :
-                          request.status === 'pending' ? 'secondary' : 'destructive'
-                        }
-                        className={
-                          request.status === 'approved' ? 'bg-green-100 text-green-800' :
-                          request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          request.status === 'rejected' ? 'bg-red-100 text-red-800' : ''
+                          request.status === 'approved' ? 'approved' :
+                          request.status === 'pending' ? 'pending' : 'rejected'
                         }
                       >
+                        {request.status === 'approved' && <CheckCircle className="h-3 w-3 mr-1.5" />}
+                        {request.status === 'pending' && <Clock className="h-3 w-3 mr-1.5" />}
+                        {request.status === 'rejected' && <AlertTriangle className="h-3 w-3 mr-1.5" />}
                         {t(`common:buttons.${request.status}`)}
                       </Badge>
                       <Button 
                         variant="ghost" 
                         size="sm"
                         onClick={() => handleViewDocument(request)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <Eye className="w-4 h-4" />
                       </Button>

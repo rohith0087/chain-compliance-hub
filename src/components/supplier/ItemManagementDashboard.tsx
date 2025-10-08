@@ -8,8 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Package, Plus, Edit, Trash2, Search } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Package, Plus, Edit, Trash2, Search, Building2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { ItemFacilityManager } from './ItemFacilityManager';
 
 interface ItemManagementDashboardProps {
   supplierId: string;
@@ -86,18 +88,31 @@ export const ItemManagementDashboard = ({ supplierId }: ItemManagementDashboardP
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Item Management
-          </CardTitle>
-          <Button onClick={() => handleOpenDialog()}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Item
-          </Button>
-        </CardHeader>
-        <CardContent>
+      <Tabs defaultValue="items">
+        <TabsList>
+          <TabsTrigger value="items">
+            <Package className="h-4 w-4 mr-2" />
+            Items
+          </TabsTrigger>
+          <TabsTrigger value="facilities">
+            <Building2 className="h-4 w-4 mr-2" />
+            Facility Assignments
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="items">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Item Management
+              </CardTitle>
+              <Button onClick={() => handleOpenDialog()}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Item
+              </Button>
+            </CardHeader>
+            <CardContent>
           <div className="flex gap-4 mb-6">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -181,8 +196,14 @@ export const ItemManagementDashboard = ({ supplierId }: ItemManagementDashboardP
               })}
             </div>
           )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="facilities">
+          <ItemFacilityManager />
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>

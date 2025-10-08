@@ -87,3 +87,9 @@ verify_jwt = false
 
 [functions.buyer-agent]
 verify_jwt = false
+
+[functions.calculate-supplier-metrics]
+verify_jwt = false
+
+[functions.send-assignment-notification]
+verify_jwt = false

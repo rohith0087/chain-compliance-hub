@@ -19,6 +19,8 @@ const ItemComplianceView = ({ buyerId }: ItemComplianceViewProps) => {
   const [generalDocuments, setGeneralDocuments] = useState<any[]>([]);
   const [missingDocs, setMissingDocs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [facilityFilter, setFacilityFilter] = useState<string>('all');
+  const [facilities, setFacilities] = useState<any[]>([]);
 
   useEffect(() => {
     fetchSupplierItems();
@@ -57,7 +59,18 @@ const ItemComplianceView = ({ buyerId }: ItemComplianceViewProps) => {
   const fetchDocumentsForItem = async () => {
     setLoading(true);
     
-    const { data: linked } = await supabase
+    // Fetch facilities for the selected item
+    const selectedItem = allItems.find(i => i.id === selectedItemId);
+    if (selectedItem) {
+      const { data: facilityData } = await supabase
+        .from('company_branches')
+        .select('*')
+        .eq('company_id', selectedItem.supplier_id)
+        .eq('company_type', 'supplier');
+      setFacilities(facilityData || []);
+    }
+    
+    let linkedQuery = supabase
       .from('document_uploads')
       .select(`
         *,
@@ -71,6 +84,13 @@ const ItemComplianceView = ({ buyerId }: ItemComplianceViewProps) => {
       `)
       .eq('document_requests.buyer_id', buyerId)
       .contains('linked_item_ids', [selectedItemId]);
+    
+    // Apply facility filter if selected
+    if (facilityFilter !== 'all') {
+      linkedQuery = linkedQuery.contains('linked_facility_ids', [facilityFilter]);
+    }
+    
+    const { data: linked } = await linkedQuery;
 
     const { data: general } = await supabase
       .from('document_uploads')
@@ -113,31 +133,50 @@ const ItemComplianceView = ({ buyerId }: ItemComplianceViewProps) => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div>
-              <Label>Select Item to Review</Label>
-              <Select value={selectedItemId} onValueChange={setSelectedItemId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose an item..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {ITEM_CATEGORIES.map(category => {
-                    const categoryItems = allItems.filter(i => i.item_category === category.value);
-                    if (categoryItems.length === 0) return null;
-                    return (
-                      <div key={category.value}>
-                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                          {category.icon} {category.label}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Select Item to Review</Label>
+                <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose an item..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ITEM_CATEGORIES.map(category => {
+                      const categoryItems = allItems.filter(i => i.item_category === category.value);
+                      if (categoryItems.length === 0) return null;
+                      return (
+                        <div key={category.value}>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                            {category.icon} {category.label}
+                          </div>
+                          {categoryItems.map(item => (
+                            <SelectItem key={item.id} value={item.id}>
+                              {item.item_name} ({item.suppliers?.company_name})
+                            </SelectItem>
+                          ))}
                         </div>
-                        {categoryItems.map(item => (
-                          <SelectItem key={item.id} value={item.id}>
-                            {item.item_name} ({item.suppliers?.company_name})
-                          </SelectItem>
-                        ))}
-                      </div>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label>Filter by Facility</Label>
+                <Select value={facilityFilter} onValueChange={(val) => { setFacilityFilter(val); fetchDocumentsForItem(); }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All facilities" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Facilities</SelectItem>
+                    {facilities.map(facility => (
+                      <SelectItem key={facility.id} value={facility.id}>
+                        {facility.branch_name} - {facility.location}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {selectedItem && (

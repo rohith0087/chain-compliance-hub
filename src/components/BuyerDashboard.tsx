@@ -25,6 +25,11 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import SubscriptionPage from '@/pages/SubscriptionPage';
 import { useBranchContext } from '@/contexts/BranchContext';
 import ItemComplianceView from '@/components/buyer/ItemComplianceView';
+import { AllSuppliersPerformanceDashboard } from '@/components/buyer/AllSuppliersPerformanceDashboard';
+import { SupplierRiskManagement } from '@/components/buyer/SupplierRiskManagement';
+import { DocumentAssignmentManager } from '@/components/buyer/DocumentAssignmentManager';
+import { OnboardingPipelineView } from '@/components/buyer/OnboardingPipelineView';
+import { MyAssignments } from '@/components/shared/MyAssignments';
 
 import { supabase } from '@/integrations/supabase/client';
 
@@ -384,6 +389,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
               </Card>
             </div>
 
+            {/* My Assignments Widget */}
+            {authUser && (
+              <MyAssignments />
+            )}
+
           </div>
         )}
 
@@ -407,9 +417,29 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
           <BuyerDocumentsDashboard />
         )}
 
+        {/* Performance Dashboard */}
+        {activeTab === 'performance' && (
+          <AllSuppliersPerformanceDashboard />
+        )}
+
+        {/* Risk Management */}
+        {activeTab === 'risk' && (
+          <SupplierRiskManagement />
+        )}
+
+        {/* Document Assignments */}
+        {activeTab === 'assignments' && (
+          <DocumentAssignmentManager />
+        )}
+
         {/* Item Compliance Content */}
         {activeTab === 'item-compliance' && buyerProfile && (
           <ItemComplianceView buyerId={buyerProfile.id} />
+        )}
+
+        {/* Onboarding Content - Use Pipeline View */}
+        {activeTab === 'onboarding' && (
+          <OnboardingPipelineView />
         )}
 
         {/* Templates Content */}

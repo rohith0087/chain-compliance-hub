@@ -47,6 +47,7 @@ import { ItemManagementDashboard } from '@/components/supplier/ItemManagementDas
 import { ContactRoleManager } from '@/components/supplier/ContactRoleManager';
 import { ConnectWithBuyerModal } from '@/components/supplier/ConnectWithBuyerModal';
 import { DocumentUploadModal } from '@/components/supplier/DocumentUploadModal';
+import { MyAssignments } from '@/components/shared/MyAssignments';
 
 interface SupplierDashboardProps {
   user: { 
@@ -480,6 +481,9 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
                   )}
                 </CardContent>
               </Card>
+
+              {/* My Assignments Section */}
+              <MyAssignments />
 
               {/* Connected Buyers */}
               <Card>

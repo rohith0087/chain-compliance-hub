@@ -43,10 +43,7 @@ export const OnboardingPipelineView = () => {
 
       const { data, error } = await supabase
         .from('supplier_onboarding_requests')
-        .select(`
-          *,
-          supplier:suppliers(company_name, contact_email)
-        `)
+        .select('*')
         .eq('buyer_id', buyer.id)
         .order('created_at', { ascending: false });
 

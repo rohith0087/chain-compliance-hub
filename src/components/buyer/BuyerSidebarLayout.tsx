@@ -21,7 +21,12 @@ import {
   UserPlus,
   Upload,
   CreditCard,
-  Bot
+  Bot,
+  TrendingUp,
+  AlertTriangle,
+  ClipboardCheck,
+  GitBranch,
+  Package
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from 'react-i18next';
@@ -157,6 +162,31 @@ export function BuyerSidebarLayout({
       title: t('common:navigation.compliance'),
       icon: BarChart3,
       value: 'compliance'
+    },
+    {
+      title: 'Performance',
+      icon: TrendingUp,
+      value: 'performance'
+    },
+    {
+      title: 'Risk Management',
+      icon: AlertTriangle,
+      value: 'risk'
+    },
+    {
+      title: 'Assignments',
+      icon: ClipboardCheck,
+      value: 'assignments'
+    },
+    {
+      title: 'Onboarding Pipeline',
+      icon: GitBranch,
+      value: 'onboarding'
+    },
+    {
+      title: 'Item Compliance',
+      icon: Package,
+      value: 'item-compliance'
     },
     {
       title: 'Agents',

@@ -3,16 +3,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { AlertTriangle, CheckCircle, FileText } from 'lucide-react';
+import { AlertTriangle, CheckCircle, FileText, Building2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import DocumentCard from '@/components/documents/DocumentCard';
 import { ITEM_CATEGORIES } from '@/hooks/useSupplierItems';
+import { useBranchContext } from '@/contexts/BranchContext';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface ItemComplianceViewProps {
   buyerId: string;
 }
 
 const ItemComplianceView = ({ buyerId }: ItemComplianceViewProps) => {
+  const { currentBranch, allBranchesView } = useBranchContext();
   const [allItems, setAllItems] = useState<any[]>([]);
   const [selectedItemId, setSelectedItemId] = useState<string>('');
   const [linkedDocuments, setLinkedDocuments] = useState<any[]>([]);
@@ -24,7 +27,7 @@ const ItemComplianceView = ({ buyerId }: ItemComplianceViewProps) => {
 
   useEffect(() => {
     fetchSupplierItems();
-  }, [buyerId]);
+  }, [buyerId, currentBranch, allBranchesView]);
 
   useEffect(() => {
     if (selectedItemId) {
@@ -33,15 +36,32 @@ const ItemComplianceView = ({ buyerId }: ItemComplianceViewProps) => {
   }, [selectedItemId]);
 
   const fetchSupplierItems = async () => {
-    const { data: connections } = await supabase
-      .from('buyer_supplier_connections')
-      .select('supplier_id')
-      .eq('buyer_id', buyerId)
-      .eq('status', 'approved');
+    let supplierIds: string[] = [];
 
-    if (!connections) return;
+    // If specific branch selected, only show suppliers assigned to that branch
+    if (currentBranch && !allBranchesView) {
+      const { data: branchSuppliers } = await supabase
+        .from('branch_supplier_connections')
+        .select('supplier_id')
+        .eq('branch_id', currentBranch.id)
+        .eq('status', 'active');
+      
+      supplierIds = branchSuppliers?.map(bs => bs.supplier_id) || [];
+    } else {
+      // Show all approved suppliers
+      const { data: connections } = await supabase
+        .from('buyer_supplier_connections')
+        .select('supplier_id')
+        .eq('buyer_id', buyerId)
+        .eq('status', 'approved');
 
-    const supplierIds = connections.map(c => c.supplier_id);
+      supplierIds = connections?.map(c => c.supplier_id) || [];
+    }
+
+    if (supplierIds.length === 0) {
+      setAllItems([]);
+      return;
+    }
 
     const { data: items } = await supabase
       .from('supplier_items')
@@ -127,6 +147,16 @@ const ItemComplianceView = ({ buyerId }: ItemComplianceViewProps) => {
 
   return (
     <div className="space-y-6">
+      {currentBranch && !allBranchesView && (
+        <Alert>
+          <Building2 className="h-4 w-4" />
+          <AlertTitle>Branch View</AlertTitle>
+          <AlertDescription>
+            Showing items and compliance for suppliers assigned to: <strong>{currentBranch.branch_name}</strong> ({currentBranch.location})
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <Card>
         <CardHeader>
           <CardTitle>Item-Specific Compliance View</CardTitle>

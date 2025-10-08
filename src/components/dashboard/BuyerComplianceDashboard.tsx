@@ -32,8 +32,12 @@ import { AIInsightsService } from '@/services/AIInsightsService';
 import { SubscriptionGuard } from '@/components/subscription/SubscriptionGuard';
 import { canGenerateReport, getReportCreditCost } from '@/utils/subscriptionGuards';
 import { ComplianceFilters } from '../compliance/ComplianceFilters';
+import { useBranchContext } from '@/contexts/BranchContext';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { RefreshCcw } from 'lucide-react';
 
 const BuyerComplianceDashboard = () => {
+  const { currentBranch, allBranchesView } = useBranchContext();
   const [supplierStats, setSupplierStats] = useState<any[]>([]);
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,7 +68,7 @@ const BuyerComplianceDashboard = () => {
     if (user) {
       loadDashboardData();
     }
-  }, [user]);
+  }, [user, currentBranch, allBranchesView]);
 
   const loadDashboardData = async () => {
     setLoading(true);
@@ -80,8 +84,8 @@ const BuyerComplianceDashboard = () => {
         setBuyerId(buyerProfile.id);
         setBuyerData(buyerProfile);
         
-        // Load document requests with supplier info
-        const { data: requests } = await supabase
+        // Load document requests with supplier info and branch filter
+        let requestsQuery = supabase
           .from('document_requests')
           .select(`
             *,
@@ -92,8 +96,14 @@ const BuyerComplianceDashboard = () => {
               company_logo_url
             )
           `)
-          .eq('buyer_id', buyerProfile.id)
-          .order('created_at', { ascending: false });
+          .eq('buyer_id', buyerProfile.id);
+
+        // Apply branch filter if specific branch selected
+        if (currentBranch && !allBranchesView) {
+          requestsQuery = requestsQuery.eq('branch_id', currentBranch.id);
+        }
+
+        const { data: requests } = await requestsQuery.order('created_at', { ascending: false });
 
         setDocumentRequests(requests || []);
 
@@ -418,6 +428,7 @@ const BuyerComplianceDashboard = () => {
         <h2 className="text-2xl font-bold">{t('dashboard:compliance.title')}</h2>
         <div className="flex gap-2">
           <Button variant="outline" onClick={loadDashboardData}>
+            <RefreshCcw className="w-4 h-4 mr-2" />
             {t('common:buttons.refresh')}
           </Button>
           <SubscriptionGuard
@@ -442,6 +453,17 @@ const BuyerComplianceDashboard = () => {
           </SubscriptionGuard>
         </div>
       </div>
+
+      {/* Branch indicator */}
+      {currentBranch && !allBranchesView && (
+        <Alert>
+          <Building2 className="h-4 w-4" />
+          <AlertTitle>Branch View</AlertTitle>
+          <AlertDescription>
+            Showing compliance data for: <strong>{currentBranch.branch_name}</strong> ({currentBranch.location})
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Filters */}
       <ComplianceFilters

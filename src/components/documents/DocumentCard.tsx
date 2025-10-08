@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,8 @@ import {
   ThumbsDown,
   Link
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { ITEM_CATEGORIES } from '@/hooks/useSupplierItems';
 
 interface DocumentCardProps {
   document: {
@@ -27,6 +30,7 @@ interface DocumentCardProps {
     expiration_date?: string;
     file_name?: string;
     file_size?: number;
+    linked_item_ids?: string[];
     uploader?: {
       full_name: string;
     };
@@ -111,6 +115,30 @@ const DocumentCard = ({
   const isExpired = (expirationDate?: string) => {
     if (!expirationDate) return false;
     return new Date(expirationDate) < new Date();
+  };
+
+  const [linkedItems, setLinkedItems] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (document.linked_item_ids && document.linked_item_ids.length > 0) {
+      fetchLinkedItems();
+    }
+  }, [document.linked_item_ids]);
+
+  const fetchLinkedItems = async () => {
+    const { data, error } = await supabase
+      .from('supplier_items')
+      .select('id, item_name, item_category')
+      .in('id', document.linked_item_ids || []);
+    
+    if (!error && data) {
+      setLinkedItems(data);
+    }
+  };
+
+  const getCategoryIcon = (category: string) => {
+    const categoryItem = ITEM_CATEGORIES.find(c => c.value === category);
+    return categoryItem?.icon || '📋';
   };
 
   // Show approve/decline buttons for buyers when document is submitted and has a file
@@ -240,6 +268,22 @@ const DocumentCard = ({
       
       <CardContent className="pt-0">
         <div className="space-y-3">
+          {/* Linked Items */}
+          {linkedItems.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap mb-3">
+              <span className="text-xs text-muted-foreground">Applies to:</span>
+              {linkedItems.map(item => (
+                <Badge
+                  key={item.id}
+                  variant="outline"
+                  className="text-xs cursor-default"
+                >
+                  {getCategoryIcon(item.item_category)} {item.item_name}
+                </Badge>
+              ))}
+            </div>
+          )}
+
           {/* File Information */}
           {document.file_name && (
             <div className="flex items-center justify-between text-sm">

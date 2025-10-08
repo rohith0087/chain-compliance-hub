@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Upload, File, X, Calendar, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useSupplierItems, ITEM_CATEGORIES } from '@/hooks/useSupplierItems';
 
 interface DocumentUploadDialogProps {
   isOpen: boolean;
@@ -23,11 +25,13 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
   const [expirationDate, setExpirationDate] = useState('');
   const [uploading, setUploading] = useState(false);
   const [updateMetadataOnly, setUpdateMetadataOnly] = useState(false);
+  const [linkedItemIds, setLinkedItemIds] = useState<string[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
 
   const isResubmission = request.status === 'rejected';
   const latestUpload = request.document_uploads?.[0]; // Get the latest upload for rejected documents
+  const { items, loading: itemsLoading } = useSupplierItems(request.supplier_id);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     console.info('[UploadDialog] File input change', {
@@ -155,7 +159,8 @@ if (file) {
             status: 'pending_review',
             reviewer_notes: notes || null,
             expiration_date: expirationDate || null,
-            version: version
+            version: version,
+            linked_item_ids: linkedItemIds.length > 0 ? linkedItemIds : null
           });
 
         if (insertError) throw insertError;
@@ -376,6 +381,44 @@ if (file) {
               Set when this document expires (e.g., certificate expiry, license renewal date)
             </p>
           </div>
+
+          {/* Link Items */}
+          {items.length > 0 && (
+            <div>
+              <Label>Link to Items (Optional)</Label>
+              <div className="mt-2 space-y-2 max-h-40 overflow-y-auto border rounded-lg p-3">
+                {ITEM_CATEGORIES.map(category => {
+                  const categoryItems = items.filter(i => i.item_category === category.value);
+                  if (categoryItems.length === 0) return null;
+                  return (
+                    <div key={category.value}>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">
+                        {category.icon} {category.label}
+                      </p>
+                      {categoryItems.map(item => (
+                        <label key={item.id} className="flex items-center gap-2 text-sm pl-4 cursor-pointer hover:bg-muted/50 rounded py-1">
+                          <Checkbox
+                            checked={linkedItemIds.includes(item.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setLinkedItemIds([...linkedItemIds, item.id]);
+                              } else {
+                                setLinkedItemIds(linkedItemIds.filter(id => id !== item.id));
+                              }
+                            }}
+                          />
+                          {item.item_name}
+                        </label>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Link this document to specific items (e.g., COA for Yellowfin Tuna)
+              </p>
+            </div>
+          )}
 
           {/* Notes */}
           <div>

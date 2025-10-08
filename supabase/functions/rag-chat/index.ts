@@ -452,8 +452,24 @@ async function searchDocumentsAdvanced(query: string, companyId: string, company
       return [];
     }
 
+    // Enrich with item metadata
+    const enrichedDocs = await Promise.all(relevantDocs.map(async (doc) => {
+      if (doc.metadata?.linked_item_ids && doc.metadata.linked_item_ids.length > 0) {
+        const { data: items } = await supabase
+          .from('supplier_items')
+          .select('item_name, item_category')
+          .in('id', doc.metadata.linked_item_ids);
+        
+        return {
+          ...doc,
+          linked_items: items || []
+        };
+      }
+      return doc;
+    }));
+
     // Filter and sort based on intent
-    let filteredDocs = relevantDocs;
+    let filteredDocs = enrichedDocs;
 
     // Apply intent-specific filtering
     if (intent.intent_type === 'latest_document') {
@@ -756,7 +772,7 @@ QUERY INTENT ANALYSIS:
   }
 
   // Enhanced response generation with actionable items
-  const systemPrompt = `You are an intelligent compliance assistant. Based on the provided context, generate a comprehensive response that includes:
+  const systemPrompt = `You are an intelligent compliance assistant with item-level awareness. Based on the provided context, generate a comprehensive response that includes:
 
   1. **Main Response**: A clear, detailed answer to the user's query
   2. **Actionable Items**: Specific tasks the user can execute directly from the chat
@@ -770,6 +786,12 @@ QUERY INTENT ANALYSIS:
   - Query Intent: ${JSON.stringify(intent)}
   - Available Knowledge: ${knowledgeEntries.length} entries
   - Found Documents: ${documents.length} documents
+
+  ITEM-LEVEL AWARENESS:
+  When documents have linked items, always mention which items documents apply to (e.g., "COA for Yellowfin Tuna").
+  Identify compliance gaps for specific items when relevant.
+  Suggest targeted actions based on item categories.
+  Prioritize expired/expiring documents by item importance.
 
   CRITICAL: Always include actionable_items and suggested_actions arrays in your response when relevant.
 
@@ -820,7 +842,13 @@ QUERY INTENT ANALYSIS:
   ${knowledgeEntries.map(entry => `${entry.title}: ${entry.content.substring(0, 200)}...`).join('\n')}
   
   Document Information:
-  ${documents.map(doc => `Document: ${doc.title} | Supplier: ${doc.supplier_name || 'Unknown'} | Status: ${doc.status} | Type: ${doc.document_type}${doc.expiration_date ? ` | Expires: ${doc.expiration_date}` : ''}`).join('\n')}
+  ${documents.map(doc => {
+    const linkedItems = (doc as any).linked_items;
+    const itemsText = linkedItems && linkedItems.length > 0 
+      ? ` | Items: ${linkedItems.map((i: any) => i.item_name).join(', ')}`
+      : '';
+    return `Document: ${doc.title} | Supplier: ${doc.supplier_name || 'Unknown'} | Status: ${doc.status} | Type: ${doc.document_type}${doc.expiration_date ? ` | Expires: ${doc.expiration_date}` : ''}${itemsText}`;
+  }).join('\n')}
   
   Compliance Data:
   ${contextualData.complianceMetrics ? `Total: ${contextualData.complianceMetrics.total_documents}, Score: ${Math.round(contextualData.complianceMetrics.compliance_score)}%, Pending: ${contextualData.complianceMetrics.pending_documents}, Expired: ${contextualData.complianceMetrics.expired_documents}` : 'No metrics available'}

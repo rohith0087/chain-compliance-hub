@@ -24,6 +24,7 @@ import { BuyerDocumentPrePopulator } from '@/components/buyer/BuyerDocumentPrePo
 import { SidebarProvider } from '@/components/ui/sidebar';
 import SubscriptionPage from '@/pages/SubscriptionPage';
 import { useBranchContext } from '@/contexts/BranchContext';
+import ItemComplianceView from '@/components/buyer/ItemComplianceView';
 
 import { supabase } from '@/integrations/supabase/client';
 
@@ -404,6 +405,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         {/* Documents Content */}
         {activeTab === 'documents' && (
           <BuyerDocumentsDashboard />
+        )}
+
+        {/* Item Compliance Content */}
+        {activeTab === 'item-compliance' && buyerProfile && (
+          <ItemComplianceView buyerId={buyerProfile.id} />
         )}
 
         {/* Templates Content */}

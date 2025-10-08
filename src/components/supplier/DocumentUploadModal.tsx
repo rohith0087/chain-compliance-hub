@@ -8,8 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Upload, X, FileText, Loader2, Sparkles, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useSupplierItems, ITEM_CATEGORIES } from '@/hooks/useSupplierItems';
 
 interface DocumentUploadModalProps {
   supplierId: string;
@@ -50,6 +52,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [linkedItemIds, setLinkedItemIds] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     document_name: '',
     document_type: '',
@@ -63,6 +66,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
   const [tagInput, setTagInput] = useState('');
   const [aiSuggestions, setAiSuggestions] = useState<any>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const { items } = useSupplierItems(supplierId);
 
   const analyzeDocument = async (file: File) => {
     setAnalyzing(true);
@@ -230,6 +234,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           expiration_date: formData.expiration_date || null,
           ai_suggested_tags: aiSuggestions?.suggestedTags || null,
           ai_suggested_description: aiSuggestions?.suggestedDescription || null,
+          linked_item_ids: linkedItemIds.length > 0 ? linkedItemIds : null
         })
         .select()
         .single();
@@ -490,6 +495,44 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
               rows={3}
             />
           </div>
+
+          {/* Link Items */}
+          {items.length > 0 && (
+            <div className="space-y-2">
+              <Label>Link to Items (Optional)</Label>
+              <div className="mt-2 space-y-2 max-h-40 overflow-y-auto border rounded-lg p-3">
+                {ITEM_CATEGORIES.map(category => {
+                  const categoryItems = items.filter(i => i.item_category === category.value);
+                  if (categoryItems.length === 0) return null;
+                  return (
+                    <div key={category.value}>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">
+                        {category.icon} {category.label}
+                      </p>
+                      {categoryItems.map(item => (
+                        <label key={item.id} className="flex items-center gap-2 text-sm pl-4 cursor-pointer hover:bg-muted/50 rounded py-1">
+                          <Checkbox
+                            checked={linkedItemIds.includes(item.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setLinkedItemIds([...linkedItemIds, item.id]);
+                              } else {
+                                setLinkedItemIds(linkedItemIds.filter(id => id !== item.id));
+                              }
+                            }}
+                          />
+                          {item.item_name}
+                        </label>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Link this document to specific items (e.g., COA for Yellowfin Tuna)
+              </p>
+            </div>
+          )}
 
           {/* Tags */}
           <div className="space-y-2">

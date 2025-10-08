@@ -46,5 +46,11 @@
     "success": "Success",
     "welcome": "Welcome",
     "selectRegion": "Select your region"
+  },
+  "documents": {
+    "linkToItems": "Link to Items",
+    "appliesToItems": "Applies to:",
+    "noItemsLinked": "Not linked to any items",
+    "selectItems": "Select items this document applies to"
   }
 }

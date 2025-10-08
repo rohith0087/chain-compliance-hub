@@ -45,5 +45,11 @@
     "success": "Erfolgreich",
     "welcome": "Willkommen",
     "selectRegion": "Wählen Sie Ihre Region"
+  },
+  "documents": {
+    "linkToItems": "Mit Artikeln verknüpfen",
+    "appliesToItems": "Gilt für:",
+    "noItemsLinked": "Nicht mit Artikeln verknüpft",
+    "selectItems": "Wählen Sie Artikel aus, für die dieses Dokument gilt"
   }
 }

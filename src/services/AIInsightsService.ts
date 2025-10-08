@@ -135,6 +135,8 @@ export class AIInsightsService {
   }
 
   private static buildSupplierAnalysisPrompt(data: SupplierComplianceData): string {
+    const itemMetadata = (data as any).itemMetadata;
+    
     return `
 Analyze the following supplier compliance data and provide detailed insights:
 
@@ -156,16 +158,25 @@ ${data.categoryStats.map(cat =>
   `- ${cat.category}: ${cat.approved}/${cat.total} approved (${Math.round((cat.approved/cat.total)*100)}%)`
 ).join('\n')}
 
+${itemMetadata ? `
+ITEM PORTFOLIO:
+- Total Items: ${itemMetadata.totalItems}
+- Categories: ${itemMetadata.categories.join(', ')}
+- Items with Documents: ${itemMetadata.itemsWithDocs}
+- Items Missing Documents: ${itemMetadata.itemsMissingDocs}
+- Top Items: ${itemMetadata.topItems.join(', ')}
+` : ''}
+
 RISK FACTORS:
 ${data.riskFactors.map(risk => 
   `- ${risk.factor} (${risk.severity}): ${risk.description}`
 ).join('\n')}
 
 Please provide:
-1. A comprehensive risk assessment (2-3 sentences)
-2. 3-5 specific actionable recommendations
+1. A comprehensive risk assessment (2-3 sentences) including item-level risks if applicable
+2. 3-5 specific actionable recommendations (prioritize item-specific gaps if applicable)
 3. 2-3 key strengths of this supplier
-4. 2-3 primary areas of concern
+4. 2-3 primary areas of concern (highlight item compliance gaps if present)
 5. Industry comparison context (how they compare to typical industry standards)
 6. Future outlook and potential trajectory
 

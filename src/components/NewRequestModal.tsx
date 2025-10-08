@@ -339,6 +339,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
               onDocumentToggle={handleDocumentToggle}
               onRemoveSelected={removeSelectedDocument}
               onNext={() => setStep(2)}
+              buyerId={buyerProfile?.id}
             />
           </div>
         )}

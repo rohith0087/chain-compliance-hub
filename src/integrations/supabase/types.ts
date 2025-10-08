@@ -1423,6 +1423,60 @@ export type Database = {
           },
         ]
       }
+      document_sets: {
+        Row: {
+          buyer_id: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          document_ids: Json
+          id: string
+          is_default: boolean | null
+          set_name: string
+          updated_at: string | null
+          usage_count: number | null
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          document_ids?: Json
+          id?: string
+          is_default?: boolean | null
+          set_name: string
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          document_ids?: Json
+          id?: string
+          is_default?: boolean | null
+          set_name?: string
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_sets_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_sets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_shared_links: {
         Row: {
           access_token: string

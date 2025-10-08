@@ -34,6 +34,7 @@ import { MyAssignments } from '@/components/shared/MyAssignments';
 import { StatCard } from '@/components/ui/stat-card';
 import { StatCardSkeleton, TimelineItemSkeleton } from '@/components/ui/skeleton-card';
 import { UrgencyBadge, PriorityBadge } from '@/components/ui/priority-badge';
+import { DocumentSetManager } from '@/components/buyer/DocumentSetManager';
 
 import { supabase } from '@/integrations/supabase/client';
 
@@ -545,6 +546,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         {/* Templates Content */}
         {activeTab === 'templates' && (
           <CustomTemplateManager />
+        )}
+
+        {/* Document Sets Content */}
+        {activeTab === 'document-sets' && buyerProfile && (
+          <DocumentSetManager buyerId={buyerProfile.id} />
         )}
 
         {/* Suppliers Content */}

@@ -5,8 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ClipboardCheck, ArrowLeft, X, Filter, Search } from 'lucide-react';
+import { ClipboardCheck, X, Filter, Search, Package, Save } from 'lucide-react';
 import { ComplianceDocument } from './ComplianceDocuments';
+import { useDocumentSets } from '@/hooks/useDocumentSets';
+import { SaveDocumentSetDialog } from '@/components/buyer/SaveDocumentSetDialog';
 
 interface DocumentSelectionStepProps {
   complianceDocuments: ComplianceDocument[];
@@ -14,6 +16,7 @@ interface DocumentSelectionStepProps {
   onDocumentToggle: (doc: ComplianceDocument, checked: boolean) => void;
   onRemoveSelected: (docId: string) => void;
   onNext: () => void;
+  buyerId?: string;
 }
 
 const DocumentSelectionStep = ({
@@ -21,12 +24,17 @@ const DocumentSelectionStep = ({
   selectedDocuments,
   onDocumentToggle,
   onRemoveSelected,
-  onNext
+  onNext,
+  buyerId
 }: DocumentSelectionStepProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedRegulatoryBody, setSelectedRegulatoryBody] = useState('all');
   const [showRequiredOnly, setShowRequiredOnly] = useState(false);
+  const [selectedSetId, setSelectedSetId] = useState<string>('none');
+  const [showSaveSetDialog, setShowSaveSetDialog] = useState(false);
+
+  const { documentSets, incrementUsage } = useDocumentSets(buyerId);
 
   // Get unique categories and regulatory bodies
   const categories = useMemo(() => {
@@ -57,6 +65,27 @@ const DocumentSelectionStep = ({
     setSelectedCategory('all');
     setSelectedRegulatoryBody('all');
     setShowRequiredOnly(false);
+    setSelectedSetId('none');
+  };
+
+  // Handle document set selection
+  const handleSetSelection = (setId: string) => {
+    setSelectedSetId(setId);
+    if (setId === 'none') return;
+
+    const selectedSet = documentSets.find(s => s.id === setId);
+    if (!selectedSet) return;
+
+    // Auto-select documents from the set
+    selectedSet.document_ids.forEach(docId => {
+      const doc = complianceDocuments.find(d => d.id === docId);
+      if (doc && !selectedDocuments.find(sd => sd.id === docId)) {
+        onDocumentToggle(doc, true);
+      }
+    });
+
+    // Increment usage count
+    incrementUsage(setId);
   };
 
   return (
@@ -70,7 +99,7 @@ const DocumentSelectionStep = ({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
@@ -85,7 +114,7 @@ const DocumentSelectionStep = ({
               <SelectTrigger>
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-background border-border">
                 <SelectItem value="all">All Categories</SelectItem>
                 {categories.map(category => (
                   <SelectItem key={category} value={category}>{category}</SelectItem>
@@ -97,13 +126,32 @@ const DocumentSelectionStep = ({
               <SelectTrigger>
                 <SelectValue placeholder="All Regulatory Bodies" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-background border-border">
                 <SelectItem value="all">All Regulatory Bodies</SelectItem>
                 {regulatoryBodies.map(body => (
                   <SelectItem key={body} value={body}>{body}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+
+            {buyerId && documentSets && documentSets.length > 0 && (
+              <Select value={selectedSetId} onValueChange={handleSetSelection}>
+                <SelectTrigger>
+                  <SelectValue placeholder="My Document Sets" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border-border">
+                  <SelectItem value="none">No Set Selected</SelectItem>
+                  {documentSets.map(set => (
+                    <SelectItem key={set.id} value={set.id}>
+                      <div className="flex items-center gap-2">
+                        <Package className="h-3 w-3" />
+                        {set.set_name} ({set.document_ids.length})
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
 
             <div className="flex items-center space-x-2">
               <Checkbox 
@@ -153,14 +201,23 @@ const DocumentSelectionStep = ({
                 </Badge>
               ))}
             </div>
-            <div className="mt-3 flex justify-end">
+            <div className="mt-3 flex justify-between items-center">
+              {buyerId && selectedDocuments.length > 0 && (
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowSaveSetDialog(true)}
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save as Document Set
+                </Button>
+              )}
               <Button 
                 onClick={onNext}
                 disabled={selectedDocuments.length === 0}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-primary hover:bg-primary/90 ml-auto"
               >
                 Configure Requests
-                <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
               </Button>
             </div>
           </CardContent>
@@ -227,6 +284,17 @@ const DocumentSelectionStep = ({
           ))
         )}
       </div>
+
+      {/* Save Document Set Dialog */}
+      {buyerId && (
+        <SaveDocumentSetDialog
+          open={showSaveSetDialog}
+          onOpenChange={setShowSaveSetDialog}
+          buyerId={buyerId}
+          selectedDocumentIds={selectedDocuments.map(d => d.id)}
+          documentCount={selectedDocuments.length}
+        />
+      )}
     </div>
   );
 };

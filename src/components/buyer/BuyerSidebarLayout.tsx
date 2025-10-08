@@ -26,7 +26,8 @@ import {
   AlertTriangle,
   ClipboardCheck,
   GitBranch,
-  Package
+  Package,
+  FolderKanban
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from 'react-i18next';
@@ -155,7 +156,8 @@ export function BuyerSidebarLayout({
       submenu: [
         { title: t('common:navigation.requests'), value: 'requests', icon: ListChecks },
         { title: t('common:navigation.documents'), value: 'documents', icon: FileCheck },
-        { title: 'Templates', value: 'templates', icon: FileText }
+        { title: 'Templates', value: 'templates', icon: FileText },
+        { title: 'Document Sets', value: 'document-sets', icon: FolderKanban }
       ]
     },
     {

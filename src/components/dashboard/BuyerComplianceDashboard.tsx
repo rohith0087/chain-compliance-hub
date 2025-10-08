@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +31,7 @@ import { AdvancedPDFExportService } from '@/services/AdvancedPDFExportService';
 import { AIInsightsService } from '@/services/AIInsightsService';
 import { SubscriptionGuard } from '@/components/subscription/SubscriptionGuard';
 import { canGenerateReport, getReportCreditCost } from '@/utils/subscriptionGuards';
+import { ComplianceFilters } from '../compliance/ComplianceFilters';
 
 const BuyerComplianceDashboard = () => {
   const [supplierStats, setSupplierStats] = useState<any[]>([]);
@@ -41,6 +42,19 @@ const BuyerComplianceDashboard = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [buyerData, setBuyerData] = useState<any>(null);
   const [buyerId, setBuyerId] = useState<string>('');
+  
+  // Filter states
+  const [filters, setFilters] = useState({
+    searchQuery: '',
+    industries: [] as string[],
+    itemCategories: [] as string[],
+    statuses: [] as string[],
+    riskLevels: [] as string[]
+  });
+  const [filteredSuppliers, setFilteredSuppliers] = useState<any[]>([]);
+  const [filteredRequests, setFilteredRequests] = useState<any[]>([]);
+  const [supplierItemsMap, setSupplierItemsMap] = useState<Map<string, Set<string>>>(new Map());
+  
   const { user } = useAuth();
   const { subscriptionData, hasEnoughCredits } = useSubscription();
   const { t } = useTranslation(['dashboard', 'common']);
@@ -112,7 +126,28 @@ const BuyerComplianceDashboard = () => {
             : 0
         }));
 
+        // Load supplier items for category filtering
+        const { data: supplierItems } = await supabase
+          .from('supplier_items')
+          .select('supplier_id, item_category')
+          .in('supplier_id', Array.from(supplierMap.keys()));
+
+        // Create mapping of supplier -> item categories
+        const itemsMap = new Map<string, Set<string>>();
+        supplierItems?.forEach(item => {
+          if (!itemsMap.has(item.supplier_id)) {
+            itemsMap.set(item.supplier_id, new Set());
+          }
+          if (item.item_category) {
+            itemsMap.get(item.supplier_id)?.add(item.item_category);
+          }
+        });
+        setSupplierItemsMap(itemsMap);
+
         setSupplierStats(supplierStatsArray);
+        setFilteredSuppliers(supplierStatsArray);
+        setDocumentRequests(requests || []);
+        setFilteredRequests(requests || []);
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -121,14 +156,104 @@ const BuyerComplianceDashboard = () => {
     }
   };
 
+  // Apply filters whenever data or filters change
+  React.useEffect(() => {
+    applyFilters();
+  }, [supplierStats, documentRequests, filters]);
+
+  const applyFilters = () => {
+    let filtered = [...supplierStats];
+
+    // Search filter
+    if (filters.searchQuery) {
+      const query = filters.searchQuery.toLowerCase();
+      filtered = filtered.filter(s =>
+        s.company_name?.toLowerCase().includes(query) ||
+        s.id?.toLowerCase().includes(query) ||
+        s.industry?.toLowerCase().includes(query)
+      );
+    }
+
+    // Industry filter
+    if (filters.industries.length > 0) {
+      filtered = filtered.filter(s =>
+        s.industry && filters.industries.includes(s.industry)
+      );
+    }
+
+    // Item category filter
+    if (filters.itemCategories.length > 0) {
+      filtered = filtered.filter(s => {
+        const supplierCategories = supplierItemsMap.get(s.id);
+        if (!supplierCategories) return false;
+        return filters.itemCategories.some(cat => supplierCategories.has(cat));
+      });
+    }
+
+    // Risk level filter
+    if (filters.riskLevels.length > 0) {
+      filtered = filtered.filter(s => {
+        const score = s.complianceScore || 0;
+        if (filters.riskLevels.includes('high') && score < 70) return true;
+        if (filters.riskLevels.includes('medium') && score >= 70 && score < 85) return true;
+        if (filters.riskLevels.includes('good') && score >= 85) return true;
+        return false;
+      });
+    }
+
+    setFilteredSuppliers(filtered);
+
+    // Filter document requests
+    let filteredReqs = [...documentRequests];
+
+    // Search filter
+    if (filters.searchQuery) {
+      const query = filters.searchQuery.toLowerCase();
+      filteredReqs = filteredReqs.filter(r =>
+        r.title?.toLowerCase().includes(query) ||
+        r.suppliers?.company_name?.toLowerCase().includes(query)
+      );
+    }
+
+    // Status filter
+    if (filters.statuses.length > 0) {
+      filteredReqs = filteredReqs.filter(r =>
+        r.status && filters.statuses.includes(r.status)
+      );
+    }
+
+    // Industry filter (via supplier)
+    if (filters.industries.length > 0) {
+      filteredReqs = filteredReqs.filter(r =>
+        r.suppliers?.industry && filters.industries.includes(r.suppliers.industry)
+      );
+    }
+
+    setFilteredRequests(filteredReqs);
+  };
+
+  // Get unique industries and item categories for filters
+  const availableIndustries = Array.from(new Set(
+    supplierStats.map(s => s.industry).filter(Boolean)
+  )).sort();
+
+  const availableItemCategories = Array.from(
+    new Set(
+      Array.from(supplierItemsMap.values())
+        .flatMap(categories => Array.from(categories))
+    )
+  ).sort();
+
+  const availableStatuses = ['pending', 'submitted', 'approved', 'rejected'];
+
   const overallStats = {
-    totalSuppliers: supplierStats.length,
-    totalRequests: documentRequests.length,
-    avgComplianceScore: supplierStats.length > 0 
-      ? Math.round(supplierStats.reduce((sum, s) => sum + s.complianceScore, 0) / supplierStats.length)
+    totalSuppliers: filteredSuppliers.length,
+    totalRequests: filteredRequests.length,
+    avgComplianceScore: filteredSuppliers.length > 0 
+      ? Math.round(filteredSuppliers.reduce((sum, s) => sum + (s.complianceScore || 0), 0) / filteredSuppliers.length)
       : 0,
-    pendingRequests: documentRequests.filter(r => r.status === 'pending').length,
-    highRiskSuppliers: supplierStats.filter(s => s.complianceScore < 70).length
+    pendingRequests: filteredRequests.filter(r => r.status === 'pending').length,
+    highRiskSuppliers: filteredSuppliers.filter(s => (s.complianceScore || 0) < 70).length
   };
 
   const handleViewDocument = async (request: any) => {
@@ -318,6 +443,17 @@ const BuyerComplianceDashboard = () => {
         </div>
       </div>
 
+      {/* Filters */}
+      <ComplianceFilters
+        filters={filters}
+        onFiltersChange={setFilters}
+        availableIndustries={availableIndustries}
+        availableItemCategories={availableItemCategories}
+        availableStatuses={availableStatuses}
+        supplierCount={filteredSuppliers.length}
+        totalSuppliers={supplierStats.length}
+      />
+
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -391,7 +527,7 @@ const BuyerComplianceDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {documentRequests.slice(0, 5).map((request) => (
+                {filteredRequests.slice(0, 5).map((request) => (
                   <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center space-x-3">
                       <FileCheck className="w-5 h-5 text-blue-500" />
@@ -437,54 +573,72 @@ const BuyerComplianceDashboard = () => {
               <CardTitle>{t('dashboard:compliance.supplierCompliance')}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {supplierStats.map((supplier) => (
-                  <div 
-                    key={supplier.id} 
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                    onClick={() => handleSupplierClick(supplier)}
+              {filteredSuppliers.length > 0 ? (
+                <div className="space-y-4">
+                  {filteredSuppliers.map((supplier) => (
+                    <div 
+                      key={supplier.id} 
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => handleSupplierClick(supplier)}
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center overflow-hidden">
+                          {supplier.company_logo_url ? (
+                            <img 
+                              src={supplier.company_logo_url} 
+                              alt={`${supplier.company_name} logo`}
+                              className="w-full h-full object-cover rounded-lg"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                target.nextElementSibling?.classList.remove('hidden');
+                              }}
+                            />
+                          ) : null}
+                          <Building2 className={`w-6 h-6 text-blue-600 ${supplier.company_logo_url ? 'hidden' : ''}`} />
+                        </div>
+                        <div>
+                          <h3 className="font-medium flex items-center gap-2">
+                            {supplier.company_name}
+                            <MousePointer className="w-3 h-3 text-muted-foreground" />
+                          </h3>
+                          <p className="text-sm text-gray-500">{supplier.industry}</p>
+                          <p className="text-xs text-gray-400">
+                            {supplier.totalRequests} requests • {supplier.approvedRequests} approved
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className={`text-lg font-bold ${
+                          supplier.complianceScore >= 90 ? 'text-green-600' :
+                          supplier.complianceScore >= 70 ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {supplier.complianceScore}%
+                        </div>
+                        <Progress value={supplier.complianceScore} className="w-24 mt-1" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground mb-4">No suppliers match your current filters</p>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setFilters({
+                      searchQuery: '',
+                      industries: [],
+                      itemCategories: [],
+                      statuses: [],
+                      riskLevels: []
+                    })}
                   >
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center overflow-hidden">
-                        {supplier.company_logo_url ? (
-                          <img 
-                            src={supplier.company_logo_url} 
-                            alt={`${supplier.company_name} logo`}
-                            className="w-full h-full object-cover rounded-lg"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                              target.nextElementSibling?.classList.remove('hidden');
-                            }}
-                          />
-                        ) : null}
-                        <Building2 className={`w-6 h-6 text-blue-600 ${supplier.company_logo_url ? 'hidden' : ''}`} />
-                      </div>
-                      <div>
-                        <h3 className="font-medium flex items-center gap-2">
-                          {supplier.company_name}
-                          <MousePointer className="w-3 h-3 text-muted-foreground" />
-                        </h3>
-                        <p className="text-sm text-gray-500">{supplier.industry}</p>
-                        <p className="text-xs text-gray-400">
-                          {supplier.totalRequests} requests • {supplier.approvedRequests} approved
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className={`text-lg font-bold ${
-                        supplier.complianceScore >= 90 ? 'text-green-600' :
-                        supplier.complianceScore >= 70 ? 'text-yellow-600' : 'text-red-600'
-                      }`}>
-                        {supplier.complianceScore}%
-                      </div>
-                      <Progress value={supplier.complianceScore} className="w-24 mt-1" />
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    Clear All Filters
+                  </Button>
+                </div>
+              )}
             </CardContent>
-          </Card>
+            </Card>
         </TabsContent>
 
         <TabsContent value="analytics">

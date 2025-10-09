@@ -232,17 +232,17 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         {activeTab === 'dashboard' && (
           <div className="space-y-8 animate-fade-in">
             {/* Hero Section - Welcome */}
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary-hover to-secondary p-8 text-white shadow-elegant">
+            <div className="relative overflow-hidden rounded-2xl bg-background/60 backdrop-blur-xl border border-primary/20 border-t-4 border-t-primary/40 p-8 shadow-lg">
               <div className="relative z-10">
-                <h1 className="text-3xl font-bold mb-2">
+                <h1 className="text-3xl font-bold mb-2 text-foreground">
                   {t('dashboard:buyer.welcome', { name: user.name })}
                 </h1>
-                <p className="text-white/90 text-lg">
+                <p className="text-muted-foreground text-lg">
                   {t('dashboard:buyer.description')}
                 </p>
               </div>
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32" />
-              <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-3xl -ml-24 -mb-24" />
+              <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -mr-48 -mt-48" />
+              <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl -ml-32 -mb-32" />
             </div>
 
             {/* Key Metrics Grid */}

@@ -85,7 +85,7 @@ export const OnboardingPipelineView = () => {
 
   useEffect(() => {
     loadRequests();
-  }, [user, currentBranch, allBranchesView]);
+  }, [user]);
 
   useEffect(() => {
     // Set up real-time subscription
@@ -127,20 +127,11 @@ export const OnboardingPipelineView = () => {
       if (!buyer) return;
       setBuyerId(buyer.id);
 
-      let query = supabase
+      const { data, error } = await supabase
         .from('supplier_onboarding_requests')
-        .select(`
-          *,
-          onboarding_branch_selections!inner(branch_id)
-        `)
-        .eq('buyer_id', buyer.id);
-
-      // Filter by branch if a specific branch is selected
-      if (currentBranch && !allBranchesView) {
-        query = query.eq('onboarding_branch_selections.branch_id', currentBranch.id);
-      }
-
-      const { data, error } = await query.order('created_at', { ascending: false });
+        .select('*')
+        .eq('buyer_id', buyer.id)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       
@@ -283,19 +274,6 @@ export const OnboardingPipelineView = () => {
       <Card>
         <CardContent className="pt-6">
           <div className="space-y-3">
-            {/* Branch Filter Indicator */}
-            {currentBranch && !allBranchesView && (
-              <div className="flex items-center gap-2 text-sm">
-                <Badge variant="outline" className="gap-1">
-                  <Building2 className="h-3 w-3" />
-                  {currentBranch.branch_name}
-                </Badge>
-                <span className="text-muted-foreground">
-                  Showing requests for this branch only
-                </span>
-              </div>
-            )}
-
             <div className="flex items-center gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

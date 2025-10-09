@@ -389,7 +389,7 @@ export function BuyerSidebarLayout({
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter className="border-t p-3">
+        <SidebarFooter className="p-3">
           <div className="flex items-center gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

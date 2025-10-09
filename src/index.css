@@ -91,6 +91,13 @@
     --spacing-xl: 2rem;
     --spacing-2xl: 3rem;
 
+    /* Chart Colors */
+    --chart-1: 217 91% 60%;
+    --chart-2: 200 80% 55%;
+    --chart-3: 38 92% 55%;
+    --chart-4: 152 76% 45%;
+    --chart-5: 355 78% 60%;
+
     --radius: 0.75rem;
 
     --sidebar-background: 0 0% 98%;
@@ -157,6 +164,13 @@
     --border: 230 15% 20%;
     --input: 230 15% 20%;
     --ring: 230 70% 60%;
+
+    /* Chart Colors - Dark Mode */
+    --chart-1: 217 91% 70%;
+    --chart-2: 200 85% 60%;
+    --chart-3: 38 92% 60%;
+    --chart-4: 152 76% 50%;
+    --chart-5: 355 78% 65%;
 
     /* Balanced Dark Mode Colors */
     --gradient-primary: linear-gradient(135deg, hsl(230 70% 60%), hsl(280 75% 65%));

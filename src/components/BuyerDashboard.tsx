@@ -245,51 +245,6 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
               <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl -ml-32 -mb-32" />
             </div>
 
-            {/* Key Metrics Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {dashboardLoading ? (
-                <>
-                  <StatCardSkeleton />
-                  <StatCardSkeleton />
-                  <StatCardSkeleton />
-                  <StatCardSkeleton />
-                </>
-              ) : (
-                <>
-                  <StatCard
-                    title="Total Suppliers"
-                    value={buyerProfile?.total_suppliers || 0}
-                    icon={Users}
-                    trend={12}
-                    trendLabel="from last month"
-                    subtitle="Active connections"
-                  />
-                  <StatCard
-                    title="Compliance Rate"
-                    value="87%"
-                    icon={CheckCircle}
-                    trend={5}
-                    trendLabel="this quarter"
-                    subtitle="Overall compliance"
-                    iconClassName="from-success to-success/70"
-                  />
-                  <StatCard
-                    title="Active Requests"
-                    value={actionItems.length}
-                    icon={ListChecks}
-                    subtitle="Pending review"
-                    iconClassName="from-accent to-accent/70"
-                  />
-                  <StatCard
-                    title="Upcoming Deadlines"
-                    value={upcomingDeadlines.length}
-                    icon={Calendar}
-                    subtitle="Next 30 days"
-                    iconClassName="from-warning to-warning/70"
-                  />
-                </>
-              )}
-            </div>
 
             {/* Quick Actions */}
             <div className="grid md:grid-cols-3 gap-6">

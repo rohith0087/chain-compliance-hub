@@ -328,10 +328,23 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
   };
 
   const renderStructuredMessage = (message: Message) => {
-if (!message.metadata?.structured_response) {
-      return typeof message.content === 'string'
-        ? <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-        : <pre className="text-xs text-muted-foreground whitespace-pre-wrap">{JSON.stringify(message.content, null, 2)}</pre>;
+    // Check if it's a plain text response (simple questions or follow-ups)
+    const isPlainText = typeof message.content === 'string' 
+      && !message.metadata?.structured_response;
+    
+    if (isPlainText) {
+      // Render as conversational text with markdown-like formatting
+      return (
+        <div className="prose prose-sm max-w-none">
+          <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">
+            {message.content}
+          </p>
+        </div>
+      );
+    }
+
+    if (!message.metadata?.structured_response) {
+      return <pre className="text-xs text-muted-foreground whitespace-pre-wrap">{JSON.stringify(message.content, null, 2)}</pre>;
     }
 
     const response: StructuredResponse = message.metadata.structured_response;

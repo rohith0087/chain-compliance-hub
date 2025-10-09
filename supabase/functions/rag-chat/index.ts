@@ -66,18 +66,21 @@ interface DocumentReference {
 
 // Enhanced query intent analysis for intelligent responses
 interface QueryIntent {
-  intent_type: 'latest_document' | 'specific_document' | 'document_status' | 'compliance_summary' | 'expired_documents' | 'supplier_specific' | 'daily_overview' | 'visual_analysis' | 'general_inquiry';
+  intent_type: 'latest_document' | 'specific_document' | 'document_status' | 'compliance_summary' | 'expired_documents' | 'supplier_specific' | 'daily_overview' | 'visual_analysis' | 'general_inquiry' | 'simple_question' | 'follow_up';
   entities: {
     supplier_names?: string[];
     document_types?: string[];
     time_references?: string[];
     status_types?: string[];
     visualization_type?: string;
+    is_follow_up?: boolean;
+    is_simple_question?: boolean;
   };
   limit_documents: number;
   confidence: number;
   requires_visual?: boolean;
   context_scope?: 'today' | 'week' | 'month' | 'all';
+  response_format?: 'plain_text' | 'structured' | 'conversational';
 }
 
 // Enhanced compliance data interfaces
@@ -308,6 +311,8 @@ async function analyzeQueryIntent(query: string, companyType: string): Promise<Q
           content: `You are a query intent classifier for a compliance document management system. 
           
 Analyze the user query and classify it into one of these intent types:
+- simple_question: Simple informational queries (what is, explain, define, tell me about, how does)
+- follow_up: Follow-up questions referencing previous context (tell me more, what about that, can you elaborate, more details)
 - latest_document: User wants the most recent document(s) from a specific supplier or type
 - specific_document: User is looking for a particular document type or certification
 - document_status: User wants to know the status of documents (pending, approved, expired)  
@@ -323,6 +328,13 @@ Extract entities including:
 - time references (latest, recent, today, this week, expiring)
 - status types (pending, approved, expired, overdue)
 - visualization requests (chart, graph, visual, dashboard)
+- is_simple_question: true if asking for definition/explanation
+- is_follow_up: true if referencing previous conversation
+
+Determine response_format:
+- "plain_text" for simple questions and follow-ups
+- "conversational" for follow-ups that need context
+- "structured" for complex analysis with multiple data points
 
 Determine context scope: "today" for daily queries, "week" for weekly summaries, "month" for trends, "all" for comprehensive analysis.
 
@@ -332,18 +344,21 @@ Determine appropriate document limit: 1 for "latest", 2-3 for "specific", 5-10 f
 
 Respond in JSON format:
 {
-  "intent_type": "daily_overview",
+  "intent_type": "simple_question",
   "entities": {
     "supplier_names": ["Company Name"],
     "document_types": ["ISO Certificate"],
     "time_references": ["today"],
     "status_types": ["pending"],
-    "visualization_type": "dashboard"
+    "visualization_type": "dashboard",
+    "is_simple_question": true,
+    "is_follow_up": false
   },
   "limit_documents": 5,
   "confidence": 0.95,
-  "requires_visual": true,
-  "context_scope": "today"
+  "requires_visual": false,
+  "context_scope": "all",
+  "response_format": "plain_text"
 }`
         },
         {
@@ -771,96 +786,161 @@ QUERY INTENT ANALYSIS:
     };
   }
 
-  // Enhanced response generation with actionable items
-  const systemPrompt = `You are an intelligent compliance assistant with item-level awareness. Based on the provided context, generate a comprehensive response that includes:
+  // Build conversation context from recent messages for follow-ups
+  const recentMessages = conversationHistory.slice(-10); // Last 5 Q&A pairs
+  const contextSummary = recentMessages
+    .filter(msg => msg.role === 'assistant')
+    .slice(-3) // Last 3 AI responses
+    .map(msg => {
+      const content = typeof msg.content === 'string' 
+        ? msg.content 
+        : JSON.stringify(msg.content);
+      return content.substring(0, 400); // First 400 chars
+    })
+    .join('\n---PREVIOUS RESPONSE---\n');
 
-  1. **Main Response**: A clear, detailed answer to the user's query
-  2. **Actionable Items**: Specific tasks the user can execute directly from the chat
-  3. **Suggested Actions**: Recommended next steps based on the analysis
-  4. **Quick Actions**: Simple navigation or query actions
-
-  Context:
-  - Company Type: ${userInfo.companyType}
-  - Company ID: ${userInfo.companyId}
-  - Industry: ${userInfo.industry || 'General'}
-  - Query Intent: ${JSON.stringify(intent)}
-  - Available Knowledge: ${knowledgeEntries.length} entries
-  - Found Documents: ${documents.length} documents
-
-  ITEM-LEVEL AWARENESS:
-  When documents have linked items, always mention which items documents apply to (e.g., "COA for Yellowfin Tuna").
-  Identify compliance gaps for specific items when relevant.
-  Suggest targeted actions based on item categories.
-  Prioritize expired/expiring documents by item importance.
-
-  CRITICAL: Always include actionable_items and suggested_actions arrays in your response when relevant.
-
-  For actionable items, use this structure:
-  {
-    "actionable_items": [
-      {
-        "type": "email",
-        "description": "Send follow-up email to Kerry Ingredients",
-        "priority": "high",
-        "estimated_time": "2 minutes", 
-        "action_type": "send_follow_up_email",
-        "parameters": {
-          "supplier_name": "Kerry Ingredients",
-          "subject": "Compliance Document Follow-up",
-          "content": "Please review and update your ISO 9001 certificate",
-          "recipient_email": "supplier@kerryingredients.com"
-        }
-      }
-    ],
-    "suggested_actions": [
-      {
-        "label": "Set expiry reminder",
-        "description": "Create automated alerts for document expiration",
-        "action_type": "create_reminder",
-        "parameters": {
-          "reminder_text": "ISO 9001 expires soon - follow up needed",
-          "days_ahead": 7,
-          "supplier_name": "Kerry Ingredients"
-        },
-        "urgency": "medium"
-      }
-    ]
-  }
-
-  Available action types:
-  - send_follow_up_email: Send emails to suppliers
-  - create_reminder: Set up reminders and alerts
-  - send_document_expiry_alert: Alert suppliers about expiring docs
-  - request_additional_documents: Create new document requests
-  - generate_compliance_report: Create compliance reports
-
-  Always make actions specific, executable, and include all necessary parameters.`;
-
-  const userPrompt = `Query: "${userMessage}"
+  // Determine response style based on query type
+  const isSimpleQuestion = intent.intent_type === 'simple_question' || 
+    intent.entities.is_simple_question || 
+    userMessage.match(/^(what is|explain|define|tell me about|how do|why is)/i);
   
-  Knowledge Context:
-  ${knowledgeEntries.map(entry => `${entry.title}: ${entry.content.substring(0, 200)}...`).join('\n')}
+  const isFollowUp = intent.intent_type === 'follow_up' || 
+    intent.entities.is_follow_up || 
+    userMessage.match(/^(tell me more|what about|can you|more details|elaborate|expand on|that|it|this)/i);
   
-  Document Information:
-  ${documents.map(doc => {
-    const linkedItems = (doc as any).linked_items;
-    const itemsText = linkedItems && linkedItems.length > 0 
-      ? ` | Items: ${linkedItems.map((i: any) => i.item_name).join(', ')}`
-      : '';
-    return `Document: ${doc.title} | Supplier: ${doc.supplier_name || 'Unknown'} | Status: ${doc.status} | Type: ${doc.document_type}${doc.expiration_date ? ` | Expires: ${doc.expiration_date}` : ''}${itemsText}`;
-  }).join('\n')}
-  
-  Compliance Data:
-  ${contextualData.complianceMetrics ? `Total: ${contextualData.complianceMetrics.total_documents}, Score: ${Math.round(contextualData.complianceMetrics.compliance_score)}%, Pending: ${contextualData.complianceMetrics.pending_documents}, Expired: ${contextualData.complianceMetrics.expired_documents}` : 'No metrics available'}
-  
-  Generate a comprehensive, well-structured response with clear headings, bullet points, and actionable insights. Use proper formatting to make information scannable and digestible.
+  const needsStructuredResponse = intent.intent_type === 'compliance_summary' 
+    || intent.intent_type === 'expired_documents'
+    || intent.intent_type === 'daily_overview'
+    || intent.intent_type === 'document_status'
+    || documents.length > 5
+    || intent.requires_visual;
 
-  ${intent.intent_type === 'expired_documents' || expiringDocs.length > 0 ? 
-    `CRITICAL: Structure expiring documents responses with:
-    - An "Executive Summary" section with key insights
-    - A "Critical Documents" section listing each expiring document
-    - An "Action Items" section with prioritized next steps
-    - Use structured formatting with clear headings and bullet points` : ''}
+  // Enhanced response generation with conversation intelligence
+  const systemPrompt = `You are an intelligent compliance assistant that adapts its response style based on the query type.
+
+RESPONSE STYLE GUIDELINES:
+
+1. **Simple Informational Questions** (What is X? Explain Y? Define Z?)
+   - Give a clear, concise answer in 2-3 paragraphs
+   - Use plain text format (no JSON sections)
+   - Only mention relevant documents if specifically asked
+   - Keep it conversational and friendly
+   - Example: "What is ISO 9001?" → Brief 2-3 paragraph explanation
+
+2. **Follow-Up Questions** (Tell me more, What about X, Can you elaborate?)
+   - Reference the previous conversation naturally
+   - Build on what was already discussed
+   - Stay conversational and maintain context
+   - Use plain text unless detailed analysis is needed
+   - Example: "Tell me more about that" → Continue from previous context
+
+3. **Complex Analysis Questions** (Show compliance status, What documents are expiring?)
+   - Use full structured format with sections
+   - Include metrics, documents, action items
+   - Provide executive summary and details
+   - Use visual data when requested
+
+4. **Conversation Memory**
+   - Always consider the last 5 Q&A exchanges shown below
+   - If user says "that document", "those suppliers", or "it" - reference previous context
+   - Build a natural conversation flow
+   - Maintain context across the conversation
+
+RECENT CONVERSATION CONTEXT:
+${contextSummary ? contextSummary : 'No recent conversation history'}
+
+QUERY CLASSIFICATION:
+- Type: ${intent.intent_type}
+- Is Simple Question: ${isSimpleQuestion}
+- Is Follow-Up: ${isFollowUp}
+- Requires Structured Response: ${needsStructuredResponse}
+- Response Format: ${intent.response_format || (isSimpleQuestion || isFollowUp ? 'plain_text' : 'structured')}
+
+Context:
+- Company Type: ${userInfo.companyType}
+- Company ID: ${userInfo.companyId}
+- Industry: ${userInfo.industry || 'General'}
+- Available Knowledge: ${knowledgeEntries.length} entries
+- Found Documents: ${documents.length} documents
+
+ITEM-LEVEL AWARENESS:
+When documents have linked items, always mention which items documents apply to (e.g., "COA for Yellowfin Tuna").
+Identify compliance gaps for specific items when relevant.
+Suggest targeted actions based on item categories.
+Prioritize expired/expiring documents by item importance.
+
+Available action types for complex queries:
+- send_follow_up_email: Send emails to suppliers
+- create_reminder: Set up reminders and alerts
+- send_document_expiry_alert: Alert suppliers about expiring docs
+- request_additional_documents: Create new document requests
+- generate_compliance_report: Create compliance reports`;
+
+  let userPrompt = `Query: "${userMessage}"`;
+
+  // Format prompt based on query type and requirements
+  if (isSimpleQuestion && !needsStructuredResponse) {
+    // Simple question - plain text response
+    userPrompt += `
+
+RESPONSE FORMAT: Plain text only - NO JSON structure.
+
+This is a simple informational question. Provide a clear, concise 2-3 paragraph explanation.
+Keep it friendly and conversational. Do not include sections, bullet points, or structured data.
+Only mention relevant documents if the user specifically asks about them.
+
+Knowledge Context:
+${knowledgeEntries.slice(0, 2).map(entry => `${entry.title}: ${entry.content.substring(0, 300)}`).join('\n\n')}
+
+Just answer the question directly and naturally, like you're explaining it to a colleague.`;
+
+  } else if (isFollowUp) {
+    // Follow-up - conversational with context
+    userPrompt += `
+
+RESPONSE FORMAT: Conversational text referencing previous context.
+
+This is a follow-up question. The user is asking you to expand on the previous conversation.
+Reference what was discussed before and build on it naturally.
+
+Previous Context:
+${contextSummary}
+
+${documents.length > 0 ? `
+Relevant Documents:
+${documents.slice(0, 3).map(doc => `- ${doc.title} (${doc.document_type}) - ${doc.status}`).join('\n')}
+` : ''}
+
+Respond naturally, building on the previous conversation. Use plain text unless detailed analysis is clearly needed.
+If there are specific documents or data points to highlight, you can use simple bullet points.`;
+
+  } else {
+    // Complex query - full structured response
+    userPrompt += `
+  
+Knowledge Context:
+${knowledgeEntries.map(entry => `${entry.title}: ${entry.content.substring(0, 200)}...`).join('\n')}
+  
+Document Information:
+${documents.map(doc => {
+  const linkedItems = (doc as any).linked_items;
+  const itemsText = linkedItems && linkedItems.length > 0 
+    ? ` | Items: ${linkedItems.map((i: any) => i.item_name).join(', ')}`
+    : '';
+  return `Document: ${doc.title} | Supplier: ${doc.supplier_name || 'Unknown'} | Status: ${doc.status} | Type: ${doc.document_type}${doc.expiration_date ? ` | Expires: ${doc.expiration_date}` : ''}${itemsText}`;
+}).join('\n')}
+  
+Compliance Data:
+${contextualData.complianceMetrics ? `Total: ${contextualData.complianceMetrics.total_documents}, Score: ${Math.round(contextualData.complianceMetrics.compliance_score)}%, Pending: ${contextualData.complianceMetrics.pending_documents}, Expired: ${contextualData.complianceMetrics.expired_documents}` : 'No metrics available'}
+  
+Generate a comprehensive, well-structured response with clear headings, bullet points, and actionable insights.
+
+${intent.intent_type === 'expired_documents' || expiringDocs.length > 0 ? 
+  `CRITICAL: Structure expiring documents responses with:
+  - An "Executive Summary" section with key insights
+  - A "Critical Documents" section listing each expiring document
+  - An "Action Items" section with prioritized next steps
+  - Use structured formatting with clear headings and bullet points` : ''}
 
 Respond in this JSON format:
 {
@@ -902,7 +982,8 @@ ENHANCED RESPONSE GUIDELINES:
 - Format document information as clear bullet lists within document_overview sections
 - End with prioritized action items and quick recommendations
 
-Current context: ${userInfo.companyType} in ${userInfo.industry || 'general'} industry. 
+Current context: ${userInfo.companyType} in ${userInfo.industry || 'general'} industry.`;
+  }
 Data available: ${documents.length} documents, ${contextualData.complianceMetrics ? 'compliance metrics' : 'no metrics'}, ${contextualData.dailyOverview ? 'daily overview' : 'no overview'}.`;
 
   const messages = [
@@ -927,6 +1008,20 @@ Data available: ${documents.length} documents, ${contextualData.complianceMetric
 
   const data = await response.json();
   const rawResponse = data.choices[0].message.content;
+  
+  // Handle simple text responses (for simple questions and follow-ups)
+  if (isSimpleQuestion || isFollowUp) {
+    // For simple questions/follow-ups, return plain text if it doesn't look like JSON
+    if (!rawResponse.trim().startsWith('{')) {
+      return {
+        type: 'simple',
+        content: rawResponse,
+        sections: [],
+        documents: documents.slice(0, 3), // Include a few relevant docs
+        quick_actions: []
+      };
+    }
+  }
   
   try {
     // Clean the response content to remove markdown code blocks and fix common issues

@@ -334,14 +334,6 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
               </Card>
             </div>
 
-            {/* Show Buyer ID Card if available */}
-            {buyerProfile?.buyer_id_number && profile && (
-              <BuyerIdCard 
-                buyerId={buyerProfile.buyer_id_number}
-                buyerProfile={buyerProfile}
-                userProfile={{ full_name: profile.full_name }}
-              />
-            )}
 
             {/* Activity & Timeline Section */}
             <div className="grid md:grid-cols-2 gap-6">
@@ -555,7 +547,19 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
 
         {/* Suppliers Content */}
         {activeTab === 'suppliers' && (
-          <SupplierDiscovery />
+          <div className="space-y-6">
+            {/* Buyer ID Card - Show at top of suppliers section */}
+            {buyerProfile?.buyer_id_number && profile && (
+              <BuyerIdCard 
+                buyerId={buyerProfile.buyer_id_number}
+                buyerProfile={buyerProfile}
+                userProfile={{ full_name: profile.full_name }}
+              />
+            )}
+            
+            {/* Supplier Discovery Component */}
+            <SupplierDiscovery />
+          </div>
         )}
 
         {/* Supplier Requests Content */}

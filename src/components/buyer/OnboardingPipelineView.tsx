@@ -24,6 +24,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { DndContext, DragEndEvent, DragOverlay, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useBranchContext } from '@/contexts/BranchContext';
+import { Building2 } from 'lucide-react';
 
 const PIPELINE_STAGES = [
   { id: 'pending', name: 'Invited', color: 'bg-slate-100' },
@@ -36,6 +38,7 @@ const PIPELINE_STAGES = [
 export const OnboardingPipelineView = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { currentBranch, allBranchesView } = useBranchContext();
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -82,7 +85,7 @@ export const OnboardingPipelineView = () => {
 
   useEffect(() => {
     loadRequests();
-  }, [user]);
+  }, [user, currentBranch, allBranchesView]);
 
   useEffect(() => {
     // Set up real-time subscription
@@ -124,11 +127,20 @@ export const OnboardingPipelineView = () => {
       if (!buyer) return;
       setBuyerId(buyer.id);
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('supplier_onboarding_requests')
-        .select('*')
-        .eq('buyer_id', buyer.id)
-        .order('created_at', { ascending: false });
+        .select(`
+          *,
+          onboarding_branch_selections!inner(branch_id)
+        `)
+        .eq('buyer_id', buyer.id);
+
+      // Filter by branch if a specific branch is selected
+      if (currentBranch && !allBranchesView) {
+        query = query.eq('onboarding_branch_selections.branch_id', currentBranch.id);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
       
@@ -270,17 +282,31 @@ export const OnboardingPipelineView = () => {
       {/* Search & Filter Bar */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                ref={searchInputRef}
-                placeholder="Search by company name or email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
+          <div className="space-y-3">
+            {/* Branch Filter Indicator */}
+            {currentBranch && !allBranchesView && (
+              <div className="flex items-center gap-2 text-sm">
+                <Badge variant="outline" className="gap-1">
+                  <Building2 className="h-3 w-3" />
+                  {currentBranch.branch_name}
+                </Badge>
+                <span className="text-muted-foreground">
+                  Showing requests for this branch only
+                </span>
+              </div>
+            )}
+
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  ref={searchInputRef}
+                  placeholder="Search by company name or email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => setShowAnalytics(prev => !prev)} className="gap-2">
                 <BarChart3 className="h-4 w-4" />
@@ -300,6 +326,7 @@ export const OnboardingPipelineView = () => {
               <Button variant="outline" size="icon" onClick={loadRequests} disabled={loading}>
                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               </Button>
+            </div>
             </div>
           </div>
 

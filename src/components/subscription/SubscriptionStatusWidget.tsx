@@ -61,10 +61,7 @@ export function SubscriptionStatusWidget({ compact = false }: SubscriptionStatus
                   </div>
                 </>
               ) : (
-                <>
-                  <Crown className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium text-foreground">Unlimited</span>
-                </>
+                <span className="text-sm font-medium text-foreground">Unlimited</span>
               )}
             </div>
           </TooltipTrigger>

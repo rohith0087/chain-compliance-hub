@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { UserCircle, AlertCircle, CheckCircle } from 'lucide-react';
+import { UserCircle, AlertCircle, CheckCircle, Users, FileText, Settings } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -36,10 +36,15 @@ export const DocumentAssignmentManager = () => {
         .eq('profile_id', user.id)
         .single();
 
-      if (!buyer) return;
+      if (!buyer) {
+        console.log('[DocumentAssignmentManager] No buyer found for user');
+        return;
+      }
 
-      // Get unassigned documents
-      const { data: docs } = await supabase
+      console.log('[DocumentAssignmentManager] Buyer ID:', buyer.id);
+
+      // Get unassigned documents - relaxed status filter to include both pending_review and submitted
+      const { data: docs, error: docsError } = await supabase
         .from('document_uploads')
         .select(`
           *,
@@ -47,17 +52,24 @@ export const DocumentAssignmentManager = () => {
             id,
             title,
             document_type,
+            buyer_id,
             supplier:suppliers(company_name)
           )
         `)
-        .eq('status', 'pending_review')
+        .in('status', ['pending_review', 'submitted'])
         .not('id', 'in', `(SELECT document_upload_id FROM document_assignments)`)
         .limit(50);
+
+      console.log('[DocumentAssignmentManager] Unassigned docs query result:', {
+        count: docs?.length || 0,
+        error: docsError,
+        statuses: docs?.map(d => d.status)
+      });
 
       setUnassignedDocs(docs || []);
 
       // Get team members
-      const { data: team } = await supabase
+      const { data: team, error: teamError } = await supabase
         .from('company_users')
         .select(`
           *,
@@ -67,6 +79,12 @@ export const DocumentAssignmentManager = () => {
         .eq('company_type', 'buyer')
         .eq('status', 'active')
         .in('role', ['company_admin', 'branch_manager', 'document_manager', 'approver']);
+
+      console.log('[DocumentAssignmentManager] Team members query result:', {
+        count: team?.length || 0,
+        error: teamError,
+        roles: team?.map(t => t.role)
+      });
 
       setTeamMembers(team || []);
 
@@ -145,7 +163,18 @@ export const DocumentAssignmentManager = () => {
 
             <TabsContent value="unassigned" className="space-y-2">
               {unassignedDocs.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No unassigned documents</p>
+                <div className="text-center py-8 space-y-4">
+                  <FileText className="h-12 w-12 mx-auto text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">No unassigned documents found</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Documents need status "Pending Review" or "Submitted" to appear here
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Check your Documents Manager to see all pending documents
+                    </p>
+                  </div>
+                </div>
               ) : (
                 unassignedDocs.map(doc => (
                   <div
@@ -178,7 +207,35 @@ export const DocumentAssignmentManager = () => {
             </TabsContent>
 
             <TabsContent value="team" className="space-y-4">
-              {teamMembers.map(member => {
+              {teamMembers.length === 0 ? (
+                <div className="text-center py-8 space-y-4">
+                  <Users className="h-12 w-12 mx-auto text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">No team members found</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Invite team members with these roles to enable assignments:
+                    </p>
+                    <ul className="text-sm text-muted-foreground mt-2 space-y-1">
+                      <li>• Document Manager</li>
+                      <li>• Approver</li>
+                      <li>• Branch Manager</li>
+                      <li>• Company Admin</li>
+                    </ul>
+                    <Button 
+                      variant="outline" 
+                      className="mt-4"
+                      onClick={() => {
+                        const event = new CustomEvent('navigate-to-tab', { detail: 'company' });
+                        window.dispatchEvent(event);
+                      }}
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Go to Company Management
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                teamMembers.map(member => {
                 const workload = getWorkloadForUser(member.profile_id);
                 return (
                   <Card key={member.id}>
@@ -198,13 +255,31 @@ export const DocumentAssignmentManager = () => {
                     </CardHeader>
                   </Card>
                 );
-              })}
+                })
+              )}
             </TabsContent>
 
             <TabsContent value="overdue" className="space-y-2">
-              {assignments
-                .filter(a => a.due_date && new Date(a.due_date) < new Date() && a.status !== 'completed')
-                .map(assignment => (
+              {(() => {
+                const overdueAssignments = assignments.filter(
+                  a => a.due_date && new Date(a.due_date) < new Date() && a.status !== 'completed'
+                );
+                
+                if (overdueAssignments.length === 0) {
+                  return (
+                    <div className="text-center py-8 space-y-4">
+                      <CheckCircle className="h-12 w-12 mx-auto text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">No overdue assignments</p>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          All assignments are on track!
+                        </p>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                return overdueAssignments.map(assignment => (
                   <div key={assignment.id} className="flex items-center gap-3 p-3 border border-destructive rounded-lg">
                     <AlertCircle className="h-5 w-5 text-destructive" />
                     <div className="flex-1">
@@ -215,7 +290,8 @@ export const DocumentAssignmentManager = () => {
                     </div>
                     <Badge variant="destructive">Overdue</Badge>
                   </div>
-                ))}
+                ));
+              })()}
             </TabsContent>
           </Tabs>
         </CardContent>

@@ -334,71 +334,29 @@ const ChatPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("rag-chat", {
+      const { data, error } = await supabase.functions.invoke("simple-rag-chat", {
         body: {
-          message: userMsg.content,
-          company_id: companyInfo.id,
-          company_type: companyInfo.type,
+          question: userMsg.content,
+          buyer_id: companyInfo.id,
           session_id: currentSession,
-          conversation_history: messages.slice(-10),
         },
       });
       if (error) throw error;
 
-      // Edge may return { response: StructuredResponse } or a flat StructuredResponse
-      const structured: StructuredResponse = (typeof data?.response === "object" && data.response) || data || {};
 
       const assistant: Message = {
         id: `assistant-${Date.now()}`,
         role: "assistant",
         content:
-          typeof structured.response === "string"
-            ? structured.response
-            : typeof structured.content === "string"
-            ? structured.content
+          data?.answer || "I apologize, but I was unable to process your request."
+            
+            
+            
             : structured.explanation || "Here’s what I found.",
-        metadata: {
-          ...data,
-          structured_response: structured,
-          generated_image: extractImageB64(structured),
-        },
         created_at: new Date().toISOString(),
       };
 
       setMessages((prev) => [...prev, assistant]);
-
-      // Refresh sessions if server assigned a new one
-      if (data?.session_id && data.session_id !== currentSession) {
-        setCurrentSession(data.session_id);
-        (async () => {
-          if (!user || !companyInfo) return;
-          const { data: sessions } = await supabase
-            .from("chat_sessions")
-            .select("id, session_title, created_at, updated_at")
-            .eq("user_id", user.id)
-            .eq("company_id", companyInfo.id)
-            .eq("company_type", companyInfo.type)
-            .order("updated_at", { ascending: false })
-            .limit(20);
-          if (sessions) setChatSessions(sessions);
-        })();
-      }
-
-      // Edge signaled rate-limit chart fallback
-      if (structured?.error_code === "insufficient_quota" || structured?.error_code === "429") {
-        toast({
-          title: "Visualization temporarily unavailable",
-          description: "Using a local chart from database data instead.",
-        });
-      }
-      if (structured?.error) {
-        toast({
-          title: "Request issue",
-          description:
-            typeof structured.response === "string" ? structured.response : "Request failed — want to try again?",
-          variant: "destructive",
-        });
-      }
     } catch (e: any) {
       console.error("sendMessage", e);
       toast({

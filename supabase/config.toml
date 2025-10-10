@@ -93,3 +93,6 @@ verify_jwt = false
 
 [functions.send-assignment-notification]
 verify_jwt = false
+
+[functions.simple-rag-chat]
+verify_jwt = false

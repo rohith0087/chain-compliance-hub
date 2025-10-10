@@ -128,6 +128,9 @@ interface StructuredResponse {
   // error hints
   error?: boolean;
   error_code?: string;
+  
+  // edge may return explanation as top-level field
+  explanation?: string;
 }
 
 type CompanyInfo = { id: string; type: "buyer" | "supplier"; industry?: string } | null;
@@ -499,7 +502,7 @@ const ChatPage: React.FC = () => {
         {!isError && imgB64 && renderGeneratedImage(imgB64)}
 
         {/* Client-side chart fallback */}
-        {!isError && !imgB64 && parsed?.rows && renderClientPieFromRows(parsed.rows)}
+        {!isError && !imgB64 && parsed?.rows && <ClientPieFromRows rows={parsed.rows} />}
 
         {/* Action executor */}
         {!isError &&

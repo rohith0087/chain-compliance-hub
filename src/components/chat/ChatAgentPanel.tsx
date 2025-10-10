@@ -219,12 +219,15 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: typeof data.response === 'string' ? data.response : JSON.stringify(data.response),
+        content: typeof data.response === 'string' 
+          ? data.response 
+          : (data.response.content || data.response.explanation || 'AI response generated'),
         metadata: {
           knowledge_entries_used: data.knowledge_entries_used,
           documents_found: data.documents_found,
           sources: data.sources,
-          structured_response: typeof data.response === 'object' ? data.response : null
+          structured_response: typeof data.response === 'object' ? data.response : null,
+          generated_image: data.response?.generated_image || null
         },
         created_at: new Date().toISOString()
       };

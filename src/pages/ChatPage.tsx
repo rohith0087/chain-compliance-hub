@@ -460,10 +460,16 @@ const ChatPage: React.FC = () => {
     const imgB64 = extractImageB64(parsed) || message.metadata?.generated_image || null;
 
     // Normalize for deterministic list routes
-    const isExpiredRoute = parsed?.type === "expired_documents" || parsed?.intent === "expired_documents";
+    const isListRoute = parsed?.type === "expired_documents" 
+      || parsed?.intent === "expired_documents"
+      || parsed?.intent === "document_status"
+      || parsed?.intent === "pending_documents"
+      || parsed?.intent === "document_review"
+      || parsed?.type === "text_to_sql";
+    
     const normalizedDocs = parsed?.documents?.length
       ? parsed.documents
-      : isExpiredRoute
+      : (isListRoute && parsed?.rows)
         ? rowsToDocuments(parsed?.rows)
         : undefined;
 
@@ -542,9 +548,9 @@ const ChatPage: React.FC = () => {
           ))}
 
         {/* Empty-states for known intents */}
-        {isExpiredRoute && (!normalizedDocs || normalizedDocs.length === 0) && (
+        {isListRoute && (!normalizedDocs || normalizedDocs.length === 0) && (
           <div className="rounded-lg border border-dashed p-6 text-center text-muted-foreground">
-            No expired documents found. 🎉
+            No documents found matching your query.
           </div>
         )}
 
@@ -553,7 +559,7 @@ const ChatPage: React.FC = () => {
           <div className="space-y-4">
             <h4 className="font-semibold text-foreground flex items-center gap-2">
               <FileText className="w-4 h-4" />
-              Expired Documents ({normalizedDocs.length})
+              Documents ({normalizedDocs.length})
             </h4>
 
             {/* Top 3 */}

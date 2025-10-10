@@ -512,7 +512,7 @@ const ChatPage: React.FC = () => {
               <ActionExecutor
                 actionItems={parsed.actionable_items}
                 suggestedActions={parsed.suggested_actions}
-                quickActions={parsed.quick_actions}
+                quickActions={Array.isArray(parsed.quick_actions) ? parsed.quick_actions.filter((qa): qa is { label: string; action: string; action_type?: string; parameters?: Record<string, any>; data?: any; } => typeof qa === "object" && qa !== null) : []}
                 sessionId={currentSession || "temp-session"}
                 onActionComplete={(result) => toast({ title: "Action Completed", description: result.message })}
               />
@@ -1014,4 +1014,32 @@ const ChatPage: React.FC = () => {
         </div>
 
         {/* Input */}
-        <
+        <div className="sticky bottom-0 border-t border-border bg-card/95 backdrop-blur-sm p-6">
+          <div className="flex items-end gap-3">
+            <Input
+              ref={inputRef}
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Ask about documents, compliance, or regulations..."
+              className="flex-1"
+              disabled={isLoading}
+            />
+            <Button onClick={sendMessage} disabled={isLoading || !inputMessage.trim()} size="lg" className="px-6">
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Document Viewer */}
+      <ChatDocumentViewer
+        document={selectedDocument}
+        isOpen={isDocumentViewerOpen}
+        onClose={closeDocumentViewer}
+      />
+    </div>
+  );
+};
+
+export default ChatPage;

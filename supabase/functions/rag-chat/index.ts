@@ -41,6 +41,7 @@ interface StructuredResponse {
   }[];
   documents?: DocumentReference[];
   quick_actions?: string[];
+  generated_image?: string; // Base64 image string from AI
   visual_data?: {
     type: 'compliance_dashboard' | 'document_status_chart' | 'expiration_timeline' | 'supplier_comparison';
     data: any;
@@ -661,6 +662,143 @@ async function getUserCompany(userId: string): Promise<{companyId: string, compa
   return null;
 }
 
+// Helper: Format data for AI image generation
+function formatDataForVisualization(
+  complianceData: {
+    metrics?: ComplianceMetrics;
+    documents?: DocumentReference[];
+    supplierData?: SupplierComplianceData;
+  },
+  visualizationType: string
+): string {
+  let description = '';
+
+  if (complianceData.metrics) {
+    const m = complianceData.metrics;
+    description += `
+COMPLIANCE METRICS:
+- Total Documents: ${m.total_documents}
+- Compliance Score: ${Math.round(m.compliance_score)}%
+- Approved: ${m.approved_documents}
+- Pending: ${m.pending_documents}
+- Expired: ${m.expired_documents}
+- Rejected: ${m.rejected_documents}
+- Expiring Soon (next 30 days): ${m.expiring_soon}
+`;
+  }
+
+  if (complianceData.documents && complianceData.documents.length > 0) {
+    // Group documents by status
+    const byStatus = complianceData.documents.reduce((acc, doc) => {
+      acc[doc.status] = (acc[doc.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    description += `\nDOCUMENT BREAKDOWN BY STATUS:\n`;
+    Object.entries(byStatus).forEach(([status, count]) => {
+      description += `- ${status}: ${count} documents\n`;
+    });
+
+    // Group by document type
+    const byType = complianceData.documents.reduce((acc, doc) => {
+      acc[doc.document_type] = (acc[doc.document_type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    description += `\nDOCUMENT BREAKDOWN BY TYPE:\n`;
+    Object.entries(byType).forEach(([type, count]) => {
+      description += `- ${type}: ${count} documents\n`;
+    });
+  }
+
+  if (complianceData.supplierData) {
+    const s = complianceData.supplierData;
+    description += `\nSUPPLIER COMPLIANCE DATA (${s.supplier_name}):
+- Risk Level: ${s.risk_level.toUpperCase()}
+- Compliance Score: ${Math.round(s.compliance_metrics.compliance_score)}%
+- Total Documents: ${s.compliance_metrics.total_documents}
+- Approved: ${s.compliance_metrics.approved_documents}
+- Pending: ${s.compliance_metrics.pending_documents}
+`;
+  }
+
+  description += `\nVISUALIZATION TYPE REQUESTED: ${visualizationType || 'general dashboard'}`;
+
+  return description;
+}
+
+// Generate AI-powered compliance visualization image
+async function generateComplianceImage(
+  query: string,
+  complianceData: {
+    metrics?: ComplianceMetrics;
+    documents?: DocumentReference[];
+    supplierData?: SupplierComplianceData;
+  },
+  visualizationType: string
+): Promise<string | null> {
+  try {
+    // Format the data for image generation
+    const dataDescription = formatDataForVisualization(complianceData, visualizationType);
+    
+    const imagePrompt = `Generate a professional compliance dashboard visualization with the following data:
+    
+${dataDescription}
+
+Create a clean, modern chart/graph that clearly shows:
+- Document status breakdown (approved, pending, expired, rejected) as a pie chart or bar chart
+- Compliance scores and trends with visual indicators
+- Key metrics with color coding (green for good, yellow for warning, red for critical)
+- Professional color scheme suitable for business compliance reporting
+
+Style: Modern, clean, professional dashboard with clear labels and legends. Use a white or light background with high contrast for readability.`;
+
+    console.log('Generating compliance image with OpenAI...');
+    console.log('Prompt:', imagePrompt);
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-5',
+        messages: [
+          {
+            role: 'user',
+            content: imagePrompt
+          }
+        ],
+        tools: [{ type: "image_generation" }],
+        max_completion_tokens: 1000
+      }),
+    });
+
+    const data = await response.json();
+    console.log('OpenAI image generation response status:', response.status);
+
+    if (!response.ok) {
+      console.error('OpenAI API error:', data);
+      return null;
+    }
+
+    // Extract the base64 image from the response
+    const imageData = data.output?.find((output: any) => output.type === "image_generation_call");
+    
+    if (imageData && imageData.result) {
+      console.log('Successfully generated compliance image');
+      return imageData.result; // This is the base64 string
+    }
+
+    console.log('No image data found in response');
+    return null;
+  } catch (error) {
+    console.error('Error generating compliance image:', error);
+    return null;
+  }
+}
+
 // Generate comprehensive intelligent response with contextual data and visual capabilities
 async function generateStructuredResponse(
   userMessage: string, 
@@ -749,8 +887,26 @@ QUERY INTENT ANALYSIS:
 
   // Generate visual data if required
   let visualData = undefined;
+  let generatedImage = null;
+  
   if (intent.requires_visual && contextualData.complianceMetrics) {
     const metrics = contextualData.complianceMetrics;
+    
+    // Generate AI image
+    console.log('Generating AI image for visual analysis...');
+    generatedImage = await generateComplianceImage(
+      userMessage,
+      {
+        metrics: contextualData.complianceMetrics,
+        documents: documents.slice(0, 20), // Limit for prompt size
+        supplierData: contextualData.supplierData
+      },
+      intent.entities.visualization_type || 'dashboard'
+    );
+    
+    if (generatedImage) {
+      console.log('Successfully generated compliance image');
+    }
     
     if (intent.entities.visualization_type === 'dashboard' || intent.intent_type === 'compliance_summary') {
       visualData = {
@@ -1072,6 +1228,11 @@ Data available: ${documents.length} documents, ${contextualData.complianceMetric
       structuredResponse.visual_data = visualData;
     }
 
+    // Add generated image if available
+    if (generatedImage) {
+      structuredResponse.generated_image = generatedImage;
+    }
+
     // Add daily insights if available
     if (dailyInsights) {
       structuredResponse.daily_insights = dailyInsights;
@@ -1114,6 +1275,7 @@ Data available: ${documents.length} documents, ${contextualData.complianceMetric
       response: enhancedContent,
       content: enhancedContent,
       documents: documents.length > 0 ? documents : undefined,
+      generated_image: generatedImage,
       visual_data: visualData,
       daily_insights: dailyInsights,
       quick_actions: intent.intent_type === 'daily_overview' ? 

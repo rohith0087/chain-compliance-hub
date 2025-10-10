@@ -403,6 +403,19 @@ Respond in JSON format:
     return analysis;
   } catch (error) {
     console.error('Intent analysis failed:', error);
+    console.error('Error details:', {
+      message: error?.message,
+      name: error?.name,
+      stack: error?.stack
+    });
+    
+    // Try to get response details if available
+    if (response) {
+      const responseText = await response.text().catch(() => 'Could not read response');
+      console.error('OpenAI Response status:', response.status);
+      console.error('OpenAI Response body:', responseText);
+    }
+    
     // Fallback to general inquiry
     return {
       intent_type: 'general_inquiry',
@@ -1395,10 +1408,23 @@ serve(async (req) => {
   }
 
   try {
+    // Deployment trigger: Force fresh deployment to clear any cached tool definitions
+    console.log('=== RAG-CHAT REQUEST START ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Version: 2.0 - No tool calling');
+    
     // Ensure vector search function exists
     await ensureSearchFunction();
 
-    const { message, session_id, context_tags }: ChatRequest = await req.json();
+    const requestBody = await req.json();
+    const { message, session_id, context_tags }: ChatRequest = requestBody;
+    
+    console.log('Request details:', {
+      messageLength: message?.length,
+      hasSessionId: !!session_id,
+      contextTags: context_tags
+    });
+    console.log('================================');
 
     // Get user from auth
     const authHeader = req.headers.get('authorization');

@@ -88,6 +88,7 @@ interface StructuredResponse {
     parameters: Record<string, any>;
     urgency: 'low' | 'medium' | 'high';
   }>;
+  generated_image?: string;
 }
 
 interface DocumentReference {
@@ -323,6 +324,8 @@ const ChatPage = () => {
         created_at: new Date().toISOString(),
       };
 
+      console.log('AI structured_response keys:', Object.keys((data?.response || data) || {}));
+
       setMessages(prev => [...prev, assistantMessage]);
       
       if (data.session_id && data.session_id !== currentSession) {
@@ -457,6 +460,33 @@ const ChatPage = () => {
               )}
             </div>
           )}
+
+          {/* Render Generated Image */}
+          {(() => {
+            const parsedAny = parsed as any;
+            const imgB64 =
+              parsedAny?.generated_image ||
+              parsedAny?.image ||
+              parsedAny?.image_base64 ||
+              parsedAny?.b64_json ||
+              message.metadata?.generated_image;
+
+            if (!imgB64) return null;
+
+            return (
+              <div className="mt-4 space-y-2">
+                <img
+                  src={`data:image/png;base64,${imgB64}`}
+                  alt="AI-generated visualization"
+                  className="rounded-lg border border-border w-full max-w-2xl shadow-sm"
+                />
+                <div className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  <span>AI-generated visualization</span>
+                </div>
+              </div>
+            );
+          })()}
           
           {/* Action Executor */}
           {(((parsed.actionable_items?.length ?? 0) > 0) || ((parsed.suggested_actions?.length ?? 0) > 0) || (Array.isArray(parsed.quick_actions) && parsed.quick_actions.some(qa => (qa as any)?.action_type && (qa as any)?.action_type !== 'navigate'))) && (

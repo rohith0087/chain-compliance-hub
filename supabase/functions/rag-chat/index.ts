@@ -982,9 +982,9 @@ ENHANCED RESPONSE GUIDELINES:
 - Format document information as clear bullet lists within document_overview sections
 - End with prioritized action items and quick recommendations
 
-Current context: ${userInfo.companyType} in ${userInfo.industry || 'general'} industry.`;
-  }
+Current context: ${userInfo.companyType} in ${userInfo.industry || 'general'} industry.
 Data available: ${documents.length} documents, ${contextualData.complianceMetrics ? 'compliance metrics' : 'no metrics'}, ${contextualData.dailyOverview ? 'daily overview' : 'no overview'}.`;
+  }
 
   const messages = [
     { role: 'system', content: systemPrompt },

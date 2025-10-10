@@ -348,7 +348,7 @@ const ChatPage: React.FC = () => {
         id: `assistant-${Date.now()}`,
         role: "assistant",
         content:
-          data?.answer || "I apologize, but I was unable to process your request."
+          content: data?.answer || "I apologize, but I was unable to process your request.",
             
             
             

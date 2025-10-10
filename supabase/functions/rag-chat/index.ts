@@ -753,53 +753,46 @@ Requirements:
 - Show percentages and counts clearly
 - Professional typography suitable for corporate reporting`;
 
-    console.log('Generating compliance image with Lovable AI...');
+    console.log('Generating compliance image with OpenAI GPT-5...');
+    console.log('Image prompt:', imagePrompt);
 
-    // Get Lovable API key
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!lovableApiKey) {
-      console.error('LOVABLE_API_KEY not configured');
+    // Use OpenAI API key
+    if (!openAIApiKey) {
+      console.error('OPENAI_API_KEY not configured');
       return null;
     }
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
+        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-image-preview',
-        messages: [
-          {
-            role: 'user',
-            content: imagePrompt
-          }
-        ],
-        modalities: ['image', 'text']
+        model: 'gpt-5',
+        input: imagePrompt,
+        tools: [{ type: "image_generation" }]
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Lovable AI API error:', response.status, errorText);
+      console.error('OpenAI API error:', response.status, errorText);
       return null;
     }
 
     const data = await response.json();
-    console.log('Lovable AI image generation successful');
+    console.log('OpenAI image generation response received');
 
-    // Extract the base64 image from the response
-    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    // Extract the base64 image from response.output (matching Python example)
+    const imageData = data.output?.find((output: any) => output.type === "image_generation_call");
     
-    if (imageUrl && imageUrl.startsWith('data:image/png;base64,')) {
-      // Extract just the base64 part (remove the data:image/png;base64, prefix)
-      const base64Data = imageUrl.replace('data:image/png;base64,', '');
-      console.log('Successfully generated compliance image');
-      return base64Data;
+    if (imageData && imageData.result) {
+      console.log('Successfully generated compliance image with OpenAI');
+      return imageData.result; // This is the base64 string
     }
 
-    console.log('No image data found in response');
+    console.log('No image data found in OpenAI response');
     return null;
   } catch (error) {
     console.error('Error generating compliance image:', error);

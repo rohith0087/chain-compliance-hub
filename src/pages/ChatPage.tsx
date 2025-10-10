@@ -1,5 +1,5 @@
 // src/pages/ChatPage.tsx
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -8,7 +8,6 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import ComplianceVisualizer from "@/components/chat/ComplianceVisualizer";
@@ -34,7 +33,6 @@ import {
   Building,
   Shield,
   RotateCcw,
-  Info,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -69,31 +67,26 @@ interface DocumentReference {
   metadata?: any;
 }
 
+/**
+ * This mirrors what the edge can return (either under `response` or flat).
+ * Only fields actually used by the UI are strictly necessary.
+ */
 interface StructuredResponse {
-  // free-form top-level narrative
-  response?: string;
-  content?: string;
-
-  // sections (executive summary / actions)
+  response?: string;            // narrative
+  content?: string;             // narrative (alt)
   sections?: Array<{ title: string; content: string; type?: string }>;
 
-  // documents (preferred field)
   documents?: DocumentReference[];
-
-  // raw SQL return (rows) — used by our adapters + charts
   rows?: Array<Record<string, any>>;
 
-  // generated image (any common key that can show a base64 image)
-  generated_image?: string;
+  generated_image?: string;     // base64 PNG
   image?: string;
   image_base64?: string;
   b64_json?: string;
 
-  // optional analytics
   visual_data?: any;
   daily_insights?: any;
 
-  // action blocks
   actionable_items?: Array<{
     type: string;
     description: string;
@@ -115,22 +108,16 @@ interface StructuredResponse {
     action_type?: string;
     parameters?: Record<string, any>;
     data?: any;
-  }>;
+  } | string>;
 
-  // transparency
-  sql?: string;
+  sql?: string;                 // transparency
   params?: Record<string, any>;
+  type?: string;                // route/type sent by edge
+  intent?: string;              // optional route hint
 
-  // routing/intents (edge sends these)
-  type?: string;
-  intent?: string;
-
-  // error hints
-  error?: boolean;
-  error_code?: string;
-  
-  // edge may return explanation as top-level field
-  explanation?: string;
+  error?: boolean;              // UI error banner flag
+  error_code?: string;          // "insufficient_quota" | "429" etc.
+  explanation?: string;         // optional narrative fallback
 }
 
 type CompanyInfo = { id: string; type: "buyer" | "supplier"; industry?: string } | null;
@@ -138,6 +125,7 @@ type CompanyInfo = { id: string; type: "buyer" | "supplier"; industry?: string }
 /* ------------ Helpers ------------ */
 
 const tidyTitle = (s?: string) => (s || "Untitled").replace(/_/g, " ");
+
 const getStatusColor = (status: string) => {
   switch (status) {
     case "approved":
@@ -152,6 +140,7 @@ const getStatusColor = (status: string) => {
       return "border-l-primary/20 bg-card";
   }
 };
+
 const getStatusIcon = (status: string) => {
   switch (status) {
     case "approved":
@@ -167,7 +156,7 @@ const getStatusIcon = (status: string) => {
   }
 };
 
-// Normalize known list routes that return only rows
+// Normalize known list routes that return only rows → UI documents
 function rowsToDocuments(rows?: any[]): DocumentReference[] {
   if (!Array.isArray(rows)) return [];
   return rows.map((r) => ({
@@ -219,13 +208,16 @@ const ChatPage: React.FC = () => {
     if (!user) return;
     (async () => {
       try {
-        // Buyer?
-        const { data: buyer } = await supabase.from("buyers").select("id, industry").eq("profile_id", user.id).single();
+        // Try buyer, else supplier
+        const { data: buyer } = await supabase
+          .from("buyers")
+          .select("id, industry")
+          .eq("profile_id", user.id)
+          .single();
         if (buyer) {
           setCompanyInfo({ id: buyer.id, type: "buyer", industry: buyer.industry });
           return;
         }
-        // Supplier?
         const { data: supplier } = await supabase
           .from("suppliers")
           .select("id, industry")
@@ -353,23 +345,21 @@ const ChatPage: React.FC = () => {
       });
       if (error) throw error;
 
-      // The edge returns either { response: StructuredResponse-like } or a flat structured object
+      // Edge may return { response: StructuredResponse } or a flat StructuredResponse
       const structured: StructuredResponse = (typeof data?.response === "object" && data.response) || data || {};
 
       const assistant: Message = {
         id: `assistant-${Date.now()}`,
         role: "assistant",
-        // Keep a short human string for the balloon; everything else goes in metadata. Never stringify the object.
         content:
           typeof structured.response === "string"
             ? structured.response
             : typeof structured.content === "string"
-              ? structured.content
-              : structured.explanation || "Here’s what I found.",
+            ? structured.content
+            : structured.explanation || "Here’s what I found.",
         metadata: {
           ...data,
           structured_response: structured,
-          // duplicate generated image at metadata root for robust rendering
           generated_image: extractImageB64(structured),
         },
         created_at: new Date().toISOString(),
@@ -377,9 +367,9 @@ const ChatPage: React.FC = () => {
 
       setMessages((prev) => [...prev, assistant]);
 
+      // Refresh sessions if server assigned a new one
       if (data?.session_id && data.session_id !== currentSession) {
         setCurrentSession(data.session_id);
-        // refresh sessions list async
         (async () => {
           if (!user || !companyInfo) return;
           const { data: sessions } = await supabase
@@ -394,7 +384,7 @@ const ChatPage: React.FC = () => {
         })();
       }
 
-      // Rate-limit / friendly fail hints
+      // Edge signaled rate-limit chart fallback
       if (structured?.error_code === "insufficient_quota" || structured?.error_code === "429") {
         toast({
           title: "Visualization temporarily unavailable",
@@ -449,27 +439,29 @@ const ChatPage: React.FC = () => {
     </div>
   );
 
-  // Client chart moved to a lightweight, dynamically loaded component
-
-
   const renderStructuredMessage = (message: Message) => {
     const parsed: StructuredResponse =
       message.metadata?.structured_response || (typeof message.content === "object" ? (message.content as any) : {});
 
-    const isError = Boolean((parsed as any)?.error);
+    // ✅ Treat backend `{ type: "error" }` as an error too.
+    const isError = Boolean((parsed as any)?.error || parsed?.type === "error");
+
     const imgB64 = extractImageB64(parsed) || message.metadata?.generated_image || null;
 
-    // Normalize for deterministic list routes
-    const isListRoute = parsed?.type === "expired_documents" 
-      || parsed?.intent === "expired_documents"
-      || parsed?.intent === "document_status"
-      || parsed?.intent === "pending_documents"
-      || parsed?.intent === "document_review"
-      || parsed?.type === "text_to_sql";
-    
-    const normalizedDocs = parsed?.documents?.length
-      ? parsed.documents
-      : (isListRoute && parsed?.rows)
+    // ✅ Added "expiring_documents" so expiring lists render as document cards.
+    const isListRoute =
+      parsed?.type === "expired_documents" ||
+      parsed?.type === "expiring_documents" ||
+      parsed?.intent === "expired_documents" ||
+      parsed?.intent === "document_status" ||
+      parsed?.intent === "pending_documents" ||
+      parsed?.intent === "document_review" ||
+      parsed?.type === "text_to_sql";
+
+    const normalizedDocs =
+      parsed?.documents?.length
+        ? parsed.documents
+        : isListRoute && parsed?.rows
         ? rowsToDocuments(parsed?.rows)
         : undefined;
 
@@ -515,7 +507,7 @@ const ChatPage: React.FC = () => {
           ((parsed.actionable_items?.length ?? 0) > 0 ||
             (parsed.suggested_actions?.length ?? 0) > 0 ||
             (Array.isArray(parsed.quick_actions) &&
-              parsed.quick_actions.some((qa: any) => qa?.action_type && qa?.action_type !== "navigate"))) && (
+              parsed.quick_actions.some((qa: any) => qa && typeof qa === "object" && qa?.action_type && qa?.action_type !== "navigate"))) && (
             <div className="border-l-4 border-primary/20 pl-4">
               <ActionExecutor
                 actionItems={parsed.actionable_items}
@@ -536,8 +528,8 @@ const ChatPage: React.FC = () => {
                 s.type === "executive_summary"
                   ? "bg-primary/5 border-primary/20"
                   : s.type === "actions"
-                    ? "bg-secondary/5 border-secondary/20"
-                    : "bg-card/30"
+                  ? "bg-secondary/5 border-secondary/20"
+                  : "bg-card/30"
               }`}
             >
               <h4 className="font-semibold text-card-foreground">{s.title}</h4>
@@ -591,7 +583,16 @@ const ChatPage: React.FC = () => {
                         {doc.expiration_date && (
                           <div className="flex items-center gap-1 text-muted-foreground">
                             <Calendar className="w-3 h-3" />
-                            <span>Expires: {format(new Date(doc.expiration_date), "MMM dd, yyyy")}</span>
+                            <span>
+                              Expires:{" "}
+                              {(() => {
+                                try {
+                                  return format(new Date(doc.expiration_date), "MMM dd, yyyy");
+                                } catch {
+                                  return String(doc.expiration_date);
+                                }
+                              })()}
+                            </span>
                           </div>
                         )}
 
@@ -601,8 +602,8 @@ const ChatPage: React.FC = () => {
                             doc.status === "approved"
                               ? "border-emerald-500 text-emerald-700 dark:text-emerald-400"
                               : doc.status === "pending_review"
-                                ? "border-amber-500 text-amber-700 dark:text-amber-400"
-                                : "border-red-500 text-red-700 dark:text-red-400"
+                              ? "border-amber-500 text-amber-700 dark:text-amber-400"
+                              : "border-red-500 text-red-700 dark:text-red-400"
                           }`}
                         >
                           {doc.status.replace("_", " ")}
@@ -667,7 +668,16 @@ const ChatPage: React.FC = () => {
                               {doc.expiration_date && (
                                 <div className="flex items-center gap-1 text-muted-foreground">
                                   <Calendar className="w-3 h-3" />
-                                  <span>Expires: {format(new Date(doc.expiration_date), "MMM dd, yyyy")}</span>
+                                  <span>
+                                    Expires:{" "}
+                                    {(() => {
+                                      try {
+                                        return format(new Date(doc.expiration_date), "MMM dd, yyyy");
+                                      } catch {
+                                        return String(doc.expiration_date);
+                                      }
+                                    })()}
+                                  </span>
                                 </div>
                               )}
 
@@ -677,8 +687,8 @@ const ChatPage: React.FC = () => {
                                   doc.status === "approved"
                                     ? "border-emerald-500 text-emerald-700 dark:text-emerald-400"
                                     : doc.status === "pending_review"
-                                      ? "border-amber-500 text-amber-700 dark:text-amber-400"
-                                      : "border-red-500 text-red-700 dark:text-red-400"
+                                    ? "border-amber-500 text-amber-700 dark:text-amber-400"
+                                    : "border-red-500 text-red-700 dark:text-red-400"
                                 }`}
                               >
                                 {doc.status.replace("_", " ")}
@@ -739,7 +749,7 @@ const ChatPage: React.FC = () => {
           </div>
         )}
 
-        {/* Visual data / insights (non-error only) */}
+        {/* Visual data / insights */}
         {!isError && parsed.visual_data && (
           <div className="mt-4">
             <ComplianceVisualizer visualData={parsed.visual_data} />
@@ -1004,39 +1014,4 @@ const ChatPage: React.FC = () => {
         </div>
 
         {/* Input */}
-        <div className="sticky bottom-0 z-10 border-t border-border bg-card/95 backdrop-blur-sm p-6">
-          <div className="max-w-2xl mx-auto">
-            <div className="flex gap-3">
-              <Input
-                ref={inputRef}
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyDown={handleKeyPress}
-                placeholder="Ask about compliance documents, suppliers, or deadlines…"
-                className="flex-1 bg-background border-border focus:border-primary/40 focus:ring-primary/20"
-                disabled={isLoading}
-              />
-              <Button onClick={sendMessage} disabled={!inputMessage.trim() || isLoading} size="sm">
-                <Send className="w-4 h-4" />
-              </Button>
-            </div>
-
-            {messages.length > 0 && (
-              <div className="mt-4 text-center">
-                <p className="text-xs text-muted-foreground">
-                  Knowledge sources: {messages[messages.length - 1]?.metadata?.knowledge_entries_used || 0} • Documents
-                  found: {messages[messages.length - 1]?.metadata?.documents_found || 0}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Document viewer */}
-      <ChatDocumentViewer document={selectedDocument} isOpen={isDocumentViewerOpen} onClose={closeDocumentViewer} />
-    </div>
-  );
-};
-
-export default ChatPage;
+        <

@@ -309,18 +309,33 @@ async function analyzeQueryIntent(query: string, companyType: string): Promise<Q
         {
           role: 'system',
           content: `You are a query intent classifier for a compliance document management system. 
-          
-Analyze the user query and classify it into one of these intent types:
-- simple_question: Simple informational queries (what is, explain, define, tell me about, how does)
-- follow_up: Follow-up questions referencing previous context (tell me more, what about that, can you elaborate, more details)
-- latest_document: User wants the most recent document(s) from a specific supplier or type
-- specific_document: User is looking for a particular document type or certification
-- document_status: User wants to know the status of documents (pending, approved, expired)  
-- compliance_summary: User wants an overview/summary of compliance status
-- expired_documents: User specifically asks about expired or expiring documents
-- supplier_specific: User asks about a specific supplier's documents/compliance
-- daily_overview: User asks "what does my day look like", "today's priorities", "my dashboard"
-- visual_analysis: User requests charts, graphs, visual representation of data
+
+CRITICAL RULES FOR CLASSIFICATION:
+1. DATA QUERIES (asking for lists, status, showing documents) = NOT simple questions
+   - "what are all the expired documents" → expired_documents, is_simple_question: false, response_format: "structured"
+   - "show me pending documents" → document_status, is_simple_question: false, response_format: "structured"
+   - "list all suppliers" → supplier_specific, is_simple_question: false, response_format: "structured"
+
+2. INFORMATIONAL QUERIES (asking for definitions, explanations) = simple questions
+   - "what is ISO 9001" → simple_question, is_simple_question: true, response_format: "plain_text"
+   - "explain compliance" → simple_question, is_simple_question: true, response_format: "plain_text"
+   - "how does certification work" → simple_question, is_simple_question: true, response_format: "plain_text"
+
+3. FOLLOW-UP QUERIES (referencing previous context) = conversational
+   - "tell me more" → follow_up, is_follow_up: true, response_format: "conversational"
+   - "what about that supplier" → follow_up, is_follow_up: true, response_format: "conversational"
+
+Classify the query into one of these intent types:
+- simple_question: ONLY for definitions/explanations (what is, explain, define, how does)
+- follow_up: References previous conversation (tell me more, what about that, elaborate, more details)
+- latest_document: Most recent document(s) from supplier or type
+- specific_document: Looking for particular document type or certification
+- document_status: Status of documents (pending, approved, expired)  
+- compliance_summary: Overview/summary of compliance status
+- expired_documents: Specifically asks about expired or expiring documents
+- supplier_specific: Asks about specific supplier's documents/compliance
+- daily_overview: "what does my day look like", "today's priorities", "my dashboard"
+- visual_analysis: Requests charts, graphs, visual representation of data
 - general_inquiry: General questions about compliance, processes, requirements
 
 Extract entities including:
@@ -328,13 +343,13 @@ Extract entities including:
 - time references (latest, recent, today, this week, expiring)
 - status types (pending, approved, expired, overdue)
 - visualization requests (chart, graph, visual, dashboard)
-- is_simple_question: true if asking for definition/explanation
+- is_simple_question: true ONLY if asking for definition/explanation, NOT for data
 - is_follow_up: true if referencing previous conversation
 
 Determine response_format:
-- "plain_text" for simple questions and follow-ups
+- "plain_text" ONLY for simple informational questions
 - "conversational" for follow-ups that need context
-- "structured" for complex analysis with multiple data points
+- "structured" for ALL data queries (lists, status, documents, analysis)
 
 Determine context scope: "today" for daily queries, "week" for weekly summaries, "month" for trends, "all" for comprehensive analysis.
 

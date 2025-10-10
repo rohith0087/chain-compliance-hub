@@ -773,7 +773,6 @@ Requirements:
         model: 'gpt-image-1',
         prompt: imagePrompt,
         size: '1024x1024',
-        response_format: 'b64_json',
         n: 1
       }),
     });
@@ -786,16 +785,21 @@ Requirements:
 
     const data = await response.json();
     console.log('OpenAI image generation response received');
+    console.log('Response structure:', JSON.stringify(data, null, 2));
 
-    // Extract base64 from standard format: data.data[0].b64_json
-    const base64Data = data.data?.[0]?.b64_json;
+    // Try multiple possible response formats
+    const base64Data = 
+      data.data?.[0]?.b64_json ||  // Standard DALL-E format
+      data.data?.[0]?.image ||      // Possible gpt-image-1 format
+      data.result ||                 // Another possible format
+      data.image;                    // Yet another possible format
     
     if (base64Data) {
-      console.log('Successfully generated compliance image with OpenAI');
+      console.log('Successfully generated compliance image with OpenAI, data length:', base64Data.length);
       return base64Data;
     }
 
-    console.log('No image data found in OpenAI response');
+    console.log('No image data found in OpenAI response. Full response:', JSON.stringify(data));
     return null;
   } catch (error) {
     console.error('Error generating compliance image:', error);

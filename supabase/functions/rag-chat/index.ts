@@ -753,7 +753,7 @@ Requirements:
 - Show percentages and counts clearly
 - Professional typography suitable for corporate reporting`;
 
-    console.log('Generating compliance image with OpenAI GPT-5...');
+    console.log('Generating compliance image with OpenAI gpt-image-1...');
     console.log('Image prompt:', imagePrompt);
 
     // Use OpenAI API key
@@ -762,34 +762,37 @@ Requirements:
       return null;
     }
 
-    const response = await fetch('https://api.openai.com/v1/responses', {
+    // Use the standard OpenAI Images API
+    const response = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5',
-        input: imagePrompt,
-        tools: [{ type: "image_generation" }]
+        model: 'gpt-image-1',
+        prompt: imagePrompt,
+        size: '1024x1024',
+        response_format: 'b64_json',
+        n: 1
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenAI API error:', response.status, errorText);
+      console.error('OpenAI Images API error:', response.status, errorText);
       return null;
     }
 
     const data = await response.json();
     console.log('OpenAI image generation response received');
 
-    // Extract the base64 image from response.output (matching Python example)
-    const imageData = data.output?.find((output: any) => output.type === "image_generation_call");
+    // Extract base64 from standard format: data.data[0].b64_json
+    const base64Data = data.data?.[0]?.b64_json;
     
-    if (imageData && imageData.result) {
+    if (base64Data) {
       console.log('Successfully generated compliance image with OpenAI');
-      return imageData.result; // This is the base64 string
+      return base64Data;
     }
 
     console.log('No image data found in OpenAI response');

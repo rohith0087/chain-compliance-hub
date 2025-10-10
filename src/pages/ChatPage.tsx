@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
 import ChatDocumentViewer from "@/components/chat/ChatDocumentViewer";
 import ComplianceVisualizer from "@/components/chat/ComplianceVisualizer";
@@ -790,21 +791,22 @@ const ChatPage = () => {
   };
 
   return (
-    <SidebarLayout
-      activeTab="chat"
-      onTabChange={() => {}}
-      user={sidebarUser}
-      onLogout={async () => {
-        await supabase.auth.signOut();
-      }}
-      onRoleSwitch={() => {}}
-      onShowRequestForm={() => {}}
-      onShowSettings={() => {}}
-      onShowQuickOnboarding={() => {}}
-      onShowBulkInvite={() => {}}
-      buyerProfile={null}
-      supplierProfile={null}
-    >
+    <SidebarProvider>
+      <SidebarLayout
+        activeTab="chat"
+        onTabChange={() => {}}
+        user={sidebarUser}
+        onLogout={async () => {
+          await supabase.auth.signOut();
+        }}
+        onRoleSwitch={() => {}}
+        onShowRequestForm={() => {}}
+        onShowSettings={() => {}}
+        onShowQuickOnboarding={() => {}}
+        onShowBulkInvite={() => {}}
+        buyerProfile={null}
+        supplierProfile={null}
+      >
       <div className="flex flex-col h-full">
         {/* Chat Header */}
         <div className="border-b border-border bg-card p-4">
@@ -1028,7 +1030,8 @@ const ChatPage = () => {
         isOpen={isDocumentViewerOpen}
         onClose={closeDocumentViewer}
       />
-    </SidebarLayout>
+      </SidebarLayout>
+    </SidebarProvider>
   );
 };
 

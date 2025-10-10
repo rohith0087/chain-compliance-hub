@@ -738,57 +738,65 @@ async function generateComplianceImage(
   visualizationType: string
 ): Promise<string | null> {
   try {
-    // Format the data for image generation
     const dataDescription = formatDataForVisualization(complianceData, visualizationType);
     
-    const imagePrompt = `Generate a professional compliance dashboard visualization with the following data:
-    
+    const imagePrompt = `Generate a professional compliance dashboard visualization chart with this data:
+
 ${dataDescription}
 
-Create a clean, modern chart/graph that clearly shows:
-- Document status breakdown (approved, pending, expired, rejected) as a pie chart or bar chart
-- Compliance scores and trends with visual indicators
-- Key metrics with color coding (green for good, yellow for warning, red for critical)
-- Professional color scheme suitable for business compliance reporting
+Requirements:
+- Create a clean, modern bar chart or pie chart showing document status breakdown
+- Use professional colors: green for approved, yellow for pending, red for expired/rejected
+- Include clear labels and a legend
+- White or light background with high contrast
+- Make it look like a business compliance dashboard
+- Show percentages and counts clearly
+- Professional typography suitable for corporate reporting`;
 
-Style: Modern, clean, professional dashboard with clear labels and legends. Use a white or light background with high contrast for readability.`;
+    console.log('Generating compliance image with Lovable AI...');
 
-    console.log('Generating compliance image with OpenAI...');
-    console.log('Prompt:', imagePrompt);
+    // Get Lovable API key
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    if (!lovableApiKey) {
+      console.error('LOVABLE_API_KEY not configured');
+      return null;
+    }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${lovableApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5',
+        model: 'google/gemini-2.5-flash-image-preview',
         messages: [
           {
             role: 'user',
             content: imagePrompt
           }
         ],
-        tools: [{ type: "image_generation" }],
-        max_completion_tokens: 1000
+        modalities: ['image', 'text']
       }),
     });
 
-    const data = await response.json();
-    console.log('OpenAI image generation response status:', response.status);
-
     if (!response.ok) {
-      console.error('OpenAI API error:', data);
+      const errorText = await response.text();
+      console.error('Lovable AI API error:', response.status, errorText);
       return null;
     }
 
+    const data = await response.json();
+    console.log('Lovable AI image generation successful');
+
     // Extract the base64 image from the response
-    const imageData = data.output?.find((output: any) => output.type === "image_generation_call");
+    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     
-    if (imageData && imageData.result) {
+    if (imageUrl && imageUrl.startsWith('data:image/png;base64,')) {
+      // Extract just the base64 part (remove the data:image/png;base64, prefix)
+      const base64Data = imageUrl.replace('data:image/png;base64,', '');
       console.log('Successfully generated compliance image');
-      return imageData.result; // This is the base64 string
+      return base64Data;
     }
 
     console.log('No image data found in response');

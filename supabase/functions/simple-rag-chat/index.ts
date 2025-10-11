@@ -87,6 +87,63 @@ const tools = [
   }
 ];
 
+// Fuzzy matching helper functions
+function normalize(str: string): string {
+  return str.toLowerCase().trim().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ');
+}
+
+function levenshteinDistance(a: string, b: string): number {
+  const matrix: number[][] = [];
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
+function fuzzyMatch(supplier: string, query: string): boolean {
+  const normSupplier = normalize(supplier);
+  const normQuery = normalize(query);
+  
+  // Exact substring match
+  if (normSupplier.includes(normQuery) || normQuery.includes(normSupplier)) {
+    return true;
+  }
+  
+  // Levenshtein distance <= 2 for typos
+  if (levenshteinDistance(normSupplier, normQuery) <= 2) {
+    return true;
+  }
+  
+  // Token-level matching (any word in supplier matches any word in query)
+  const supplierTokens = normSupplier.split(' ');
+  const queryTokens = normQuery.split(' ');
+  for (const qt of queryTokens) {
+    for (const st of supplierTokens) {
+      if (st.includes(qt) || qt.includes(st) || levenshteinDistance(st, qt) <= 1) {
+        return true;
+      }
+    }
+  }
+  
+  return false;
+}
+
 async function queryDocuments(filters: any, buyerId: string) {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   
@@ -159,14 +216,20 @@ async function queryDocuments(filters: any, buyerId: string) {
     
     if (error) throw error;
 
-    // If supplier_names filter is provided, filter in-memory (since we can't filter through nested relations easily)
+    // If supplier_names filter is provided, filter in-memory with fuzzy matching
     let results = data || [];
     if (filters.supplier_names && filters.supplier_names.length > 0) {
       results = results.filter((doc: any) => {
-        const supplierName = doc.document_requests?.suppliers?.company_name?.toLowerCase() || '';
-        return filters.supplier_names.some((name: string) => 
-          supplierName.includes(name.toLowerCase())
+        const supplierName = doc.document_requests?.suppliers?.company_name || '';
+        return filters.supplier_names.some((queryName: string) => 
+          fuzzyMatch(supplierName, queryName)
         );
+      });
+      
+      console.log('Supplier filter applied:', {
+        requested: filters.supplier_names,
+        filtered_count: results.length,
+        sample_matches: results.slice(0, 3).map((r: any) => r.document_requests?.suppliers?.company_name)
       });
     }
 
@@ -404,7 +467,10 @@ Use the available tools to answer questions about:
 - Suppliers and their connection status
 - Compliance metrics and statistics
 
-IMPORTANT: When filtering by expiration dates, always consider documents already past their expiration date as "expired", not "expiring soon".
+IMPORTANT FILTERING RULES:
+- When filtering by expiration dates, always consider documents already past their expiration date as "expired", not "expiring soon".
+- If user asks for documents that are "valid", "currently valid", or "valid till date", call query_documents with expired=false to exclude already expired documents.
+- For "latest" or "most recent" queries, rely on the default ordering (newest first) and use limit=1 if needed.
 
 When presenting results:
 - Be clear and concise

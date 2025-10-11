@@ -1293,6 +1293,18 @@ IMPORTANT:
         })
         .find((result: any) => result?.success);
       
+      // Check if any of the tool results was a visualization generation
+      const visualizationResult = messages
+        .filter((m: any) => m.role === 'tool' && m.name === 'generate_visualization_code')
+        .map((m: any) => {
+          try {
+            return JSON.parse(m.content);
+          } catch {
+            return null;
+          }
+        })
+        .find((result: any) => result?.success && result?.type === 'code_visualization');
+      
       // Save assistant response to history with ENHANCED pending action detection
       if (session_id) {
         // Enhanced detection: Extract parameters directly from tool calls and AI messages
@@ -1443,6 +1455,24 @@ IMPORTANT:
               action: 'document_requests_created',
               data: documentRequestResult,
               response: aiResponse.content
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // If we generated a visualization, return it with proper structure
+      if (visualizationResult) {
+        return new Response(
+          JSON.stringify({
+            answer: aiResponse.content,
+            session_id,
+            conversation_history: messages,
+            structured_response: {
+              type: 'code_visualization',
+              code: visualizationResult.code,
+              data: visualizationResult.data,
+              summary: visualizationResult.summary || aiResponse.content
             }
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

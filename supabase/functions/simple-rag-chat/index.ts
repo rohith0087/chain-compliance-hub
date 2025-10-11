@@ -443,6 +443,37 @@ async function getComplianceMetrics(buyerId: string) {
   }
 }
 
+// Helper to parse pending request from confirmation message
+function parsePendingRequest(message: string): any | null {
+  try {
+    // Look for confirmation pattern in message
+    const supplierMatch = message.match(/(?:from|for)\s+([^,\.]+?)(?:\s*[,\.]|\s+with)/i);
+    const docsMatch = message.match(/Requesting\s+(.+?)\s+(?:from|for)/i);
+    const dueDateMatch = message.match(/due date of ([^,\.]+)/i);
+    const priorityMatch = message.match(/(low|medium|high|urgent) priority/i);
+    
+    if (supplierMatch && docsMatch) {
+      const docTypes = docsMatch[1]
+        .split(/\s+and\s+|\s*,\s*/i)
+        .map((d: string) => d.trim())
+        .filter(Boolean);
+      
+      return {
+        type: "create_document_request",
+        params: {
+          supplier_name: supplierMatch[1].trim(),
+          document_types: docTypes,
+          due_date: dueDateMatch?.[1]?.trim(),
+          priority: priorityMatch?.[1]?.toLowerCase() || 'medium'
+        }
+      };
+    }
+  } catch (e) {
+    console.log('Could not parse pending request:', e);
+  }
+  return null;
+}
+
 async function createDocumentRequest(filters: any, buyerId: string) {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   
@@ -671,13 +702,15 @@ serve(async (req) => {
 
     // Fetch recent conversation history for context
     let conversationHistory: any[] = [];
+    let pendingAction: any = null;
+    
     if (session_id) {
       const { data: recentMessages } = await supabase
         .from('chat_messages')
-        .select('role, content, created_at')
+        .select('role, content, created_at, metadata')
         .eq('session_id', session_id)
         .order('created_at', { ascending: false })
-        .limit(6); // Last 6 messages (typically 3 exchanges)
+        .limit(8); // Last 8 messages for better context
 
       if (recentMessages && recentMessages.length > 0) {
         // Reverse to get chronological order (oldest first)
@@ -689,8 +722,82 @@ serve(async (req) => {
             content: msg.content
           }));
         
+        // Check for pending actions in recent assistant messages
+        const assistantWithPending = recentMessages.find(
+          msg => msg.role === 'assistant' && msg.metadata?.pending_action
+        );
+        
+        if (assistantWithPending) {
+          pendingAction = assistantWithPending.metadata.pending_action;
+          console.log('Found pending action:', pendingAction);
+        }
+        
         console.log(`Loaded ${conversationHistory.length} messages from conversation history`);
       }
+    }
+
+    // DETERMINISTIC SHORT-REPLY INTERCEPTOR
+    // Handle short confirmations/modifications for pending actions
+    const normalizedQuestion = question.trim().toLowerCase();
+    const isConfirm = /^(yes|yess|y|yeah|sure|go ahead|proceed|confirm|correct|that's right)$/i.test(normalizedQuestion);
+    const isNoNotes = /^(no|nope|nah|no notes|skip notes|no changes|not now)$/i.test(normalizedQuestion);
+    const hasNoteCmd = /^(add note|note:|make it|change|update)/i.test(question);
+    
+    if ((isConfirm || isNoNotes || hasNoteCmd) && pendingAction?.type === 'create_document_request') {
+      console.log('Intercepting short reply for pending action:', { normalizedQuestion, pendingAction });
+      
+      const params = { ...pendingAction.params };
+      
+      // Handle different reply types
+      if (isNoNotes) {
+        params.notes = '';
+      } else if (hasNoteCmd) {
+        // Extract modifications from command
+        const priorityMatch = question.match(/(low|medium|high|urgent)/i);
+        const dateMatch = question.match(/(\d{4}-\d{2}-\d{2})|(?:due|date).*?(\d{1,2})(?:th|st|nd|rd)?/i);
+        const noteMatch = question.match(/(?:add note|note:)\s*(.+)/i);
+        
+        if (priorityMatch) params.priority = priorityMatch[1].toLowerCase();
+        if (dateMatch && dateMatch[1]) params.due_date = dateMatch[1];
+        if (noteMatch) params.notes = noteMatch[1].trim();
+      }
+      
+      // Execute the request directly
+      const result = await createDocumentRequest(params, buyer_id);
+      
+      // Save both user message and assistant response
+      const userMsg = {
+        session_id,
+        role: 'user',
+        content: question,
+        metadata: {}
+      };
+      
+      const responseText = result.success
+        ? `✓ Created ${result.created_count} document request${result.created_count > 1 ? 's' : ''} for ${result.supplier_name}:\n- Documents: ${result.document_types?.join(', ')}\n- Due: ${result.due_date}\n- Priority: ${result.priority}\n${result.notes ? `- Notes: ${result.notes}` : ''}`
+        : `I couldn't create the request: ${result.error || 'Unknown error'}`;
+      
+      const assistantMsg = {
+        session_id,
+        role: 'assistant',
+        content: responseText,
+        metadata: result.success ? { action: 'document_requests_created', data: result } : {}
+      };
+      
+      await supabase.from('chat_messages').insert([userMsg, assistantMsg]);
+      
+      return new Response(JSON.stringify({
+        answer: responseText,
+        structured_response: result.success ? {
+          action: 'document_requests_created',
+          data: result,
+          response: responseText
+        } : undefined,
+        session_id,
+        conversation_history: [...conversationHistory, userMsg, assistantMsg]
+      }), { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
     }
 
     // Step 1: Initial conversation with OpenAI
@@ -754,6 +861,7 @@ When users respond with confirmations or modifications after you've presented re
 
 Confirmation phrases that mean "execute now":
 - "yes" / "yess" / "yeah" / "sure" / "go ahead" / "proceed" / "correct" / "that's right"
+- "no" / "nope" / "nah" when asked "Would you like to add any notes?" (means "no notes, proceed")
 - "yes its 2025" (correction + confirmation)
 - "yes change date to X" (modification + confirmation)
 - "add note Y" (direct command)
@@ -761,11 +869,12 @@ Confirmation phrases that mean "execute now":
 
 CRITICAL EXECUTION RULES:
 1. If user says "yes" or any confirmation phrase → IMMEDIATELY call create_document_request with parameters from conversation history
-2. If user makes modifications ("change date to X", "add note Y") → Update parameters and IMMEDIATELY execute
-3. NEVER respond with just "Thank you for confirming" or "I'll proceed with that" - EXECUTE THE TOOL
-4. Use conversation history to gather all parameters (supplier, documents, priority, date, notes)
-5. If there's a typo (like "22025" instead of "2025"), correct it and proceed with the corrected value
-6. Look back at previous messages to find supplier name, document types, priority level, and notes
+2. If you just asked "Would you like to add any notes?" and user replies "no"/"nope"/"nah"/"no notes" → IMMEDIATELY call create_document_request with empty notes
+3. If user makes modifications ("change date to X", "add note Y") → Update parameters and IMMEDIATELY execute
+4. NEVER respond with just "Thank you for confirming" or "I'll proceed with that" - EXECUTE THE TOOL
+5. Use conversation history to gather all parameters (supplier, documents, priority, date, notes)
+6. If there's a typo (like "22025" instead of "2025"), correct it and proceed with the corrected value
+7. Look back at previous messages to find supplier name, document types, priority level, and notes
 
 Example of CORRECT behavior:
 User (message 1): "Request HACCP from Killer Farms, urgent"
@@ -883,8 +992,12 @@ IMPORTANT - Document Query Presentation:
         })
         .find((result: any) => result?.success);
       
-      // Save assistant response to history
+      // Save assistant response to history with pending action detection
       if (session_id) {
+        // Check if this is a confirmation request for document creation
+        const maybePending = parsePendingRequest(aiResponse.content);
+        const isAskingForNotes = /would you like to add any notes|any additional notes|add notes/i.test(aiResponse.content);
+        
         await supabase
           .from('chat_messages')
           .insert({
@@ -897,10 +1010,12 @@ IMPORTANT - Document Query Presentation:
             } : queryDocumentsResult ? {
               action: 'documents_queried',
               count: queryDocumentsResult.documents?.length || 0
+            } : (maybePending && isAskingForNotes) ? {
+              pending_action: maybePending
             } : {}
           });
         
-        console.log('Saved assistant response to chat history');
+        console.log('Saved assistant response to chat history', maybePending ? 'with pending action' : '');
       }
 
       // If we queried documents, format the response with structured document cards

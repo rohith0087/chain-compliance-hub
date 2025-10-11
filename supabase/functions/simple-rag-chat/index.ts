@@ -744,35 +744,44 @@ async function generateVisualizationCode(args: any, buyerId: string) {
     }
     
     // Step 3: Generate React component code using OpenAI
-    const codePrompt = `Generate a TypeScript React functional component for a ${args.visualization_type}.
+    const codePrompt = `Generate a React component in PLAIN JAVASCRIPT (not TypeScript) for a ${args.visualization_type}.
 
 Data structure (first 3 items): ${JSON.stringify(processedData.slice(0, 3), null, 2)}
 
-Requirements:
+CRITICAL REQUIREMENTS:
+- Write in PLAIN JAVASCRIPT - NO TypeScript syntax, NO type annotations, NO React.FC
 - Component name: CustomVisualization
-- Function signature: const CustomVisualization = ({ data }: { data: any[] }) => { ... }
-- Use arrow function syntax with explicit return statement
+- Function signature: const CustomVisualization = ({ data }) => { ... }
+- NO colons for type annotations - this must be executable JavaScript
+- Use JSX syntax (React elements with angle brackets)
 - Accept a "data" prop containing an array of objects
 - Use ONLY Recharts library components (ResponsiveContainer, ${args.visualization_type === 'bar_chart' ? 'BarChart, Bar' : args.visualization_type === 'pie_chart' ? 'PieChart, Pie, Cell' : 'LineChart, Line'}, XAxis, YAxis, Tooltip, Legend, CartesianGrid)
 - ${chartConfig.x_axis ? `X-axis dataKey: "${chartConfig.x_axis}"` : 'Determine best X-axis field from data structure'}
 - ${chartConfig.y_axis ? `Y-axis dataKey: "${chartConfig.y_axis}"` : 'Use "value" or "count" for Y-axis dataKey'}
 - ${chartConfig.title ? `Include title: "${chartConfig.title}"` : ''}
-- Color scheme: ${chartConfig.color_scheme || 'blue'} - use "hsl(var(--primary))" or "#3b82f6" for blue
+- Color scheme: ${chartConfig.color_scheme || 'blue'} - use "#3b82f6" for blue, "#10b981" for green
 - ResponsiveContainer: width="100%" height={400}
 - Include proper labels, legend, and interactive tooltip
-- NO imports needed - all libraries pre-imported
-- Use Tailwind classes for any text/styling (e.g., className="text-lg font-semibold")
+- NO imports needed - React and Recharts are already available
+- Use className with Tailwind classes for styling
 
-Example structure:
-const CustomVisualization = ({ data }: { data: any[] }) => {
+Example structure (PLAIN JAVASCRIPT):
+const CustomVisualization = ({ data }) => {
   return (
     <ResponsiveContainer width="100%" height={400}>
-      {/* Your chart component here */}
+      <BarChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="name" />
+        <YAxis />
+        <Tooltip />
+        <Legend />
+        <Bar dataKey="value" fill="#3b82f6" />
+      </BarChart>
     </ResponsiveContainer>
   );
 };
 
-Return ONLY the complete function code with proper syntax. No markdown formatting, no explanations.`;
+Return ONLY the complete function code. NO markdown, NO explanations, NO TypeScript.`;
 
     const codeResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -801,21 +810,19 @@ Return ONLY the complete function code with proper syntax. No markdown formattin
     let generatedCode = codeData.choices[0].message.content;
     
     // Clean up code (remove markdown formatting if present)
-    generatedCode = generatedCode.replace(/```typescript|```tsx|```javascript|```/g, '').trim();
+    generatedCode = generatedCode.replace(/```typescript|```tsx|```javascript|```jsx|```/g, '').trim();
+    
+    // Strip any TypeScript type annotations to ensure plain JavaScript
+    // Remove type annotations from function parameters: ({ data }: { data: any[] }) => ({ data })
+    generatedCode = generatedCode.replace(/\(\s*{\s*(\w+)\s*}\s*:\s*{[^}]+}\s*\)/g, '({ $1 })');
+    // Remove React.FC type annotations: const X: React.FC<...> = => const X =
+    generatedCode = generatedCode.replace(/const\s+(\w+)\s*:\s*React\.FC<[^>]+>\s*=/g, 'const $1 =');
+    // Remove 'as' type assertions
+    generatedCode = generatedCode.replace(/\s+as\s+[A-Za-z0-9_.<>[\]]+/g, '');
     
     // Validate generated code has correct syntax
-    if (!generatedCode.includes('=>') || !generatedCode.includes('const CustomVisualization')) {
-      throw new Error('Generated code has invalid syntax - missing arrow function or component definition');
-    }
-    
-    // Fix common TypeScript type annotation issues
-    if (generatedCode.includes('const CustomVisualization:') && !generatedCode.match(/const\s+CustomVisualization\s*=\s*\(\s*{[^}]+}\s*:\s*{[^}]+}\s*\)\s*=>/)) {
-      console.warn('Generated code may have TypeScript type annotation issues, attempting to fix...');
-      // Try to fix common issues where AI generates "const X: React.FC<...> = ({ data })"
-      generatedCode = generatedCode.replace(
-        /const\s+CustomVisualization:\s*React\.FC<[^>]+>\s*=\s*\(\s*{\s*data\s*}/,
-        'const CustomVisualization = ({ data }: { data: any[] }) =>'
-      );
+    if (!generatedCode.includes('CustomVisualization')) {
+      throw new Error('Generated code missing CustomVisualization component');
     }
     
     // Generate summary

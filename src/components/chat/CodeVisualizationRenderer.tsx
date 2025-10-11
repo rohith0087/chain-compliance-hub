@@ -4,6 +4,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Sparkles, Code2, RefreshCw } from 'lucide-react';
 import * as Recharts from 'recharts';
+import { transform } from 'sucrase';
 
 interface CodeVisualizationProps {
   code: string;
@@ -35,13 +36,26 @@ export function CodeVisualizationRenderer({ code, data, summary }: CodeVisualiza
         }
       }
       
-      // Syntax validation
-      if (!code.includes('=>')) {
-        throw new Error('Invalid code: Missing arrow function syntax');
-      }
-
+      // Basic validation
       if (!code.includes('CustomVisualization')) {
         throw new Error('Invalid code: Component not named CustomVisualization');
+      }
+
+      // Transform JSX/TSX to plain JavaScript before execution
+      let executableCode = code;
+      try {
+        const transformed = transform(code, {
+          transforms: ['jsx', 'typescript'],
+          production: true,
+        });
+        executableCode = transformed.code;
+      } catch (transformError: any) {
+        console.error('Sucrase transformation failed:', transformError);
+        // Fallback: try basic regex cleanup
+        executableCode = code
+          .replace(/\(\s*{\s*(\w+)\s*}\s*:\s*{[^}]+}\s*\)/g, '({ $1 })')
+          .replace(/const\s+(\w+)\s*:\s*React\.FC<[^>]+>\s*=/g, 'const $1 =')
+          .replace(/\s+as\s+[A-Za-z0-9_.<>[\]]+/g, '');
       }
 
       // Create a safe execution context with timeout protection
@@ -85,7 +99,7 @@ export function CodeVisualizationRenderer({ code, data, summary }: CodeVisualiza
           data
         } = arguments[0];
         
-        ${code}
+        ${executableCode}
         
         return CustomVisualization;
       `;

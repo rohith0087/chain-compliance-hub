@@ -719,28 +719,127 @@ async function generateVisualizationCode(args: any, buyerId: string) {
     
     // Step 2: Aggregate/transform data based on chart config
     const chartConfig = args.chart_config || {};
+    
+    // INFER missing configuration based on visualization type and query type
+    if (!chartConfig.aggregation) {
+      if (args.visualization_type === 'bar_chart' || args.visualization_type === 'pie_chart') {
+        chartConfig.aggregation = 'count';
+      } else if (args.visualization_type === 'line_chart' || args.visualization_type === 'area_chart') {
+        chartConfig.aggregation = 'time_series';
+      }
+    }
+    
+    if (!chartConfig.x_axis && query_type === 'documents' && Array.isArray(data) && data.length > 0) {
+      // Smart field detection based on common patterns
+      if (data[0]?.supplier_name) chartConfig.x_axis = 'supplier_name';
+      else if (data[0]?.document_type) chartConfig.x_axis = 'document_type';
+      else if (data[0]?.status) chartConfig.x_axis = 'status';
+      else if (data[0]?.created_at) chartConfig.x_axis = 'created_at';
+    }
+    
+    // Helper function to safely extract nested values
+    function getNestedValue(obj: any, path: string): any {
+      return path.split('.').reduce((current, key) => current?.[key], obj);
+    }
+    
     let processedData = data;
     
-    if (Array.isArray(data) && chartConfig.aggregation === 'group_by' && chartConfig.x_axis) {
-      // Group data by x_axis field
-      const grouped: any = {};
-      data.forEach((item: any) => {
-        const key = item[chartConfig.x_axis] || 'Unknown';
-        if (!grouped[key]) {
-          grouped[key] = { name: key, count: 0, items: [] };
-        }
-        grouped[key].count++;
-        grouped[key].items.push(item);
-      });
-      processedData = Object.values(grouped);
-    } else if (Array.isArray(data) && chartConfig.aggregation === 'count') {
-      // Count occurrences
-      const counts: any = {};
-      data.forEach((item: any) => {
-        const key = item[chartConfig.x_axis] || 'Unknown';
-        counts[key] = (counts[key] || 0) + 1;
-      });
-      processedData = Object.entries(counts).map(([name, value]) => ({ name, value }));
+    if (Array.isArray(data)) {
+      if (chartConfig.aggregation === 'time_series') {
+        // Time-based aggregation for line/area charts
+        const dateField = chartConfig.x_axis || 'created_at';
+        const period = chartConfig.time_period || 'month'; // day, week, month
+        
+        const timeGroups: Record<string, number> = {};
+        data.forEach((item: any) => {
+          const dateValue = getNestedValue(item, dateField);
+          if (!dateValue) return;
+          
+          const date = new Date(dateValue);
+          if (isNaN(date.getTime())) return;
+          
+          let key: string;
+          if (period === 'month') {
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            key = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+          } else if (period === 'week') {
+            const weekNum = Math.ceil(date.getDate() / 7);
+            key = `Week ${weekNum}, ${date.getFullYear()}`;
+          } else {
+            key = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          }
+          
+          timeGroups[key] = (timeGroups[key] || 0) + 1;
+        });
+        
+        processedData = Object.entries(timeGroups)
+          .map(([name, value]) => ({ name, value }))
+          .sort((a, b) => {
+            // Sort chronologically
+            const dateA = new Date(a.name);
+            const dateB = new Date(b.name);
+            return dateA.getTime() - dateB.getTime();
+          });
+          
+      } else if (chartConfig.aggregation === 'count' || chartConfig.aggregation === 'group_by') {
+        // Count/group by field (bar/pie charts)
+        const groupField = chartConfig.x_axis || 'supplier_name';
+        const counts: Record<string, number> = {};
+        
+        data.forEach((item: any) => {
+          let key = getNestedValue(item, groupField);
+          
+          // Handle missing values
+          if (!key || key === null || key === undefined || key === '') {
+            key = 'Not Specified';
+          }
+          
+          // Convert to string for grouping
+          key = String(key);
+          counts[key] = (counts[key] || 0) + 1;
+        });
+        
+        processedData = Object.entries(counts)
+          .map(([name, value]) => ({ name, value }))
+          .sort((a, b) => b.value - a.value) // Sort by count descending
+          .slice(0, 15); // Limit to top 15 for readability
+          
+      } else if (chartConfig.aggregation === 'sum' && chartConfig.y_axis) {
+        // Sum numeric values
+        const groupField = chartConfig.x_axis;
+        const sumField = chartConfig.y_axis;
+        const sums: Record<string, number> = {};
+        
+        data.forEach((item: any) => {
+          const key = String(getNestedValue(item, groupField) || 'Not Specified');
+          const value = parseFloat(getNestedValue(item, sumField)) || 0;
+          sums[key] = (sums[key] || 0) + value;
+        });
+        
+        processedData = Object.entries(sums)
+          .map(([name, value]) => ({ name, value }))
+          .sort((a, b) => b.value - a.value);
+      }
+    }
+    
+    // Data quality validation and debugging
+    console.log('Data transformation complete:', {
+      original_count: Array.isArray(data) ? data.length : 'N/A',
+      processed_count: Array.isArray(processedData) ? processedData.length : 'N/A',
+      sample_data: Array.isArray(processedData) ? processedData.slice(0, 3) : processedData,
+      config: chartConfig
+    });
+    
+    // Validate we have meaningful data
+    if (!processedData || (Array.isArray(processedData) && processedData.length === 0)) {
+      return {
+        success: false,
+        error: 'Data transformation resulted in empty dataset. Check filters and field names.'
+      };
+    }
+    
+    if (Array.isArray(processedData) && processedData.every((item: any) => item.name === 'Unknown' || item.name === 'Not Specified')) {
+      console.warn('All data points labeled as "Unknown/Not Specified" - field mapping may be incorrect');
     }
     
     // Step 3: Generate React component code using OpenAI
@@ -1242,6 +1341,60 @@ The tool will:
 1. Fetch the required data using existing query tools
 2. Generate custom React component code using Recharts
 3. Return both the code and data for safe rendering
+
+CRITICAL - When calling generate_visualization_code, YOU MUST provide complete chart_config:
+
+Example 1 - Bar chart of document counts by supplier:
+{
+  "visualization_type": "bar_chart",
+  "data_query": {
+    "query_type": "documents",
+    "filters": {}
+  },
+  "chart_config": {
+    "x_axis": "supplier_name",
+    "y_axis": "count",
+    "aggregation": "count",
+    "title": "Document Counts by Supplier"
+  }
+}
+
+Example 2 - Line chart of documents over time:
+{
+  "visualization_type": "line_chart",
+  "data_query": {
+    "query_type": "documents",
+    "filters": { "status": ["approved"] }
+  },
+  "chart_config": {
+    "x_axis": "created_at",
+    "y_axis": "count",
+    "aggregation": "time_series",
+    "time_period": "month",
+    "title": "Document Submissions by Month"
+  }
+}
+
+Example 3 - Pie chart of document status distribution:
+{
+  "visualization_type": "pie_chart",
+  "data_query": {
+    "query_type": "documents",
+    "filters": {}
+  },
+  "chart_config": {
+    "x_axis": "status",
+    "aggregation": "count",
+    "title": "Document Status Distribution"
+  }
+}
+
+ALWAYS include in chart_config:
+- x_axis: the field to group/bucket by (e.g., "supplier_name", "document_type", "status", "created_at")
+- y_axis: typically "count" for counting records
+- aggregation: "count" (for bar/pie), "time_series" (for line/area), "sum", or "group_by"
+- title: descriptive chart title
+- time_period: "day", "week", or "month" (only for time_series)
 
 IMPORTANT:
 - Use this for CUSTOM visualizations that require specific chart types or aggregations

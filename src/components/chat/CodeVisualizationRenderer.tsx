@@ -12,8 +12,35 @@ interface CodeVisualizationProps {
   summary: string;
 }
 
+// Helper to validate data quality
+function validateVisualizationData(data: any): { isValid: boolean; message?: string } {
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    return { isValid: false, message: 'No data available for visualization' };
+  }
+  
+  // Check if all items have required fields
+  const hasNames = data.every(item => item.name !== undefined && item.name !== null);
+  const hasValues = data.every(item => 
+    typeof item.value === 'number' || 
+    typeof item.count === 'number' ||
+    (item.data && Array.isArray(item.data))
+  );
+  
+  if (!hasNames || !hasValues) {
+    return { 
+      isValid: false, 
+      message: 'Data format invalid. Expected array of objects with "name" and "value"/"count" fields.' 
+    };
+  }
+  
+  return { isValid: true };
+}
+
 export function CodeVisualizationRenderer({ code, data, summary }: CodeVisualizationProps) {
   const [showCode, setShowCode] = useState(false);
+  
+  // Validate data quality on mount
+  const dataValidation = useMemo(() => validateVisualizationData(data), [data]);
   
   const { component: RenderedComponent, error } = useMemo(() => {
     try {
@@ -124,6 +151,28 @@ export function CodeVisualizationRenderer({ code, data, summary }: CodeVisualiza
     }
   }, [code, data]);
 
+  // Early return if data validation fails
+  if (!dataValidation.isValid) {
+    return (
+      <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Sparkles className="w-5 h-5 text-primary" />
+            Custom Visualization
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Data Quality Issue:</strong> {dataValidation.message}
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
+  
   return (
     <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
       <CardHeader>

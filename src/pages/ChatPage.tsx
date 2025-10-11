@@ -343,10 +343,17 @@ const ChatPage: React.FC = () => {
       });
       if (error) throw error;
 
+      console.debug("[simple-rag-chat] response", data);
+
       const assistant: Message = {
         id: `assistant-${Date.now()}`,
         role: "assistant",
         content: data?.answer || "I apologize, but I was unable to process your request.",
+        metadata: {
+          structured_response: {
+            content: data?.answer || "I apologize, but I was unable to process your request.",
+          },
+        },
         created_at: new Date().toISOString(),
       };
 
@@ -924,7 +931,9 @@ const ChatPage: React.FC = () => {
                     </div>
                     <div className="prose prose-sm max-w-none">
                       {m.role === "assistant" ? (
-                        renderStructuredMessage(m)
+                        m.metadata?.structured_response || typeof m.content !== "string"
+                          ? renderStructuredMessage(m)
+                          : <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{m.content}</p>
                       ) : typeof m.content === "string" ? (
                         <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{m.content}</p>
                       ) : (

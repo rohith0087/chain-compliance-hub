@@ -343,16 +343,10 @@ const ChatPage: React.FC = () => {
       });
       if (error) throw error;
 
-
       const assistant: Message = {
         id: `assistant-${Date.now()}`,
         role: "assistant",
-        content:
-          content: data?.answer || "I apologize, but I was unable to process your request.",
-            
-            
-            
-            : structured.explanation || "Here’s what I found.",
+        content: data?.answer || "I apologize, but I was unable to process your request.",
         created_at: new Date().toISOString(),
       };
 

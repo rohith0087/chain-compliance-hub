@@ -124,23 +124,38 @@ async function queryDocuments(filters: any, buyerId: string) {
       query = query.in('document_requests.document_type', filters.document_types);
     }
     
+    // Handle expiration date filtering
+    const today = new Date().toISOString();
+    
     if (filters.expired === true) {
-      query = query.lt('expiration_date', new Date().toISOString());
+      // Only documents that are ALREADY expired (before today)
+      query = query.lt('expiration_date', today);
     } else if (filters.expired === false) {
-      query = query.gte('expiration_date', new Date().toISOString());
+      query = query.gte('expiration_date', today);
     }
     
     if (filters.expiring_days) {
+      // Documents expiring BETWEEN today and future date (not already expired)
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + filters.expiring_days);
-      query = query.lte('expiration_date', futureDate.toISOString())
-                   .gte('expiration_date', new Date().toISOString());
+      query = query
+        .gte('expiration_date', today)  // Must be today or later
+        .lte('expiration_date', futureDate.toISOString());  // But before future cutoff
     }
     
     const limit = Math.min(filters.limit || 20, 100);
     query = query.limit(limit).order('created_at', { ascending: false });
 
     const { data, error } = await query;
+    
+    console.log('Query filters applied:', {
+      status: filters.status,
+      expired: filters.expired,
+      expiring_days: filters.expiring_days,
+      supplier_names: filters.supplier_names,
+      today: new Date().toISOString(),
+      result_count: data?.length || 0
+    });
     
     if (error) throw error;
 
@@ -382,12 +397,14 @@ serve(async (req) => {
     const messages = [
       {
         role: "system",
-        content: `You are a compliance assistant helping a buyer manage their supplier documents and compliance.
+        content: `You are a compliance assistant helping a buyer manage their supplier documents and compliance. Today's date is ${new Date().toISOString().split('T')[0]}.
         
 Use the available tools to answer questions about:
 - Documents (certificates, safety sheets, insurance, etc.)
 - Suppliers and their connection status
 - Compliance metrics and statistics
+
+IMPORTANT: When filtering by expiration dates, always consider documents already past their expiration date as "expired", not "expiring soon".
 
 When presenting results:
 - Be clear and concise

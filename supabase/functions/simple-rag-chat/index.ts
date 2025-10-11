@@ -84,6 +84,52 @@ const tools = [
         properties: {}
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_document_request",
+      description: "Create document requests for suppliers. Can create single or multiple requests at once. Use this when the user wants to request documents from a supplier.",
+      parameters: {
+        type: "object",
+        properties: {
+          supplier_name: {
+            type: "string",
+            description: "Name of the supplier to request documents from"
+          },
+          document_types: {
+            type: "array",
+            items: { type: "string" },
+            description: "List of document types to request (e.g., ['ISO 9001', 'HACCP Certificate'])"
+          },
+          due_date: {
+            type: "string",
+            description: "Due date in YYYY-MM-DD format. If not specified, system will set reasonable default (14 days from now)"
+          },
+          priority: {
+            type: "string",
+            enum: ["low", "medium", "high", "urgent"],
+            description: "Priority level for the request"
+          },
+          notes: {
+            type: "string",
+            description: "Additional notes or instructions for the supplier"
+          }
+        },
+        required: ["supplier_name", "document_types"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_document_sets",
+      description: "Get saved document sets for the buyer. Use this to suggest document sets when the user wants to request multiple documents.",
+      parameters: {
+        type: "object",
+        properties: {}
+      }
+    }
   }
 ];
 
@@ -396,6 +442,164 @@ async function getComplianceMetrics(buyerId: string) {
   }
 }
 
+async function createDocumentRequest(filters: any, buyerId: string) {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  try {
+    // 1. Find supplier by fuzzy matching
+    const { data: connections } = await supabase
+      .from('buyer_supplier_connections')
+      .select('supplier_id, suppliers(id, company_name)')
+      .eq('buyer_id', buyerId)
+      .eq('status', 'approved');
+
+    const matchedSupplier = connections?.find((conn: any) => 
+      fuzzyMatch(
+        conn.suppliers.company_name, 
+        filters.supplier_name
+      )
+    );
+
+    if (!matchedSupplier) {
+      return {
+        success: false,
+        error: `No approved supplier found matching "${filters.supplier_name}". Please check the supplier name or connection status.`
+      };
+    }
+
+    // 2. Get buyer profile data
+    const { data: buyer } = await supabase
+      .from('buyers')
+      .select('id, profile_id')
+      .eq('id', buyerId)
+      .single();
+
+    if (!buyer) {
+      return {
+        success: false,
+        error: 'Buyer profile not found'
+      };
+    }
+
+    // 3. Set reasonable defaults
+    const dueDate = filters.due_date || 
+      new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 14 days
+    
+    const priority = filters.priority || 'medium';
+    
+    const notes = filters.notes || 
+      `This document request was created via Compliance Compass. Please upload the requested documents at your earliest convenience.`;
+
+    // 4. Create requests for each document type
+    const createdRequests = [];
+    const errors = [];
+
+    for (const docType of filters.document_types) {
+      try {
+        const { data: request, error } = await supabase
+          .from('document_requests')
+          .insert({
+            title: docType,
+            description: `Request for ${docType} from ${matchedSupplier.suppliers.company_name}`,
+            document_type: docType,
+            category: 'Compliance',
+            priority: priority,
+            due_date: dueDate,
+            supplier_id: matchedSupplier.supplier_id,
+            buyer_id: buyerId,
+            requester_id: buyer.profile_id,
+            notes: notes,
+            status: 'pending'
+          })
+          .select()
+          .single();
+
+        if (error) {
+          errors.push(`${docType}: ${error.message}`);
+        } else {
+          createdRequests.push(request);
+          
+          // Send notification
+          try {
+            await supabase.functions.invoke('send-document-request-notification', {
+              body: { requestId: request.id }
+            });
+          } catch (notifError) {
+            console.error('Notification error:', notifError);
+          }
+        }
+      } catch (err: any) {
+        errors.push(`${docType}: ${err.message}`);
+      }
+    }
+
+    console.log('Document requests created:', {
+      supplier: matchedSupplier.suppliers.company_name,
+      successful: createdRequests.length,
+      failed: errors.length,
+      due_date: dueDate,
+      priority
+    });
+
+    return {
+      success: true,
+      created_count: createdRequests.length,
+      failed_count: errors.length,
+      supplier_name: matchedSupplier.suppliers.company_name,
+      document_types: filters.document_types,
+      due_date: dueDate,
+      priority: priority,
+      request_ids: createdRequests.map((r: any) => r.id),
+      errors: errors.length > 0 ? errors : undefined
+    };
+  } catch (error: any) {
+    console.error('Error creating document requests:', error);
+    return {
+      success: false,
+      error: error.message,
+      created_count: 0,
+      failed_count: filters.document_types?.length || 0
+    };
+  }
+}
+
+async function getDocumentSets(buyerId: string) {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  try {
+    const { data, error } = await supabase
+      .from('document_sets')
+      .select('id, set_name, description, document_ids, usage_count, is_default')
+      .eq('buyer_id', buyerId)
+      .order('is_default', { ascending: false })
+      .order('usage_count', { ascending: false });
+
+    if (error) throw error;
+
+    return {
+      success: true,
+      count: data?.length || 0,
+      document_sets: data?.map((set: any) => ({
+        id: set.id,
+        name: set.set_name,
+        description: set.description,
+        document_count: Array.isArray(set.document_ids) ? set.document_ids.length : 0,
+        documents: set.document_ids,
+        usage_count: set.usage_count,
+        is_default: set.is_default
+      })) || []
+    };
+  } catch (error: any) {
+    console.error('Error getting document sets:', error);
+    return {
+      success: false,
+      error: error.message,
+      count: 0,
+      document_sets: []
+    };
+  }
+}
+
 async function executeToolCall(toolName: string, args: any, buyerId: string) {
   console.log(`Executing tool: ${toolName} with args:`, args);
   
@@ -406,6 +610,10 @@ async function executeToolCall(toolName: string, args: any, buyerId: string) {
       return await querySuppliers(args, buyerId);
     case "get_compliance_metrics":
       return await getComplianceMetrics(buyerId);
+    case "create_document_request":
+      return await createDocumentRequest(args, buyerId);
+    case "get_document_sets":
+      return await getDocumentSets(buyerId);
     default:
       return {
         success: false,
@@ -475,6 +683,26 @@ Use the available tools to answer questions about:
 - Documents (certificates, safety sheets, insurance, etc.)
 - Suppliers and their connection status
 - Compliance metrics and statistics
+- Creating document requests for suppliers
+
+DOCUMENT REQUEST CREATION:
+When users want to create document requests, guide them through the process:
+1. Identify the supplier (use fuzzy matching from query_suppliers)
+2. Ask which documents they need OR suggest using saved document sets (get_document_sets)
+3. Confirm due date (default: 14 days) and priority (default: medium)
+4. Ask if they want to add custom notes (optional)
+5. Use create_document_request tool to create the requests
+6. Confirm success with details: supplier name, number of requests, due date
+
+CONVERSATIONAL FLOW EXAMPLES FOR REQUESTS:
+User: "I want to request ISO 9001 from Kerry"
+→ Create request with defaults, confirm success
+
+User: "Can you request documents from Kerry?"
+→ "I found Kerry as an approved supplier. Which documents would you like to request? You can also use saved document sets if you have any."
+
+User: "Request HACCP and ISO 22000 from Killer Farms, urgent priority, due next week"
+→ Create with specified priority and calculate due date
 
 IMPORTANT FILTERING RULES:
 - When filtering by expiration dates, always consider documents already past their expiration date as "expired", not "expiring soon".
@@ -486,7 +714,8 @@ When presenting results:
 - Format lists nicely
 - Include relevant details like expiration dates, statuses, and supplier names
 - Tailor your language and examples to the ${industry} industry context
-- If no results are found, suggest alternative searches or provide helpful guidance`
+- If no results are found, suggest alternative searches or provide helpful guidance
+- For document request creation, always confirm what was created and provide clear feedback`
       },
       {
         role: "user",
@@ -521,6 +750,35 @@ When presenting results:
       
       // Step 3: Get final answer from OpenAI with tool results
       aiResponse = await callOpenAI(messages, "none"); // Don't allow more tool calls
+      
+      // Check if any of the tool results was a document request creation
+      const documentRequestResult = messages
+        .filter((m: any) => m.role === 'tool' && m.name === 'create_document_request')
+        .map((m: any) => {
+          try {
+            return JSON.parse(m.content);
+          } catch {
+            return null;
+          }
+        })
+        .find((result: any) => result?.success);
+      
+      // If we created document requests, format the response specially
+      if (documentRequestResult) {
+        return new Response(
+          JSON.stringify({
+            answer: aiResponse.content,
+            session_id,
+            conversation_history: messages,
+            structured_response: {
+              action: 'document_requests_created',
+              data: documentRequestResult,
+              response: aiResponse.content
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     console.log('simple-rag-chat response generated successfully');

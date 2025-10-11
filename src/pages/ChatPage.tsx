@@ -118,6 +118,9 @@ interface StructuredResponse {
   error?: boolean;              // UI error banner flag
   error_code?: string;          // "insufficient_quota" | "429" etc.
   explanation?: string;         // optional narrative fallback
+  
+  action?: string;              // Action type (e.g., 'document_requests_created')
+  data?: any;                   // Action data payload
 }
 
 type CompanyInfo = { id: string; type: "buyer" | "supplier"; industry?: string } | null;
@@ -354,7 +357,7 @@ const ChatPage: React.FC = () => {
         role: "assistant",
         content: data?.answer || "I apologize, but I was unable to process your request.",
         metadata: {
-          structured_response: {
+          structured_response: data?.structured_response || {
             content: data?.answer || "I apologize, but I was unable to process your request.",
           },
         },
@@ -456,6 +459,63 @@ const ChatPage: React.FC = () => {
                   .replace(/\n/g, "<br />"),
               }}
             />
+          </div>
+        )}
+
+        {/* Document request creation success */}
+        {!isError && parsed.action === 'document_requests_created' && parsed.data && (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              <h4 className="font-semibold text-emerald-900 dark:text-emerald-100">
+                Document Requests Created Successfully
+              </h4>
+            </div>
+            <div className="text-sm text-emerald-800 dark:text-emerald-200 space-y-2">
+              <div className="grid gap-2">
+                <p className="flex items-center gap-2">
+                  <Building className="w-4 h-4" />
+                  <span>Supplier: <strong>{parsed.data.supplier_name}</strong></span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  <span>Documents requested: <strong>{parsed.data.created_count}</strong></span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  <span>Due date: <strong>{format(new Date(parsed.data.due_date), "MMM dd, yyyy")}</strong></span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>Priority: <strong className="uppercase">{parsed.data.priority}</strong></span>
+                </p>
+              </div>
+              {parsed.data.document_types && parsed.data.document_types.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-800">
+                  <p className="font-medium mb-2">Requested documents:</p>
+                  <ul className="list-disc list-inside ml-2 space-y-1">
+                    {parsed.data.document_types.map((doc: string, idx: number) => (
+                      <li key={idx}>{doc}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {parsed.data.failed_count > 0 && (
+                <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400">
+                  <p className="flex items-center gap-2 font-medium">
+                    <AlertCircle className="w-4 h-4" />
+                    {parsed.data.failed_count} request(s) failed
+                  </p>
+                  {parsed.data.errors && (
+                    <ul className="text-xs list-disc list-inside ml-6 mt-1 space-y-0.5">
+                      {parsed.data.errors.map((err: string, i: number) => (
+                        <li key={i}>{err}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

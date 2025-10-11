@@ -28,6 +28,8 @@ import {
   Building
 } from "lucide-react";
 import { format } from "date-fns";
+import ResponseActionButtons from "./ResponseActionButtons";
+import ShareDialog from "./ShareDialog";
 
 interface Message {
   id: string;
@@ -85,6 +87,8 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [lastSources, setLastSources] = useState<ChatSource[]>([]);
   const [documentStatusUpdates, setDocumentStatusUpdates] = useState<Map<string, string>>(new Map());
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [messageToShare, setMessageToShare] = useState<Message | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -269,6 +273,16 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
       e.preventDefault();
       sendMessage();
     }
+  };
+
+  const handleRegenerate = (question: string) => {
+    setInputMessage(question);
+    setTimeout(() => sendMessage(), 100);
+  };
+
+  const handleShare = (message: Message) => {
+    setMessageToShare(message);
+    setShareDialogOpen(true);
   };
 
   const handleViewDocumentInNewWindow = async (doc: DocumentReference) => {
@@ -797,7 +811,7 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
             )}
 
             {messages.map((message) => (
-              <div key={message.id} className="space-y-2">
+              <div key={message.id} className="space-y-2 group">
                 <div className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
                   <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
                     message.role === 'user' 
@@ -840,6 +854,16 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
                         </div>
                       )}
                     </div>
+
+                    {/* Action buttons for assistant messages */}
+                    {message.role === 'assistant' && (
+                      <ResponseActionButtons
+                        message={message}
+                        messages={messages}
+                        onRegenerate={handleRegenerate}
+                        onShare={handleShare}
+                      />
+                    )}
                     
                     <p className="text-xs text-muted-foreground mt-1">
                       {format(new Date(message.created_at), 'HH:mm')}
@@ -904,6 +928,15 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
           )}
         </div>
       </CardContent>
+
+      {/* Share Dialog */}
+      {messageToShare && (
+        <ShareDialog
+          open={shareDialogOpen}
+          onOpenChange={setShareDialogOpen}
+          message={messageToShare}
+        />
+      )}
     </Card>
   );
 };

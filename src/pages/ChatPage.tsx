@@ -14,6 +14,8 @@ import ComplianceVisualizer from "@/components/chat/ComplianceVisualizer";
 import DailyInsightsPanel from "@/components/chat/DailyInsightsPanel";
 import ActionExecutor from "@/components/chat/ActionExecutor";
 import ChatDocumentViewer from "@/components/chat/ChatDocumentViewer";
+import ResponseActionButtons from "@/components/chat/ResponseActionButtons";
+import ShareDialog from "@/components/chat/ShareDialog";
 import {
   MessageSquare,
   Send,
@@ -197,6 +199,8 @@ const ChatPage: React.FC = () => {
   const [selectedDocument, setSelectedDocument] = useState<DocumentReference | null>(null);
   const [isDocumentViewerOpen, setIsDocumentViewerOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [messageToShare, setMessageToShare] = useState<Message | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -393,6 +397,16 @@ const ChatPage: React.FC = () => {
   function closeDocumentViewer() {
     setIsDocumentViewerOpen(false);
     setSelectedDocument(null);
+  }
+
+  function handleRegenerate(question: string) {
+    setInputMessage(question);
+    setTimeout(() => sendMessage(), 100);
+  }
+
+  function handleShareMessage(message: Message) {
+    setMessageToShare(message);
+    setShareDialogOpen(true);
   }
 
   async function handleViewDocumentInNewWindow(doc: DocumentReference) {
@@ -1060,7 +1074,7 @@ const ChatPage: React.FC = () => {
           ) : (
             <div className="space-y-1">
               {messages.map((m) => (
-                <div key={m.id} className="flex items-start gap-4 p-6 hover:bg-accent/30 transition-colors">
+                <div key={m.id} className="flex items-start gap-4 p-6 hover:bg-accent/30 transition-colors group">
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                       m.role === "user"
@@ -1087,6 +1101,16 @@ const ChatPage: React.FC = () => {
                         </pre>
                       )}
                     </div>
+
+                    {/* Action buttons for assistant messages */}
+                    {m.role === 'assistant' && (
+                      <ResponseActionButtons
+                        message={m}
+                        messages={messages}
+                        onRegenerate={handleRegenerate}
+                        onShare={handleShareMessage}
+                      />
+                    )}
                   </div>
                 </div>
               ))}
@@ -1144,6 +1168,15 @@ const ChatPage: React.FC = () => {
         isOpen={isDocumentViewerOpen}
         onClose={closeDocumentViewer}
       />
+
+      {/* Share Dialog */}
+      {messageToShare && (
+        <ShareDialog
+          open={shareDialogOpen}
+          onOpenChange={setShareDialogOpen}
+          message={messageToShare}
+        />
+      )}
     </div>
   );
 };

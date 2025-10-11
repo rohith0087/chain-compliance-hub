@@ -445,9 +445,13 @@ serve(async (req) => {
   }
 
   try {
-    const { buyer_id, question, session_id } = await req.json();
+    const { buyer_id, question, session_id, user_context } = await req.json();
+    
+    const companyType = user_context?.company_type || 'buyer';
+    const industry = user_context?.industry || 'General';
     
     console.log('simple-rag-chat request:', { buyer_id, question, session_id });
+    console.log('User context:', { company_type: companyType, industry });
 
     if (!buyer_id || !question) {
       return new Response(
@@ -460,8 +464,13 @@ serve(async (req) => {
     const messages = [
       {
         role: "system",
-        content: `You are a compliance assistant helping a buyer manage their supplier documents and compliance. Today's date is ${new Date().toISOString().split('T')[0]}.
-        
+        content: `You are a compliance assistant helping a ${companyType} in the ${industry} industry manage their ${companyType === 'buyer' ? 'supplier documents and compliance' : 'document submissions and buyer requirements'}. Today's date is ${new Date().toISOString().split('T')[0]}.
+
+USER CONTEXT:
+- Role: ${companyType.toUpperCase()}
+- Industry: ${industry}
+- This means you should provide responses relevant to ${industry}-specific compliance requirements and terminology.
+
 Use the available tools to answer questions about:
 - Documents (certificates, safety sheets, insurance, etc.)
 - Suppliers and their connection status
@@ -476,6 +485,7 @@ When presenting results:
 - Be clear and concise
 - Format lists nicely
 - Include relevant details like expiration dates, statuses, and supplier names
+- Tailor your language and examples to the ${industry} industry context
 - If no results are found, suggest alternative searches or provide helpful guidance`
       },
       {

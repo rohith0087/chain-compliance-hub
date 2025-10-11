@@ -339,6 +339,10 @@ const ChatPage: React.FC = () => {
           question: userMsg.content,
           buyer_id: companyInfo.id,
           session_id: currentSession,
+          user_context: {
+            company_type: companyInfo.type,
+            industry: companyInfo.industry || "General",
+          },
         },
       });
       if (error) throw error;

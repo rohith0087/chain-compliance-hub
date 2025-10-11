@@ -66,7 +66,11 @@ serve(async (req) => {
     // Check if this is a request to create a shared link
     const body = await req.json().catch(() => null);
     
+    console.log('document-link-handler received body:', JSON.stringify(body, null, 2));
+    
     if (body && body.action === 'create_link') {
+      console.log('Creating shared link for document_id:', body.document_id, 'with permission_level:', body.permission_level);
+      
       // Authenticate user
       const authHeader = req.headers.get('Authorization');
       if (!authHeader) {
@@ -98,33 +102,54 @@ serve(async (req) => {
         );
       }
 
+      // Validate permission_level
+      const validPermissions = ['public', 'organization', 'admin_only'];
+      const permissionLevel = body.permission_level || 'public';
+      
+      if (!validPermissions.includes(permissionLevel)) {
+        console.error('Invalid permission_level:', permissionLevel);
+        return new Response(
+          JSON.stringify({ error: `Invalid permission_level. Must be one of: ${validPermissions.join(', ')}` }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
       // Create shared link
       const expiresInDays = body.expires_in_days || 30;
       const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString();
       
+      const insertPayload = {
+        document_upload_id: body.document_id,
+        access_token: crypto.randomUUID(),
+        created_by: userData.user.id,
+        permission_level: permissionLevel,
+        expires_at: expiresAt,
+        is_active: true
+      };
+      
+      console.log('Inserting into document_shared_links:', JSON.stringify(insertPayload, null, 2));
+      
       const { data: linkData, error: insertError } = await supabase
         .from('document_shared_links')
-        .insert({
-          document_upload_id: body.document_id,
-          access_token: crypto.randomUUID(),
-          created_by: userData.user.id,
-          permission_level: body.permission_level || 'public',
-          expires_at: expiresAt,
-          is_active: true
-        })
+        .insert(insertPayload)
         .select()
         .single();
       
       if (insertError || !linkData) {
         console.error('Failed to create shared link:', insertError);
         return new Response(
-          JSON.stringify({ error: 'Failed to create link' }),
+          JSON.stringify({ error: 'Failed to create link', details: insertError?.message }),
           { 
             status: 500, 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           }
         );
       }
+      
+      console.log('Successfully created shared link:', linkData.id);
       
       return new Response(
         JSON.stringify({ 

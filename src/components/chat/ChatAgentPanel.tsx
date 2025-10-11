@@ -273,12 +273,17 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
 
   const handleViewDocumentInNewWindow = async (doc: DocumentReference) => {
     try {
+      console.log('handleViewDocumentInNewWindow - Document object:', doc);
+      console.log('Sending to secure-document-url:', { file_path: doc.file_path, document_id: doc.id });
+      
       const { data, error } = await supabase.functions.invoke('secure-document-url', {
         body: { 
           file_path: doc.file_path,
           document_id: doc.id
         }
       });
+      
+      console.log('secure-document-url response:', { data, error });
       
       if (error) {
         console.error('secure-document-url error:', error);
@@ -294,7 +299,7 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
       console.error('Failed to open document:', e);
       toast({
         title: "Error",
-        description: e.message || "Failed to open document.",
+        description: e.message || "Failed to open document. Check console for details.",
         variant: "destructive"
       });
     }
@@ -302,14 +307,22 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
 
   const handleCopyDocumentLink = async (doc: DocumentReference) => {
     try {
+      console.log('handleCopyDocumentLink - Document object:', doc);
+      
+      const requestBody = {
+        action: 'create_link',
+        document_id: doc.id,
+        permission_level: 'public',
+        expires_in_days: 30
+      };
+      
+      console.log('Sending to document-link-handler:', requestBody);
+      
       const { data, error } = await supabase.functions.invoke('document-link-handler', {
-        body: {
-          action: 'create_link',
-          document_id: doc.id,
-          permission_level: 'public',
-          expires_in_days: 30
-        }
+        body: requestBody
       });
+      
+      console.log('document-link-handler response:', { data, error });
       
       if (error) {
         console.error('document-link-handler error:', error);
@@ -329,10 +342,10 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
         description: "Document link copied to clipboard (expires in 30 days)",
       });
     } catch (e: any) {
-      console.error('Failed to copy link:', e);
+      console.error('Failed to copy link - Full error:', e);
       toast({
         title: "Error",
-        description: e.message || "Failed to copy link.",
+        description: e.message || "Failed to copy link. Check console for details.",
         variant: "destructive"
       });
     }

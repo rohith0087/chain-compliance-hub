@@ -72,9 +72,17 @@ serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { bucket, key, filePath, document_id, expiresIn = 3600 } = body || {} as any;
+    
+    console.log('secure-document-url RAW body:', JSON.stringify(body, null, 2));
+    
+    // Support both camelCase and snake_case
+    const bucket = body.bucket;
+    const key = body.key;
+    const filePath = body.filePath || body.file_path;
+    const document_id = body.document_id || body.documentId;
+    const expiresIn = body.expiresIn || body.expires_in || 3600;
 
-    console.log('secure-document-url request:', { bucket, key, filePath, document_id });
+    console.log('secure-document-url parsed params:', { bucket, key, filePath, document_id, expiresIn });
 
     let resolved = null as { bucket: string; key: string } | null;
     if (bucket && key) {

@@ -668,6 +668,30 @@ serve(async (req) => {
       );
     }
 
+    // Fetch recent conversation history for context
+    let conversationHistory: any[] = [];
+    if (session_id) {
+      const { data: recentMessages } = await supabase
+        .from('chat_messages')
+        .select('role, content, created_at')
+        .eq('session_id', session_id)
+        .order('created_at', { ascending: false })
+        .limit(6); // Last 6 messages (typically 3 exchanges)
+
+      if (recentMessages && recentMessages.length > 0) {
+        // Reverse to get chronological order (oldest first)
+        conversationHistory = recentMessages
+          .reverse()
+          .filter(msg => msg.role === 'user' || msg.role === 'assistant')
+          .map(msg => ({
+            role: msg.role,
+            content: msg.content
+          }));
+        
+        console.log(`Loaded ${conversationHistory.length} messages from conversation history`);
+      }
+    }
+
     // Step 1: Initial conversation with OpenAI
     const messages = [
       {
@@ -717,11 +741,30 @@ When presenting results:
 - If no results are found, suggest alternative searches or provide helpful guidance
 - For document request creation, always confirm what was created and provide clear feedback`
       },
+      // Add recent conversation history for context
+      ...conversationHistory,
+      // Add current question
       {
         role: "user",
         content: question
       }
     ];
+
+    console.log(`Total messages sent to OpenAI: ${messages.length} (including ${conversationHistory.length} history messages)`);
+
+    // Save user message to history
+    if (session_id) {
+      await supabase
+        .from('chat_messages')
+        .insert({
+          session_id,
+          role: 'user',
+          content: question,
+          metadata: { company_type: companyType, industry }
+        });
+      
+      console.log('Saved user message to chat history');
+    }
 
     let aiResponse = await callOpenAI(messages);
     
@@ -763,6 +806,23 @@ When presenting results:
         })
         .find((result: any) => result?.success);
       
+      // Save assistant response to history
+      if (session_id) {
+        await supabase
+          .from('chat_messages')
+          .insert({
+            session_id,
+            role: 'assistant',
+            content: aiResponse.content,
+            metadata: documentRequestResult ? { 
+              action: 'document_requests_created',
+              data: documentRequestResult 
+            } : {}
+          });
+        
+        console.log('Saved assistant response to chat history');
+      }
+
       // If we created document requests, format the response specially
       if (documentRequestResult) {
         return new Response(
@@ -779,6 +839,20 @@ When presenting results:
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+    }
+
+    // Save assistant response to history (if no tool calls)
+    if (session_id) {
+      await supabase
+        .from('chat_messages')
+        .insert({
+          session_id,
+          role: 'assistant',
+          content: aiResponse.content,
+          metadata: {}
+        });
+      
+      console.log('Saved assistant response to chat history');
     }
 
     console.log('simple-rag-chat response generated successfully');

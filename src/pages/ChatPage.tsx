@@ -597,6 +597,17 @@ const ChatPage: React.FC = () => {
           </div>
         )}
 
+        {/* Code Visualization - PRIORITY RENDERING */}
+        {!isError && parsed.type === 'code_visualization' && parsed.code && parsed.data && (
+          <div className="my-4">
+            <CodeVisualizationRenderer
+              code={parsed.code}
+              data={parsed.data}
+              summary={parsed.summary || ''}
+            />
+          </div>
+        )}
+
         {/* Generated image */}
         {!isError && imgB64 && renderGeneratedImage(imgB64)}
 
@@ -881,17 +892,6 @@ const ChatPage: React.FC = () => {
         {!isError && parsed.daily_insights && (
           <div className="mt-4">
             <DailyInsightsPanel insights={parsed.daily_insights} />
-          </div>
-        )}
-        
-        {/* Code Visualization */}
-        {!isError && parsed.type === 'code_visualization' && parsed.code && parsed.data && (
-          <div className="mt-4">
-            <CodeVisualizationRenderer
-              code={parsed.code}
-              data={parsed.data}
-              summary={parsed.summary || ''}
-            />
           </div>
         )}
 

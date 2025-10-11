@@ -165,25 +165,39 @@ const tools = [
             properties: {
               x_axis: {
                 type: "string",
-                description: "Data key for X axis (e.g., 'supplier_name', 'date', 'category')"
+                description: "Field for x-axis (e.g., 'supplier_name', 'created_at', 'status', 'document_type')"
               },
               y_axis: {
                 type: "string",
-                description: "Data key for Y axis (e.g., 'document_count', 'compliance_score')"
+                description: "Field for y-axis (typically 'count' or a numeric field)"
               },
-              color_scheme: {
+              aggregation: {
                 type: "string",
-                enum: ["blue", "green", "purple", "multi"],
-                description: "Color scheme for the chart"
+                enum: ["count", "sum", "time_series", "time_series_grouped", "group_by", "group_by_multiple"],
+                description: "How to aggregate data: 'count' for counting items, 'sum' for summing values, 'time_series' for time-based trends, 'time_series_grouped' for multi-series time trends, 'group_by' for simple grouping, 'group_by_multiple' for grouped bar charts"
+              },
+              group_by: {
+                type: "string",
+                description: "Secondary field to group by (for multi-series charts, e.g., 'status' to split lines by status)"
+              },
+              series: {
+                type: "array",
+                items: { type: "string" },
+                description: "Specific series to show (e.g., ['approved', 'pending'] for status-based grouping)"
+              },
+              time_period: {
+                type: "string",
+                enum: ["day", "week", "month"],
+                description: "Time bucket size for time_series aggregations"
               },
               title: {
                 type: "string",
                 description: "Chart title"
               },
-              aggregation: {
+              color_scheme: {
                 type: "string",
-                enum: ["count", "sum", "average", "group_by"],
-                description: "How to aggregate the data"
+                enum: ["blue", "green", "purple", "multi"],
+                description: "Color scheme for the chart"
               }
             }
           }
@@ -746,9 +760,9 @@ async function generateVisualizationCode(args: any, buyerId: string) {
     
     if (Array.isArray(data)) {
       if (chartConfig.aggregation === 'time_series') {
-        // Time-based aggregation for line/area charts
+        // Time-based aggregation for line/area charts (single series)
         const dateField = chartConfig.x_axis || 'created_at';
-        const period = chartConfig.time_period || 'month'; // day, week, month
+        const period = chartConfig.time_period || 'month';
         
         const timeGroups: Record<string, number> = {};
         data.forEach((item: any) => {
@@ -781,6 +795,57 @@ async function generateVisualizationCode(args: any, buyerId: string) {
             return dateA.getTime() - dateB.getTime();
           });
           
+      } else if (chartConfig.aggregation === 'time_series_grouped') {
+        // Multi-series time chart (e.g., documents over time split by status)
+        const dateField = chartConfig.x_axis || 'created_at';
+        const groupField = chartConfig.group_by || 'status';
+        const period = chartConfig.time_period || 'month';
+        
+        const timeGroupsMap: Record<string, Record<string, number>> = {};
+        
+        data.forEach((item: any) => {
+          const dateValue = getNestedValue(item, dateField);
+          const groupValue = getNestedValue(item, groupField) || 'Not Specified';
+          
+          if (!dateValue) return;
+          const date = new Date(dateValue);
+          if (isNaN(date.getTime())) return;
+          
+          let timeKey: string;
+          if (period === 'month') {
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            timeKey = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+          } else if (period === 'week') {
+            const weekNum = Math.ceil(date.getDate() / 7);
+            timeKey = `Week ${weekNum}, ${date.getFullYear()}`;
+          } else {
+            timeKey = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          }
+          
+          if (!timeGroupsMap[timeKey]) timeGroupsMap[timeKey] = {};
+          timeGroupsMap[timeKey][groupValue] = (timeGroupsMap[timeKey][groupValue] || 0) + 1;
+        });
+        
+        // Convert to array format with all series
+        const allGroups = new Set<string>();
+        Object.values(timeGroupsMap).forEach(groups => {
+          Object.keys(groups).forEach(g => allGroups.add(g));
+        });
+        
+        processedData = Object.entries(timeGroupsMap)
+          .sort(([a], [b]) => {
+            const dateA = new Date(a);
+            const dateB = new Date(b);
+            return dateA.getTime() - dateB.getTime();
+          })
+          .map(([timeKey, groups]) => {
+            const dataPoint: any = { name: timeKey };
+            allGroups.forEach(group => {
+              dataPoint[group] = groups[group] || 0;
+            });
+            return dataPoint;
+          });
+          
       } else if (chartConfig.aggregation === 'count' || chartConfig.aggregation === 'group_by') {
         // Count/group by field (bar/pie charts)
         const groupField = chartConfig.x_axis || 'supplier_name';
@@ -801,8 +866,46 @@ async function generateVisualizationCode(args: any, buyerId: string) {
         
         processedData = Object.entries(counts)
           .map(([name, value]) => ({ name, value }))
-          .sort((a, b) => b.value - a.value) // Sort by count descending
-          .slice(0, 15); // Limit to top 15 for readability
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 15); // Top 15 for readability
+          
+      } else if (chartConfig.aggregation === 'group_by_multiple') {
+        // Grouped bar chart (e.g., document counts by supplier, grouped by status)
+        const primaryField = chartConfig.x_axis || 'supplier_name';
+        const secondaryField = chartConfig.group_by || 'status';
+        
+        const groupMap: Record<string, Record<string, number>> = {};
+        
+        data.forEach((item: any) => {
+          const primaryKey = String(getNestedValue(item, primaryField) || 'Not Specified');
+          const secondaryKey = String(getNestedValue(item, secondaryField) || 'Not Specified');
+          
+          if (!groupMap[primaryKey]) groupMap[primaryKey] = {};
+          groupMap[primaryKey][secondaryKey] = (groupMap[primaryKey][secondaryKey] || 0) + 1;
+        });
+        
+        // Convert to array format
+        const allSecondaryKeys = new Set<string>();
+        Object.values(groupMap).forEach(groups => {
+          Object.keys(groups).forEach(k => allSecondaryKeys.add(k));
+        });
+        
+        processedData = Object.entries(groupMap)
+          .map(([primaryKey, groups]) => {
+            const dataPoint: any = { name: primaryKey };
+            allSecondaryKeys.forEach(secondaryKey => {
+              dataPoint[secondaryKey] = groups[secondaryKey] || 0;
+            });
+            return dataPoint;
+          })
+          .sort((a, b) => {
+            const totalA = Object.values(a).reduce((sum: number, val) => 
+              typeof val === 'number' ? sum + val : sum, 0);
+            const totalB = Object.values(b).reduce((sum: number, val) => 
+              typeof val === 'number' ? sum + val : sum, 0);
+            return totalB - totalA;
+          })
+          .slice(0, 10); // Top 10 for grouped charts
           
       } else if (chartConfig.aggregation === 'sum' && chartConfig.y_axis) {
         // Sum numeric values
@@ -842,6 +945,14 @@ async function generateVisualizationCode(args: any, buyerId: string) {
       console.warn('All data points labeled as "Unknown/Not Specified" - field mapping may be incorrect');
     }
     
+    // Determine if this is multi-series data
+    const isMultiSeries = Array.isArray(processedData) && processedData.length > 0 && 
+      Object.keys(processedData[0]).length > 2;
+    
+    const seriesKeys = isMultiSeries && Array.isArray(processedData) 
+      ? Object.keys(processedData[0]).filter(key => key !== 'name')
+      : [];
+
     // Step 3: Generate React component code using OpenAI
     const codePrompt = `Generate a React component in PLAIN JAVASCRIPT (not TypeScript) for a ${args.visualization_type}.
 
@@ -858,11 +969,44 @@ CRITICAL REQUIREMENTS:
 - ${chartConfig.x_axis ? `X-axis dataKey: "${chartConfig.x_axis}"` : 'Determine best X-axis field from data structure'}
 - ${chartConfig.y_axis ? `Y-axis dataKey: "${chartConfig.y_axis}"` : 'Use "value" or "count" for Y-axis dataKey'}
 - ${chartConfig.title ? `Include title: "${chartConfig.title}"` : ''}
-- Color scheme: ${chartConfig.color_scheme || 'blue'} - use "#3b82f6" for blue, "#10b981" for green
+- Color scheme: ${chartConfig.color_scheme || 'blue'} - use "#3b82f6" for blue, "#10b981" for green, "#f59e0b" for amber, "#ef4444" for red
 - ResponsiveContainer: width="100%" height={400}
 - Include proper labels, legend, and interactive tooltip
 - NO imports needed - React and Recharts are already available
 - Use className with Tailwind classes for styling
+
+${isMultiSeries ? `
+⚠️ MULTI-SERIES DATA DETECTED! ⚠️
+Series keys: ${JSON.stringify(seriesKeys)}
+
+You MUST render one <${args.visualization_type === 'line_chart' || args.visualization_type === 'area_chart' ? 'Line' : 'Bar'}> component for EACH series key.
+
+Example for multi-series line chart:
+<LineChart data={data}>
+  <CartesianGrid strokeDasharray="3 3" />
+  <XAxis dataKey="name" />
+  <YAxis />
+  <Tooltip />
+  <Legend />
+  <Line dataKey="approved" stroke="#10b981" name="Approved" strokeWidth={2} />
+  <Line dataKey="pending" stroke="#f59e0b" name="Pending" strokeWidth={2} />
+  <Line dataKey="rejected" stroke="#ef4444" name="Rejected" strokeWidth={2} />
+</LineChart>
+
+Example for grouped bar chart:
+<BarChart data={data}>
+  <CartesianGrid strokeDasharray="3 3" />
+  <XAxis dataKey="name" />
+  <YAxis />
+  <Tooltip />
+  <Legend />
+  <Bar dataKey="approved" fill="#10b981" name="Approved" />
+  <Bar dataKey="pending" fill="#f59e0b" name="Pending" />
+  <Bar dataKey="rejected" fill="#ef4444" name="Rejected" />
+</BarChart>
+
+CRITICAL: Render one chart element per series key from the data!
+` : ''}
 
 Example structure (PLAIN JAVASCRIPT):
 const CustomVisualization = ({ data }) => {
@@ -1188,6 +1332,99 @@ Use the available tools to answer questions about:
 - Suppliers and their connection status
 - Compliance metrics and statistics
 - Creating document requests for suppliers
+
+CUSTOM VISUALIZATIONS - CRITICAL REQUIREMENTS:
+
+When calling generate_visualization_code, you MUST provide complete and accurate chart_config. Missing parameters will result in poor visualizations.
+
+REQUIRED PARAMETERS FOR ALL VISUALIZATIONS:
+- x_axis: The field to group/bucket by (e.g., 'supplier_name', 'created_at', 'status', 'document_type')
+- y_axis: Typically 'count' for counting items, or a specific numeric field for sums
+- aggregation: HOW to process the data (see below)
+- title: Descriptive chart title
+
+AGGREGATION TYPES:
+
+1. "count" - For simple bar/pie charts counting items by category
+   Example: Count documents per supplier
+   {
+     "visualization_type": "bar_chart",
+     "data_query": { "query_type": "documents", "filters": {} },
+     "chart_config": {
+       "x_axis": "supplier_name",
+       "y_axis": "count",
+       "aggregation": "count",
+       "title": "Document Counts by Supplier"
+     }
+   }
+
+2. "time_series" - For single-line time trends
+   Example: Total approved documents over time
+   {
+     "visualization_type": "line_chart",
+     "data_query": { "query_type": "documents", "filters": { "status": ["approved"] } },
+     "chart_config": {
+       "x_axis": "approved_at",
+       "y_axis": "count",
+       "aggregation": "time_series",
+       "time_period": "month",
+       "title": "Approved Documents Over Time"
+     }
+   }
+
+3. "time_series_grouped" - For MULTI-SERIES time trends (e.g., "for each supplier" or "split by status")
+   Example: Documents over time, one line per supplier
+   {
+     "visualization_type": "line_chart",
+     "data_query": { "query_type": "documents", "filters": {} },
+     "chart_config": {
+       "x_axis": "created_at",
+       "y_axis": "count",
+       "aggregation": "time_series_grouped",
+       "group_by": "supplier_name",
+       "time_period": "month",
+       "title": "Document Trends by Supplier"
+     }
+   }
+
+4. "group_by_multiple" - For GROUPED BAR CHARTS (e.g., "documents by supplier, grouped by status")
+   Example: Document status breakdown per supplier
+   {
+     "visualization_type": "bar_chart",
+     "data_query": { "query_type": "documents", "filters": {} },
+     "chart_config": {
+       "x_axis": "supplier_name",
+       "y_axis": "count",
+       "aggregation": "group_by_multiple",
+       "group_by": "status",
+       "title": "Document Status by Supplier"
+     }
+   }
+
+5. "sum" - For summing numeric values
+   Example: Total value by category
+   {
+     "visualization_type": "bar_chart",
+     "chart_config": {
+       "x_axis": "category",
+       "y_axis": "amount",
+       "aggregation": "sum",
+       "title": "Total Amount by Category"
+     }
+   }
+
+CRITICAL DECISION LOGIC:
+- User says "for each supplier" or "by supplier over time" → use "time_series_grouped" with group_by="supplier_name"
+- User says "split by status" or "grouped by status" → use "time_series_grouped" or "group_by_multiple" with group_by="status"
+- User says "trend" or "over time" without grouping → use "time_series"
+- User says "how many documents" per category → use "count"
+- User wants comparison across categories → use "group_by_multiple"
+
+ALWAYS INCLUDE:
+- Appropriate aggregation type based on user request
+- group_by field when request implies multi-series ("for each", "by", "split by")
+- time_period ("month", "week", "day") for time-series
+- Clear, descriptive title
 
 CRITICAL TOOL USAGE RULES:
 

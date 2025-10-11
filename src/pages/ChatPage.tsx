@@ -33,6 +33,7 @@ import {
   Building,
   Shield,
   RotateCcw,
+  Link,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -388,9 +389,67 @@ const ChatPage: React.FC = () => {
     setSelectedDocument(doc);
     setIsDocumentViewerOpen(true);
   }
+  
   function closeDocumentViewer() {
     setIsDocumentViewerOpen(false);
     setSelectedDocument(null);
+  }
+
+  async function handleViewDocumentInNewWindow(doc: DocumentReference) {
+    if (!doc.file_path) {
+      toast({
+        title: "No file available",
+        description: "This document doesn't have a file attached.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('secure-document-url', {
+        body: { file_path: doc.file_path }
+      });
+      
+      if (error) throw error;
+      
+      window.open(data.url, '_blank', 'noopener,noreferrer');
+    } catch (e: any) {
+      toast({
+        title: "Error",
+        description: "Failed to open document.",
+        variant: "destructive"
+      });
+    }
+  }
+
+  async function handleCopyDocumentLink(doc: DocumentReference) {
+    try {
+      const { data, error } = await supabase.functions.invoke('document-link-handler', {
+        body: {
+          action: 'create_link',
+          document_id: doc.id,
+          permission_level: 'view',
+          expires_in_days: 30
+        }
+      });
+      
+      if (error) throw error;
+      
+      const shareableUrl = `${window.location.origin}/shared/document/${data.access_token}`;
+      
+      await navigator.clipboard.writeText(shareableUrl);
+      
+      toast({
+        title: "Link copied!",
+        description: "Document link copied to clipboard",
+      });
+    } catch (e: any) {
+      toast({
+        title: "Error",
+        description: "Failed to copy link.",
+        variant: "destructive"
+      });
+    }
   }
 
   /* ---- Renderers ---- */
@@ -582,30 +641,30 @@ const ChatPage: React.FC = () => {
               {normalizedDocs.slice(0, 3).map((doc, index) => (
                 <Card
                   key={doc.id || index}
-                  className={`p-4 border-l-4 transition-all hover:shadow-md ${getStatusColor(doc.status)}`}
+                  className={`border-l-4 transition-all hover:shadow-lg ${getStatusColor(doc.status)}`}
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start justify-between gap-4 p-4">
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-2">
                         {getStatusIcon(doc.status)}
-                        <span className="font-medium text-foreground">{doc.title}</span>
+                        <h3 className="font-semibold text-lg text-foreground">{doc.title}</h3>
                       </div>
 
                       {doc.supplier_name && (
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Building className="w-3 h-3" />
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Building className="w-4 h-4" />
                           <span>{doc.supplier_name}</span>
                         </div>
                       )}
 
-                      <div className="flex items-center gap-4 text-sm flex-wrap">
-                        <Badge variant="secondary" className="bg-primary/10 text-primary">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400">
                           {doc.document_type}
                         </Badge>
 
                         {doc.expiration_date && (
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <Calendar className="w-3 h-3" />
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Calendar className="w-4 h-4" />
                             <span>
                               Expires:{" "}
                               {(() => {
@@ -623,10 +682,10 @@ const ChatPage: React.FC = () => {
                           variant="outline"
                           className={`capitalize ${
                             doc.status === "approved"
-                              ? "border-emerald-500 text-emerald-700 dark:text-emerald-400"
+                              ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-400"
                               : doc.status === "pending_review"
-                              ? "border-amber-500 text-amber-700 dark:text-amber-400"
-                              : "border-red-500 text-red-700 dark:text-red-400"
+                              ? "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-400"
+                              : "bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-400"
                           }`}
                         >
                           {doc.status.replace("_", " ")}
@@ -635,15 +694,26 @@ const ChatPage: React.FC = () => {
                     </div>
 
                     {doc.file_path && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="hover:bg-primary/10"
-                        onClick={() => handleViewDocument(doc)}
-                      >
-                        <ExternalLink className="w-3 h-3 mr-1" />
-                        View
-                      </Button>
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewDocumentInNewWindow(doc)}
+                          className="gap-2 hover:bg-primary/10"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          View
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCopyDocumentLink(doc)}
+                          className="gap-2 hover:bg-primary/10"
+                        >
+                          <Link className="w-4 h-4" />
+                          Copy Link
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </Card>
@@ -667,30 +737,30 @@ const ChatPage: React.FC = () => {
                     {normalizedDocs.slice(3).map((doc, index) => (
                       <Card
                         key={doc.id || `rest-${index}`}
-                        className={`p-4 border-l-4 transition-all hover:shadow-md ${getStatusColor(doc.status)}`}
+                        className={`border-l-4 transition-all hover:shadow-lg ${getStatusColor(doc.status)}`}
                       >
-                        <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start justify-between gap-4 p-4">
                           <div className="flex-1 space-y-2">
                             <div className="flex items-center gap-2">
                               {getStatusIcon(doc.status)}
-                              <span className="font-medium text-foreground">{doc.title}</span>
+                              <h3 className="font-semibold text-lg text-foreground">{doc.title}</h3>
                             </div>
 
                             {doc.supplier_name && (
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                <Building className="w-3 h-3" />
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <Building className="w-4 h-4" />
                                 <span>{doc.supplier_name}</span>
                               </div>
                             )}
 
-                            <div className="flex items-center gap-4 text-sm flex-wrap">
-                              <Badge variant="secondary" className="bg-primary/10 text-primary">
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400">
                                 {doc.document_type}
                               </Badge>
 
                               {doc.expiration_date && (
-                                <div className="flex items-center gap-1 text-muted-foreground">
-                                  <Calendar className="w-3 h-3" />
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                  <Calendar className="w-4 h-4" />
                                   <span>
                                     Expires:{" "}
                                     {(() => {
@@ -708,10 +778,10 @@ const ChatPage: React.FC = () => {
                                 variant="outline"
                                 className={`capitalize ${
                                   doc.status === "approved"
-                                    ? "border-emerald-500 text-emerald-700 dark:text-emerald-400"
+                                    ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-400"
                                     : doc.status === "pending_review"
-                                    ? "border-amber-500 text-amber-700 dark:text-amber-400"
-                                    : "border-red-500 text-red-700 dark:text-red-400"
+                                    ? "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-400"
+                                    : "bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-400"
                                 }`}
                               >
                                 {doc.status.replace("_", " ")}
@@ -720,15 +790,26 @@ const ChatPage: React.FC = () => {
                           </div>
 
                           {doc.file_path && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="hover:bg-primary/10"
-                              onClick={() => handleViewDocument(doc)}
-                            >
-                              <ExternalLink className="w-3 h-3 mr-1" />
-                              View
-                            </Button>
+                            <div className="flex flex-col gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewDocumentInNewWindow(doc)}
+                                className="gap-2 hover:bg-primary/10"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                                View
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleCopyDocumentLink(doc)}
+                                className="gap-2 hover:bg-primary/10"
+                              >
+                                <Link className="w-4 h-4" />
+                                Copy Link
+                              </Button>
+                            </div>
                           )}
                         </div>
                       </Card>

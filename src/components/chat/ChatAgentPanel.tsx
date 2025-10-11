@@ -23,7 +23,9 @@ import {
   XCircle,
   ExternalLink,
   AlertTriangle,
-  Info
+  Info,
+  Link,
+  Building
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -266,6 +268,63 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
+    }
+  };
+
+  const handleViewDocumentInNewWindow = async (doc: DocumentReference) => {
+    if (!doc.file_path) {
+      toast({
+        title: "No file available",
+        description: "This document doesn't have a file attached.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('secure-document-url', {
+        body: { file_path: doc.file_path }
+      });
+      
+      if (error) throw error;
+      
+      window.open(data.url, '_blank', 'noopener,noreferrer');
+    } catch (e: any) {
+      toast({
+        title: "Error",
+        description: "Failed to open document.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleCopyDocumentLink = async (doc: DocumentReference) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('document-link-handler', {
+        body: {
+          action: 'create_link',
+          document_id: doc.id,
+          permission_level: 'view',
+          expires_in_days: 30
+        }
+      });
+      
+      if (error) throw error;
+      
+      const shareableUrl = `${window.location.origin}/shared/document/${data.access_token}`;
+      
+      await navigator.clipboard.writeText(shareableUrl);
+      
+      toast({
+        title: "Link copied!",
+        description: "Document link copied to clipboard",
+      });
+    } catch (e: any) {
+      toast({
+        title: "Error",
+        description: "Failed to copy link.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -548,40 +607,98 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
 
         {/* Document cards */}
         {response.documents && response.documents.length > 0 && (
-          <div className="space-y-2">
-            <h4 className="font-medium text-sm">Related Documents</h4>
-            {response.documents.map((doc, idx) => (
-              <div key={idx} className="bg-muted/50 rounded-lg p-3 border">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      {getDocumentStatusIcon(doc.status, doc.id)}
-                      <span className="font-medium text-sm truncate">{doc.title}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground space-y-1">
+          <div className="space-y-3">
+            <h4 className="font-semibold text-foreground flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Documents ({response.documents.length})
+            </h4>
+            {response.documents.map((doc, idx) => {
+              const statusColor = 
+                doc.status === "approved" 
+                  ? "border-l-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20"
+                  : doc.status === "pending_review" || doc.status === "submitted"
+                  ? "border-l-amber-500 bg-amber-50/50 dark:bg-amber-950/20"
+                  : "border-l-red-500 bg-red-50/50 dark:bg-red-950/20";
+                  
+              return (
+                <Card key={idx} className={`border-l-4 transition-all hover:shadow-lg ${statusColor}`}>
+                  <div className="flex items-start justify-between gap-4 p-4">
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        {getDocumentStatusIcon(doc.status, doc.id)}
+                        <h3 className="font-semibold text-base text-foreground">{doc.title}</h3>
+                      </div>
+                      
                       {doc.supplier_name && (
-                        <div>From: {doc.supplier_name}</div>
-                      )}
-                      <div>Type: {doc.document_type}</div>
-                      {doc.expiration_date && (
-                        <div className={`flex items-center gap-1 ${
-                          isExpired(doc.expiration_date) ? 'text-red-500' : 
-                          isExpiringSoon(doc.expiration_date) ? 'text-yellow-500' : ''
-                        }`}>
-                          <Calendar className="h-3 w-3" />
-                          Expires: {format(new Date(doc.expiration_date), 'MMM dd, yyyy')}
-                          {isExpired(doc.expiration_date) && ' (EXPIRED)'}
-                          {isExpiringSoon(doc.expiration_date) && ' (Expiring Soon)'}
+                        <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                          <Building className="w-4 h-4" />
+                          <span>{doc.supplier_name}</span>
                         </div>
                       )}
+                      
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400">
+                          {doc.document_type}
+                        </Badge>
+                        
+                        {doc.expiration_date && (
+                          <div className={`flex items-center gap-1 text-sm ${
+                            isExpired(doc.expiration_date) 
+                              ? 'text-red-600 dark:text-red-400' 
+                              : isExpiringSoon(doc.expiration_date) 
+                              ? 'text-amber-600 dark:text-amber-400' 
+                              : 'text-muted-foreground'
+                          }`}>
+                            <Calendar className="w-4 h-4" />
+                            <span>
+                              Expires: {format(new Date(doc.expiration_date), 'MMM dd, yyyy')}
+                              {isExpired(doc.expiration_date) && ' (EXPIRED)'}
+                              {isExpiringSoon(doc.expiration_date) && ' (Soon)'}
+                            </span>
+                          </div>
+                        )}
+                        
+                        <Badge
+                          variant="outline"
+                          className={`capitalize ${
+                            doc.status === "approved"
+                              ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-400"
+                              : doc.status === "pending_review" || doc.status === "submitted"
+                              ? "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-400"
+                              : "bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-400"
+                          }`}
+                        >
+                          {doc.status.replace("_", " ")}
+                        </Badge>
+                      </div>
                     </div>
+                    
+                    {doc.file_path && (
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewDocumentInNewWindow(doc)}
+                          className="gap-2 hover:bg-primary/10"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          View
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCopyDocumentLink(doc)}
+                          className="gap-2 hover:bg-primary/10"
+                        >
+                          <Link className="w-4 h-4" />
+                          Copy Link
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                    <ExternalLink className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         )}
 

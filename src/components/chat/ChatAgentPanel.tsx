@@ -272,27 +272,29 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
   };
 
   const handleViewDocumentInNewWindow = async (doc: DocumentReference) => {
-    if (!doc.file_path) {
-      toast({
-        title: "No file available",
-        description: "This document doesn't have a file attached.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
     try {
       const { data, error } = await supabase.functions.invoke('secure-document-url', {
-        body: { file_path: doc.file_path }
+        body: { 
+          file_path: doc.file_path,
+          document_id: doc.id
+        }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('secure-document-url error:', error);
+        throw error;
+      }
+      
+      if (!data?.url) {
+        throw new Error('No URL returned from server');
+      }
       
       window.open(data.url, '_blank', 'noopener,noreferrer');
     } catch (e: any) {
+      console.error('Failed to open document:', e);
       toast({
         title: "Error",
-        description: "Failed to open document.",
+        description: e.message || "Failed to open document.",
         variant: "destructive"
       });
     }
@@ -304,12 +306,19 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
         body: {
           action: 'create_link',
           document_id: doc.id,
-          permission_level: 'view',
+          permission_level: 'public',
           expires_in_days: 30
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('document-link-handler error:', error);
+        throw error;
+      }
+      
+      if (!data?.access_token) {
+        throw new Error('No access token returned from server');
+      }
       
       const shareableUrl = `${window.location.origin}/shared/document/${data.access_token}`;
       
@@ -317,12 +326,13 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
       
       toast({
         title: "Link copied!",
-        description: "Document link copied to clipboard",
+        description: "Document link copied to clipboard (expires in 30 days)",
       });
     } catch (e: any) {
+      console.error('Failed to copy link:', e);
       toast({
         title: "Error",
-        description: "Failed to copy link.",
+        description: e.message || "Failed to copy link.",
         variant: "destructive"
       });
     }

@@ -72,21 +72,43 @@ serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { bucket, key, filePath, expiresIn = 3600 } = body || {} as any;
+    const { bucket, key, filePath, document_id, expiresIn = 3600 } = body || {} as any;
+
+    console.log('secure-document-url request:', { bucket, key, filePath, document_id });
 
     let resolved = null as { bucket: string; key: string } | null;
     if (bucket && key) {
       resolved = { bucket, key };
     } else if (filePath) {
       resolved = resolveStoragePath(filePath);
+    } else if (document_id) {
+      // Fallback: look up document by ID
+      console.log('Looking up document by ID:', document_id);
+      const { data: docData, error: docError } = await adminClient
+        .from('document_uploads')
+        .select('file_path')
+        .eq('id', document_id)
+        .maybeSingle();
+      
+      if (docError) {
+        console.error('Error looking up document by ID:', docError);
+      }
+      
+      if (docData?.file_path) {
+        console.log('Found file_path for document:', docData.file_path);
+        resolved = resolveStoragePath(docData.file_path);
+      }
     }
 
     if (!resolved) {
+      console.error('Failed to resolve storage path:', { bucket, key, filePath, document_id });
       return new Response(JSON.stringify({ error: 'Missing or invalid file path' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    console.log('Resolved storage path:', resolved);
 
     // Check if this is a custom template request
     const isCustomTemplate = resolved.key.startsWith('custom-templates/');
@@ -148,6 +170,7 @@ serve(async (req) => {
 
       upload = await tryFindUpload();
       if (!upload) {
+        console.log('Document upload not found in database for key:', resolved.key);
         // Try to find a template submission with this file path
         const tryFindSubmission = async () => {
           // Exact match
@@ -182,12 +205,15 @@ serve(async (req) => {
 
         submission = await tryFindSubmission();
         if (!submission) {
-          console.warn('Document not found for key', { resolved });
-          return new Response(JSON.stringify({ error: 'Document not found' }), {
+          console.error('Document not found in database:', { resolved, document_id, filePath });
+          return new Response(JSON.stringify({ error: 'Document not found in database' }), {
             status: 404,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
+        console.log('Found template submission:', submission);
+      } else {
+        console.log('Found document upload:', upload);
       }
     }
 
@@ -322,12 +348,14 @@ serve(async (req) => {
       .createSignedUrl(resolved.key, Math.min(60 * 60 * 6, Math.max(60, Number(expiresIn) || 3600))); // 1h default, max 6h
 
     if (signErr || !signed?.signedUrl) {
-      console.error('Failed to sign URL', { signErr, resolved });
-      return new Response(JSON.stringify({ error: 'Failed to generate URL' }), {
-        status: 500,
+      console.error('Failed to create signed URL:', { error: signErr, bucket: resolved.bucket, key: resolved.key });
+      return new Response(JSON.stringify({ error: 'File not found in storage' }), {
+        status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    console.log('Successfully created signed URL for:', resolved.key);
 
     return new Response(
       JSON.stringify({ success: true, url: signed.signedUrl }),

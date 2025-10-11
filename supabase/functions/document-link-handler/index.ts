@@ -63,23 +63,92 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Check if this is a request to create a shared link
+    const body = await req.json().catch(() => null);
+    
+    if (body && body.action === 'create_link') {
+      // Authenticate user
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader) {
+        return new Response(
+          JSON.stringify({ error: 'Authentication required' }),
+          { 
+            status: 401, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      const userSupabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      );
+
+      const { data: userData, error: authError } = await userSupabase.auth.getUser(
+        authHeader.replace('Bearer ', '')
+      );
+      
+      if (authError || !userData?.user) {
+        return new Response(
+          JSON.stringify({ error: 'Not authenticated' }),
+          { 
+            status: 401, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      // Create shared link
+      const expiresInDays = body.expires_in_days || 30;
+      const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString();
+      
+      const { data: linkData, error: insertError } = await supabase
+        .from('document_shared_links')
+        .insert({
+          document_upload_id: body.document_id,
+          access_token: crypto.randomUUID(),
+          created_by: userData.user.id,
+          permission_level: body.permission_level || 'public',
+          expires_at: expiresAt,
+          is_active: true
+        })
+        .select()
+        .single();
+      
+      if (insertError || !linkData) {
+        console.error('Failed to create shared link:', insertError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to create link' }),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          access_token: linkData.access_token,
+          expires_at: linkData.expires_at
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Handle existing token-based access
     const url = new URL(req.url);
-    // Try to extract token from URL path, query params, or request body
     let token = url.pathname.split('/').pop();
 
     if (!token || token === 'document-link-handler') {
       token = url.searchParams.get('access_token') || url.searchParams.get('token') || undefined as unknown as string;
     }
 
-    if (!token) {
-      try {
-        const body = await req.json();
-        if (body && typeof body.access_token === 'string') {
-          token = body.access_token;
-        }
-      } catch (_) {
-        // ignore JSON parse errors
-      }
+    if (!token && body && typeof body.access_token === 'string') {
+      token = body.access_token;
     }
 
     if (!token) {

@@ -496,20 +496,34 @@ async function searchDocumentsAdvanced(query: string, companyId: string, company
       return [];
     }
 
-    // Enrich with item metadata
+    // Enrich with item metadata and ensure file_path is present
     const enrichedDocs = await Promise.all(relevantDocs.map(async (doc) => {
+      let enrichedDoc = { ...doc };
+      
+      // Fetch file_path if missing
+      if (!doc.file_path && doc.id) {
+        const { data: uploadData } = await supabase
+          .from('document_uploads')
+          .select('file_path')
+          .eq('id', doc.id)
+          .single();
+        
+        if (uploadData?.file_path) {
+          enrichedDoc.file_path = uploadData.file_path;
+        }
+      }
+      
+      // Fetch linked items if available
       if (doc.metadata?.linked_item_ids && doc.metadata.linked_item_ids.length > 0) {
         const { data: items } = await supabase
           .from('supplier_items')
           .select('item_name, item_category')
           .in('id', doc.metadata.linked_item_ids);
         
-        return {
-          ...doc,
-          linked_items: items || []
-        };
+        enrichedDoc.linked_items = items || [];
       }
-      return doc;
+      
+      return enrichedDoc;
     }));
 
     // Filter and sort based on intent
@@ -1009,6 +1023,14 @@ QUERY INTENT ANALYSIS:
 
   // Enhanced response generation with conversation intelligence
   const systemPrompt = `You are an intelligent compliance assistant that adapts its response style based on the query type.
+
+CRITICAL LINK GENERATION RULES:
+- NEVER generate direct URLs to documents in your text responses
+- NEVER create placeholder links like "example.com" or fake URLs
+- NEVER use markdown links like [View Document](http://...)
+- The UI will automatically display "View" and "Copy Link" buttons for all documents
+- Keep your narrative text clean and focused on insights, not links
+- Document access is handled securely through the UI buttons
 
 RESPONSE STYLE GUIDELINES:
 

@@ -673,8 +673,8 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
                       </div>
                     </div>
                     
-                    {doc.file_path && (
-                      <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2">
+                      {doc.file_path && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -684,17 +684,17 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
                           <ExternalLink className="w-4 h-4" />
                           View
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleCopyDocumentLink(doc)}
-                          className="gap-2 hover:bg-primary/10"
-                        >
-                          <Link className="w-4 h-4" />
-                          Copy Link
-                        </Button>
-                      </div>
-                    )}
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleCopyDocumentLink(doc)}
+                        className="gap-2 hover:bg-primary/10"
+                      >
+                        <Link className="w-4 h-4" />
+                        Copy Link
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               );

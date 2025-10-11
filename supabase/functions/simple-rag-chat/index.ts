@@ -292,7 +292,8 @@ async function queryDocuments(filters: any, buyerId: string) {
         status: doc.status,
         request_status: doc.document_requests?.status,
         expiration_date: doc.expiration_date,
-        created_at: doc.created_at
+        created_at: doc.created_at,
+        file_path: doc.file_path
       }))
     };
   } catch (error) {

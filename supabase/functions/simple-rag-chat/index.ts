@@ -736,30 +736,81 @@ serve(async (req) => {
       }
     }
 
-    // DETERMINISTIC SHORT-REPLY INTERCEPTOR
-    // Handle short confirmations/modifications for pending actions
-    const normalizedQuestion = question.trim().toLowerCase();
-    const isConfirm = /^(yes|yess|y|yeah|sure|go ahead|proceed|confirm|correct|that's right)$/i.test(normalizedQuestion);
-    const isNoNotes = /^(no|nope|nah|no notes|skip notes|no changes|not now)$/i.test(normalizedQuestion);
-    const hasNoteCmd = /^(add note|note:|make it|change|update)/i.test(question);
+    // Helper to parse natural language dates
+    const parseNaturalDate = (text: string): string | null => {
+      const today = new Date();
+      
+      // Match patterns like "nov 30", "november 30", "end of november", "by november"
+      const monthEndMatch = text.match(/(?:end of|by)\s+(january|february|march|april|may|june|july|august|september|october|november|december)/i);
+      if (monthEndMatch) {
+        const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+        const monthIndex = monthNames.findIndex(m => m.startsWith(monthEndMatch[1].toLowerCase()));
+        if (monthIndex >= 0) {
+          const year = monthIndex < today.getMonth() ? today.getFullYear() + 1 : today.getFullYear();
+          const lastDay = new Date(year, monthIndex + 1, 0).getDate();
+          return `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+        }
+      }
+      
+      // Match "nov 30", "november 30", "oct 25"
+      const monthDayMatch = text.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})/i);
+      if (monthDayMatch) {
+        const monthAbbr = monthDayMatch[1].toLowerCase().substring(0, 3);
+        const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+        const monthIndex = monthNames.indexOf(monthAbbr);
+        if (monthIndex >= 0) {
+          const day = parseInt(monthDayMatch[2]);
+          const year = monthIndex < today.getMonth() ? today.getFullYear() + 1 : today.getFullYear();
+          return `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+      }
+      
+      // Match YYYY-MM-DD format
+      const isoMatch = text.match(/(\d{4})-(\d{2})-(\d{2})/);
+      if (isoMatch) return isoMatch[0];
+      
+      return null;
+    };
     
-    if ((isConfirm || isNoNotes || hasNoteCmd) && pendingAction?.type === 'create_document_request') {
-      console.log('Intercepting short reply for pending action:', { normalizedQuestion, pendingAction });
+    // ENHANCED SHORT-REPLY INTERCEPTOR
+    // Handle confirmations and multi-part responses for pending actions
+    const normalizedQuestion = question.trim().toLowerCase();
+    
+    // Expanded patterns to catch more variations
+    const isConfirm = /^(yes|yess|y|yeah|sure|go ahead|proceed|confirm|correct|that's right|ok|okay)$/i.test(normalizedQuestion);
+    const isNoNotes = /(no|nope|nah|no notes|skip notes|no changes|not now)/i.test(question);
+    const hasDateModification = /(use|set|change|update|make it).*?(nov|oct|sep|dec|january|february|march|april|may|june|july|august|september|october|november|december|\d{4}-\d{2}-\d{2})/i.test(question);
+    const hasPriorityModification = /(low|medium|high|urgent)\s*priority/i.test(question);
+    const hasNoteModification = /(?:add note|note:|notes?:)\s*(.+)/i.test(question);
+    
+    // Multi-part response pattern: "you can use nov 30 and no notes"
+    const isMultiPart = (hasDateModification || hasPriorityModification || hasNoteModification || isNoNotes) && question.split(/\s+and\s+/i).length > 1;
+    
+    if ((isConfirm || isNoNotes || hasDateModification || isMultiPart) && pendingAction?.type === 'create_document_request') {
+      console.log('Intercepting reply for pending action:', { question, pendingAction });
       
       const params = { ...pendingAction.params };
       
-      // Handle different reply types
-      if (isNoNotes) {
+      // Extract modifications from multi-part or single-part responses
+      const dateFromText = parseNaturalDate(question);
+      if (dateFromText) {
+        params.due_date = dateFromText;
+        console.log('Extracted date from text:', dateFromText);
+      }
+      
+      const priorityMatch = question.match(/(low|medium|high|urgent)/i);
+      if (priorityMatch) {
+        params.priority = priorityMatch[1].toLowerCase();
+        console.log('Extracted priority:', params.priority);
+      }
+      
+      const noteMatch = question.match(/(?:add note|note:|notes?:)\s*(.+?)(?:\s+and\s+|$)/i);
+      if (noteMatch) {
+        params.notes = noteMatch[1].trim();
+        console.log('Extracted notes:', params.notes);
+      } else if (isNoNotes) {
         params.notes = '';
-      } else if (hasNoteCmd) {
-        // Extract modifications from command
-        const priorityMatch = question.match(/(low|medium|high|urgent)/i);
-        const dateMatch = question.match(/(\d{4}-\d{2}-\d{2})|(?:due|date).*?(\d{1,2})(?:th|st|nd|rd)?/i);
-        const noteMatch = question.match(/(?:add note|note:)\s*(.+)/i);
-        
-        if (priorityMatch) params.priority = priorityMatch[1].toLowerCase();
-        if (dateMatch && dateMatch[1]) params.due_date = dateMatch[1];
-        if (noteMatch) params.notes = noteMatch[1].trim();
+        console.log('No notes requested');
       }
       
       // Execute the request directly
@@ -774,7 +825,7 @@ serve(async (req) => {
       };
       
       const responseText = result.success
-        ? `✓ Created ${result.created_count} document request${result.created_count > 1 ? 's' : ''} for ${result.supplier_name}:\n- Documents: ${result.document_types?.join(', ')}\n- Due: ${result.due_date}\n- Priority: ${result.priority}\n${result.notes ? `- Notes: ${result.notes}` : ''}`
+        ? `✓ Created ${result.created_count} document request${result.created_count > 1 ? 's' : ''} for ${result.supplier_name}:\n- Documents: ${result.document_types?.join(', ')}\n- Due: ${result.due_date}\n- Priority: ${result.priority}${params.notes ? `\n- Notes: ${params.notes}` : ''}`
         : `I couldn't create the request: ${result.error || 'Unknown error'}`;
       
       const assistantMsg = {
@@ -856,25 +907,47 @@ When users want to create document requests, guide them through the process:
 5. Use create_document_request tool to create the requests
 6. Confirm success with details: supplier name, number of requests, due date
 
+CRITICAL - CONVERSATION CONTEXT & PARAMETER EXTRACTION:
+You have access to conversation_history containing previous messages. ALWAYS look back at these messages to extract parameters when needed.
+
+When a user provides information across multiple messages, YOU MUST:
+1. Extract supplier name from any previous message mentioning it
+2. Extract document types from any previous message listing them
+3. Extract due date from phrases like "by end of november", "nov 30", "october 25"
+4. Extract priority from words like "urgent", "high priority", "asap"
+5. Combine all extracted parameters and execute create_document_request IMMEDIATELY when confirmed
+
 HANDLING USER CONFIRMATIONS (CRITICAL):
 When users respond with confirmations or modifications after you've presented request details, you MUST IMMEDIATELY execute the create_document_request tool. DO NOT just acknowledge - TAKE ACTION.
 
 Confirmation phrases that mean "execute now":
-- "yes" / "yess" / "yeah" / "sure" / "go ahead" / "proceed" / "correct" / "that's right"
-- "no" / "nope" / "nah" when asked "Would you like to add any notes?" (means "no notes, proceed")
-- "yes its 2025" (correction + confirmation)
-- "yes change date to X" (modification + confirmation)
-- "add note Y" (direct command)
-- "make it urgent" (priority update command)
+- Simple: "yes" / "y" / "yeah" / "sure" / "go ahead" / "proceed" / "correct"
+- With modifications: "you can use nov 30 and no notes" (extract params and execute)
+- Date changes: "use november 30", "change date to nov 30", "by end of november"
+- Note responses: "no notes", "nope", "skip notes" (when asked about notes)
+- Combined: "yes change it to urgent and add note X" (update multiple params)
 
 CRITICAL EXECUTION RULES:
-1. If user says "yes" or any confirmation phrase → IMMEDIATELY call create_document_request with parameters from conversation history
-2. If you just asked "Would you like to add any notes?" and user replies "no"/"nope"/"nah"/"no notes" → IMMEDIATELY call create_document_request with empty notes
-3. If user makes modifications ("change date to X", "add note Y") → Update parameters and IMMEDIATELY execute
-4. NEVER respond with just "Thank you for confirming" or "I'll proceed with that" - EXECUTE THE TOOL
-5. Use conversation history to gather all parameters (supplier, documents, priority, date, notes)
-6. If there's a typo (like "22025" instead of "2025"), correct it and proceed with the corrected value
-7. Look back at previous messages to find supplier name, document types, priority level, and notes
+1. LOOK BACK at conversation_history for ALL parameters (supplier, documents, date, priority, notes)
+2. If user says "yes" or confirms → IMMEDIATELY call create_document_request with ALL params from history
+3. If user provides modifications → Extract changes, merge with history params, IMMEDIATELY execute
+4. NEVER respond with just "Thank you" or acknowledgment - EXECUTE THE TOOL
+5. Multi-part responses like "you can use X and no Y" → Extract both parts and execute
+6. Natural language dates: "end of november" → calculate last day of month
+7. If ANY parameter is missing from current message, GET IT from conversation_history
+
+EXAMPLE CONTEXT EXTRACTION:
+Message 1 (user): "can I request a HACCP Plan from killer by end of November"
+→ Extract: supplier="killer", documents=["HACCP Plan"], due_date="end of november" (convert to 2025-11-30)
+
+Message 2 (you): "Would you like to add notes?"
+
+Message 3 (user): "you can use nov 30 and no notes"
+→ YOU MUST: Look back at Message 1, extract supplier="killer" and documents=["HACCP Plan"]
+→ From Message 3, extract: due_date="2025-11-30", notes=""
+→ IMMEDIATELY call create_document_request with {supplier_name: "killer", document_types: ["HACCP Plan"], due_date: "2025-11-30", notes: "", priority: "medium"}
+
+DO NOT ask "what supplier?" or "what documents?" - the information is already in conversation_history!
 
 Example of CORRECT behavior:
 User (message 1): "Request HACCP from Killer Farms, urgent"
@@ -1010,11 +1083,73 @@ Your summary adds VALUE by providing context and insights, not by duplicating wh
         })
         .find((result: any) => result?.success);
       
-      // Save assistant response to history with pending action detection
+      // Save assistant response to history with ENHANCED pending action detection
       if (session_id) {
-        // Check if this is a confirmation request for document creation
-        const maybePending = parsePendingRequest(aiResponse.content);
-        const isAskingForNotes = /would you like to add any notes|any additional notes|add notes/i.test(aiResponse.content);
+        // Enhanced detection: Extract parameters directly from tool calls and AI messages
+        let pendingActionToSave = null;
+        
+        // Check if AI is asking for confirmation on a document request
+        const isAskingForConfirmation = /would you like to add any notes|any additional notes|please confirm|do you want to/i.test(aiResponse.content);
+        
+        if (isAskingForConfirmation) {
+          // Try to parse from assistant's confirmation message
+          const maybePending = parsePendingRequest(aiResponse.content);
+          
+          if (maybePending) {
+            pendingActionToSave = maybePending;
+            console.log('Extracted pending action from assistant message:', pendingActionToSave);
+          } else {
+            // If parsing failed, try to extract from recent tool calls
+            const createRequestToolCall = aiResponse.tool_calls?.find((tc: any) => tc.function?.name === 'create_document_request');
+            if (createRequestToolCall) {
+              try {
+                const args = JSON.parse(createRequestToolCall.function.arguments);
+                pendingActionToSave = {
+                  type: 'create_document_request',
+                  params: args
+                };
+                console.log('Extracted pending action from tool call:', pendingActionToSave);
+              } catch (e) {
+                console.log('Failed to parse tool call arguments:', e);
+              }
+            }
+            
+            // If still no pending action, try to extract from conversation history
+            if (!pendingActionToSave && conversationHistory.length > 0) {
+              // Look for most recent user message with request details
+              const lastUserMessage = [...conversationHistory].reverse().find(m => m.role === 'user');
+              if (lastUserMessage) {
+                const content = lastUserMessage.content.toLowerCase();
+                
+                // Extract supplier
+                const supplierMatch = content.match(/(?:from|request.*?from)\s+([a-z0-9\s]+?)(?:\s+by|\s+due|\s+with|$)/i);
+                
+                // Extract documents  
+                const docMatches = content.match(/(haccp|iso|certificate|plan|sheet|document|cert)/gi);
+                
+                // Extract date
+                const dateText = parseNaturalDate(content);
+                
+                // Extract priority
+                const priorityMatch = content.match(/(low|medium|high|urgent)/i);
+                
+                if (supplierMatch || docMatches) {
+                  pendingActionToSave = {
+                    type: 'create_document_request',
+                    params: {
+                      supplier_name: supplierMatch?.[1]?.trim() || '',
+                      document_types: docMatches || [],
+                      due_date: dateText || undefined,
+                      priority: priorityMatch?.[1]?.toLowerCase() || 'medium',
+                      notes: undefined
+                    }
+                  };
+                  console.log('Extracted pending action from conversation history:', pendingActionToSave);
+                }
+              }
+            }
+          }
+        }
         
         await supabase
           .from('chat_messages')
@@ -1028,12 +1163,12 @@ Your summary adds VALUE by providing context and insights, not by duplicating wh
             } : queryDocumentsResult ? {
               action: 'documents_queried',
               count: queryDocumentsResult.documents?.length || 0
-            } : (maybePending && isAskingForNotes) ? {
-              pending_action: maybePending
+            } : pendingActionToSave ? {
+              pending_action: pendingActionToSave
             } : {}
           });
         
-        console.log('Saved assistant response to chat history', maybePending ? 'with pending action' : '');
+        console.log('Saved assistant response to chat history', pendingActionToSave ? 'WITH pending action' : 'without pending action');
       }
 
       // If we queried documents, format the response with structured document cards

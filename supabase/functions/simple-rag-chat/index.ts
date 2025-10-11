@@ -797,7 +797,13 @@ When presenting results:
 - Include relevant details like expiration dates, statuses, and supplier names
 - Tailor your language and examples to the ${industry} industry context
 - If no results are found, suggest alternative searches or provide helpful guidance
-- For document request creation, always confirm what was created and provide clear feedback`
+- For document request creation, always confirm what was created and provide clear feedback
+
+IMPORTANT - Document Query Presentation:
+- When presenting document query results, keep your narrative response VERY concise (e.g., "Here are the 5 approved documents from Kerry:")
+- The frontend will automatically render documents in beautiful cards with View and Copy Link buttons
+- DO NOT repeat all document details (title, type, expiration, etc.) in text format - the cards will show them
+- Focus on providing brief context, insights, or next steps instead of listing details`
       },
       // Add recent conversation history for context
       ...conversationHistory,
@@ -852,6 +858,18 @@ When presenting results:
       // Step 3: Get final answer from OpenAI with tool results
       aiResponse = await callOpenAI(messages, "none"); // Don't allow more tool calls
       
+      // Check if any of the tool results was a document query
+      const queryDocumentsResult = messages
+        .filter((m: any) => m.role === 'tool' && m.name === 'query_documents')
+        .map((m: any) => {
+          try {
+            return JSON.parse(m.content);
+          } catch {
+            return null;
+          }
+        })
+        .find((result: any) => result?.success && result?.documents);
+      
       // Check if any of the tool results was a document request creation
       const documentRequestResult = messages
         .filter((m: any) => m.role === 'tool' && m.name === 'create_document_request')
@@ -875,10 +893,38 @@ When presenting results:
             metadata: documentRequestResult ? { 
               action: 'document_requests_created',
               data: documentRequestResult 
+            } : queryDocumentsResult ? {
+              action: 'documents_queried',
+              count: queryDocumentsResult.documents?.length || 0
             } : {}
           });
         
         console.log('Saved assistant response to chat history');
+      }
+
+      // If we queried documents, format the response with structured document cards
+      if (queryDocumentsResult && queryDocumentsResult.documents && queryDocumentsResult.documents.length > 0) {
+        return new Response(
+          JSON.stringify({
+            answer: aiResponse.content,
+            session_id,
+            conversation_history: messages,
+            structured_response: {
+              content: aiResponse.content,
+              documents: queryDocumentsResult.documents.map((doc: any) => ({
+                id: doc.id,
+                title: doc.title,
+                document_type: doc.document_type,
+                category: doc.category,
+                supplier_name: doc.supplier_name,
+                status: doc.status,
+                expiration_date: doc.expiration_date,
+                file_path: doc.file_path || null
+              }))
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
       // If we created document requests, format the response specially

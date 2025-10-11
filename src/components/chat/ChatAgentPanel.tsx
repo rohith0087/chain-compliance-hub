@@ -30,6 +30,7 @@ import {
 import { format } from "date-fns";
 import ResponseActionButtons from "./ResponseActionButtons";
 import ShareDialog from "./ShareDialog";
+import { CodeVisualizationRenderer } from "./CodeVisualizationRenderer";
 
 interface Message {
   id: string;
@@ -46,7 +47,7 @@ interface ChatSource {
 }
 
 interface StructuredResponse {
-  type: 'structured' | 'simple';
+  type: 'structured' | 'simple' | 'code_visualization';
   content: string;
   sections?: {
     title: string;
@@ -56,6 +57,9 @@ interface StructuredResponse {
   documents?: DocumentReference[];
   quick_actions?: string[];
   generated_image?: string; // Base64 image string from AI
+  code?: string; // Generated React component code for visualizations
+  data?: any; // Data for the visualization
+  summary?: string; // Summary of the visualization
 }
 
 interface DocumentReference {
@@ -756,6 +760,17 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
                 </Button>
               );
             })}
+          </div>
+        )}
+        
+        {/* Code Visualization */}
+        {response.type === 'code_visualization' && response.code && response.data && (
+          <div className="mt-4">
+            <CodeVisualizationRenderer
+              code={response.code}
+              data={response.data}
+              summary={response.summary || ''}
+            />
           </div>
         )}
       </div>

@@ -130,6 +130,67 @@ const tools = [
         properties: {}
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "generate_visualization_code",
+      description: "Generate custom TypeScript React component code for data visualizations. Use when user requests charts, graphs, or dashboards that require custom formatting (e.g., 'scatter plot', 'heatmap', 'custom dashboard', 'timeline chart'). NOT for standard compliance dashboards or supplier comparisons.",
+      parameters: {
+        type: "object",
+        properties: {
+          visualization_type: {
+            type: "string",
+            enum: ["bar_chart", "line_chart", "area_chart", "pie_chart", "scatter_plot", "radar_chart", "composed_chart", "custom_table"],
+            description: "Type of visualization to generate"
+          },
+          data_query: {
+            type: "object",
+            description: "Query parameters to fetch the data needed for visualization (uses existing query_documents/query_suppliers tools)",
+            properties: {
+              query_type: {
+                type: "string",
+                enum: ["documents", "suppliers", "metrics"],
+                description: "Which data source to query"
+              },
+              filters: {
+                type: "object",
+                description: "Filters to apply to the data query"
+              }
+            }
+          },
+          chart_config: {
+            type: "object",
+            description: "Chart customization options",
+            properties: {
+              x_axis: {
+                type: "string",
+                description: "Data key for X axis (e.g., 'supplier_name', 'date', 'category')"
+              },
+              y_axis: {
+                type: "string",
+                description: "Data key for Y axis (e.g., 'document_count', 'compliance_score')"
+              },
+              color_scheme: {
+                type: "string",
+                enum: ["blue", "green", "purple", "multi"],
+                description: "Color scheme for the chart"
+              },
+              title: {
+                type: "string",
+                description: "Chart title"
+              },
+              aggregation: {
+                type: "string",
+                enum: ["count", "sum", "average", "group_by"],
+                description: "How to aggregate the data"
+              }
+            }
+          }
+        },
+        required: ["visualization_type", "data_query"]
+      }
+    }
   }
 ];
 
@@ -632,6 +693,132 @@ async function getDocumentSets(buyerId: string) {
   }
 }
 
+async function generateVisualizationCode(args: any, buyerId: string) {
+  try {
+    // Step 1: Fetch the data based on query type
+    let data: any = null;
+    const { query_type, filters } = args.data_query;
+    
+    if (query_type === 'documents') {
+      const result = await queryDocuments(filters || {}, buyerId);
+      data = result.documents || [];
+    } else if (query_type === 'suppliers') {
+      const result = await querySuppliers(filters || {}, buyerId);
+      data = result.suppliers || [];
+    } else if (query_type === 'metrics') {
+      const result = await getComplianceMetrics(buyerId);
+      data = result.metrics;
+    }
+    
+    if (!data || (Array.isArray(data) && data.length === 0)) {
+      return {
+        success: false,
+        error: 'No data available for visualization'
+      };
+    }
+    
+    // Step 2: Aggregate/transform data based on chart config
+    const chartConfig = args.chart_config || {};
+    let processedData = data;
+    
+    if (Array.isArray(data) && chartConfig.aggregation === 'group_by' && chartConfig.x_axis) {
+      // Group data by x_axis field
+      const grouped: any = {};
+      data.forEach((item: any) => {
+        const key = item[chartConfig.x_axis] || 'Unknown';
+        if (!grouped[key]) {
+          grouped[key] = { name: key, count: 0, items: [] };
+        }
+        grouped[key].count++;
+        grouped[key].items.push(item);
+      });
+      processedData = Object.values(grouped);
+    } else if (Array.isArray(data) && chartConfig.aggregation === 'count') {
+      // Count occurrences
+      const counts: any = {};
+      data.forEach((item: any) => {
+        const key = item[chartConfig.x_axis] || 'Unknown';
+        counts[key] = (counts[key] || 0) + 1;
+      });
+      processedData = Object.entries(counts).map(([name, value]) => ({ name, value }));
+    }
+    
+    // Step 3: Generate React component code using OpenAI
+    const codePrompt = `Generate a TypeScript React component for a ${args.visualization_type}.
+
+Data structure: ${JSON.stringify(processedData.slice(0, 3), null, 2)}
+
+Requirements:
+- Component MUST be named "CustomVisualization"
+- Accept a "data" prop: CustomVisualization({ data }: { data: any })
+- Use ONLY Recharts library components (already imported)
+- ${chartConfig.x_axis ? `X-axis: ${chartConfig.x_axis}` : 'Determine best X-axis from data'}
+- ${chartConfig.y_axis ? `Y-axis: ${chartConfig.y_axis}` : 'Use "value" or "count" for Y-axis'}
+- ${chartConfig.title ? `Title: ${chartConfig.title}` : ''}
+- Color scheme: ${chartConfig.color_scheme || 'blue'} (use hsl(var(--primary)) for blue)
+- Width: 100%, Height: 400px
+- Include axis labels, legend, and tooltip
+- NO imports - all libraries are pre-imported
+- Make it visually appealing with proper spacing and colors
+
+Return ONLY the function code, no explanations.`;
+
+    const codeResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { 
+            role: 'system', 
+            content: 'You are a TypeScript React visualization expert. Generate clean, working Recharts components.' 
+          },
+          { role: 'user', content: codePrompt }
+        ],
+        temperature: 0.3,
+      }),
+    });
+    
+    if (!codeResponse.ok) {
+      throw new Error(`Code generation failed: ${codeResponse.status}`);
+    }
+    
+    const codeData = await codeResponse.json();
+    let generatedCode = codeData.choices[0].message.content;
+    
+    // Clean up code (remove markdown formatting if present)
+    generatedCode = generatedCode.replace(/```typescript|```tsx|```javascript|```/g, '').trim();
+    
+    // Generate summary
+    const summary = chartConfig.title || 
+      `${args.visualization_type.replace(/_/g, ' ')} showing ${processedData.length} data points`;
+    
+    console.log('Generated visualization code:', {
+      type: args.visualization_type,
+      data_points: processedData.length,
+      code_length: generatedCode.length
+    });
+    
+    return {
+      success: true,
+      type: 'code_visualization',
+      code: generatedCode,
+      data: processedData,
+      summary,
+      chart_config: chartConfig
+    };
+  } catch (error: any) {
+    console.error('Error generating visualization:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
 async function executeToolCall(toolName: string, args: any, buyerId: string) {
   console.log(`Executing tool: ${toolName} with args:`, args);
   
@@ -646,6 +833,8 @@ async function executeToolCall(toolName: string, args: any, buyerId: string) {
       return await createDocumentRequest(args, buyerId);
     case "get_document_sets":
       return await getDocumentSets(buyerId);
+    case "generate_visualization_code":
+      return await generateVisualizationCode(args, buyerId);
     default:
       return {
         success: false,
@@ -1004,7 +1193,28 @@ Think of your response as an executive summary providing:
 - Key patterns or insights
 - Any action items if relevant
 
-Your summary adds VALUE by providing context and insights, not by duplicating what the cards already show.`
+Your summary adds VALUE by providing context and insights, not by duplicating what the cards already show.
+
+CUSTOM VISUALIZATIONS:
+When users request unique charts or data visualizations that aren't covered by standard compliance dashboards, use the generate_visualization_code tool.
+
+Examples of when to use custom visualizations:
+- "Create a scatter plot of compliance score vs response time"
+- "Show me a bar chart comparing document counts by supplier"
+- "Generate a heatmap of expiring documents by category"
+- "Make a line chart showing submission trends over time"
+- "Create a pie chart of document types distribution"
+
+The tool will:
+1. Fetch the required data using existing query tools
+2. Generate custom React component code using Recharts
+3. Return both the code and data for safe rendering
+
+IMPORTANT:
+- Use this for CUSTOM visualizations that require specific chart types or aggregations
+- DO NOT use for standard compliance dashboards or supplier comparisons (those have existing UI)
+- The generated charts will be interactive with tooltips, legends, and proper styling
+- Summarize what the visualization shows in 1-2 sentences`
       },
       // Add recent conversation history for context
       ...conversationHistory,

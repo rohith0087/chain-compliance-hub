@@ -16,6 +16,7 @@ import ActionExecutor from "@/components/chat/ActionExecutor";
 import ChatDocumentViewer from "@/components/chat/ChatDocumentViewer";
 import ResponseActionButtons from "@/components/chat/ResponseActionButtons";
 import ShareDialog from "@/components/chat/ShareDialog";
+import { CodeVisualizationRenderer } from "@/components/chat/CodeVisualizationRenderer";
 import {
   MessageSquare,
   Send,
@@ -124,6 +125,10 @@ interface StructuredResponse {
   
   action?: string;              // Action type (e.g., 'document_requests_created')
   data?: any;                   // Action data payload
+  
+  // Code visualization
+  code?: string;                // Generated React component code
+  summary?: string;             // Summary of the visualization
 }
 
 type CompanyInfo = { id: string; type: "buyer" | "supplier"; industry?: string } | null;
@@ -876,6 +881,17 @@ const ChatPage: React.FC = () => {
         {!isError && parsed.daily_insights && (
           <div className="mt-4">
             <DailyInsightsPanel insights={parsed.daily_insights} />
+          </div>
+        )}
+        
+        {/* Code Visualization */}
+        {!isError && parsed.type === 'code_visualization' && parsed.code && parsed.data && (
+          <div className="mt-4">
+            <CodeVisualizationRenderer
+              code={parsed.code}
+              data={parsed.data}
+              summary={parsed.summary || ''}
+            />
           </div>
         )}
 

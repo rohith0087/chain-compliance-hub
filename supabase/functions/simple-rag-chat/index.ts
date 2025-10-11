@@ -909,11 +909,29 @@ When presenting results:
 - If no results are found, suggest alternative searches or provide helpful guidance
 - For document request creation, always confirm what was created and provide clear feedback
 
-IMPORTANT - Document Query Presentation:
-- When presenting document query results, keep your narrative response VERY concise (e.g., "Here are the 5 approved documents from Kerry:")
-- The frontend will automatically render documents in beautiful cards with View and Copy Link buttons
-- DO NOT repeat all document details (title, type, expiration, etc.) in text format - the cards will show them
-- Focus on providing brief context, insights, or next steps instead of listing details`
+CRITICAL - Document Query Presentation Rules:
+When presenting document query results, provide ONLY a brief executive summary (1-3 sentences maximum).
+
+✅ GOOD summary examples:
+- "Found 20 approved documents from Kerry across 5 categories. Most are valid through October 2025, with 3 expiring within 30 days."
+- "Kerry has 15 active certifications. 12 are in good standing, 3 require renewal within 60 days."
+- "Located 8 documents expiring soon: 5 from Kerry, 2 from Supplier X, and 1 from ABC Corp."
+
+❌ DO NOT do any of these:
+- DO NOT list individual documents by number (e.g., "1. Document A", "2. Document B")
+- DO NOT write "Here are the documents:" followed by a numbered list
+- DO NOT repeat document details (title, type, category, expiration) in your text response
+- DO NOT create tables or structured lists of documents
+
+The formatted document cards below your summary will show ALL details automatically.
+
+Think of your response as an executive summary providing:
+- Total count and breakdown by status/category
+- Expiration highlights (how many expiring soon, already expired)
+- Key patterns or insights
+- Any action items if relevant
+
+Your summary adds VALUE by providing context and insights, not by duplicating what the cards already show.`
       },
       // Add recent conversation history for context
       ...conversationHistory,
@@ -1020,13 +1038,39 @@ IMPORTANT - Document Query Presentation:
 
       // If we queried documents, format the response with structured document cards
       if (queryDocumentsResult && queryDocumentsResult.documents && queryDocumentsResult.documents.length > 0) {
+        // Clean up redundant document listings from AI response
+        console.log('Post-processing: Cleaning up AI response to remove redundant document listings');
+        
+        let cleanedContent = aiResponse.content;
+        
+        // Remove numbered document lists with details (multi-line format)
+        cleanedContent = cleanedContent
+          .replace(/\d+\.\s+[^\n]+\n\s*-\s*Type:[^\n]+\n\s*-\s*Category:[^\n]+\n\s*-\s*Expiration[^\n]*\n*/gi, '')
+          .replace(/\d+\.\s+\*\*[^\n]+\*\*\n\s*-\s*Type:[^\n]+\n\s*-\s*Category:[^\n]+\n\s*-\s*Expiration[^\n]*\n*/gi, '');
+        
+        // Remove simple numbered lists (single-line format)
+        cleanedContent = cleanedContent
+          .replace(/\d+\.\s+[^\n]{20,}\n/g, '') // Remove numbered items with substantial content
+          .replace(/\n{3,}/g, '\n\n') // Clean up excessive newlines
+          .trim();
+        
+        // If cleaned content is too short or empty, generate a helpful summary
+        if (cleanedContent.length < 30) {
+          const docCount = queryDocumentsResult.documents.length;
+          const uniqueSuppliers = [...new Set(queryDocumentsResult.documents.map((d: any) => d.supplier_name).filter(Boolean))];
+          const supplierName = uniqueSuppliers.length === 1 ? uniqueSuppliers[0] : `${uniqueSuppliers.length} supplier${uniqueSuppliers.length !== 1 ? 's' : ''}`;
+          cleanedContent = `Found ${docCount} document${docCount !== 1 ? 's' : ''} from ${supplierName}. View details in the cards below.`;
+        }
+        
+        console.log(`AI response cleaned. Original: ${aiResponse.content.length} chars → Cleaned: ${cleanedContent.length} chars`);
+        
         return new Response(
           JSON.stringify({
-            answer: aiResponse.content,
+            answer: cleanedContent,
             session_id,
             conversation_history: messages,
             structured_response: {
-              content: aiResponse.content,
+              content: cleanedContent,
               documents: queryDocumentsResult.documents.map((doc: any) => ({
                 id: doc.id,
                 title: doc.title,

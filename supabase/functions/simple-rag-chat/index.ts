@@ -744,24 +744,35 @@ async function generateVisualizationCode(args: any, buyerId: string) {
     }
     
     // Step 3: Generate React component code using OpenAI
-    const codePrompt = `Generate a TypeScript React component for a ${args.visualization_type}.
+    const codePrompt = `Generate a TypeScript React functional component for a ${args.visualization_type}.
 
-Data structure: ${JSON.stringify(processedData.slice(0, 3), null, 2)}
+Data structure (first 3 items): ${JSON.stringify(processedData.slice(0, 3), null, 2)}
 
 Requirements:
-- Component MUST be named "CustomVisualization"
-- Accept a "data" prop: CustomVisualization({ data }: { data: any })
-- Use ONLY Recharts library components (already imported)
-- ${chartConfig.x_axis ? `X-axis: ${chartConfig.x_axis}` : 'Determine best X-axis from data'}
-- ${chartConfig.y_axis ? `Y-axis: ${chartConfig.y_axis}` : 'Use "value" or "count" for Y-axis'}
-- ${chartConfig.title ? `Title: ${chartConfig.title}` : ''}
-- Color scheme: ${chartConfig.color_scheme || 'blue'} (use hsl(var(--primary)) for blue)
-- Width: 100%, Height: 400px
-- Include axis labels, legend, and tooltip
-- NO imports - all libraries are pre-imported
-- Make it visually appealing with proper spacing and colors
+- Component name: CustomVisualization
+- Function signature: const CustomVisualization = ({ data }: { data: any[] }) => { ... }
+- Use arrow function syntax with explicit return statement
+- Accept a "data" prop containing an array of objects
+- Use ONLY Recharts library components (ResponsiveContainer, ${args.visualization_type === 'bar_chart' ? 'BarChart, Bar' : args.visualization_type === 'pie_chart' ? 'PieChart, Pie, Cell' : 'LineChart, Line'}, XAxis, YAxis, Tooltip, Legend, CartesianGrid)
+- ${chartConfig.x_axis ? `X-axis dataKey: "${chartConfig.x_axis}"` : 'Determine best X-axis field from data structure'}
+- ${chartConfig.y_axis ? `Y-axis dataKey: "${chartConfig.y_axis}"` : 'Use "value" or "count" for Y-axis dataKey'}
+- ${chartConfig.title ? `Include title: "${chartConfig.title}"` : ''}
+- Color scheme: ${chartConfig.color_scheme || 'blue'} - use "hsl(var(--primary))" or "#3b82f6" for blue
+- ResponsiveContainer: width="100%" height={400}
+- Include proper labels, legend, and interactive tooltip
+- NO imports needed - all libraries pre-imported
+- Use Tailwind classes for any text/styling (e.g., className="text-lg font-semibold")
 
-Return ONLY the function code, no explanations.`;
+Example structure:
+const CustomVisualization = ({ data }: { data: any[] }) => {
+  return (
+    <ResponsiveContainer width="100%" height={400}>
+      {/* Your chart component here */}
+    </ResponsiveContainer>
+  );
+};
+
+Return ONLY the complete function code with proper syntax. No markdown formatting, no explanations.`;
 
     const codeResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -791,6 +802,21 @@ Return ONLY the function code, no explanations.`;
     
     // Clean up code (remove markdown formatting if present)
     generatedCode = generatedCode.replace(/```typescript|```tsx|```javascript|```/g, '').trim();
+    
+    // Validate generated code has correct syntax
+    if (!generatedCode.includes('=>') || !generatedCode.includes('const CustomVisualization')) {
+      throw new Error('Generated code has invalid syntax - missing arrow function or component definition');
+    }
+    
+    // Fix common TypeScript type annotation issues
+    if (generatedCode.includes('const CustomVisualization:') && !generatedCode.match(/const\s+CustomVisualization\s*=\s*\(\s*{[^}]+}\s*:\s*{[^}]+}\s*\)\s*=>/)) {
+      console.warn('Generated code may have TypeScript type annotation issues, attempting to fix...');
+      // Try to fix common issues where AI generates "const X: React.FC<...> = ({ data })"
+      generatedCode = generatedCode.replace(
+        /const\s+CustomVisualization:\s*React\.FC<[^>]+>\s*=\s*\(\s*{\s*data\s*}/,
+        'const CustomVisualization = ({ data }: { data: any[] }) =>'
+      );
+    }
     
     // Generate summary
     const summary = chartConfig.title || 

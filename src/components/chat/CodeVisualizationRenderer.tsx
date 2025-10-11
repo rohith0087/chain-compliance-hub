@@ -34,6 +34,15 @@ export function CodeVisualizationRenderer({ code, data, summary }: CodeVisualiza
           throw new Error(`Security violation: Code contains prohibited pattern: ${pattern.source}`);
         }
       }
+      
+      // Syntax validation
+      if (!code.includes('=>')) {
+        throw new Error('Invalid code: Missing arrow function syntax');
+      }
+
+      if (!code.includes('CustomVisualization')) {
+        throw new Error('Invalid code: Component not named CustomVisualization');
+      }
 
       // Create a safe execution context with timeout protection
       const timeoutMs = 5000;

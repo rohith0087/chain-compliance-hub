@@ -660,6 +660,7 @@ export type Database = {
           context_tags: string[] | null
           created_at: string
           id: string
+          last_activity_at: string | null
           session_title: string | null
           updated_at: string
           user_id: string
@@ -670,6 +671,7 @@ export type Database = {
           context_tags?: string[] | null
           created_at?: string
           id?: string
+          last_activity_at?: string | null
           session_title?: string | null
           updated_at?: string
           user_id: string
@@ -680,6 +682,7 @@ export type Database = {
           context_tags?: string[] | null
           created_at?: string
           id?: string
+          last_activity_at?: string | null
           session_title?: string | null
           updated_at?: string
           user_id?: string

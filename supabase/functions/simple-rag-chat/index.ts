@@ -2001,10 +2001,35 @@ serve(async (req) => {
   }
 
   try {
-    const { buyer_id, question, session_id, user_context } = await req.json();
+    const { buyer_id, question, session_id: incoming_session_id, user_context } = await req.json();
     
     const companyType = user_context?.company_type || 'buyer';
     const industry = user_context?.industry || 'General';
+
+    // Defensive session creation: if no session_id provided, create one
+    let session_id = incoming_session_id;
+    if (!session_id) {
+      console.log('⚠️ No session_id provided, creating new session...');
+      const { data: newSession, error: sessionError } = await supabase
+        .from('chat_sessions')
+        .insert({
+          user_id: user_context?.user_id,
+          company_id: buyer_id,
+          company_type: companyType,
+          session_title: 'New Chat',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select('id')
+        .single();
+      
+      if (sessionError) {
+        console.error('Failed to create session:', sessionError);
+      } else {
+        session_id = newSession.id;
+        console.log('✓ Created new session:', session_id);
+      }
+    }
     
     console.log('simple-rag-chat request:', { buyer_id, question, session_id });
     console.log('User context:', { company_type: companyType, industry });
@@ -3066,6 +3091,16 @@ IMPORTANT:
     }
 
     console.log('simple-rag-chat response generated successfully');
+
+    // Update session activity
+    if (session_id) {
+      await supabase
+        .from('chat_sessions')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', session_id)
+        .then(() => console.log('✓ Updated session activity'))
+        .catch((e) => console.error('Failed to update session activity:', e));
+    }
 
     return new Response(
       JSON.stringify({

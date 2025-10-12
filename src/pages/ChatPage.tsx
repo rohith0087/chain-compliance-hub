@@ -194,6 +194,7 @@ const ChatPage: React.FC = () => {
   const { toast } = useToast();
 
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [currentSession, setCurrentSession] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -219,6 +220,7 @@ const ChatPage: React.FC = () => {
 
   useEffect(() => {
     if (!user) return;
+    setUserId(user.id);
     (async () => {
       try {
         // Try buyer, else supplier
@@ -299,10 +301,39 @@ const ChatPage: React.FC = () => {
     }
   }
 
-  function startNewChat() {
-    setMessages([]);
-    setCurrentSession(null);
-    inputRef.current?.focus();
+  async function startNewChat() {
+    if (!user || !companyInfo) {
+      toast({ title: "Error", description: "User or company not loaded.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke("chat-session-manager", {
+        body: {
+          action: 'create',
+          user_id: user.id,
+          company_id: companyInfo.id,
+          company_type: companyInfo.type,
+          title: 'New Chat'
+        }
+      });
+
+      if (error) throw error;
+
+      console.log('✓ Created new session:', data.session.id);
+      
+      setCurrentSession(data.session.id);
+      setMessages([]);
+      inputRef.current?.focus();
+
+    } catch (e: any) {
+      console.error('Failed to create session:', e);
+      toast({
+        title: "Error",
+        description: "Failed to start new chat.",
+        variant: "destructive"
+      });
+    }
   }
 
   function selectSession(s: ChatSession) {
@@ -353,6 +384,7 @@ const ChatPage: React.FC = () => {
           buyer_id: companyInfo.id,
           session_id: currentSession,
           user_context: {
+            user_id: user.id,
             company_type: companyInfo.type,
             industry: companyInfo.industry || "General",
           },
@@ -361,6 +393,25 @@ const ChatPage: React.FC = () => {
       if (error) throw error;
 
       console.debug("[simple-rag-chat] response", data);
+
+      // Capture session_id from response if we didn't have one
+      if (data.session_id && !currentSession) {
+        console.log('✓ Session created by edge function:', data.session_id);
+        setCurrentSession(data.session_id);
+        
+        // Update session title based on first question
+        const autoTitle = userMsg.content.length > 50 
+          ? userMsg.content.substring(0, 47) + '...'
+          : userMsg.content;
+        
+        supabase.functions.invoke("chat-session-manager", {
+          body: {
+            action: 'update_title',
+            session_id: data.session_id,
+            title: autoTitle
+          }
+        }).catch(console.error);
+      }
 
       const assistant: Message = {
         id: `assistant-${Date.now()}`,

@@ -824,11 +824,14 @@ async function generateVisualizationCode(args: any, buyerId: string) {
         
         // Helper to normalize status labels for display
         const normalizeStatusLabel = (status: string): string => {
-          if (status === 'pending_review') return 'Submitted';
-          if (status === 'approved') return 'Approved';
-          if (status === 'rejected') return 'Rejected';
-          if (status === 'expired') return 'Expired';
-          return status;
+          const normalizedStatus = String(status).toLowerCase();
+          if (normalizedStatus === 'pending_review' || normalizedStatus === 'submitted') return 'Submitted';
+          if (normalizedStatus === 'approved') return 'Approved';
+          if (normalizedStatus === 'rejected' || normalizedStatus === 'declined') return 'Rejected';
+          if (normalizedStatus === 'expired') return 'Expired';
+          if (normalizedStatus === 'pending') return 'Pending';
+          // Capitalize first letter for any other status
+          return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
         };
         
         data.forEach((item: any) => {

@@ -2005,10 +2005,14 @@ async function getMissingRequiredDocuments(params: any, buyerId: string) {
     // 4. Find missing documents
     const missingDocuments = requiredDocs.filter(docType => !uploadedTypes.has(docType));
     
+    // Calculate compliance correctly: submitted REQUIRED docs / total required docs
+    const submittedRequiredCount = requiredDocs.filter(docType => uploadedTypes.has(docType)).length;
+    
     console.log('🔍 Missing documents check:', {
       supplier: matchedSupplier.company_name,
       required: requiredDocs.length,
-      submitted: uploadedTypes.size,
+      submitted_required: submittedRequiredCount, // Only count required docs that were submitted
+      total_submitted: uploadedTypes.size, // Total docs submitted (including non-required)
       missing: missingDocuments.length
     });
     
@@ -2020,11 +2024,12 @@ async function getMissingRequiredDocuments(params: any, buyerId: string) {
       },
       required_set: requiredSetInfo,
       total_required: requiredDocs.length,
-      total_submitted: uploadedTypes.size,
+      total_submitted: submittedRequiredCount, // Changed: only count required docs that were submitted
+      total_submitted_all: uploadedTypes.size, // New: total docs including non-required
       missing_count: missingDocuments.length,
       missing_documents: missingDocuments,
       compliance_percentage: requiredDocs.length > 0 ? 
-        Math.round((uploadedTypes.size / requiredDocs.length) * 100) : 0
+        Math.round((submittedRequiredCount / requiredDocs.length) * 100) : 0 // Fixed calculation
     };
   } catch (error: any) {
     console.error('Error getting missing documents:', error);

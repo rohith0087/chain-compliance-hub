@@ -37,6 +37,8 @@ import {
   Shield,
   RotateCcw,
   Link,
+  Mic,
+  Volume2,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -1098,37 +1100,40 @@ const ChatPage: React.FC = () => {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-6 py-6" ref={scrollAreaRef}>
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full space-y-12 px-4 py-16">
-              <div className="space-y-6 text-center max-w-2xl">
-                <div className="w-16 h-16 rounded-full bg-primary/5 mx-auto flex items-center justify-center mb-8">
-                  <Shield className="w-7 h-7 text-primary/70" />
-                </div>
-                <h2 className="text-4xl font-semibold text-foreground mb-3">
+            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] px-4">
+              <div className="w-full max-w-3xl space-y-8">
+                <h2 className="text-4xl font-semibold text-foreground text-center">
                   What can I help with?
                 </h2>
-                <p className="text-muted-foreground text-base max-w-xl mx-auto">
-                  Your assistant for document management, compliance tracking, and regulatory guidance.
-                </p>
-              </div>
-
-              <div className="space-y-4 max-w-2xl w-full">
-                <h3 className="text-sm font-medium text-muted-foreground mb-4">
-                  Try asking:
-                </h3>
-                <div className="grid gap-3 max-w-lg mx-auto">
-                  {dynamicQuestions.map((q, i) => (
-                    <Button
-                      key={i}
-                      variant="ghost"
-                      className="text-left justify-start h-auto py-3 px-4 hover:bg-accent/50 border-0 rounded-lg w-full group"
-                      onClick={() => setInputMessage(q)}
-                    >
-                      <div className="flex items-start gap-3 w-full">
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary/60 mt-2 flex-shrink-0" />
-                        <span className="text-sm text-muted-foreground">{q}</span>
-                      </div>
-                    </Button>
-                  ))}
+                
+                {/* Centered Input - Only shown when empty */}
+                <div className="relative flex items-center gap-2 bg-background border border-border rounded-full shadow-lg hover:shadow-xl transition-all p-2">
+                  <Button variant="ghost" size="icon" className="rounded-full">
+                    <Plus className="w-5 h-5 text-muted-foreground" />
+                  </Button>
+                  <Input
+                    ref={inputRef}
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Ask anything"
+                    className="flex-1 border-0 focus-visible:ring-0 text-base"
+                    disabled={isLoading}
+                  />
+                  <Button variant="ghost" size="icon" className="rounded-full">
+                    <Mic className="w-5 h-5 text-muted-foreground" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="rounded-full">
+                    <Volume2 className="w-5 h-5 text-muted-foreground" />
+                  </Button>
+                  <Button 
+                    onClick={sendMessage} 
+                    disabled={isLoading || !inputMessage.trim()} 
+                    size="icon"
+                    className="rounded-full h-10 w-10"
+                  >
+                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  </Button>
                 </div>
               </div>
             </div>
@@ -1204,30 +1209,32 @@ const ChatPage: React.FC = () => {
           )}
         </div>
 
-        {/* Input */}
-        <div className="sticky bottom-0 border-t border-border bg-card/95 backdrop-blur-sm p-6">
-          <div className="max-w-3xl mx-auto">
-            <div className="relative flex items-center gap-2 bg-background border border-border rounded-2xl shadow-sm hover:shadow-md transition-shadow p-2">
-              <Input
-                ref={inputRef}
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Ask about documents, compliance, or regulations..."
-                className="flex-1 border-0 focus-visible:ring-0 text-base"
-                disabled={isLoading}
-              />
-              <Button 
-                onClick={sendMessage} 
-                disabled={isLoading || !inputMessage.trim()} 
-                size="icon"
-                className="rounded-xl h-10 w-10"
-              >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              </Button>
+        {/* Input - Only shown at bottom when messages exist */}
+        {messages.length > 0 && (
+          <div className="sticky bottom-0 border-t border-border bg-card/95 backdrop-blur-sm p-6">
+            <div className="max-w-3xl mx-auto">
+              <div className="relative flex items-center gap-2 bg-background border border-border rounded-2xl shadow-sm hover:shadow-md transition-shadow p-2">
+                <Input
+                  ref={inputRef}
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Ask about documents, compliance, or regulations..."
+                  className="flex-1 border-0 focus-visible:ring-0 text-base"
+                  disabled={isLoading}
+                />
+                <Button 
+                  onClick={sendMessage} 
+                  disabled={isLoading || !inputMessage.trim()} 
+                  size="icon"
+                  className="rounded-xl h-10 w-10"
+                >
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Document Viewer */}

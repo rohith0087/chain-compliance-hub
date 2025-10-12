@@ -1176,23 +1176,23 @@ const ChatPage: React.FC = () => {
 
         {/* Input - Only shown at bottom when messages exist */}
         {messages.length > 0 && (
-          <div className="sticky bottom-0 border-t border-border bg-card/95 backdrop-blur-sm p-6">
+          <div className="sticky bottom-0 p-6 pb-8">
             <div className="max-w-3xl mx-auto">
-              <div className="relative flex items-center gap-2 bg-background border border-border rounded-2xl shadow-sm hover:shadow-md transition-shadow p-2">
+              <div className="relative flex items-center gap-2 bg-background/95 backdrop-blur-sm border border-border/50 rounded-full shadow-lg hover:shadow-xl transition-all p-3 px-4">
                 <Input
                   ref={inputRef}
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Ask about documents, compliance, or regulations..."
-                  className="flex-1 border-0 focus-visible:ring-0 text-base"
+                  className="flex-1 border-0 focus-visible:ring-0 text-base bg-transparent"
                   disabled={isLoading}
                 />
                 <Button 
                   onClick={sendMessage} 
                   disabled={isLoading || !inputMessage.trim()} 
                   size="icon"
-                  className="rounded-xl h-10 w-10"
+                  className="rounded-full h-10 w-10 shadow-sm"
                 >
                   {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 </Button>

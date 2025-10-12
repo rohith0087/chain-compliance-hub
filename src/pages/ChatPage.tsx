@@ -1067,16 +1067,11 @@ const ChatPage: React.FC = () => {
               <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setShowHistory(true)}>
                 <Menu className="w-4 h-4" />
               </Button>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                  <Shield className="w-4 h-4 text-primary" />
-                </div>
-                <div>
-                  <h1 className="font-semibold text-foreground">Compliance Assistant</h1>
-                  <p className="text-xs text-muted-foreground capitalize">
-                    {companyInfo?.type || "—"} • {companyInfo?.industry || "General"}
-                  </p>
-                </div>
+              <div>
+                <h1 className="font-semibold text-base text-foreground">Compliance Assistant</h1>
+                <p className="text-xs text-muted-foreground capitalize">
+                  {companyInfo?.type || "—"} • {companyInfo?.industry || "General"}
+                </p>
               </div>
             </div>
 
@@ -1103,35 +1098,34 @@ const ChatPage: React.FC = () => {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-6 py-6" ref={scrollAreaRef}>
           {messages.length === 0 ? (
-            <div className="max-w-2xl mx-auto text-center space-y-8">
-              <div className="space-y-4">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 via-primary/10 to-transparent mx-auto flex items-center justify-center border border-primary/20">
-                  <Shield className="w-10 h-10 text-primary" />
+            <div className="flex flex-col items-center justify-center h-full space-y-12 px-4 py-16">
+              <div className="space-y-6 text-center max-w-2xl">
+                <div className="w-16 h-16 rounded-full bg-primary/5 mx-auto flex items-center justify-center mb-8">
+                  <Shield className="w-7 h-7 text-primary/70" />
                 </div>
-                <h2 className="text-3xl font-bold text-foreground bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                  Welcome to your Compliance AI
+                <h2 className="text-4xl font-semibold text-foreground mb-3">
+                  What can I help with?
                 </h2>
-                <p className="text-muted-foreground text-lg max-w-md mx-auto">
+                <p className="text-muted-foreground text-base max-w-xl mx-auto">
                   Your assistant for document management, compliance tracking, and regulatory guidance.
                 </p>
               </div>
 
-              <div className="space-y-4">
-                <h3 className="font-semibold text-foreground flex items-center justify-center gap-2">
-                  <Sparkles className="w-4 h-4" />
+              <div className="space-y-4 max-w-2xl w-full">
+                <h3 className="text-sm font-medium text-muted-foreground mb-4">
                   Try asking:
                 </h3>
                 <div className="grid gap-3 max-w-lg mx-auto">
                   {dynamicQuestions.map((q, i) => (
                     <Button
                       key={i}
-                      variant="outline"
-                      className="text-left justify-start h-auto p-4 hover:bg-primary/5 hover:border-primary/20"
+                      variant="ghost"
+                      className="text-left justify-start h-auto py-3 px-4 hover:bg-accent/50 border-0 rounded-lg w-full group"
                       onClick={() => setInputMessage(q)}
                     >
                       <div className="flex items-start gap-3 w-full">
-                        <div className="w-2 h-2 rounded-full bg-primary/40 mt-2 group-hover:bg-primary flex-shrink-0" />
-                        <span className="text-muted-foreground group-hover:text-foreground">{q}</span>
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary/60 mt-2 flex-shrink-0" />
+                        <span className="text-sm text-muted-foreground">{q}</span>
                       </div>
                     </Button>
                   ))}
@@ -1212,19 +1206,26 @@ const ChatPage: React.FC = () => {
 
         {/* Input */}
         <div className="sticky bottom-0 border-t border-border bg-card/95 backdrop-blur-sm p-6">
-          <div className="flex items-end gap-3">
-            <Input
-              ref={inputRef}
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Ask about documents, compliance, or regulations..."
-              className="flex-1"
-              disabled={isLoading}
-            />
-            <Button onClick={sendMessage} disabled={isLoading || !inputMessage.trim()} size="lg" className="px-6">
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            </Button>
+          <div className="max-w-3xl mx-auto">
+            <div className="relative flex items-center gap-2 bg-background border border-border rounded-2xl shadow-sm hover:shadow-md transition-shadow p-2">
+              <Input
+                ref={inputRef}
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Ask about documents, compliance, or regulations..."
+                className="flex-1 border-0 focus-visible:ring-0 text-base"
+                disabled={isLoading}
+              />
+              <Button 
+                onClick={sendMessage} 
+                disabled={isLoading || !inputMessage.trim()} 
+                size="icon"
+                className="rounded-xl h-10 w-10"
+              >
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              </Button>
+            </div>
           </div>
         </div>
       </div>

@@ -713,15 +713,34 @@ async function generateVisualizationCode(args: any, buyerId: string) {
     let data: any = null;
     const { query_type, filters } = args.data_query;
     
+    // Ensure high limit for visualizations
+    const vizFilters = {
+      ...filters,
+      limit: Math.max(filters?.limit || 500, 500)
+    };
+    
     if (query_type === 'documents') {
-      const result = await queryDocuments(filters || {}, buyerId);
+      const result = await queryDocuments(vizFilters, buyerId);
       data = result.documents || [];
     } else if (query_type === 'suppliers') {
-      const result = await querySuppliers(filters || {}, buyerId);
+      const result = await querySuppliers(vizFilters, buyerId);
       data = result.suppliers || [];
     } else if (query_type === 'metrics') {
       const result = await getComplianceMetrics(buyerId);
       data = result.metrics;
+    }
+    
+    // Apply time window filter if specified (client-side filtering)
+    if (Array.isArray(data) && vizFilters.time_window_days) {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - vizFilters.time_window_days);
+      
+      data = data.filter((item: any) => {
+        const itemDate = item.created_at ? new Date(item.created_at) : null;
+        return itemDate && itemDate >= cutoffDate;
+      });
+      
+      console.log(`⏰ Time window filter applied: ${vizFilters.time_window_days} days, ${data.length} items remaining`);
     }
     
     if (!data || (Array.isArray(data) && data.length === 0)) {
@@ -803,9 +822,23 @@ async function generateVisualizationCode(args: any, buyerId: string) {
         
         const timeGroupsMap: Record<string, Record<string, number>> = {};
         
+        // Helper to normalize status labels for display
+        const normalizeStatusLabel = (status: string): string => {
+          if (status === 'pending_review') return 'Submitted';
+          if (status === 'approved') return 'Approved';
+          if (status === 'rejected') return 'Rejected';
+          if (status === 'expired') return 'Expired';
+          return status;
+        };
+        
         data.forEach((item: any) => {
           const dateValue = getNestedValue(item, dateField);
-          const groupValue = getNestedValue(item, groupField) || 'Not Specified';
+          let groupValue = getNestedValue(item, groupField) || 'Not Specified';
+          
+          // Normalize status labels if grouping by status
+          if (groupField === 'status') {
+            groupValue = normalizeStatusLabel(String(groupValue));
+          }
           
           if (!dateValue) return;
           const date = new Date(dateValue);
@@ -819,6 +852,7 @@ async function generateVisualizationCode(args: any, buyerId: string) {
             const weekNum = Math.ceil(date.getDate() / 7);
             timeKey = `Week ${weekNum}, ${date.getFullYear()}`;
           } else {
+            // Daily - format as "Oct 12"
             timeKey = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           }
           
@@ -1236,6 +1270,157 @@ serve(async (req) => {
       
       return null;
     };
+    
+    // ============= VISUALIZATION INTENT ROUTER =============
+    // This router intercepts chart/graph requests and handles them directly
+    // without going through the LLM to avoid misinterpretation
+    
+    const chartKeywordPattern = /(chart|graph|plot|visuali[sz]e|trend|line|bar|pie|timeseries|vs|over time)/i;
+    const hasChartIntent = chartKeywordPattern.test(question);
+    
+    if (hasChartIntent) {
+      console.log('🎨 Visualization intent detected, routing directly...');
+      
+      // Extract time window (e.g., "last 60 days")
+      const timeWindowMatch = question.match(/last\s+(\d+)\s+days/i);
+      const time_window_days = timeWindowMatch ? parseInt(timeWindowMatch[1]) : undefined;
+      
+      if (time_window_days) {
+        console.log(`⏰ Time window detected: ${time_window_days} days`);
+      }
+      
+      // Determine chart type
+      let visualization_type = 'bar_chart';
+      if (/(line|trend)/i.test(question)) visualization_type = 'line_chart';
+      else if (/pie/i.test(question)) visualization_type = 'pie_chart';
+      else if (/bar/i.test(question)) visualization_type = 'bar_chart';
+      
+      // Detect if this is a multi-series request (vs, split by, for each)
+      const isVsPattern = /\bvs\b|\b(and|split by|for each|by)\s+(status|supplier|document|type)/i.test(question);
+      const hasStatusComparison = /(approved|pending|submitted|rejected).*?(vs|and|split|each).*?(approved|pending|submitted|rejected)/i.test(question);
+      
+      let aggregation = 'count';
+      let group_by: string | undefined = undefined;
+      let x_axis = 'created_at';
+      let time_period = 'day';
+      
+      // Determine aggregation and grouping
+      if (hasStatusComparison || /\bvs\b/i.test(question)) {
+        // Multi-series time chart (e.g., "approved vs pending vs submitted")
+        aggregation = 'time_series_grouped';
+        group_by = 'status';
+        x_axis = 'created_at';
+        
+        // Use daily buckets for time windows <= 90 days, weekly for longer
+        time_period = time_window_days && time_window_days <= 90 ? 'day' : 'week';
+        
+        console.log('📊 Multi-series time chart detected (status comparison)');
+      } else if (/over time|trend/i.test(question) && !/by supplier|for each supplier/i.test(question)) {
+        // Single time series
+        aggregation = 'time_series';
+        x_axis = 'created_at';
+        console.log('📈 Single time series detected');
+      } else if (/(by supplier|for each supplier)/i.test(question)) {
+        // Group by supplier
+        aggregation = 'group_by';
+        x_axis = 'supplier_name';
+        console.log('🏢 Group by supplier detected');
+      }
+      
+      // Build filters
+      const filters: any = {
+        limit: 1000 // Force high limit for visualizations
+      };
+      
+      // Add time window filter if specified
+      if (time_window_days) {
+        filters.time_window_days = time_window_days;
+      }
+      
+      // Normalize status filters (map "submitted" to "pending_review")
+      const statusPattern = /approved|pending|submitted|rejected/gi;
+      const statusMatches = question.match(statusPattern);
+      if (statusMatches && !hasStatusComparison) {
+        // If not comparing statuses, filter by them
+        const normalizedStatuses = statusMatches.map((s: string) => 
+          s.toLowerCase() === 'submitted' ? 'pending_review' : s.toLowerCase()
+        );
+        filters.status = [...new Set(normalizedStatuses)];
+      }
+      
+      console.log('🔧 Chart config:', {
+        visualization_type,
+        aggregation,
+        group_by,
+        x_axis,
+        time_period,
+        filters
+      });
+      
+      // Build args for generateVisualizationCode
+      const vizArgs = {
+        visualization_type,
+        data_query: {
+          query_type: 'documents',
+          filters
+        },
+        chart_config: {
+          x_axis,
+          y_axis: 'count',
+          aggregation,
+          group_by,
+          time_period,
+          title: `Document ${aggregation === 'time_series_grouped' ? 'Trends' : 'Distribution'}`
+        }
+      };
+      
+      // Call generateVisualizationCode directly
+      const vizResult = await generateVisualizationCode(vizArgs, buyer_id);
+      
+      if (vizResult.success) {
+        const summary = `I've generated a ${visualization_type.replace('_', ' ')} showing ${
+          aggregation === 'time_series_grouped' 
+            ? `document trends over time${group_by ? ` by ${group_by}` : ''}`
+            : aggregation === 'time_series'
+            ? 'document trends over time'
+            : `documents by ${x_axis.replace('_', ' ')}`
+        }${time_window_days ? ` for the last ${time_window_days} days` : ''}.`;
+        
+        // Save to chat history
+        const userMsg = { session_id, role: 'user', content: question, metadata: {} };
+        const assistantMsg = {
+          session_id,
+          role: 'assistant',
+          content: summary,
+          metadata: {
+            code_visualization: {
+              code: vizResult.code,
+              data: vizResult.data,
+              summary: vizResult.summary
+            }
+          }
+        };
+        
+        await supabase.from('chat_messages').insert([userMsg, assistantMsg]);
+        
+        return new Response(JSON.stringify({
+          answer: summary,
+          structured_response: {
+            type: 'code_visualization',
+            code: vizResult.code,
+            data: vizResult.data,
+            summary: vizResult.summary
+          },
+          session_id,
+          conversation_history: [...conversationHistory, userMsg, assistantMsg]
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } else {
+        console.error('❌ Visualization generation failed:', vizResult.error);
+        // Fall through to normal LLM processing
+      }
+    }
     
     // ENHANCED SHORT-REPLY INTERCEPTOR
     // Handle confirmations and multi-part responses for pending actions

@@ -47,6 +47,18 @@ const tools = [
           limit: {
             type: "number",
             description: "Maximum number of results to return (default: 20, max: 100)"
+          },
+          page: {
+            type: "number",
+            description: "Page number for pagination (starts at 1)"
+          },
+          created_from: {
+            type: "string",
+            description: "Filter documents created on or after this date (YYYY-MM-DD format)"
+          },
+          created_to: {
+            type: "string",
+            description: "Filter documents created on or before this date (YYYY-MM-DD format)"
           }
         }
       }
@@ -69,6 +81,14 @@ const tools = [
             type: "string",
             enum: ["pending", "approved", "rejected"],
             description: "Filter suppliers by connection status"
+          },
+          limit: {
+            type: "number",
+            description: "Maximum number of results to return (default: 20)"
+          },
+          page: {
+            type: "number",
+            description: "Page number for pagination (starts at 1)"
           }
         }
       }
@@ -81,7 +101,12 @@ const tools = [
       description: "Get overall compliance statistics and metrics for the buyer. Use this for questions about compliance scores, totals, or overall statistics.",
       parameters: {
         type: "object",
-        properties: {}
+        properties: {
+          window_days: {
+            type: "number",
+            description: "Optional: Only include documents created within the last N days (e.g., 30, 60, 90)"
+          }
+        }
       }
     }
   },
@@ -128,6 +153,53 @@ const tools = [
       parameters: {
         type: "object",
         properties: {}
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_document_timeseries",
+      description: "Get time-series data for documents over a period. Perfect for line charts showing trends over time. Returns daily/weekly/monthly buckets with counts per status for easy chart rendering.",
+      parameters: {
+        type: "object",
+        properties: {
+          days: {
+            type: "number",
+            description: "Number of days to look back (default: 60, max: 365)"
+          },
+          statuses: {
+            type: "array",
+            items: { type: "string", enum: ["pending_review", "approved", "rejected", "expired"] },
+            description: "Specific statuses to track (if empty, includes all statuses)"
+          },
+          bucket_size: {
+            type: "string",
+            enum: ["day", "week", "month"],
+            description: "Time bucket size. Auto-determined if not specified: day for <=90 days, week for 91-180, month for >180"
+          }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_missing_required_documents",
+      description: "Find which required documents are missing from a supplier. Compares required document set against approved uploads. Critical for compliance gap analysis and knowing what still needs to be requested.",
+      parameters: {
+        type: "object",
+        properties: {
+          supplier_name: {
+            type: "string",
+            description: "Name of the supplier to check (fuzzy matching supported)"
+          },
+          required_set_id: {
+            type: "string",
+            description: "Optional: specific document set ID to check against. If not provided, uses default requirements."
+          }
+        },
+        required: ["supplier_name"]
       }
     }
   },
@@ -321,8 +393,22 @@ async function queryDocuments(filters: any, buyerId: string) {
         .lte('expiration_date', futureDate.toISOString());  // But before future cutoff
     }
     
+    // Date range filtering
+    if (filters.created_from) {
+      query = query.gte('created_at', filters.created_from);
+    }
+    if (filters.created_to) {
+      const toDate = new Date(filters.created_to);
+      toDate.setHours(23, 59, 59, 999); // Include entire day
+      query = query.lte('created_at', toDate.toISOString());
+    }
+    
+    // Pagination
     const limit = Math.min(filters.limit || 20, 100);
-    query = query.limit(limit).order('created_at', { ascending: false });
+    const page = Math.max(filters.page || 1, 1);
+    const offset = (page - 1) * limit;
+    
+    query = query.range(offset, offset + limit - 1).order('created_at', { ascending: false });
 
     const { data, error } = await query;
     
@@ -354,9 +440,16 @@ async function queryDocuments(filters: any, buyerId: string) {
       });
     }
 
+    const totalCount = results.length;
+    const currentPage = Math.max(filters.page || 1, 1);
+    const hasMore = totalCount === limit;
+    
     return {
       success: true,
-      count: results.length,
+      total: totalCount,
+      current_page: currentPage,
+      next_page: hasMore ? currentPage + 1 : null,
+      has_more: hasMore,
       documents: results.map((doc: any) => ({
         id: doc.id,
         title: doc.document_requests?.title,
@@ -408,6 +501,13 @@ async function querySuppliers(filters: any, buyerId: string) {
     if (filters.connection_status) {
       query = query.eq('status', filters.connection_status);
     }
+    
+    // Pagination
+    const limit = filters.limit || 20;
+    const page = Math.max(filters.page || 1, 1);
+    const offset = (page - 1) * limit;
+    
+    query = query.range(offset, offset + limit - 1);
 
     const { data, error } = await query;
     
@@ -425,9 +525,17 @@ async function querySuppliers(filters: any, buyerId: string) {
       });
     }
 
+    const totalCount = results.length;
+    const currentPage = Math.max(filters.page || 1, 1);
+    const limitVal = filters.limit || 20;
+    const hasMore = totalCount === limitVal;
+    
     return {
       success: true,
-      count: results.length,
+      total: totalCount,
+      current_page: currentPage,
+      next_page: hasMore ? currentPage + 1 : null,
+      has_more: hasMore,
       suppliers: results.map((conn: any) => ({
         connection_id: conn.id,
         connection_status: conn.status,
@@ -453,19 +561,29 @@ async function querySuppliers(filters: any, buyerId: string) {
   }
 }
 
-async function getComplianceMetrics(buyerId: string) {
+async function getComplianceMetrics(params: any, buyerId: string) {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   
   try {
-    // Get document counts by status
-    const { data: documents, error: docsError } = await supabase
+    // Build query with optional time window
+    let query = supabase
       .from('document_uploads')
       .select(`
         status,
         expiration_date,
+        created_at,
         document_requests!inner(buyer_id)
       `)
       .eq('document_requests.buyer_id', buyerId);
+    
+    // Apply time window if specified
+    if (params?.window_days) {
+      const windowDate = new Date();
+      windowDate.setDate(windowDate.getDate() - params.window_days);
+      query = query.gte('created_at', windowDate.toISOString());
+    }
+    
+    const { data: documents, error: docsError } = await query;
 
     if (docsError) throw docsError;
 
@@ -502,11 +620,17 @@ async function getComplianceMetrics(buyerId: string) {
 
     return {
       success: true,
+      window_days: params?.window_days || null,
       metrics: {
         ...metrics,
         compliance_score: complianceScore,
         total_suppliers: supplierCount || 0
-      }
+      },
+      trends: params?.window_days ? {
+        documents_in_window: documents?.length || 0,
+        approval_rate: documents?.length ? 
+          Math.round((metrics.approved / documents.length) * 100) : 0
+      } : null
     };
   } catch (error) {
     console.error('Error getting compliance metrics:', error);
@@ -1132,6 +1256,218 @@ Return ONLY the complete function code. NO markdown, NO explanations, NO TypeScr
   }
 }
 
+async function getDocumentTimeseries(params: any, buyerId: string) {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  try {
+    const days = Math.min(params?.days || 60, 365);
+    const statuses = params?.statuses || ['pending_review', 'approved', 'rejected'];
+    
+    // Auto-determine bucket size
+    let bucketSize = params?.bucket_size;
+    if (!bucketSize) {
+      if (days <= 90) bucketSize = 'day';
+      else if (days <= 180) bucketSize = 'week';
+      else bucketSize = 'month';
+    }
+    
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    
+    // Fetch documents in time window
+    const { data: documents, error } = await supabase
+      .from('document_uploads')
+      .select(`
+        created_at,
+        status,
+        document_requests!inner(buyer_id)
+      `)
+      .eq('document_requests.buyer_id', buyerId)
+      .gte('created_at', startDate.toISOString())
+      .order('created_at');
+    
+    if (error) throw error;
+    
+    // Group by time buckets and status
+    const bucketMap = new Map<string, Map<string, number>>();
+    
+    documents?.forEach((doc: any) => {
+      const date = new Date(doc.created_at);
+      let bucketKey: string;
+      
+      if (bucketSize === 'day') {
+        bucketKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+      } else if (bucketSize === 'week') {
+        const weekStart = new Date(date);
+        weekStart.setDate(date.getDate() - date.getDay());
+        bucketKey = weekStart.toISOString().split('T')[0];
+      } else {
+        bucketKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      }
+      
+      if (!bucketMap.has(bucketKey)) {
+        bucketMap.set(bucketKey, new Map());
+      }
+      
+      const statusMap = bucketMap.get(bucketKey)!;
+      const normalizedStatus = doc.status === 'pending_review' ? 'Submitted' : 
+                   doc.status.charAt(0).toUpperCase() + doc.status.slice(1);
+      statusMap.set(normalizedStatus, (statusMap.get(normalizedStatus) || 0) + 1);
+    });
+    
+    // Convert to array format for charts
+    const labels: string[] = [];
+    const series: { name: string; data: number[] }[] = [];
+    
+    // Initialize series for each status
+    statuses.forEach(status => {
+      const displayName = status === 'pending_review' ? 'Submitted' : 
+                         status.charAt(0).toUpperCase() + status.slice(1);
+      series.push({ name: displayName, data: [] });
+    });
+    
+    // Fill data arrays
+    const sortedBuckets = Array.from(bucketMap.keys()).sort();
+    sortedBuckets.forEach(bucketKey => {
+      labels.push(bucketKey);
+      const statusMap = bucketMap.get(bucketKey)!;
+      
+      series.forEach(s => {
+        s.data.push(statusMap.get(s.name) || 0);
+      });
+    });
+    
+    console.log('📈 Timeseries generated:', {
+      days,
+      bucket_size: bucketSize,
+      total_buckets: labels.length,
+      series_count: series.length
+    });
+    
+    return {
+      success: true,
+      window_days: days,
+      bucket_size: bucketSize,
+      labels,
+      series,
+      total_data_points: labels.length
+    };
+  } catch (error: any) {
+    console.error('Error getting document timeseries:', error);
+    return {
+      success: false,
+      error: error.message,
+      labels: [],
+      series: []
+    };
+  }
+}
+
+async function getMissingRequiredDocuments(params: any, buyerId: string) {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  try {
+    // 1. Find supplier by name (fuzzy match)
+    const { data: connections } = await supabase
+      .from('buyer_supplier_connections')
+      .select('id, supplier_id, suppliers(id, company_name)')
+      .eq('buyer_id', buyerId)
+      .eq('status', 'approved');
+    
+    let matchedSupplier = null;
+    for (const conn of connections || []) {
+      if (fuzzyMatch(conn.suppliers?.company_name || '', params.supplier_name)) {
+        matchedSupplier = conn.suppliers;
+        break;
+      }
+    }
+    
+    if (!matchedSupplier) {
+      return {
+        success: false,
+        error: `No approved supplier found matching "${params.supplier_name}"`,
+        missing_documents: []
+      };
+    }
+    
+    // 2. Get required documents (from set or default requirements)
+    let requiredDocs: string[] = [];
+    let requiredSetInfo = null;
+    
+    if (params.required_set_id) {
+      const { data: docSet } = await supabase
+        .from('document_sets')
+        .select('*')
+        .eq('id', params.required_set_id)
+        .eq('buyer_id', buyerId)
+        .single();
+      
+      if (docSet) {
+        requiredDocs = docSet.document_ids || [];
+        requiredSetInfo = { id: docSet.id, name: docSet.set_name };
+      }
+    } else {
+      // Use default requirements
+      const { data: defaults } = await supabase
+        .from('default_document_requirements')
+        .select('document_type, document_name')
+        .eq('buyer_id', buyerId)
+        .eq('is_required', true);
+      
+      requiredDocs = defaults?.map(d => d.document_type) || [];
+      requiredSetInfo = { id: 'default', name: 'Default Requirements' };
+    }
+    
+    // 3. Get uploaded & approved documents for this supplier
+    const { data: uploads } = await supabase
+      .from('document_uploads')
+      .select(`
+        document_requests!inner(
+          document_type,
+          supplier_id
+        )
+      `)
+      .eq('document_requests.supplier_id', matchedSupplier.id)
+      .eq('status', 'approved');
+    
+    const uploadedTypes = new Set(
+      uploads?.map((u: any) => u.document_requests?.document_type) || []
+    );
+    
+    // 4. Find missing documents
+    const missingDocuments = requiredDocs.filter(docType => !uploadedTypes.has(docType));
+    
+    console.log('🔍 Missing documents check:', {
+      supplier: matchedSupplier.company_name,
+      required: requiredDocs.length,
+      submitted: uploadedTypes.size,
+      missing: missingDocuments.length
+    });
+    
+    return {
+      success: true,
+      supplier: {
+        id: matchedSupplier.id,
+        name: matchedSupplier.company_name
+      },
+      required_set: requiredSetInfo,
+      total_required: requiredDocs.length,
+      total_submitted: uploadedTypes.size,
+      missing_count: missingDocuments.length,
+      missing_documents: missingDocuments,
+      compliance_percentage: requiredDocs.length > 0 ? 
+        Math.round((uploadedTypes.size / requiredDocs.length) * 100) : 0
+    };
+  } catch (error: any) {
+    console.error('Error getting missing documents:', error);
+    return {
+      success: false,
+      error: error.message,
+      missing_documents: []
+    };
+  }
+}
+
 async function executeToolCall(toolName: string, args: any, buyerId: string) {
   console.log(`Executing tool: ${toolName} with args:`, args);
   
@@ -1141,7 +1477,11 @@ async function executeToolCall(toolName: string, args: any, buyerId: string) {
     case "query_suppliers":
       return await querySuppliers(args, buyerId);
     case "get_compliance_metrics":
-      return await getComplianceMetrics(buyerId);
+      return await getComplianceMetrics(args, buyerId);
+    case "get_document_timeseries":
+      return await getDocumentTimeseries(args, buyerId);
+    case "get_missing_required_documents":
+      return await getMissingRequiredDocuments(args, buyerId);
     case "create_document_request":
       return await createDocumentRequest(args, buyerId);
     case "get_document_sets":
@@ -1626,6 +1966,8 @@ CRITICAL TOOL USAGE RULES:
    - "find documents expiring soon" → IMMEDIATELY call query_documents
    - "which suppliers are connected?" → IMMEDIATELY call query_suppliers
    - "what's my compliance score?" → IMMEDIATELY call get_compliance_metrics
+   - "show trends over 60 days" → IMMEDIATELY call get_document_timeseries
+   - "what's missing from supplier X" → IMMEDIATELY call get_missing_required_documents
    
    DO NOT say "I'll retrieve..." or "Please hold on a moment..." - JUST CALL THE TOOL DIRECTLY.
 
@@ -1636,6 +1978,49 @@ CRITICAL TOOL USAGE RULES:
 3. FOLLOW-UP CONFIRMATIONS - Execute immediately without further delay:
    - After presenting request details and user says "yes" → IMMEDIATELY execute
    - User makes modifications → Update params and IMMEDIATELY execute
+
+NEW TOOL GUIDANCE - get_document_timeseries:
+Use this tool for ANY request about trends, time-based analysis, or line charts:
+- "Show document trends over the last 60 days" → get_document_timeseries({ days: 60 })
+- "Line chart of approved vs pending over time" → get_document_timeseries({ days: 60, statuses: ["approved", "pending_review"] })
+- "How have submissions changed this quarter?" → get_document_timeseries({ days: 90 })
+- "Document approval trends" → get_document_timeseries({ statuses: ["approved"] })
+- "Show me trends for the past week" → get_document_timeseries({ days: 7 })
+
+This tool returns ready-to-chart data with labels and series arrays. It automatically handles:
+- Time bucketing (daily/weekly/monthly based on window size)
+- Multi-series data for status comparisons
+- Proper data normalization for chart rendering
+
+PREFER this tool over generate_visualization_code for time-series charts!
+
+NEW TOOL GUIDANCE - get_missing_required_documents:
+Use this tool to identify compliance gaps for specific suppliers:
+- "What documents are missing from Kerry?" → get_missing_required_documents({ supplier_name: "Kerry" })
+- "Which requirements has Supplier X not met?" → get_missing_required_documents({ supplier_name: "Supplier X" })
+- "Show me what Killer still needs to submit" → get_missing_required_documents({ supplier_name: "Killer" })
+- "Check compliance gaps for [supplier]" → get_missing_required_documents({ supplier_name: "[supplier]" })
+- "What's missing from X for doc set Y?" → get_missing_required_documents({ supplier_name: "X", required_set_id: "Y" })
+
+This tool compares required documents (from sets or defaults) against approved uploads and returns:
+- List of missing document types
+- Compliance percentage
+- Total required vs total submitted counts
+
+ENHANCED TOOL FEATURES:
+
+query_documents now supports:
+- Pagination: { page: 2, limit: 20 } for browsing results
+- Date ranges: { created_from: "2024-01-01", created_to: "2024-12-31" }
+- Returns: { documents, total, current_page, next_page, has_more }
+
+query_suppliers now supports:
+- Pagination: { page: 1, limit: 20 }
+- Returns: { suppliers, total, current_page, next_page, has_more }
+
+get_compliance_metrics now supports:
+- Time windows: { window_days: 90 } for metrics within last N days
+- Returns: { metrics, window_days, trends: { documents_in_window, approval_rate } }
 
 WRONG behavior (DO NOT DO THIS):
 User: "show me documents from Kerry"

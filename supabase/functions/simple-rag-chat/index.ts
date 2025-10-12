@@ -206,6 +206,156 @@ const tools = [
   {
     type: "function",
     function: {
+      name: "create_requests_for_missing",
+      description: "One-click creation of document requests for ALL missing required documents from a supplier. Internally calls get_missing_required_documents to identify gaps, then creates requests for each missing document. Perfect for 'request everything missing from X' scenarios.",
+      parameters: {
+        type: "object",
+        properties: {
+          supplier_name: {
+            type: "string",
+            description: "Name of the supplier to request missing documents from"
+          },
+          required_set_id: {
+            type: "string",
+            description: "Optional: specific document set to use. If not provided, uses default requirements."
+          },
+          due_date: {
+            type: "string",
+            description: "Due date in YYYY-MM-DD format for all requests. Default: 14 days from now"
+          },
+          priority: {
+            type: "string",
+            enum: ["low", "medium", "high", "urgent"],
+            description: "Priority level for all requests. Default: medium"
+          },
+          notes: {
+            type: "string",
+            description: "Additional notes to include in all requests"
+          }
+        },
+        required: ["supplier_name"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "send_notification",
+      description: "Send in-app notifications to users (suppliers, team members). Use this to confirm actions were taken or alert users about important events. Creates visible notifications in the app.",
+      parameters: {
+        type: "object",
+        properties: {
+          type: {
+            type: "string",
+            enum: ["request_created", "reminder", "expiring_soon", "action_completed", "system_alert"],
+            description: "Type of notification to send"
+          },
+          user_id: {
+            type: "string",
+            description: "Target user's profile ID to send notification to. Use supplier's profile_id from query results."
+          },
+          title: {
+            type: "string",
+            description: "Notification title (short, clear)"
+          },
+          message: {
+            type: "string",
+            description: "Notification message body"
+          },
+          reference_id: {
+            type: "string",
+            description: "Optional: ID of related entity (request_id, document_id, etc.)"
+          }
+        },
+        required: ["type", "user_id", "title", "message"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "acknowledge_and_log",
+      description: "Record user approvals, confirmations, or AI actions to audit log. Use this after executing important actions to create permanent record of what was done and user's consent. Critical for compliance auditing.",
+      parameters: {
+        type: "object",
+        properties: {
+          action: {
+            type: "string",
+            description: "Action that was performed (e.g., 'created_document_requests', 'sent_reminders', 'exported_data')"
+          },
+          user_id: {
+            type: "string",
+            description: "Profile ID of user who initiated the action"
+          },
+          payload: {
+            type: "object",
+            description: "Complete details of what was done (parameters, results, etc.)"
+          },
+          entity_type: {
+            type: "string",
+            enum: ["document", "request", "supplier", "system"],
+            description: "Type of entity the action relates to"
+          },
+          entity_id: {
+            type: "string",
+            description: "Optional: ID of specific entity affected"
+          }
+        },
+        required: ["action", "user_id", "payload", "entity_type"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "export_csv",
+      description: "Generate CSV export file for documents or suppliers. Returns a download URL that frontend displays as download button. Use when user says 'download', 'export', 'save as CSV', etc.",
+      parameters: {
+        type: "object",
+        properties: {
+          resource: {
+            type: "string",
+            enum: ["documents", "suppliers"],
+            description: "Type of data to export"
+          },
+          query: {
+            type: "object",
+            description: "Same query parameters as query_documents or query_suppliers tool"
+          }
+        },
+        required: ["resource", "query"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "audit_trail",
+      description: "View audit trail of activities for a specific document, request, or supplier. Shows who did what and when. Use for 'what changed', 'show history', 'who approved this', etc.",
+      parameters: {
+        type: "object",
+        properties: {
+          entity: {
+            type: "string",
+            enum: ["document", "request", "supplier"],
+            description: "Type of entity to view history for"
+          },
+          entity_id: {
+            type: "string",
+            description: "ID of the specific entity"
+          },
+          limit: {
+            type: "number",
+            description: "Maximum number of events to return (default: 50)"
+          }
+        },
+        required: ["entity", "entity_id"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
       name: "generate_visualization_code",
       description: "Generate custom TypeScript React component code for data visualizations. Use when user requests charts, graphs, or dashboards that require custom formatting (e.g., 'scatter plot', 'heatmap', 'custom dashboard', 'timeline chart'). NOT for standard compliance dashboards or supplier comparisons.",
       parameters: {
@@ -827,6 +977,315 @@ async function getDocumentSets(buyerId: string) {
       error: error.message,
       count: 0,
       document_sets: []
+    };
+  }
+}
+
+async function createRequestsForMissing(params: any, buyerId: string) {
+  try {
+    // Step 1: Get missing documents
+    const missingResult = await getMissingRequiredDocuments({
+      supplier_name: params.supplier_name,
+      required_set_id: params.required_set_id
+    }, buyerId);
+
+    if (!missingResult.success || missingResult.missing_documents.length === 0) {
+      return {
+        success: false,
+        error: missingResult.error || `No missing documents found for ${params.supplier_name}`,
+        created_count: 0,
+        missing_count: 0
+      };
+    }
+
+    // Step 2: Create requests for each missing document
+    const result = await createDocumentRequest({
+      supplier_name: params.supplier_name,
+      document_types: missingResult.missing_documents,
+      due_date: params.due_date,
+      priority: params.priority || 'medium',
+      notes: params.notes || `Requesting missing compliance documents based on requirement analysis. ${missingResult.missing_count} documents are outstanding.`
+    }, buyerId);
+
+    // Add missing analysis context to result
+    return {
+      ...result,
+      missing_analysis: {
+        total_required: missingResult.total_required,
+        total_submitted: missingResult.total_submitted,
+        missing_count: missingResult.missing_count,
+        compliance_percentage: missingResult.compliance_percentage
+      }
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message,
+      created_count: 0
+    };
+  }
+}
+
+async function sendNotification(params: any) {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: params.user_id,
+        title: params.title,
+        message: params.message,
+        type: params.type,
+        reference_id: params.reference_id || null,
+        read: false
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    console.log('✉️ Notification sent:', {
+      to: params.user_id,
+      type: params.type,
+      title: params.title
+    });
+
+    return {
+      success: true,
+      notification_id: data.id,
+      message: `Notification "${params.title}" sent successfully`
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+async function acknowledgeAndLog(params: any) {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  try {
+    const { data, error } = await supabase
+      .from('document_activity_logs')
+      .insert({
+        document_upload_id: params.entity_id || '00000000-0000-0000-0000-000000000000',
+        user_id: params.user_id,
+        action_type: params.action,
+        metadata: {
+          ...params.payload,
+          entity_type: params.entity_type,
+          logged_at: new Date().toISOString(),
+          logged_by: 'compliance_compass'
+        },
+        notes: `Action: ${params.action} | Entity: ${params.entity_type}`
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      success: true,
+      logged: true,
+      log_id: data.id,
+      action: params.action,
+      timestamp: data.created_at
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      logged: false,
+      error: error.message
+    };
+  }
+}
+
+async function exportCSV(params: any, buyerId: string) {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  try {
+    let data: any[] = [];
+    let csvContent = '';
+    
+    if (params.resource === 'documents') {
+      const result = await queryDocuments({ ...params.query, limit: 1000 }, buyerId);
+      if (!result.success) throw new Error(result.error);
+      
+      data = result.documents;
+      
+      const headers = ['Document Type', 'Supplier', 'Status', 'Uploaded Date', 'Expiration Date', 'Priority'];
+      csvContent = headers.join(',') + '\n';
+      
+      data.forEach((doc: any) => {
+        const row = [
+          `"${doc.document_type || ''}"`,
+          `"${doc.supplier_name || ''}"`,
+          `"${doc.status || ''}"`,
+          `"${doc.created_at?.split('T')[0] || ''}"`,
+          `"${doc.expiration_date || ''}"`,
+          `"${doc.priority || ''}"`,
+        ].join(',');
+        csvContent += row + '\n';
+      });
+      
+    } else if (params.resource === 'suppliers') {
+      const result = await querySuppliers({ ...params.query, limit: 1000 }, buyerId);
+      if (!result.success) throw new Error(result.error);
+      
+      data = result.suppliers;
+      
+      const headers = ['Company Name', 'Contact Email', 'Industry', 'Connection Status', 'Phone'];
+      csvContent = headers.join(',') + '\n';
+      
+      data.forEach((supplier: any) => {
+        const row = [
+          `"${supplier.company_name || ''}"`,
+          `"${supplier.contact_email || ''}"`,
+          `"${supplier.industry || ''}"`,
+          `"${supplier.connection_status || ''}"`,
+          `"${supplier.phone || ''}"`,
+        ].join(',');
+        csvContent += row + '\n';
+      });
+    }
+    
+    const filename = `${params.resource}_export_${new Date().getTime()}.csv`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('exports')
+      .upload(filename, csvContent, {
+        contentType: 'text/csv',
+        upsert: false
+      });
+    
+    if (uploadError) {
+      return {
+        success: true,
+        row_count: data.length,
+        download_type: 'inline',
+        csv_content: csvContent,
+        filename
+      };
+    }
+    
+    const { data: urlData } = supabase.storage
+      .from('exports')
+      .getPublicUrl(filename);
+    
+    return {
+      success: true,
+      row_count: data.length,
+      download_type: 'url',
+      url: urlData.publicUrl,
+      filename
+    };
+    
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message,
+      row_count: 0
+    };
+  }
+}
+
+async function getAuditTrail(params: any) {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  try {
+    let events: any[] = [];
+    
+    if (params.entity === 'document') {
+      const { data, error } = await supabase
+        .from('document_activity_logs')
+        .select(`
+          id,
+          action_type,
+          created_at,
+          notes,
+          metadata,
+          user_id,
+          profiles(full_name, email)
+        `)
+        .eq('document_upload_id', params.entity_id)
+        .order('created_at', { ascending: false })
+        .limit(params.limit || 50);
+      
+      if (error) throw error;
+      
+      events = data?.map((log: any) => ({
+        at: log.created_at,
+        who: log.profiles?.full_name || log.profiles?.email || 'System',
+        action: log.action_type,
+        details: log.notes || JSON.stringify(log.metadata),
+        metadata: log.metadata
+      })) || [];
+      
+    } else if (params.entity === 'request') {
+      const { data, error } = await supabase
+        .from('document_requests')
+        .select(`
+          id,
+          status,
+          created_at,
+          updated_at,
+          requester_id,
+          profiles:requester_id(full_name, email)
+        `)
+        .eq('id', params.entity_id)
+        .single();
+      
+      if (error) throw error;
+      
+      events = [
+        {
+          at: data.created_at,
+          who: data.profiles?.full_name || 'System',
+          action: 'request_created',
+          details: `Request created with status: ${data.status}`
+        }
+      ];
+      
+      if (data.updated_at !== data.created_at) {
+        events.push({
+          at: data.updated_at,
+          who: 'System',
+          action: 'status_changed',
+          details: `Status updated to: ${data.status}`
+        });
+      }
+      
+    } else if (params.entity === 'supplier') {
+      const { data: connectionData } = await supabase
+        .from('buyer_supplier_connections')
+        .select('*, suppliers(company_name)')
+        .eq('supplier_id', params.entity_id)
+        .order('requested_at', { ascending: false });
+      
+      events = connectionData?.map((conn: any) => ({
+        at: conn.requested_at,
+        who: conn.initiated_by === 'buyer' ? 'Buyer' : 'Supplier',
+        action: 'connection_request',
+        details: `Connection status: ${conn.status}`,
+        metadata: { connection_id: conn.id }
+      })) || [];
+    }
+    
+    return {
+      success: true,
+      entity_type: params.entity,
+      entity_id: params.entity_id,
+      event_count: events.length,
+      events
+    };
+    
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message,
+      events: []
     };
   }
 }
@@ -1488,6 +1947,21 @@ async function executeToolCall(toolName: string, args: any, buyerId: string) {
       return await getDocumentSets(buyerId);
     case "generate_visualization_code":
       return await generateVisualizationCode(args, buyerId);
+    case "create_requests_for_missing":
+      console.log('📋 Creating requests for missing documents:', args);
+      return await createRequestsForMissing(args, buyerId);
+    case "send_notification":
+      console.log('✉️ Sending notification:', args);
+      return await sendNotification(args);
+    case "acknowledge_and_log":
+      console.log('📝 Logging acknowledgment:', args);
+      return await acknowledgeAndLog(args);
+    case "export_csv":
+      console.log('📊 Exporting CSV:', args);
+      return await exportCSV(args, buyerId);
+    case "audit_trail":
+      console.log('📜 Getting audit trail:', args);
+      return await getAuditTrail(args);
     default:
       return {
         success: false,
@@ -1976,6 +2450,33 @@ IMPORTANT - STATUS MAPPING:
      → Use BOTH statuses: ["pending_review", "submitted"] in your queries
    - Both "pending_review" and "submitted" display as "Submitted" in charts
    - This ensures complete data for pending/submitted documents
+
+NEW WRITE TOOLS GUIDANCE:
+
+1. create_requests_for_missing:
+   - Use when: "request everything missing from Kerry", "fill gaps for X", "request all outstanding docs"
+   - This is 1-click workflow: finds gaps + creates requests automatically
+   - Always show compliance % before and after in response
+
+2. send_notification:
+   - Use when: User wants confirmation "notify me when done", or "alert the supplier"
+   - Creates visible in-app notification
+   - Don't spam - only for important confirmations
+
+3. acknowledge_and_log:
+   - ALWAYS use after executing write actions (create requests, bulk operations)
+   - Creates permanent audit record of user consent and AI actions
+   - Include full payload for compliance
+
+4. export_csv:
+   - Use when: "download this", "export to CSV", "save as spreadsheet"
+   - Generates CSV file with download link
+   - Frontend will show download button automatically
+
+5. audit_trail:
+   - Use when: "what changed?", "show history", "who approved this?", "activity log"
+   - Shows timeline of all activities for an entity
+   - Format as timeline in response
 
 2. ACTION REQUESTS - Confirm parameters first, then execute on confirmation:
    - "create document request" → Confirm details, wait for "yes", then execute

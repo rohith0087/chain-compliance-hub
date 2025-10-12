@@ -11,6 +11,9 @@ const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+// Define supabase client once for use in request handler
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
 // OpenAI tools that the LLM can use
 const tools = [
   {
@@ -795,17 +798,19 @@ async function getComplianceMetrics(params: any, buyerId: string) {
 // Helper to parse pending request from confirmation message
 function parsePendingRequest(message: string): any | null {
   try {
-    // Look for confirmation pattern in message
-    const supplierMatch = message.match(/(?:from|for)\s+([^,\.]+?)(?:\s*[,\.]|\s+with)/i);
+    // Enhanced: More flexible parsing for supplier and document types
+    const supplierMatch = message.match(/(?:from|for)\s+([^,\.]+?)(?:\s*[,\.]|\s+with|\s+by)/i);
     const docsMatch = message.match(/Requesting\s+(.+?)\s+(?:from|for)/i);
-    const dueDateMatch = message.match(/due date of ([^,\.]+)/i);
-    const priorityMatch = message.match(/(low|medium|high|urgent) priority/i);
     
     if (supplierMatch && docsMatch) {
+      // Enhanced: Accept commas AND "and" separators, handle "HACCP" without "Plan"
       const docTypes = docsMatch[1]
-        .split(/\s+and\s+|\s*,\s*/i)
-        .map((d: string) => d.trim())
+        .split(/\s*,\s*|\s+and\s+/i)
+        .map((d: string) => d.trim().replace(/\s+/g, ' ').replace(/\.$/,''))
         .filter(Boolean);
+      
+      const dueDateMatch = message.match(/due date of ([^,\.]+)/i);
+      const priorityMatch = message.match(/(low|medium|high|urgent) priority/i);
       
       return {
         type: "create_document_request",
@@ -2273,13 +2278,33 @@ serve(async (req) => {
     
     // Expanded patterns to catch more variations
     const isConfirm = /^(yes|yess|y|yeah|sure|go ahead|proceed|confirm|correct|that's right|ok|okay)$/i.test(normalizedQuestion);
-    const isNoNotes = /(no|nope|nah|no notes|skip notes|no changes|not now)/i.test(question);
+    const isNoNotes = /\b(no notes|nope|skip notes|no changes to notes)\b/i.test(question);
     const hasDateModification = /(use|set|change|update|make it).*?(nov|oct|sep|dec|january|february|march|april|may|june|july|august|september|october|november|december|\d{4}-\d{2}-\d{2})/i.test(question);
     const hasPriorityModification = /(low|medium|high|urgent)\s*priority/i.test(question);
     const hasNoteModification = /(?:add note|note:|notes?:)\s*(.+)/i.test(question);
     
     // Multi-part response pattern: "you can use nov 30 and no notes"
     const isMultiPart = (hasDateModification || hasPriorityModification || hasNoteModification || isNoNotes) && question.split(/\s+and\s+/i).length > 1;
+    
+    // Fallback: If no pending action was saved, try to reconstruct from history
+    if (!pendingAction && (isNoNotes || hasDateModification || hasPriorityModification || hasNoteModification)) {
+      console.log('⚠️ No pending action found, attempting reconstruction from conversation history...');
+      
+      const lastUserMsg = [...conversationHistory].reverse().find(m => m.role === 'user')?.content || '';
+      const supplierMatch = lastUserMsg.match(/(?:from|request.*?from)\s+([a-z0-9\s]+?)(?:\s+by|\s+due|\s+with|$)/i);
+      const docMatches = lastUserMsg.match(/\b(haccp(?: plan)?|iso(?:\s*\d{3,5})?|certificate(?: of [a-z\s]+)?|sds|safety data sheet|coi|cop|gfs[is]|audit report|plan)\b/ig);
+
+      if (supplierMatch || docMatches) {
+        pendingAction = {
+          type: 'create_document_request',
+          params: {
+            supplier_name: supplierMatch?.[1]?.trim() || '',
+            document_types: (docMatches || []).map(s => s.trim().replace(/\s+/g,' '))
+          }
+        };
+        console.log('✓ Reconstructed pending action:', pendingAction);
+      }
+    }
     
     if ((isConfirm || isNoNotes || hasDateModification || isMultiPart) && pendingAction?.type === 'create_document_request') {
       console.log('Intercepting reply for pending action:', { question, pendingAction });
@@ -2903,89 +2928,43 @@ IMPORTANT:
       
       // Save assistant response to history with ENHANCED pending action detection
       if (session_id) {
-        // Enhanced detection: Extract parameters directly from tool calls and AI messages
         let pendingActionToSave = null;
         
-        // Check if AI is asking for confirmation on a document request
-        const isAskingForConfirmation = /would you like to add any notes|any additional notes|please confirm|do you want to/i.test(aiResponse.content);
+        // Broadened confirmation/questions that imply we have enough context
+        const confirmLike = /(?:please confirm|do you want to|would you like to|should I|proceed|go ahead|add (?:any )?notes|specify (?:a )?due date|set (?:a )?priority)/i.test(aiResponse.content || "");
         
-        if (isAskingForConfirmation) {
-          // Try to parse from assistant's confirmation message
-          const maybePending = parsePendingRequest(aiResponse.content);
-          
-          if (maybePending) {
-            pendingActionToSave = maybePending;
-            console.log('Extracted pending action from assistant message:', pendingActionToSave);
-          } else {
-            // If parsing failed, try to extract from recent tool calls
-            const createRequestToolCall = aiResponse.tool_calls?.find((tc: any) => tc.function?.name === 'create_document_request');
-            if (createRequestToolCall) {
-              try {
-                const args = JSON.parse(createRequestToolCall.function.arguments);
-                pendingActionToSave = {
-                  type: 'create_document_request',
-                  params: args
-                };
-                console.log('Extracted pending action from tool call:', pendingActionToSave);
-              } catch (e) {
-                console.log('Failed to parse tool call arguments:', e);
-              }
-            }
-            
-            // If still no pending action, try to extract from conversation history
-            if (!pendingActionToSave && conversationHistory.length > 0) {
-              // Look for most recent user message with request details
-              const lastUserMessage = [...conversationHistory].reverse().find(m => m.role === 'user');
-              if (lastUserMessage) {
-                const content = lastUserMessage.content.toLowerCase();
-                
-                // Extract supplier
-                const supplierMatch = content.match(/(?:from|request.*?from)\s+([a-z0-9\s]+?)(?:\s+by|\s+due|\s+with|$)/i);
-                
-                // Extract documents  
-                const docMatches = content.match(/(haccp|iso|certificate|plan|sheet|document|cert)/gi);
-                
-                // Extract date
-                const dateText = parseNaturalDate(content);
-                
-                // Extract priority
-                const priorityMatch = content.match(/(low|medium|high|urgent)/i);
-                
-                if (supplierMatch || docMatches) {
-                  pendingActionToSave = {
-                    type: 'create_document_request',
-                    params: {
-                      supplier_name: supplierMatch?.[1]?.trim() || '',
-                      document_types: docMatches || [],
-                      due_date: dateText || undefined,
-                      priority: priorityMatch?.[1]?.toLowerCase() || 'medium',
-                      notes: undefined
-                    }
-                  };
-                  console.log('Extracted pending action from conversation history:', pendingActionToSave);
+        if (confirmLike) {
+          // 1) Try to parse from the assistant text
+          pendingActionToSave = parsePendingRequest(aiResponse.content);
+
+          // 2) Or, if missing, try to reconstruct from recent conversation/user turns
+          if (!pendingActionToSave && conversationHistory.length > 0) {
+            const lastUserMsg = [...conversationHistory].reverse().find(m => m.role === 'user')?.content || '';
+            const supplierMatch = lastUserMsg.match(/(?:from|request.*?from)\s+([a-z0-9\s]+?)(?:\s+by|\s+due|\s+with|$)/i);
+            const docMatches = lastUserMsg.match(/\b(haccp(?: plan)?|iso(?:\s*\d{3,5})?|certificate(?: of [a-z\s]+)?|sds|safety data sheet|coi|cop|gfs[is]|audit report|plan)\b/ig);
+
+            if (supplierMatch || docMatches) {
+              pendingActionToSave = {
+                type: 'create_document_request',
+                params: {
+                  supplier_name: supplierMatch?.[1]?.trim() || '',
+                  document_types: (docMatches || []).map(s => s.trim().replace(/\s+/g,' ')),
                 }
-              }
+              };
+              console.log('✓ Reconstructed pending action from conversation:', pendingActionToSave);
             }
           }
         }
         
-        await supabase
-          .from('chat_messages')
-          .insert({
-            session_id,
-            role: 'assistant',
-            content: aiResponse.content,
-            metadata: documentRequestResult ? { 
-              action: 'document_requests_created',
-              data: documentRequestResult 
-            } : queryDocumentsResult ? {
-              action: 'documents_queried',
-              count: queryDocumentsResult.documents?.length || 0
-            } : pendingActionToSave ? {
-              pending_action: pendingActionToSave
-            } : {}
-          });
-        
+        await supabase.from('chat_messages').insert({
+          session_id,
+          role: 'assistant',
+          content: aiResponse.content,
+          metadata: pendingActionToSave ? { pending_action: pendingActionToSave } : 
+                    documentRequestResult ? { action: 'document_requests_created', data: documentRequestResult } :
+                    queryDocumentsResult ? { action: 'documents_queried', count: queryDocumentsResult.documents?.length || 0 } : {}
+        });
+
         console.log('Saved assistant response to chat history', pendingActionToSave ? 'WITH pending action' : 'without pending action');
       }
 

@@ -1062,41 +1062,6 @@ const ChatPage: React.FC = () => {
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full min-h-0">
-        {/* Header */}
-        <div className="sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur-sm">
-          <div className="px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setShowHistory(true)}>
-                <Menu className="w-4 h-4" />
-              </Button>
-              <div>
-                <h1 className="font-semibold text-base text-foreground">Compliance Assistant</h1>
-                <p className="text-xs text-muted-foreground capitalize">
-                  {companyInfo?.type || "—"} • {companyInfo?.industry || "General"}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={triggerKnowledgeRefresh}
-                disabled={isRefreshing}
-                className="flex items-center gap-2"
-                title="Refresh Knowledge Base"
-              >
-                <RotateCcw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
-                {isRefreshing ? "Updating..." : ""}
-              </Button>
-              <Button variant="outline" size="sm" onClick={startNewChat}>
-                <Plus className="w-4 h-4 mr-1" />
-                New Chat
-              </Button>
-            </div>
-          </div>
-        </div>
-
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-6 py-6" ref={scrollAreaRef}>
           {messages.length === 0 ? (

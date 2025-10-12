@@ -828,6 +828,110 @@ function parsePendingRequest(message: string): any | null {
   return null;
 }
 
+// ============= LLM-BASED PENDING ACTION DETECTION =============
+async function analyzePendingAction(params: {
+  assistantMessage: string;
+  userResponse: string;
+  conversationHistory: Array<{role: string, content: string}>;
+  openaiApiKey: string;
+}): Promise<{
+  hasPendingAction: boolean;
+  actionType: 'create_document_request' | 'query_documents' | 'other' | null;
+  extractedParams: any;
+  userConfirmed: boolean;
+  userModifications: {
+    due_date?: string;
+    priority?: string;
+    notes?: string;
+  };
+}> {
+  const { assistantMessage, userResponse, conversationHistory, openaiApiKey } = params;
+  
+  // Build context from recent conversation
+  const contextMessages = conversationHistory.slice(-3).map(m => 
+    `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`
+  ).join('\n');
+
+  const analysisPrompt = `You are analyzing a conversation to detect if there's a pending action that needs execution.
+
+Recent conversation:
+${contextMessages}
+
+Latest assistant message: "${assistantMessage}"
+Latest user response: "${userResponse}"
+
+Analyze:
+1. Does the assistant message ask for confirmation or additional details for an action?
+2. What action is being discussed? (document request, query, etc.)
+3. Did the user confirm/agree to proceed? (yes, sure, go ahead, yess, yup, etc.)
+4. Did the user provide modifications? (due date, priority, notes)
+5. Extract all parameters mentioned in the conversation (supplier name, document types, dates, etc.)
+
+Respond ONLY with valid JSON:
+{
+  "hasPendingAction": boolean,
+  "actionType": "create_document_request" | "query_documents" | "other" | null,
+  "extractedParams": {
+    "supplier_name": string or null,
+    "document_types": string[] or null,
+    "due_date": string or null (YYYY-MM-DD format if possible),
+    "priority": "low" | "medium" | "high" | "urgent" | null,
+    "notes": string or null
+  },
+  "userConfirmed": boolean,
+  "userModifications": {
+    "due_date": string or null,
+    "priority": string or null,
+    "notes": string or null
+  }
+}`;
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You are a JSON-only extraction assistant. Always respond with valid JSON matching the exact schema provided.' },
+          { role: 'user', content: analysisPrompt }
+        ],
+        temperature: 0.1,
+        response_format: { type: "json_object" }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const analysis = JSON.parse(data.choices[0].message.content);
+    
+    console.log('🤖 LLM Pending Action Analysis:', JSON.stringify(analysis, null, 2));
+    return analysis;
+    
+  } catch (error) {
+    console.error('⚠️ LLM analysis failed, falling back to regex:', error);
+    
+    // Regex-based fallback
+    const hasConfirmation = /\b(yes|yess|y|yeah|sure|go ahead|proceed|yup|ok|okay|correct)\b/i.test(userResponse);
+    const hasDateMention = /\b(by|due|before)\s+([a-z]+\s+\d{1,2}|\d{1,2}[-/]\d{1,2})/i.test(userResponse);
+    const hasPriority = /(low|medium|high|urgent)\s*priority/i.test(userResponse);
+    
+    return {
+      hasPendingAction: hasConfirmation || hasDateMention || hasPriority,
+      actionType: 'create_document_request',
+      extractedParams: {},
+      userConfirmed: hasConfirmation,
+      userModifications: {}
+    };
+  }
+}
+
 async function createDocumentRequest(filters: any, buyerId: string) {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   
@@ -2272,69 +2376,45 @@ serve(async (req) => {
       }
     }
     
-    // ENHANCED SHORT-REPLY INTERCEPTOR
-    // Handle confirmations and multi-part responses for pending actions
-    const normalizedQuestion = question.trim().toLowerCase();
-    
-    // Expanded patterns to catch more variations
-    const isConfirm = /^(yes|yess|y|yeah|sure|go ahead|proceed|confirm|correct|that's right|ok|okay)$/i.test(normalizedQuestion);
-    const isNoNotes = /\b(no notes|nope|skip notes|no changes to notes)\b/i.test(question);
-    const hasDateModification = /(use|set|change|update|make it).*?(nov|oct|sep|dec|january|february|march|april|may|june|july|august|september|october|november|december|\d{4}-\d{2}-\d{2})/i.test(question);
-    const hasPriorityModification = /(low|medium|high|urgent)\s*priority/i.test(question);
-    const hasNoteModification = /(?:add note|note:|notes?:)\s*(.+)/i.test(question);
-    
-    // Multi-part response pattern: "you can use nov 30 and no notes"
-    const isMultiPart = (hasDateModification || hasPriorityModification || hasNoteModification || isNoNotes) && question.split(/\s+and\s+/i).length > 1;
-    
-    // Fallback: If no pending action was saved, try to reconstruct from history
-    if (!pendingAction && (isNoNotes || hasDateModification || hasPriorityModification || hasNoteModification)) {
-      console.log('⚠️ No pending action found, attempting reconstruction from conversation history...');
+    // ============= LLM-BASED PENDING ACTION INTERCEPTOR =============
+    // Use LLM to intelligently detect if user is confirming or modifying a pending action
+    if (pendingAction) {
+      const lastAssistantMsg = [...conversationHistory].reverse().find(m => m.role === 'assistant');
       
-      const lastUserMsg = [...conversationHistory].reverse().find(m => m.role === 'user')?.content || '';
-      const supplierMatch = lastUserMsg.match(/(?:from|request.*?from)\s+([a-z0-9\s]+?)(?:\s+by|\s+due|\s+with|$)/i);
-      const docMatches = lastUserMsg.match(/\b(haccp(?: plan)?|iso(?:\s*\d{3,5})?|certificate(?: of [a-z\s]+)?|sds|safety data sheet|coi|cop|gfs[is]|audit report|plan)\b/ig);
+      const analysis = await analyzePendingAction({
+        assistantMessage: lastAssistantMsg?.content || '',
+        userResponse: question,
+        conversationHistory: conversationHistory.slice(-3),
+        openaiApiKey: OPENAI_API_KEY
+      });
 
-      if (supplierMatch || docMatches) {
-        pendingAction = {
-          type: 'create_document_request',
-          params: {
-            supplier_name: supplierMatch?.[1]?.trim() || '',
-            document_types: (docMatches || []).map(s => s.trim().replace(/\s+/g,' '))
-          }
+      console.log('📊 Pending action analysis result:', {
+        hasPendingAction: analysis.hasPendingAction,
+        userConfirmed: analysis.userConfirmed,
+        hasModifications: Object.keys(analysis.userModifications).length > 0
+      });
+
+      // Execute if user confirmed OR provided modifications
+      if (analysis.userConfirmed || Object.keys(analysis.userModifications).length > 0) {
+        console.log('🎯 Intercepting reply - executing pending action with LLM analysis');
+        
+        // Merge extracted modifications with pending action params
+        const finalParams = {
+          ...pendingAction.params,
+          // Apply user modifications
+          ...(analysis.userModifications.due_date && { due_date: analysis.userModifications.due_date }),
+          ...(analysis.userModifications.priority && { priority: analysis.userModifications.priority }),
+          ...(analysis.userModifications.notes !== undefined && { notes: analysis.userModifications.notes }),
+          // If LLM extracted new data, prefer that
+          ...(analysis.extractedParams.supplier_name && { supplier_name: analysis.extractedParams.supplier_name }),
+          ...(analysis.extractedParams.document_types?.length && { document_types: analysis.extractedParams.document_types })
         };
-        console.log('✓ Reconstructed pending action:', pendingAction);
-      }
-    }
+
+        console.log('📦 Final params for execution:', finalParams);
     
-    if ((isConfirm || isNoNotes || hasDateModification || isMultiPart) && pendingAction?.type === 'create_document_request') {
-      console.log('Intercepting reply for pending action:', { question, pendingAction });
-      
-      const params = { ...pendingAction.params };
-      
-      // Extract modifications from multi-part or single-part responses
-      const dateFromText = parseNaturalDate(question);
-      if (dateFromText) {
-        params.due_date = dateFromText;
-        console.log('Extracted date from text:', dateFromText);
-      }
-      
-      const priorityMatch = question.match(/(low|medium|high|urgent)/i);
-      if (priorityMatch) {
-        params.priority = priorityMatch[1].toLowerCase();
-        console.log('Extracted priority:', params.priority);
-      }
-      
-      const noteMatch = question.match(/(?:add note|note:|notes?:)\s*(.+?)(?:\s+and\s+|$)/i);
-      if (noteMatch) {
-        params.notes = noteMatch[1].trim();
-        console.log('Extracted notes:', params.notes);
-      } else if (isNoNotes) {
-        params.notes = '';
-        console.log('No notes requested');
-      }
-      
-      // Execute the request directly
-      const result = await createDocumentRequest(params, buyer_id);
+        if (pendingAction?.type === 'create_document_request') {
+          // Execute the request directly
+          const result = await createDocumentRequest(finalParams, buyer_id);
       
       // Save both user message and assistant response
       const userMsg = {
@@ -2345,7 +2425,7 @@ serve(async (req) => {
       };
       
       const responseText = result.success
-        ? `✓ Created ${result.created_count} document request${result.created_count > 1 ? 's' : ''} for ${result.supplier_name}:\n- Documents: ${result.document_types?.join(', ')}\n- Due: ${result.due_date}\n- Priority: ${result.priority}${params.notes ? `\n- Notes: ${params.notes}` : ''}`
+        ? `✓ Created ${result.created_count} document request${result.created_count > 1 ? 's' : ''} for ${result.supplier_name}:\n- Documents: ${result.document_types?.join(', ')}\n- Due: ${result.due_date}\n- Priority: ${result.priority}${finalParams.notes ? `\n- Notes: ${finalParams.notes}` : ''}`
         : `I couldn't create the request: ${result.error || 'Unknown error'}`;
       
       const assistantMsg = {
@@ -2355,20 +2435,22 @@ serve(async (req) => {
         metadata: result.success ? { action: 'document_requests_created', data: result } : {}
       };
       
-      await supabase.from('chat_messages').insert([userMsg, assistantMsg]);
-      
-      return new Response(JSON.stringify({
-        answer: responseText,
-        structured_response: result.success ? {
-          action: 'document_requests_created',
-          data: result,
-          response: responseText
-        } : undefined,
-        session_id,
-        conversation_history: [...conversationHistory, userMsg, assistantMsg]
-      }), { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
+          await supabase.from('chat_messages').insert([userMsg, assistantMsg]);
+          
+          return new Response(JSON.stringify({
+            answer: responseText,
+            structured_response: result.success ? {
+              action: 'document_requests_created',
+              data: result,
+              response: responseText
+            } : undefined,
+            session_id,
+            conversation_history: [...conversationHistory, userMsg, assistantMsg]
+          }), { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          });
+        }
+      }
     }
 
     // Step 1: Initial conversation with OpenAI
@@ -2926,34 +3008,25 @@ IMPORTANT:
         })
         .find((result: any) => result?.success && result?.type === 'code_visualization');
       
-      // Save assistant response to history with ENHANCED pending action detection
+      // Save assistant response to history with LLM-BASED pending action detection
       if (session_id) {
         let pendingActionToSave = null;
         
-        // Broadened confirmation/questions that imply we have enough context
-        const confirmLike = /(?:please confirm|do you want to|would you like to|should I|proceed|go ahead|add (?:any )?notes|specify (?:a )?due date|set (?:a )?priority)/i.test(aiResponse.content || "");
-        
-        if (confirmLike) {
-          // 1) Try to parse from the assistant text
-          pendingActionToSave = parsePendingRequest(aiResponse.content);
+        // Use LLM to detect if assistant is asking for confirmation/details
+        const analysis = await analyzePendingAction({
+          assistantMessage: aiResponse.content || '',
+          userResponse: question,
+          conversationHistory: conversationHistory.slice(-3),
+          openaiApiKey: OPENAI_API_KEY
+        });
 
-          // 2) Or, if missing, try to reconstruct from recent conversation/user turns
-          if (!pendingActionToSave && conversationHistory.length > 0) {
-            const lastUserMsg = [...conversationHistory].reverse().find(m => m.role === 'user')?.content || '';
-            const supplierMatch = lastUserMsg.match(/(?:from|request.*?from)\s+([a-z0-9\s]+?)(?:\s+by|\s+due|\s+with|$)/i);
-            const docMatches = lastUserMsg.match(/\b(haccp(?: plan)?|iso(?:\s*\d{3,5})?|certificate(?: of [a-z\s]+)?|sds|safety data sheet|coi|cop|gfs[is]|audit report|plan)\b/ig);
-
-            if (supplierMatch || docMatches) {
-              pendingActionToSave = {
-                type: 'create_document_request',
-                params: {
-                  supplier_name: supplierMatch?.[1]?.trim() || '',
-                  document_types: (docMatches || []).map(s => s.trim().replace(/\s+/g,' ')),
-                }
-              };
-              console.log('✓ Reconstructed pending action from conversation:', pendingActionToSave);
-            }
-          }
+        if (analysis.hasPendingAction) {
+          pendingActionToSave = {
+            type: analysis.actionType,
+            params: analysis.extractedParams,
+            awaitingConfirmation: !analysis.userConfirmed
+          };
+          console.log('✓ LLM detected pending action:', pendingActionToSave);
         }
         
         await supabase.from('chat_messages').insert({

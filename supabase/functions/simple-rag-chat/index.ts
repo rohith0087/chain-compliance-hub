@@ -71,7 +71,8 @@ const tools = [
     type: "function",
     function: {
       name: "query_suppliers",
-      description: "Query suppliers and their connection status. Use this to find suppliers by name or connection status.",
+      read_only: true,
+      description: "Query suppliers and their connection status. Use this to find suppliers by name or connection status. INFORMATIONAL ONLY.",
       parameters: {
         type: "object",
         properties: {
@@ -101,7 +102,8 @@ const tools = [
     type: "function",
     function: {
       name: "get_compliance_metrics",
-      description: "Get overall compliance statistics and metrics for the buyer. Use this for questions about compliance scores, totals, or overall statistics.",
+      read_only: true,
+      description: "Get overall compliance statistics and metrics for the buyer. Use this for questions about compliance scores, totals, or overall statistics. INFORMATIONAL ONLY.",
       parameters: {
         type: "object",
         properties: {
@@ -163,7 +165,8 @@ const tools = [
     type: "function",
     function: {
       name: "get_document_timeseries",
-      description: "Get time-series data for documents over a period. Perfect for line charts showing trends over time. Returns daily/weekly/monthly buckets with counts per status for easy chart rendering.",
+      read_only: true,
+      description: "Get time-series data for documents over a period. Perfect for line charts showing trends over time. Returns daily/weekly/monthly buckets with counts per status for easy chart rendering. ANALYSIS ONLY.",
       parameters: {
         type: "object",
         properties: {
@@ -189,7 +192,8 @@ const tools = [
     type: "function",
     function: {
       name: "get_missing_required_documents",
-      description: "Find which required documents are missing from a supplier. Compares required document set against approved uploads. Critical for compliance gap analysis and knowing what still needs to be requested.",
+      read_only: true,
+      description: "INFORMATIONAL ONLY - Find which required documents are missing from a supplier. Compares required document set against approved uploads. Reports gaps but does NOT create requests. User must explicitly confirm before creating any requests.",
       parameters: {
         type: "object",
         properties: {
@@ -834,6 +838,7 @@ async function analyzePendingAction(params: {
   userResponse: string;
   conversationHistory: Array<{role: string, content: string}>;
   openaiApiKey: string;
+  lastToolCalled?: string;
 }): Promise<{
   hasPendingAction: boolean;
   actionType: 'create_document_request' | 'query_documents' | 'other' | null;
@@ -844,8 +849,9 @@ async function analyzePendingAction(params: {
     priority?: string;
     notes?: string;
   };
+  isReadOnlyQuery: boolean;
 }> {
-  const { assistantMessage, userResponse, conversationHistory, openaiApiKey } = params;
+  const { assistantMessage, userResponse, conversationHistory, openaiApiKey, lastToolCalled } = params;
   
   // Build context from recent conversation
   const contextMessages = conversationHistory.slice(-3).map(m => 
@@ -859,17 +865,24 @@ ${contextMessages}
 
 Latest assistant message: "${assistantMessage}"
 Latest user response: "${userResponse}"
+Last tool called: "${lastToolCalled || 'none'}"
 
-Analyze:
-1. Does the assistant message ask for confirmation or additional details for an action?
-2. What action is being discussed? (document request, query, etc.)
-3. Did the user confirm/agree to proceed? (yes, sure, go ahead, yess, yup, etc.)
-4. Did the user provide modifications? (due date, priority, notes)
-5. Extract all parameters mentioned in the conversation (supplier name, document types, dates, etc.)
+CRITICAL RULES - READ vs WRITE DETECTION:
+1. If the user's ORIGINAL query was informational ("check", "show", "see what's", "list", "what's missing"), this is READ-ONLY
+2. READ-ONLY queries should set "hasPendingAction": false even if assistant asks follow-up questions
+3. Only set "hasPendingAction": true if user EXPLICITLY confirms a write action ("yes create", "request these", "go ahead", "create them")
+4. If last tool was read-only (get_missing_required_documents, query_documents, query_suppliers, get_compliance_metrics, get_document_timeseries), user must EXPLICITLY confirm before any write action
+
+Examples:
+✅ User: "check missing from Kerry" → AI reports → User: "yes create them" → hasPendingAction: true, isReadOnlyQuery: false
+✅ User: "check missing from Kerry" → AI reports gaps → hasPendingAction: false, isReadOnlyQuery: true (no confirmation yet)
+✅ User: "request HACCP from Kerry" → AI asks "Add notes?" → hasPendingAction: true, isReadOnlyQuery: false (user initiated write)
+❌ User: "show what's missing" → AI reports → hasPendingAction: true ← WRONG! Should be false until user confirms
 
 Respond ONLY with valid JSON:
 {
   "hasPendingAction": boolean,
+  "isReadOnlyQuery": boolean,
   "actionType": "create_document_request" | "query_documents" | "other" | null,
   "extractedParams": {
     "supplier_name": string or null,
@@ -917,17 +930,28 @@ Respond ONLY with valid JSON:
   } catch (error) {
     console.error('⚠️ LLM analysis failed, falling back to regex:', error);
     
+    // Regex-based fallback with READ-ONLY detection
+    const readOnlyKeywords = ['check', 'show', 'see', 'what\'s', 'list', 'get', 'find', 'tell me'];
+    const readOnlyTools = ['get_missing_required_documents', 'query_documents', 'query_suppliers', 'get_compliance_metrics', 'get_document_timeseries'];
+    
+    const isReadOnly = readOnlyKeywords.some(kw => 
+      conversationHistory.slice(-3).some(m => 
+        m.role === 'user' && m.content.toLowerCase().includes(kw)
+      )
+    ) || (lastToolCalled && readOnlyTools.includes(lastToolCalled));
+    
     // Regex-based fallback
     const hasConfirmation = /\b(yes|yess|y|yeah|sure|go ahead|proceed|yup|ok|okay|correct)\b/i.test(userResponse);
     const hasDateMention = /\b(by|due|before)\s+([a-z]+\s+\d{1,2}|\d{1,2}[-/]\d{1,2})/i.test(userResponse);
     const hasPriority = /(low|medium|high|urgent)\s*priority/i.test(userResponse);
     
     return {
-      hasPendingAction: hasConfirmation || hasDateMention || hasPriority,
+      hasPendingAction: (hasConfirmation || hasDateMention || hasPriority) && !isReadOnly,
       actionType: 'create_document_request',
       extractedParams: {},
-      userConfirmed: hasConfirmation,
-      userModifications: {}
+      userConfirmed: hasConfirmation && !isReadOnly,
+      userModifications: {},
+      isReadOnlyQuery: isReadOnly
     };
   }
 }
@@ -2386,21 +2410,31 @@ serve(async (req) => {
     if (pendingAction) {
       const lastAssistantMsg = [...conversationHistory].reverse().find(m => m.role === 'assistant');
       
+      // Track the last tool called (used to detect if it was a read-only tool)
+      const lastToolMsg = [...conversationHistory].reverse().find(m => m.metadata?.tool_name);
+      const lastToolCalled = lastToolMsg?.metadata?.tool_name || pendingAction?.last_tool_called || null;
+      
       const analysis = await analyzePendingAction({
         assistantMessage: lastAssistantMsg?.content || '',
         userResponse: question,
         conversationHistory: conversationHistory.slice(-3),
-        openaiApiKey: OPENAI_API_KEY
+        openaiApiKey: OPENAI_API_KEY,
+        lastToolCalled
       });
 
       console.log('📊 Pending action analysis result:', {
         hasPendingAction: analysis.hasPendingAction,
         userConfirmed: analysis.userConfirmed,
+        isReadOnlyQuery: analysis.isReadOnlyQuery,
         hasModifications: Object.keys(analysis.userModifications).length > 0
       });
 
-      // Execute if user confirmed OR provided modifications
-      if (analysis.userConfirmed || Object.keys(analysis.userModifications).length > 0) {
+      // CRITICAL GUARD: Prevent auto-execution on read-only queries
+      if (analysis.isReadOnlyQuery && !analysis.userConfirmed) {
+        console.log('⚠️ Blocking auto-execution: READ-ONLY query detected without explicit confirmation');
+        // Let normal conversation flow handle this - AI will ask for confirmation
+        // Do not execute pending action
+      } else if (analysis.userConfirmed || Object.keys(analysis.userModifications).length > 0) {
         console.log('🎯 Intercepting reply - executing pending action with LLM analysis');
         
         // Merge extracted modifications with pending action params
@@ -2681,25 +2715,37 @@ This tool compares required documents (from sets or defaults) against approved u
 - Compliance percentage
 - Total required vs total submitted counts
 
-AUTO-SUGGEST WORKFLOW - MISSING DOCUMENTS:
+CRITICAL - READ vs WRITE OPERATIONS:
 
-After calling get_missing_required_documents and finding missing documents:
-1. Present the gap analysis with compliance percentage
-2. Immediately offer 1-click solution:
-   "Create these requests now?" or "Request all missing documents?"
-3. If user responds with confirmation keyword → call create_requests_for_missing
+READ-ONLY tools (informational, never auto-execute write actions):
+- get_missing_required_documents: ONLY reports gaps, NEVER creates requests
+- query_documents, query_suppliers: Information retrieval only
+- get_compliance_metrics, get_document_timeseries: Analysis only
+- resolve_supplier: Lookup only
 
-Example:
-User: "what's missing from Kerry?"
-AI: [calls get_missing_required_documents]
-    → "Kerry is missing 3 documents: Safety Certificate, Insurance Proof, Quality License
-       Compliance: 60% (3 of 5 submitted)
-       
-       **Create these requests now?**"
-       
-User: "yes"
-AI: [calls create_requests_for_missing]
-    → "✓ Created 3 document requests for Kerry (due: Oct 25). Compliance target: 100%"
+WRITE tools (require explicit user confirmation):
+- create_document_request: Creates new requests
+- create_requests_for_missing: Bulk request creation
+- send_notification: Sends alerts
+
+TWO-PHASE WORKFLOW FOR MISSING DOCUMENTS:
+
+Phase 1 - INFORMATION (Read-Only):
+User asks: "check what's missing from Kerry", "show gaps for supplier X", "what's missing"
+AI MUST: 
+1. Call get_missing_required_documents
+2. Present results ONLY: "Kerry is missing 3 documents: Insurance, Business License, Tax Certificate (0% compliance)"
+3. Then ASK: "Would you like me to create document requests for these missing items?"
+4. DO NOT auto-execute create_requests_for_missing
+
+Phase 2 - ACTION (Write Operation - requires confirmation):
+User confirms: "yes", "create them", "go ahead", "request these"
+AI MUST:
+1. NOW call create_requests_for_missing with extracted params
+2. Present success: "✓ Created 3 document requests for Kerry"
+
+NEVER skip Phase 1 confirmation when user asks to "check" or "show" or "see what's missing"
+ALWAYS require explicit confirmation before write operations after read-only queries
 
 ENHANCED TOOL FEATURES:
 
@@ -3017,12 +3063,16 @@ IMPORTANT:
       if (session_id) {
         let pendingActionToSave = null;
         
+        // Track the last tool that was called
+        const lastToolCalled = aiResponse.tool_calls?.[aiResponse.tool_calls.length - 1]?.function?.name || null;
+        
         // Use LLM to detect if assistant is asking for confirmation/details
         const analysis = await analyzePendingAction({
           assistantMessage: aiResponse.content || '',
           userResponse: question,
           conversationHistory: conversationHistory.slice(-3),
-          openaiApiKey: OPENAI_API_KEY
+          openaiApiKey: OPENAI_API_KEY,
+          lastToolCalled
         });
 
         if (analysis.hasPendingAction) {

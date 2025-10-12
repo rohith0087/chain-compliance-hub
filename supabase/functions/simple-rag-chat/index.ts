@@ -1400,6 +1400,9 @@ serve(async (req) => {
             }
           }
         };
+
+        // Create Supabase client for database operations
+        const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
         
         await supabase.from('chat_messages').insert([userMsg, assistantMsg]);
         

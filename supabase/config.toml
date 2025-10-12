@@ -96,3 +96,6 @@ verify_jwt = false
 
 [functions.simple-rag-chat]
 verify_jwt = false
+
+[functions.chat-session-manager]
+verify_jwt = false

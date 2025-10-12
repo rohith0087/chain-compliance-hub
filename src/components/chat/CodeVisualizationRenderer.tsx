@@ -12,24 +12,44 @@ interface CodeVisualizationProps {
   summary: string;
 }
 
-// Helper to validate data quality
+// Helper to validate data quality - supports both single and multi-series formats
 function validateVisualizationData(data: any): { isValid: boolean; message?: string } {
   if (!data || !Array.isArray(data) || data.length === 0) {
     return { isValid: false, message: 'No data available for visualization' };
   }
   
-  // Check if all items have required fields
+  // Check if all items have a name field (required for all chart types)
   const hasNames = data.every(item => item.name !== undefined && item.name !== null);
-  const hasValues = data.every(item => 
-    typeof item.value === 'number' || 
-    typeof item.count === 'number' ||
-    (item.data && Array.isArray(item.data))
-  );
-  
-  if (!hasNames || !hasValues) {
+  if (!hasNames) {
     return { 
       isValid: false, 
-      message: 'Data format invalid. Expected array of objects with "name" and "value"/"count" fields.' 
+      message: 'All data items must have a "name" field for labels.' 
+    };
+  }
+  
+  // Check if items have at least one numeric field (supports multi-series)
+  const hasNumericData = data.every(item => {
+    // Check for single-series format (value/count)
+    if (typeof item.value === 'number' || typeof item.count === 'number') {
+      return true;
+    }
+    
+    // Check for nested data array
+    if (item.data && Array.isArray(item.data)) {
+      return true;
+    }
+    
+    // Check for multi-series format (any numeric field)
+    const numericFields = Object.keys(item).filter(key => 
+      key !== 'name' && typeof item[key] === 'number'
+    );
+    return numericFields.length > 0;
+  });
+  
+  if (!hasNumericData) {
+    return { 
+      isValid: false, 
+      message: 'Data items must contain at least one numeric field (value, count, or series data).' 
     };
   }
   

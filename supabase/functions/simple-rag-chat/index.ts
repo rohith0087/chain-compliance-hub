@@ -170,8 +170,8 @@ const tools = [
           },
           statuses: {
             type: "array",
-            items: { type: "string", enum: ["pending_review", "approved", "rejected", "expired"] },
-            description: "Specific statuses to track (if empty, includes all statuses)"
+            items: { type: "string", enum: ["pending_review", "submitted", "approved", "rejected", "expired"] },
+            description: "Specific statuses to track. Note: 'pending_review' and 'submitted' both display as 'Submitted' in charts. Use both when user asks for pending/submitted documents."
           },
           bucket_size: {
             type: "string",
@@ -1970,6 +1970,12 @@ CRITICAL TOOL USAGE RULES:
    - "what's missing from supplier X" → IMMEDIATELY call get_missing_required_documents
    
    DO NOT say "I'll retrieve..." or "Please hold on a moment..." - JUST CALL THE TOOL DIRECTLY.
+
+IMPORTANT - STATUS MAPPING:
+   - When user asks for "pending", "pending review", or "submitted" documents:
+     → Use BOTH statuses: ["pending_review", "submitted"] in your queries
+   - Both "pending_review" and "submitted" display as "Submitted" in charts
+   - This ensures complete data for pending/submitted documents
 
 2. ACTION REQUESTS - Confirm parameters first, then execute on confirmation:
    - "create document request" → Confirm details, wait for "yes", then execute

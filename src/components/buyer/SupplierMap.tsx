@@ -1,6 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
-import { Building2, Warehouse, MapPin, Phone, Filter, Search } from 'lucide-react';
+import { Building2, Warehouse, MapPin, Phone, Filter, Search, Plus } from 'lucide-react';
+import { addSampleSuppliers } from '@/utils/addSampleSuppliers';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -27,13 +29,30 @@ function getIndustryColor(industry?: string): string {
 }
 
 export function SupplierMap() {
-  const { markers, loading, error } = useSupplierMapData();
+  const { markers, loading, error, reload } = useSupplierMapData();
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [showSuppliers, setShowSuppliers] = useState(true);
   const [showFacilities, setShowFacilities] = useState(true);
   const [connectionFilter, setConnectionFilter] = useState<string[]>(['connected', 'pending', 'none']);
+  const [isAddingData, setIsAddingData] = useState(false);
+
+  const handleAddSampleData = async () => {
+    setIsAddingData(true);
+    toast.info('Adding sample suppliers...');
+    try {
+      const results = await addSampleSuppliers();
+      const successCount = results.filter(r => r.success).length;
+      toast.success(`Added ${successCount} sample suppliers with real US addresses`);
+      reload();
+    } catch (error) {
+      console.error('Error adding sample data:', error);
+      toast.error('Failed to add sample suppliers');
+    } finally {
+      setIsAddingData(false);
+    }
+  };
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
@@ -119,14 +138,31 @@ export function SupplierMap() {
     return (
       <Card>
         <CardContent className="p-6">
-          <p className="text-destructive">Error loading map data: {error}</p>
+          <p className="text-destructive mb-4">Error loading map data: {error}</p>
+          <Button onClick={handleAddSampleData} disabled={isAddingData}>
+            <Plus className="w-4 h-4 mr-2" />
+            {isAddingData ? 'Adding...' : 'Add Sample Data'}
+          </Button>
         </CardContent>
       </Card>
     );
   }
 
+  const showAddDataButton = markers.length === 0;
+
   return (
     <div className="relative h-[calc(100vh-120px)]">
+      {showAddDataButton && (
+        <Card className="absolute top-4 right-4 z-20">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground mb-2">No supplier data available</p>
+            <Button onClick={handleAddSampleData} disabled={isAddingData} size="sm">
+              <Plus className="w-4 h-4 mr-2" />
+              {isAddingData ? 'Adding...' : 'Add Sample Suppliers'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
       {/* Filter Panel - Desktop */}
       <Card className="absolute top-4 left-4 z-10 w-80 max-h-[calc(100vh-160px)] overflow-y-auto hidden lg:block">
         <CardHeader>

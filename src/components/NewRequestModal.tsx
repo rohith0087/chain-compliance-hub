@@ -326,8 +326,6 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
                 </SelectTrigger>
               <SelectContent>
                 <SelectItem value="General Supplier">General Supplier</SelectItem>
-                <SelectItem value="Auditor">Auditor</SelectItem>
-                <SelectItem value="Egg Processing">Egg Processing</SelectItem>
                 <SelectItem value="Sushi Company">Sushi Company</SelectItem>
               </SelectContent>
               </Select>

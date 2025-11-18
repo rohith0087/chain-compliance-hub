@@ -55,8 +55,8 @@ export async function addHishōSushiData(): Promise<AddHishōSushiResult[]> {
         company_name: 'HishōSushi',
         contact_email: 'info@hishosushi.com',
         industry: 'Food Service',
-        phone: '(212) 555-0100',
-        address: '123 5th Avenue, New York, NY 10003',
+        phone: '(704) 555-0100',
+        address: '11949 Steele Creek Road, Charlotte, NC 28273',
         profile_id: user.id
       })
       .select()
@@ -80,59 +80,31 @@ export async function addHishōSushiData(): Promise<AddHishōSushiResult[]> {
     const facilities = [
       {
         branch_name: 'HishōSushi - Corporate HQ',
-        address: '123 5th Avenue, New York, NY 10003',
+        address: '11949 Steele Creek Road, Charlotte, NC 28273',
         location: 'headquarters',
         email: 'hq@hishosushi.com',
-        phone: '(212) 555-0100'
+        phone: '(704) 555-0100'
       },
       {
-        branch_name: 'HishōSushi - Distribution Center',
-        address: '500 Commerce Blvd, Secaucus, NJ 07094',
-        location: 'distribution',
-        email: 'distribution@hishosushi.com',
-        phone: '(201) 555-0200'
-      },
-      {
-        branch_name: 'HishōSushi - Times Square',
-        address: '1540 Broadway, New York, NY 10036',
+        branch_name: 'HishōSushi - Troy University Mein Bowl',
+        address: '117 Adams Center, Troy, AL 36082-0001',
         location: 'store',
-        email: 'timessquare@hishosushi.com',
-        phone: '(212) 555-0301'
+        email: 'troy-mein@hishosushi.com',
+        phone: '334-670-3454'
       },
       {
-        branch_name: 'HishōSushi - Brooklyn Heights',
-        address: '55 Water Street, Brooklyn, NY 11201',
+        branch_name: 'HishōSushi - Troy University Sushi',
+        address: '117 Adams Center, Troy, AL 36082-0001',
         location: 'store',
-        email: 'brooklyn@hishosushi.com',
-        phone: '(718) 555-0302'
+        email: 'troy-sushi@hishosushi.com',
+        phone: '334-670-3454'
       },
       {
-        branch_name: 'HishōSushi - Philadelphia',
-        address: '1500 Market Street, Philadelphia, PA 19102',
+        branch_name: 'HishōSushi - Sprouts Peachtree City',
+        address: '2015 Highway 54, Peachtree City, GA 30269-1315',
         location: 'store',
-        email: 'philly@hishosushi.com',
-        phone: '(215) 555-0303'
-      },
-      {
-        branch_name: 'HishōSushi - Boston Seaport',
-        address: '100 Seaport Blvd, Boston, MA 02210',
-        location: 'store',
-        email: 'boston@hishosushi.com',
-        phone: '(617) 555-0304'
-      },
-      {
-        branch_name: 'HishōSushi - Washington DC',
-        address: '701 Pennsylvania Ave NW, Washington, DC 20004',
-        location: 'store',
-        email: 'dc@hishosushi.com',
-        phone: '(202) 555-0305'
-      },
-      {
-        branch_name: 'HishōSushi - Chicago Loop',
-        address: '233 S Wacker Dr, Chicago, IL 60606',
-        location: 'store',
-        email: 'chicago@hishosushi.com',
-        phone: '(312) 555-0306'
+        email: 'sprouts@hishosushi.com',
+        phone: '678-586-2577'
       }
     ];
 
@@ -165,6 +137,200 @@ export async function addHishōSushiData(): Promise<AddHishōSushiResult[]> {
     return results;
   } catch (error: any) {
     console.error('Error adding HishōSushi data:', error);
+    return [{
+      success: false,
+      message: `Unexpected error: ${error.message}`
+    }];
+  }
+}
+
+/**
+ * Adds seafood supplier companies with their facilities
+ */
+export async function addSeafoodSuppliers(): Promise<AddHishōSushiResult[]> {
+  const results: AddHishōSushiResult[] = [];
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return [{
+        success: false,
+        message: 'User not authenticated'
+      }];
+    }
+
+    // Blue Ocean Seafood Co.
+    const { data: blueOcean, error: blueOceanError } = await supabase
+      .from('suppliers')
+      .insert({
+        company_name: 'Blue Ocean Seafood Co.',
+        contact_email: 'info@blueoceanseafood.com',
+        industry: 'Seafood',
+        phone: '(206) 555-0200',
+        address: '1200 Harbor Drive, Seattle, WA 98101',
+        profile_id: user.id
+      })
+      .select()
+      .single();
+
+    if (blueOceanError || !blueOcean) {
+      results.push({
+        success: false,
+        message: `Failed to create Blue Ocean Seafood: ${blueOceanError?.message}`
+      });
+    } else {
+      results.push({
+        success: true,
+        message: 'Blue Ocean Seafood Co. created',
+        data: blueOcean
+      });
+
+      const blueOceanFacilities = [
+        {
+          branch_name: 'Blue Ocean Seafood - Corporate HQ',
+          address: '1200 Harbor Drive, Seattle, WA 98101',
+          location: 'headquarters',
+          email: 'hq@blueoceanseafood.com',
+          phone: '(206) 555-0200'
+        },
+        {
+          branch_name: 'Blue Ocean Seafood - Portland Distribution',
+          address: '4500 Industrial Parkway, Portland, OR 97203',
+          location: 'distribution',
+          email: 'portland@blueoceanseafood.com',
+          phone: '(503) 555-0250'
+        },
+        {
+          branch_name: 'Blue Ocean Seafood - Pike Place Market',
+          address: '85 Pike Street, Seattle, WA 98101',
+          location: 'store',
+          email: 'pikeplace@blueoceanseafood.com',
+          phone: '(206) 555-0201'
+        },
+        {
+          branch_name: 'Blue Ocean Seafood - Fisherman\'s Wharf',
+          address: 'Pier 39, San Francisco, CA 94133',
+          location: 'store',
+          email: 'wharf@blueoceanseafood.com',
+          phone: '(415) 555-0300'
+        }
+      ];
+
+      for (const facility of blueOceanFacilities) {
+        const { data: branch, error: branchError } = await supabase
+          .from('company_branches')
+          .insert({
+            company_id: blueOcean.id,
+            company_type: 'supplier',
+            ...facility,
+            status: 'active'
+          })
+          .select()
+          .single();
+
+        if (branchError) {
+          results.push({
+            success: false,
+            message: `Failed to create ${facility.branch_name}: ${branchError.message}`
+          });
+        } else {
+          results.push({
+            success: true,
+            message: `Created ${facility.branch_name}`,
+            data: branch
+          });
+        }
+      }
+    }
+
+    // Atlantic Fresh Fish Market
+    const { data: atlantic, error: atlanticError } = await supabase
+      .from('suppliers')
+      .insert({
+        company_name: 'Atlantic Fresh Fish Market',
+        contact_email: 'info@atlanticfresh.com',
+        industry: 'Seafood',
+        phone: '(617) 555-0400',
+        address: '789 Ocean Avenue, Boston, MA 02110',
+        profile_id: user.id
+      })
+      .select()
+      .single();
+
+    if (atlanticError || !atlantic) {
+      results.push({
+        success: false,
+        message: `Failed to create Atlantic Fresh: ${atlanticError?.message}`
+      });
+    } else {
+      results.push({
+        success: true,
+        message: 'Atlantic Fresh Fish Market created',
+        data: atlantic
+      });
+
+      const atlanticFacilities = [
+        {
+          branch_name: 'Atlantic Fresh - Corporate HQ',
+          address: '789 Ocean Avenue, Boston, MA 02110',
+          location: 'headquarters',
+          email: 'hq@atlanticfresh.com',
+          phone: '(617) 555-0400'
+        },
+        {
+          branch_name: 'Atlantic Fresh - Newark Distribution',
+          address: '2100 Commerce Street, Newark, NJ 07102',
+          location: 'distribution',
+          email: 'newark@atlanticfresh.com',
+          phone: '(973) 555-0450'
+        },
+        {
+          branch_name: 'Atlantic Fresh - Quincy Market',
+          address: '206 South Market Street, Boston, MA 02109',
+          location: 'store',
+          email: 'quincy@atlanticfresh.com',
+          phone: '(617) 555-0401'
+        },
+        {
+          branch_name: 'Atlantic Fresh - Chelsea Market',
+          address: '75 9th Avenue, New York, NY 10011',
+          location: 'store',
+          email: 'chelsea@atlanticfresh.com',
+          phone: '(212) 555-0500'
+        }
+      ];
+
+      for (const facility of atlanticFacilities) {
+        const { data: branch, error: branchError } = await supabase
+          .from('company_branches')
+          .insert({
+            company_id: atlantic.id,
+            company_type: 'supplier',
+            ...facility,
+            status: 'active'
+          })
+          .select()
+          .single();
+
+        if (branchError) {
+          results.push({
+            success: false,
+            message: `Failed to create ${facility.branch_name}: ${branchError.message}`
+          });
+        } else {
+          results.push({
+            success: true,
+            message: `Created ${facility.branch_name}`,
+            data: branch
+          });
+        }
+      }
+    }
+
+    return results;
+  } catch (error: any) {
+    console.error('Error adding seafood suppliers:', error);
     return [{
       success: false,
       message: `Unexpected error: ${error.message}`

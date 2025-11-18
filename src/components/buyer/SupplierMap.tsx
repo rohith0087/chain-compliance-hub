@@ -306,6 +306,17 @@ export function SupplierMap() {
           >
             Clear All Filters
           </Button>
+
+          {/* Load Demo Data */}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleAddSampleData}
+            disabled={isAddingData}
+            className="w-full"
+          >
+            {isAddingData ? 'Loading...' : 'Load Demo Data'}
+          </Button>
         </CardContent>
       </Card>
 

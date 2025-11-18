@@ -144,6 +144,7 @@ export function BuyerSidebarLayout({
       value: 'suppliers',
       submenu: [
         { title: 'Discovery', value: 'suppliers', icon: Search },
+        { title: 'Supplier Map', value: 'supplier-map', icon: Compass },
         { title: 'Connection Requests', value: 'supplier-requests', icon: UserCheck },
         { title: 'Quick Onboarding', value: 'quick-onboarding', icon: UserPlus },
         { title: 'Pre-populate Documents', value: 'pre-populate', icon: Upload }

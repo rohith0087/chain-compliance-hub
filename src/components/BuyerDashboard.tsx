@@ -9,7 +9,7 @@ import RequestsList from '@/components/requests/RequestsList';
 import SupplierDiscovery from '@/components/buyer/SupplierDiscovery';
 import NewRequestModal from '@/components/NewRequestModal';
 import BuyerComplianceDashboard from '@/components/dashboard/BuyerComplianceDashboard';
-import { Building2, Users, ListChecks, Plus, BarChart3, FileCheck, UserCheck, Settings, Calendar, AlertTriangle, Clock, MessageSquare, Compass, FileText, Send, CheckCircle, TrendingUp } from 'lucide-react';
+import { Building2, Users, ListChecks, Plus, BarChart3, FileCheck, UserCheck, Settings, Calendar, AlertTriangle, Clock, MessageSquare, Compass, FileText, Send, CheckCircle, TrendingUp, MapPin } from 'lucide-react';
 import AgentManagementDashboard from '@/components/agents/AgentManagementDashboard';
 import BuyerDocumentsDashboard from '@/components/documents/BuyerDocumentsDashboard';
 import { BuyerIdCard } from '@/components/buyer/BuyerIdCard';
@@ -36,6 +36,7 @@ import { StatCardSkeleton, TimelineItemSkeleton } from '@/components/ui/skeleton
 import { UrgencyBadge, PriorityBadge } from '@/components/ui/priority-badge';
 import { DocumentSetManager } from '@/components/buyer/DocumentSetManager';
 import { BuyerSupplierFacilityMatrix } from '@/components/buyer/BuyerSupplierFacilityMatrix';
+import { SupplierMap } from '@/components/buyer/SupplierMap';
 
 import { supabase } from '@/integrations/supabase/client';
 
@@ -521,6 +522,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
             {/* Supplier Discovery Component */}
             <SupplierDiscovery />
           </div>
+        )}
+
+        {/* Supplier Map */}
+        {activeTab === 'supplier-map' && (
+          <SupplierMap />
         )}
 
         {/* Supplier Requests Content */}

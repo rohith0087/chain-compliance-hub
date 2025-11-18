@@ -131,11 +131,6 @@ export function SupplierMap() {
   const [facilityTypeFilter, setFacilityTypeFilter] = useState<string[]>(['headquarters', 'distribution', 'store']);
   const [connectionFilter, setConnectionFilter] = useState<string[]>(['connected', 'pending', 'none']);
 
-  const handleRefreshData = () => {
-    toast.success('Demo data refreshed!');
-    setSelectedMarker(null);
-  };
-
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
   // Filter markers based on user selections
@@ -339,16 +334,6 @@ export function SupplierMap() {
         className="w-full"
       >
         Clear All Filters
-      </Button>
-
-      {/* Refresh Demo Data */}
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={handleRefreshData}
-        className="w-full"
-      >
-        Refresh Demo Data
       </Button>
     </>
   );

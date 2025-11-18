@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
 import { Building2, Warehouse, MapPin, Phone, Filter, Search, Store, Truck, Plus } from 'lucide-react';
-import { addHishōSushiData, cleanupSampleData } from '@/utils/addHishōSushiData';
+import { addHishōSushiData, addSeafoodSuppliers, cleanupSampleData } from '@/utils/addHishōSushiData';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';

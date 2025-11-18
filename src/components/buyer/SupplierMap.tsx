@@ -1,7 +1,6 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
-import { Building2, Warehouse, MapPin, Phone, Filter, Search, Store, Truck, Plus } from 'lucide-react';
-import { addHishōSushiData, addSeafoodSuppliers, cleanupSampleData } from '@/utils/addHishōSushiData';
+import { Building2, Warehouse, MapPin, Phone, Filter, Search, Store, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,12 +9,26 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { useSupplierMapData, MapMarker } from '@/hooks/useSupplierMapData';
-import { Skeleton } from '@/components/ui/skeleton';
+import { demoSuppliers, demoFacilities } from '@/data/demoSuppliers';
+
+interface MapMarker {
+  id: string;
+  lat: number;
+  lng: number;
+  title: string;
+  type: 'supplier' | 'facility';
+  industry?: string;
+  facilityType?: string;
+  address?: string;
+  email?: string;
+  phone?: string;
+  connectionStatus?: string;
+}
 
 const INDUSTRY_COLORS: Record<string, string> = {
   'Food Service': '#3b82f6',
   'Food & Beverage': '#3b82f6',
+  'Seafood': '#06b6d4',
   'Manufacturing': '#8b5cf6',
   'Technology': '#10b981',
   'Healthcare': '#ef4444',
@@ -41,8 +54,75 @@ function getFacilityColor(facilityType?: string): string {
   return FACILITY_COLORS[facilityType as keyof typeof FACILITY_COLORS] || FACILITY_COLORS.default;
 }
 
+// Hardcoded coordinates for demo locations (approximate)
+const DEMO_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  // HishōSushi
+  'demo-hisho-sushi': { lat: 35.1167, lng: -80.9278 }, // Charlotte, NC
+  'demo-hisho-hq': { lat: 35.1167, lng: -80.9278 },
+  'demo-hisho-troy-mein': { lat: 31.8089, lng: -85.9633 }, // Troy, AL
+  'demo-hisho-troy-sushi': { lat: 31.8089, lng: -85.9633 },
+  'demo-hisho-sprouts': { lat: 33.3968, lng: -84.5957 }, // Peachtree City, GA
+  
+  // Blue Ocean Seafood
+  'demo-blue-ocean': { lat: 47.6062, lng: -122.3321 }, // Seattle, WA
+  'demo-blue-hq': { lat: 47.6062, lng: -122.3321 },
+  'demo-blue-portland': { lat: 45.5152, lng: -122.6784 }, // Portland, OR
+  'demo-blue-pike': { lat: 47.6097, lng: -122.3421 }, // Pike Place
+  'demo-blue-wharf': { lat: 37.8087, lng: -122.4098 }, // SF Fisherman's Wharf
+  
+  // Atlantic Fresh
+  'demo-atlantic-fresh': { lat: 42.3601, lng: -71.0589 }, // Boston, MA
+  'demo-atlantic-hq': { lat: 42.3601, lng: -71.0589 },
+  'demo-atlantic-newark': { lat: 40.7357, lng: -74.1724 }, // Newark, NJ
+  'demo-atlantic-quincy': { lat: 42.3601, lng: -71.0545 }, // Quincy Market
+  'demo-atlantic-chelsea': { lat: 40.7425, lng: -74.0064 }, // Chelsea Market, NYC
+};
+
+// Static demo marker data - generated from demo suppliers and facilities
+const generateDemoMarkers = (): MapMarker[] => {
+  const markers: MapMarker[] = [];
+  
+  // Add supplier HQ markers
+  demoSuppliers.forEach(supplier => {
+    markers.push({
+      id: supplier.id,
+      lat: DEMO_COORDINATES[supplier.id]?.lat || 0,
+      lng: DEMO_COORDINATES[supplier.id]?.lng || 0,
+      title: supplier.company_name,
+      type: 'supplier',
+      industry: supplier.industry,
+      address: supplier.address,
+      email: supplier.contact_email,
+      phone: supplier.phone,
+      connectionStatus: 'none'
+    });
+  });
+  
+  // Add facility markers
+  demoFacilities.forEach(facility => {
+    const supplier = demoSuppliers.find(s => s.id === facility.supplier_id);
+    markers.push({
+      id: facility.id,
+      lat: DEMO_COORDINATES[facility.id]?.lat || 0,
+      lng: DEMO_COORDINATES[facility.id]?.lng || 0,
+      title: facility.branch_name,
+      type: 'facility',
+      facilityType: facility.location,
+      industry: supplier?.industry,
+      address: facility.address,
+      email: facility.email,
+      phone: facility.phone,
+      connectionStatus: 'none'
+    });
+  });
+  
+  return markers;
+};
+
 export function SupplierMap() {
-  const { markers, loading, error, reload } = useSupplierMapData();
+  // Generate static demo markers
+  const allMarkers = useMemo(() => generateDemoMarkers(), []);
+
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -50,71 +130,39 @@ export function SupplierMap() {
   const [showFacilities, setShowFacilities] = useState(true);
   const [facilityTypeFilter, setFacilityTypeFilter] = useState<string[]>(['headquarters', 'distribution', 'store']);
   const [connectionFilter, setConnectionFilter] = useState<string[]>(['connected', 'pending', 'none']);
-  const [isAddingData, setIsAddingData] = useState(false);
 
-  const handleAddSampleData = async () => {
-    try {
-      setIsAddingData(true);
-      
-      // Add/Update HishōSushi data
-      toast.info('Loading HishōSushi demo data...');
-      const hishoResults = await addHishōSushiData();
-      
-      const hishoSuccessCount = hishoResults.filter(r => r.success).length;
-      
-      // Step 3: Add seafood suppliers
-      toast.info('Adding seafood suppliers...');
-      const seafoodResults = await addSeafoodSuppliers();
-      
-      const seafoodSuccessCount = seafoodResults.filter(r => r.success).length;
-      
-      const totalSuccess = hishoSuccessCount + seafoodSuccessCount;
-      const totalFailed = (hishoResults.length - hishoSuccessCount) + (seafoodResults.length - seafoodSuccessCount);
-      
-      if (totalSuccess > 0) {
-        const totalSuppliers = 3; // HishōSushi + Blue Ocean + Atlantic Fresh
-        const totalFacilities = totalSuccess - totalSuppliers;
-        toast.success(`Added ${totalSuppliers} suppliers with ${totalFacilities} facilities!`);
-        // Reload the map data
-        await reload();
-      }
-      
-      if (totalFailed > 0) {
-        toast.error(`Failed to add ${totalFailed} items`);
-      }
-    } catch (error) {
-      console.error('Error adding sample data:', error);
-      toast.error('Failed to add demo data');
-    } finally {
-      setIsAddingData(false);
-    }
+  const handleRefreshData = () => {
+    toast.success('Demo data refreshed!');
+    setSelectedMarker(null);
   };
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
-
-  // Filter markers
+  // Filter markers based on user selections
   const filteredMarkers = useMemo(() => {
-    return markers.filter((marker) => {
+    return allMarkers.filter((marker) => {
       // Type filter
       if (marker.type === 'supplier' && !showSuppliers) return false;
       if (marker.type === 'facility' && !showFacilities) return false;
 
       // Facility type filter (only for facilities)
-      if (marker.type === 'facility' && facilityTypeFilter.length > 0) {
-        if (!marker.facilityType || !facilityTypeFilter.includes(marker.facilityType)) {
+      if (marker.type === 'facility' && marker.facilityType) {
+        if (!facilityTypeFilter.includes(marker.facilityType)) {
           return false;
         }
       }
 
-      // Search filter
-      if (searchQuery) {
+      // Search query filter
+      if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
-        const matchesName = marker.name.toLowerCase().includes(query);
-        const matchesAddress = marker.address.toLowerCase().includes(query);
-        if (!matchesName && !matchesAddress) return false;
+        const matchesTitle = marker.title?.toLowerCase().includes(query);
+        const matchesIndustry = marker.industry?.toLowerCase().includes(query);
+        const matchesAddress = marker.address?.toLowerCase().includes(query);
+        
+        if (!matchesTitle && !matchesIndustry && !matchesAddress) {
+          return false;
+        }
       }
-
 
       // Connection filter (only for suppliers)
       if (marker.type === 'supplier' && connectionFilter.length > 0) {
@@ -125,8 +173,7 @@ export function SupplierMap() {
 
       return true;
     });
-  }, [markers, searchQuery, showSuppliers, showFacilities, facilityTypeFilter, connectionFilter]);
-
+  }, [allMarkers, searchQuery, showSuppliers, showFacilities, facilityTypeFilter, connectionFilter]);
 
   const toggleConnectionFilter = (status: string) => {
     setConnectionFilter((prev) =>
@@ -154,44 +201,160 @@ export function SupplierMap() {
     );
   }
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-[600px] w-full" />
+  const FilterControls = () => (
+    <>
+      {/* Search */}
+      <div>
+        <Label>Search</Label>
+        <div className="relative">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search suppliers or locations..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8"
+          />
+        </div>
       </div>
-    );
-  }
 
-  if (error) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <p className="text-destructive mb-4">Error loading map data: {error}</p>
-          <Button onClick={handleAddSampleData} disabled={isAddingData}>
-            <Plus className="w-4 h-4 mr-2" />
-            {isAddingData ? 'Loading...' : 'Load HishōSushi Demo Data'}
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
+      {/* Marker Types */}
+      <div>
+        <Label className="mb-2 block">Show on Map</Label>
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="show-suppliers"
+              checked={showSuppliers}
+              onCheckedChange={(checked) => setShowSuppliers(checked === true)}
+            />
+            <label htmlFor="show-suppliers" className="text-sm cursor-pointer">
+              Suppliers (HQ)
+            </label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="show-facilities"
+              checked={showFacilities}
+              onCheckedChange={(checked) => setShowFacilities(checked === true)}
+            />
+            <label htmlFor="show-facilities" className="text-sm cursor-pointer">
+              Facilities
+            </label>
+          </div>
+        </div>
+      </div>
 
-  const showAddDataButton = markers.length === 0;
+      {/* Facility Types */}
+      {showFacilities && (
+        <div>
+          <Label className="mb-2 block">Facility Types</Label>
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="facility-hq"
+                checked={facilityTypeFilter.includes('headquarters')}
+                onCheckedChange={() => toggleFacilityType('headquarters')}
+              />
+              <Building2 className="w-4 h-4 text-blue-700" />
+              <label htmlFor="facility-hq" className="text-sm cursor-pointer flex-1">
+                Headquarters
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="facility-dist"
+                checked={facilityTypeFilter.includes('distribution')}
+                onCheckedChange={() => toggleFacilityType('distribution')}
+              />
+              <Truck className="w-4 h-4 text-orange-600" />
+              <label htmlFor="facility-dist" className="text-sm cursor-pointer flex-1">
+                Distribution Centers
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="facility-store"
+                checked={facilityTypeFilter.includes('store')}
+                onCheckedChange={() => toggleFacilityType('store')}
+              />
+              <Store className="w-4 h-4 text-green-600" />
+              <label htmlFor="facility-store" className="text-sm cursor-pointer flex-1">
+                Stores
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Connection Status */}
+      {showSuppliers && (
+        <div>
+          <Label className="mb-2 block">Connection Status</Label>
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="status-connected"
+                checked={connectionFilter.includes('connected')}
+                onCheckedChange={() => toggleConnectionFilter('connected')}
+              />
+              <label htmlFor="status-connected" className="text-sm cursor-pointer">
+                Connected
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="status-pending"
+                checked={connectionFilter.includes('pending')}
+                onCheckedChange={() => toggleConnectionFilter('pending')}
+              />
+              <label htmlFor="status-pending" className="text-sm cursor-pointer">
+                Pending
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="status-none"
+                checked={connectionFilter.includes('none')}
+                onCheckedChange={() => toggleConnectionFilter('none')}
+              />
+              <label htmlFor="status-none" className="text-sm cursor-pointer">
+                Not Connected
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Clear Filters */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          setSearchQuery('');
+          setShowSuppliers(true);
+          setShowFacilities(true);
+          setFacilityTypeFilter(['headquarters', 'distribution', 'store']);
+          setConnectionFilter(['connected', 'pending', 'none']);
+        }}
+        className="w-full"
+      >
+        Clear All Filters
+      </Button>
+
+      {/* Refresh Demo Data */}
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={handleRefreshData}
+        className="w-full"
+      >
+        Refresh Demo Data
+      </Button>
+    </>
+  );
 
   return (
     <div className="relative h-[calc(100vh-120px)]">
-      {showAddDataButton && (
-        <Card className="absolute top-4 right-4 z-20">
-          <CardContent className="p-4">
-          <p className="text-sm text-muted-foreground mb-2">No supplier data available</p>
-            <Button onClick={handleAddSampleData} disabled={isAddingData} size="sm">
-              <Plus className="w-4 h-4 mr-2" />
-              {isAddingData ? 'Loading...' : 'Load HishōSushi Demo Data'}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
       {/* Filter Panel - Desktop */}
       <Card className="absolute top-4 left-4 z-10 w-80 max-h-[calc(100vh-160px)] overflow-y-auto hidden lg:block">
         <CardHeader>
@@ -201,118 +364,7 @@ export function SupplierMap() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Search */}
-          <div>
-            <Label>Search</Label>
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search suppliers or locations..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-          </div>
-
-          {/* Marker Types */}
-          <div className="space-y-2">
-            <Label>Show on Map</Label>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="show-suppliers"
-                checked={showSuppliers}
-                onCheckedChange={(checked) => setShowSuppliers(checked === true)}
-              />
-              <label htmlFor="show-suppliers" className="text-sm cursor-pointer">
-                Supplier HQs ({markers.filter((m) => m.type === 'supplier').length})
-              </label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="show-facilities"
-                checked={showFacilities}
-                onCheckedChange={(checked) => setShowFacilities(checked === true)}
-              />
-              <label htmlFor="show-facilities" className="text-sm cursor-pointer">
-                Facilities ({markers.filter((m) => m.type === 'facility').length})
-              </label>
-            </div>
-          </div>
-
-          {/* Facility Types */}
-          {showFacilities && (
-            <div className="space-y-2">
-              <Label>Facility Type</Label>
-              {[
-                { value: 'headquarters', label: 'Corporate HQ', icon: Building2 },
-                { value: 'distribution', label: 'Distribution Center', icon: Truck },
-                { value: 'store', label: 'Stores', icon: Store }
-              ].map(({ value, label, icon: Icon }) => (
-                <div key={value} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`facility-${value}`}
-                    checked={facilityTypeFilter.includes(value)}
-                    onCheckedChange={() => toggleFacilityType(value)}
-                  />
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-sm"
-                      style={{ backgroundColor: getFacilityColor(value) }}
-                    >
-                      <Icon className="w-3 h-3 text-white" />
-                    </div>
-                    <label htmlFor={`facility-${value}`} className="text-sm cursor-pointer">
-                      {label}
-                    </label>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Connection Status */}
-          <div className="space-y-2">
-            <Label>Connection Status</Label>
-            {['connected', 'pending', 'none'].map((status) => (
-              <div key={status} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`status-${status}`}
-                  checked={connectionFilter.includes(status)}
-                  onCheckedChange={() => toggleConnectionFilter(status)}
-                />
-                <label htmlFor={`status-${status}`} className="text-sm cursor-pointer capitalize">
-                  {status === 'none' ? 'Not Connected' : status}
-                </label>
-              </div>
-            ))}
-          </div>
-
-
-          {/* Clear All */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setSearchQuery('');
-              setFacilityTypeFilter(['headquarters', 'distribution', 'store']);
-              setConnectionFilter(['connected', 'pending', 'none']);
-            }}
-            className="w-full"
-          >
-            Clear All Filters
-          </Button>
-
-          {/* Load Demo Data */}
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleAddSampleData}
-            disabled={isAddingData}
-            className="w-full"
-          >
-            {isAddingData ? 'Loading...' : 'Load Demo Data'}
-          </Button>
+          <FilterControls />
         </CardContent>
       </Card>
 
@@ -327,7 +379,9 @@ export function SupplierMap() {
           <SheetHeader>
             <SheetTitle>Filters</SheetTitle>
           </SheetHeader>
-          {/* Same filter content as desktop */}
+          <div className="mt-4 space-y-4">
+            <FilterControls />
+          </div>
         </SheetContent>
       </Sheet>
 
@@ -335,7 +389,7 @@ export function SupplierMap() {
       <Card className="absolute top-4 right-4 z-10">
         <CardContent className="p-3">
           <p className="text-sm font-medium">
-            Showing {filteredMarkers.length} of {markers.length} locations
+            Showing {filteredMarkers.length} of {allMarkers.length} locations
           </p>
         </CardContent>
       </Card>
@@ -347,147 +401,97 @@ export function SupplierMap() {
           defaultZoom={4}
           mapId="supplier-map"
           style={{ width: '100%', height: '100%' }}
-          gestureHandling="greedy"
         >
+          {/* Render markers */}
           {filteredMarkers.map((marker) => (
             <AdvancedMarker
               key={marker.id}
               position={{ lat: marker.lat, lng: marker.lng }}
               onClick={() => setSelectedMarker(marker)}
             >
-              <div className="relative cursor-pointer hover:scale-110 transition-transform">
+              <div className="relative">
                 {marker.type === 'supplier' ? (
-                  <>
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg border-2 border-white"
-                      style={{ backgroundColor: getIndustryColor(marker.industry) }}
-                    >
-                      <Building2 className="w-6 h-6 text-white" />
-                    </div>
-                    {marker.facilityCount && marker.facilityCount > 0 && (
-                      <Badge className="absolute -top-2 -right-2 w-5 h-5 p-0 flex items-center justify-center text-xs">
-                        {marker.facilityCount}
-                      </Badge>
-                    )}
-                  </>
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg cursor-pointer"
+                    style={{ backgroundColor: getIndustryColor(marker.industry) }}
+                  >
+                    <Building2 className="w-6 h-6 text-white" />
+                  </div>
                 ) : (
-                  <div 
-                    className="w-8 h-8 rounded-full flex items-center justify-center shadow-md border-2 border-white"
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg cursor-pointer"
                     style={{ backgroundColor: getFacilityColor(marker.facilityType) }}
                   >
-                    {marker.facilityType === 'headquarters' && <Building2 className="w-5 h-5 text-white" />}
-                    {marker.facilityType === 'distribution' && <Truck className="w-5 h-5 text-white" />}
-                    {marker.facilityType === 'store' && <Store className="w-5 h-5 text-white" />}
-                    {!marker.facilityType && <Warehouse className="w-5 h-5 text-white" />}
+                    {marker.facilityType === 'headquarters' && <Building2 className="w-4 h-4 text-white" />}
+                    {marker.facilityType === 'distribution' && <Truck className="w-4 h-4 text-white" />}
+                    {marker.facilityType === 'store' && <Store className="w-4 h-4 text-white" />}
+                    {!marker.facilityType && <Warehouse className="w-4 h-4 text-white" />}
                   </div>
                 )}
               </div>
             </AdvancedMarker>
           ))}
 
+          {/* Info Window */}
           {selectedMarker && (
             <InfoWindow
               position={{ lat: selectedMarker.lat, lng: selectedMarker.lng }}
               onCloseClick={() => setSelectedMarker(null)}
             >
-              <Card className="w-80 border-0 shadow-none">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    {selectedMarker.type === 'supplier' ? (
-                      <Building2 className="w-5 h-5" />
-                    ) : selectedMarker.facilityType === 'headquarters' ? (
-                      <Building2 className="w-5 h-5" />
-                    ) : selectedMarker.facilityType === 'distribution' ? (
-                      <Truck className="w-5 h-5" />
-                    ) : selectedMarker.facilityType === 'store' ? (
-                      <Store className="w-5 h-5" />
-                    ) : (
-                      <Warehouse className="w-5 h-5" />
-                    )}
-                    {selectedMarker.name}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex flex-wrap gap-2">
-                    {selectedMarker.industry && (
-                      <Badge style={{ backgroundColor: getIndustryColor(selectedMarker.industry) }}>
-                        {selectedMarker.industry}
-                      </Badge>
-                    )}
-                    {selectedMarker.facilityType && (
-                      <Badge style={{ backgroundColor: getFacilityColor(selectedMarker.facilityType) }}>
-                        {selectedMarker.facilityType === 'headquarters' && 'Corporate HQ'}
-                        {selectedMarker.facilityType === 'distribution' && 'Distribution Center'}
-                        {selectedMarker.facilityType === 'store' && 'Store'}
-                      </Badge>
-                    )}
-                    {selectedMarker.connectionStatus && (
-                      <Badge variant={
-                        selectedMarker.connectionStatus === 'connected' ? 'default' :
-                        selectedMarker.connectionStatus === 'pending' ? 'secondary' : 'outline'
-                      }>
-                        {selectedMarker.connectionStatus === 'none' ? 'Not Connected' : selectedMarker.connectionStatus}
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-start gap-2 text-sm">
-                    <MapPin className="w-4 h-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                    <span className="text-muted-foreground">{selectedMarker.address}</span>
-                  </div>
-                  {selectedMarker.phone && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">{selectedMarker.phone}</span>
+              <div className="p-2 max-w-xs">
+                <h3 className="font-semibold text-base mb-2">{selectedMarker.title}</h3>
+                
+                {selectedMarker.industry && (
+                  <Badge variant="secondary" className="mb-2">
+                    {selectedMarker.industry}
+                  </Badge>
+                )}
+                
+                {selectedMarker.facilityType && (
+                  <Badge variant="outline" className="mb-2 ml-2">
+                    {selectedMarker.facilityType === 'headquarters' && 'HQ'}
+                    {selectedMarker.facilityType === 'distribution' && 'Distribution'}
+                    {selectedMarker.facilityType === 'store' && 'Store'}
+                  </Badge>
+                )}
+
+                <div className="space-y-1 text-sm">
+                  {selectedMarker.address && (
+                    <div className="flex items-start gap-2">
+                      <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                      <span>{selectedMarker.address}</span>
                     </div>
                   )}
-                  {selectedMarker.facilityCount !== undefined && selectedMarker.facilityCount > 0 && (
-                    <p className="text-sm text-muted-foreground">
-                      {selectedMarker.facilityCount} {selectedMarker.facilityCount === 1 ? 'facility' : 'facilities'}
-                    </p>
+                  {selectedMarker.phone && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-4 h-4 text-muted-foreground" />
+                      <span>{selectedMarker.phone}</span>
+                    </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </InfoWindow>
           )}
         </Map>
       </APIProvider>
 
       {/* Legend */}
-      <Card className="absolute bottom-4 right-4 z-10">
-        <CardContent className="p-3 space-y-2">
-          <h3 className="font-semibold text-sm mb-2">Legend</h3>
-          <div className="flex items-center gap-2 text-sm">
-            <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center border-2 border-white shadow">
-              <Building2 className="w-4 h-4 text-primary-foreground" />
+      <Card className="absolute bottom-4 left-4 z-10">
+        <CardContent className="p-3">
+          <div className="text-xs font-semibold mb-2">Map Legend</div>
+          <div className="space-y-1 text-xs">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-blue-700"></div>
+              <span>Headquarters</span>
             </div>
-            <span>Supplier HQ</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <div 
-              className="w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow"
-              style={{ backgroundColor: FACILITY_COLORS.headquarters }}
-            >
-              <Building2 className="w-4 h-4 text-white" />
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-orange-600"></div>
+              <span>Distribution</span>
             </div>
-            <span>Corporate HQ</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <div 
-              className="w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow"
-              style={{ backgroundColor: FACILITY_COLORS.distribution }}
-            >
-              <Truck className="w-4 h-4 text-white" />
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-green-600"></div>
+              <span>Store</span>
             </div>
-            <span>Distribution</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <div 
-              className="w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow"
-              style={{ backgroundColor: FACILITY_COLORS.store }}
-            >
-              <Store className="w-4 h-4 text-white" />
-            </div>
-            <span>Store</span>
           </div>
         </CardContent>
       </Card>

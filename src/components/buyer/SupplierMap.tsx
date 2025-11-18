@@ -62,20 +62,29 @@ export function SupplierMap() {
       
       // Step 2: Add HishōSushi data
       toast.info('Adding HishōSushi demo data...');
-      const results = await addHishōSushiData();
+      const hishoResults = await addHishōSushiData();
       
-      const successCount = results.filter(r => r.success).length;
-      const failureCount = results.filter(r => !r.success).length;
+      const hishoSuccessCount = hishoResults.filter(r => r.success).length;
       
-      if (successCount > 0) {
-        const facilityCount = successCount - 1; // Subtract the supplier itself
-        toast.success(`HishōSushi added with ${facilityCount} facilities!`);
+      // Step 3: Add seafood suppliers
+      toast.info('Adding seafood suppliers...');
+      const seafoodResults = await addSeafoodSuppliers();
+      
+      const seafoodSuccessCount = seafoodResults.filter(r => r.success).length;
+      
+      const totalSuccess = hishoSuccessCount + seafoodSuccessCount;
+      const totalFailed = (hishoResults.length - hishoSuccessCount) + (seafoodResults.length - seafoodSuccessCount);
+      
+      if (totalSuccess > 0) {
+        const totalSuppliers = 3; // HishōSushi + Blue Ocean + Atlantic Fresh
+        const totalFacilities = totalSuccess - totalSuppliers;
+        toast.success(`Added ${totalSuppliers} suppliers with ${totalFacilities} facilities!`);
         // Reload the map data
         await reload();
       }
       
-      if (failureCount > 0) {
-        toast.error(`Failed to add ${failureCount} items`);
+      if (totalFailed > 0) {
+        toast.error(`Failed to add ${totalFailed} items`);
       }
     } catch (error) {
       console.error('Error adding sample data:', error);

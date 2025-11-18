@@ -17,10 +17,12 @@ interface EnhancedDocumentsFilterProps {
     dateRange: string;
     uploadDateRange: string;
     specificYear: string;
+    facilityLocation: string;
   };
   onFiltersChange: (filters: any) => void;
   showExpirationFilter?: boolean;
   availableSuppliers?: { id: string; company_name: string; documentCount: number }[];
+  availableFacilities?: { id: string; name: string; location: string; documentCount: number }[];
   selectedDocuments: Set<string>;
   onSelectAll: () => void;
   onClearSelection: () => void;
@@ -34,6 +36,7 @@ const EnhancedDocumentsFilter = ({
   onFiltersChange, 
   showExpirationFilter = false, 
   availableSuppliers = [],
+  availableFacilities = [],
   selectedDocuments,
   onSelectAll,
   onClearSelection,
@@ -76,7 +79,8 @@ const EnhancedDocumentsFilter = ({
       expirationStatus: '',
       dateRange: '',
       uploadDateRange: '',
-      specificYear: ''
+      specificYear: '',
+      facilityLocation: ''
     });
   };
 
@@ -208,6 +212,28 @@ const EnhancedDocumentsFilter = ({
                 {availableSuppliers.map((supplier) => (
                   <SelectItem key={supplier.id} value={supplier.id}>
                     {supplier.company_name} ({supplier.documentCount})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Facility Location Filter */}
+            <Select value={getDisplayValue(filters.facilityLocation)} onValueChange={(value) => updateFilter('facilityLocation', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Facilities" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Facilities</SelectItem>
+                {availableFacilities.map((facility) => (
+                  <SelectItem key={facility.id} value={facility.id}>
+                    <div className="flex items-center gap-2">
+                      <span>{facility.name}</span>
+                      {facility.location && (
+                        <span className="text-xs text-muted-foreground">
+                          ({facility.location})
+                        </span>
+                      )}
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>

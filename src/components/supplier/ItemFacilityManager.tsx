@@ -11,7 +11,11 @@ import { useItemFacilityMappings } from '@/hooks/useItemFacilityMappings';
 import { LinkItemToFacilityModal } from './LinkItemToFacilityModal';
 import { useToast } from '@/hooks/use-toast';
 
-export const ItemFacilityManager = () => {
+interface ItemFacilityManagerProps {
+  supplierId: string;
+}
+
+export const ItemFacilityManager = ({ supplierId }: ItemFacilityManagerProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [linkModalOpen, setLinkModalOpen] = useState(false);
@@ -20,10 +24,8 @@ export const ItemFacilityManager = () => {
   const [viewMode, setViewMode] = useState<'by-facility' | 'by-item'>('by-facility');
 
   const { branches, loading: branchesLoading } = useCompanyBranches('supplier');
-  const { items, loading: itemsLoading } = useSupplierItems();
-  const { mappings, loading: mappingsLoading, deleteMapping } = useItemFacilityMappings(
-    items[0]?.supplier_id
-  );
+  const { items, loading: itemsLoading } = useSupplierItems(supplierId);
+  const { mappings, loading: mappingsLoading, deleteMapping } = useItemFacilityMappings(supplierId);
 
   const handleLinkItem = (facilityId?: string, itemId?: string) => {
     setSelectedFacility(facilityId || null);

@@ -201,7 +201,7 @@ export const ItemManagementDashboard = ({ supplierId }: ItemManagementDashboardP
         </TabsContent>
 
         <TabsContent value="facilities">
-          <ItemFacilityManager />
+          <ItemFacilityManager supplierId={supplierId} />
         </TabsContent>
       </Tabs>
 

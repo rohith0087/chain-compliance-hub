@@ -56,12 +56,8 @@ export function SupplierMap() {
     try {
       setIsAddingData(true);
       
-      // Step 1: Clean up existing data
-      toast.info('Cleaning old sample data...');
-      await cleanupSampleData();
-      
-      // Step 2: Add HishōSushi data
-      toast.info('Adding HishōSushi demo data...');
+      // Add/Update HishōSushi data
+      toast.info('Loading HishōSushi demo data...');
       const hishoResults = await addHishōSushiData();
       
       const hishoSuccessCount = hishoResults.filter(r => r.success).length;

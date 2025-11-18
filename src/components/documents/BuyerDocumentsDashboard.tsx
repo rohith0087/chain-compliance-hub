@@ -45,9 +45,11 @@ const BuyerDocumentsDashboard = () => {
     documentType: '',
     supplier: '',
     expirationStatus: '',
-    dateRange: ''
+    dateRange: '',
+    facilityLocation: ''
   });
   const [availableSuppliers, setAvailableSuppliers] = useState<any[]>([]);
+  const [availableFacilities, setAvailableFacilities] = useState<any[]>([]);
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -87,9 +89,15 @@ const BuyerDocumentsDashboard = () => {
         .from('document_requests')
         .select(`
           supplier_id,
+          branch_id,
           suppliers!inner (
             id,
             company_name
+          ),
+          branch:branch_id (
+            id,
+            branch_name,
+            location
           )
         `)
         .eq('buyer_id', buyerProfile.id);
@@ -120,6 +128,31 @@ const BuyerDocumentsDashboard = () => {
       );
 
       setAvailableSuppliers(suppliersArray);
+
+      // Extract unique facilities
+      const facilityMap = new Map<string, { id: string; name: string; location: string; documentCount: number }>();
+      
+      documentsData.forEach((doc) => {
+        if (doc.branch && doc.branch.id) {
+          const existing = facilityMap.get(doc.branch.id);
+          if (existing) {
+            existing.documentCount++;
+          } else {
+            facilityMap.set(doc.branch.id, {
+              id: doc.branch.id,
+              name: doc.branch.branch_name,
+              location: doc.branch.location || '',
+              documentCount: 1
+            });
+          }
+        }
+      });
+
+      const facilitiesArray = Array.from(facilityMap.values()).sort((a, b) => 
+        a.name.localeCompare(b.name)
+      );
+
+      setAvailableFacilities(facilitiesArray);
     } catch (error) {
       console.error('Error loading suppliers:', error);
     }
@@ -152,6 +185,12 @@ const BuyerDocumentsDashboard = () => {
             company_name,
             industry,
             profile_id
+          ),
+          branch:branch_id (
+            id,
+            branch_name,
+            location,
+            address
           ),
           document_uploads (
             id,
@@ -189,6 +228,10 @@ const BuyerDocumentsDashboard = () => {
       }
       if (filters.supplier) {
         query = query.eq('supplier_id', filters.supplier);
+      }
+
+      if (filters.facilityLocation) {
+        query = query.eq('branch_id', filters.facilityLocation);
       }
 
       const { data, error } = await query;

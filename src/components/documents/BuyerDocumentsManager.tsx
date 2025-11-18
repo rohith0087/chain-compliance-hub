@@ -43,7 +43,8 @@ const BuyerDocumentsManager = ({
     expirationStatus: '',
     dateRange: '',
     uploadDateRange: '',
-    specificYear: ''
+    specificYear: '',
+    facilityLocation: ''
   });
   const [downloading, setDownloading] = useState<string | null>(null);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
@@ -73,6 +74,9 @@ const BuyerDocumentsManager = ({
 
     // Supplier filter
     const matchesSupplier = !filters.supplier || doc.supplier_id === filters.supplier;
+
+    // Facility location filter
+    const matchesFacility = !filters.facilityLocation || doc.branch_id === filters.facilityLocation;
 
     // Upload date range filter
     let matchesUploadDateRange = true;
@@ -152,7 +156,7 @@ const BuyerDocumentsManager = ({
 
     return matchesSearch && matchesStatus && matchesCategory && 
            matchesDocumentType && matchesSupplier && matchesUploadDateRange && 
-           matchesSpecificYear && matchesExpirationStatus;
+           matchesSpecificYear && matchesExpirationStatus && matchesFacility;
   });
 
   // Create available suppliers list from documents - extract actual supplier data
@@ -167,6 +171,20 @@ const BuyerDocumentsManager = ({
         }])
     ).values()
   ).sort((a, b) => a.company_name.localeCompare(b.company_name));
+
+  // Create available facilities list from documents
+  const availableFacilities = Array.from(
+    new Map(
+      documents
+        .filter(doc => doc.branch)
+        .map(doc => [doc.branch.id, {
+          id: doc.branch.id,
+          name: doc.branch.branch_name,
+          location: doc.branch.location || '',
+          documentCount: documents.filter(d => d.branch_id === doc.branch.id).length
+        }])
+    ).values()
+  ).sort((a, b) => a.name.localeCompare(b.name));
 
   const handleView = async (doc: any) => {
     console.log('View document:', doc.id);
@@ -521,6 +539,7 @@ const BuyerDocumentsManager = ({
         onFiltersChange={setFilters}
         showExpirationFilter={true}
         availableSuppliers={availableSuppliers}
+        availableFacilities={availableFacilities}
         selectedDocuments={selectedDocuments}
         onSelectAll={handleSelectAll}
         onClearSelection={handleClearSelection}

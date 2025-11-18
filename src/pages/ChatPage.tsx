@@ -13,9 +13,6 @@ import ReactMarkdown from "react-markdown";
 import ComplianceVisualizer from "@/components/chat/ComplianceVisualizer";
 import DailyInsightsPanel from "@/components/chat/DailyInsightsPanel";
 import ActionExecutor from "@/components/chat/ActionExecutor";
-import BuyerDailyOverview from "@/components/chat/BuyerDailyOverview";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import AdvancedComplianceInsightsDashboard from "@/components/chat/AdvancedComplianceInsightsDashboard";
 import ChatDocumentViewer from "@/components/chat/ChatDocumentViewer";
 import ResponseActionButtons from "@/components/chat/ResponseActionButtons";
 import ShareDialog from "@/components/chat/ShareDialog";
@@ -212,15 +209,8 @@ const ChatPage: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [messageToShare, setMessageToShare] = useState<Message | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Derived state for easy access
-  const userBuyerId = companyInfo?.type === 'buyer' ? companyInfo.id : null;
-  const userSupplierId = companyInfo?.type === 'supplier' ? companyInfo.id : null;
-  const companyTypeBadge = companyInfo?.type === 'buyer' ? 'Buyer' : 'Supplier';
-  const userProfile = user ? { full_name: user.user_metadata?.full_name, email: user.email } : null;
 
   /* ---- Effects ---- */
 
@@ -1071,60 +1061,11 @@ const ChatPage: React.FC = () => {
       </Sheet>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
-        <div className="bg-card border-b border-border p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Sparkles className="h-6 w-6 text-primary animate-pulse" />
-              <h1 className="text-xl font-bold text-foreground">Compliance Compass</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs">
-                <Building className="mr-1 h-3 w-3" />
-                {companyTypeBadge}
-              </Badge>
-              {userProfile && (
-                <Badge variant="outline" className="text-xs">
-                  <User className="mr-1 h-3 w-3" />
-                  {userProfile.full_name || userProfile.email}
-                </Badge>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <Tabs defaultValue="overview" className="flex-1 flex flex-col">
-          <div className="border-b border-border px-4">
-            <TabsList className="bg-transparent">
-              <TabsTrigger value="overview">Today's Overview</TabsTrigger>
-              <TabsTrigger value="chat">Chat Assistant</TabsTrigger>
-              <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            </TabsList>
-          </div>
-
-          {/* Today's Overview Tab */}
-          <TabsContent value="overview" className="flex-1 overflow-auto mt-0">
-            {userBuyerId ? (
-              <BuyerDailyOverview companyId={userBuyerId} />
-            ) : (
-              <div className="flex items-center justify-center h-full p-6">
-                <div className="text-center text-muted-foreground">
-                  <p>Daily Overview is currently available for buyers only.</p>
-                </div>
-              </div>
-            )}
-          </TabsContent>
-
-          {/* Chat Assistant Tab */}
-          <TabsContent value="chat" className="flex-1 flex flex-col mt-0">
-            <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full min-h-0"
-            >
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto px-6 py-6" ref={scrollAreaRef}>
-              {messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] px-4">
+      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full min-h-0">
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-6 py-6" ref={scrollAreaRef}>
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] px-4">
               <div className="w-full max-w-3xl space-y-8">
                 <h2 className="text-4xl font-semibold text-foreground text-center">
                   What can I help with?
@@ -1161,8 +1102,8 @@ const ChatPage: React.FC = () => {
                 </div>
               </div>
             </div>
-              ) : (
-                <div className="space-y-1">
+          ) : (
+            <div className="space-y-1">
               {messages.map((m) => (
                 <div key={m.id} className="flex items-start gap-4 p-6 hover:bg-accent/30 transition-colors group">
                   <div
@@ -1224,7 +1165,7 @@ const ChatPage: React.FC = () => {
                           style={{ animationDelay: "0.2s" }}
                         />
                       </div>
-                       Analyzing your request...
+                      Analyzing your request...
                     </div>
                   </div>
                 </div>
@@ -1259,25 +1200,6 @@ const ChatPage: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
-    </TabsContent>
-
-          {/* Analytics Tab */}
-          <TabsContent value="analytics" className="flex-1 overflow-auto mt-0">
-            {(userBuyerId || userSupplierId) ? (
-              <AdvancedComplianceInsightsDashboard 
-                companyId={userBuyerId || userSupplierId || ''} 
-                companyType={userBuyerId ? 'buyer' : 'supplier'} 
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full p-6">
-                <div className="text-center text-muted-foreground">
-                  <p>Analytics not available. Please set up your company profile.</p>
-                </div>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
       </div>
 
       {/* Document Viewer */}

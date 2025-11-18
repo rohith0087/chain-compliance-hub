@@ -33,6 +33,7 @@ export async function cleanupSampleData(): Promise<void> {
 
 /**
  * Adds HishōSushi supplier with corporate HQ and all facilities
+ * Uses upsert strategy - updates if exists, creates if not
  */
 export async function addHishōSushiData(): Promise<AddHishōSushiResult[]> {
   const results: AddHishōSushiResult[] = [];
@@ -48,33 +49,93 @@ export async function addHishōSushiData(): Promise<AddHishōSushiResult[]> {
       }];
     }
 
-    // Step 2: Create HishōSushi supplier
-    const { data: supplier, error: supplierError } = await supabase
+    console.log('🔄 Checking if HishōSushi exists...');
+    
+    // Step 2: Check if HishōSushi supplier already exists
+    const { data: existingSupplier } = await supabase
       .from('suppliers')
-      .insert({
-        company_name: 'HishōSushi',
-        contact_email: 'info@hishosushi.com',
-        industry: 'Food Service',
-        phone: '(704) 555-0100',
-        address: '11949 Steele Creek Road, Charlotte, NC 28273',
-        profile_id: user.id
-      })
-      .select()
-      .single();
+      .select('id')
+      .eq('company_name', 'HishōSushi')
+      .maybeSingle();
 
-    if (supplierError || !supplier) {
+    let supplier;
+
+    if (existingSupplier) {
+      console.log('✅ Found existing HishōSushi - updating...');
+      
+      // Update existing supplier
+      const { data: updatedSupplier, error: updateError } = await supabase
+        .from('suppliers')
+        .update({
+          contact_email: 'info@hishosushi.com',
+          industry: 'Food Service',
+          phone: '(704) 555-0100',
+          address: '11949 Steele Creek Road, Charlotte, NC 28273'
+        })
+        .eq('id', existingSupplier.id)
+        .select()
+        .single();
+
+      if (updateError || !updatedSupplier) {
+        results.push({
+          success: false,
+          message: `Failed to update HishōSushi: ${updateError?.message}`
+        });
+        return results;
+      }
+
+      supplier = updatedSupplier;
+      
+      // Delete old facilities for this supplier
+      console.log('🗑️ Deleting old HishōSushi facilities...');
+      const { error: deleteError } = await supabase
+        .from('company_branches')
+        .delete()
+        .eq('company_id', supplier.id)
+        .eq('company_type', 'supplier');
+
+      if (deleteError) {
+        console.warn('Warning deleting old facilities:', deleteError);
+      }
+
       results.push({
-        success: false,
-        message: `Failed to create HishōSushi supplier: ${supplierError?.message}`
+        success: true,
+        message: 'HishōSushi supplier updated',
+        data: supplier
       });
-      return results;
-    }
+    } else {
+      console.log('➕ Creating new HishōSushi supplier...');
+      
+      // Insert new supplier
+      const { data: newSupplier, error: insertError } = await supabase
+        .from('suppliers')
+        .insert({
+          company_name: 'HishōSushi',
+          contact_email: 'info@hishosushi.com',
+          industry: 'Food Service',
+          phone: '(704) 555-0100',
+          address: '11949 Steele Creek Road, Charlotte, NC 28273',
+          profile_id: user.id
+        })
+        .select()
+        .single();
 
-    results.push({
-      success: true,
-      message: 'HishōSushi supplier created',
-      data: supplier
-    });
+      if (insertError || !newSupplier) {
+        results.push({
+          success: false,
+          message: `Failed to create HishōSushi: ${insertError?.message}`
+        });
+        return results;
+      }
+
+      supplier = newSupplier;
+
+      results.push({
+        success: true,
+        message: 'HishōSushi supplier created',
+        data: supplier
+      });
+    }
 
     // Step 3: Create facilities for HishōSushi
     const facilities = [
@@ -146,6 +207,7 @@ export async function addHishōSushiData(): Promise<AddHishōSushiResult[]> {
 
 /**
  * Adds seafood supplier companies with their facilities
+ * Uses upsert strategy - updates if exists, creates if not
  */
 export async function addSeafoodSuppliers(): Promise<AddHishōSushiResult[]> {
   const results: AddHishōSushiResult[] = [];
@@ -160,31 +222,86 @@ export async function addSeafoodSuppliers(): Promise<AddHishōSushiResult[]> {
       }];
     }
 
-    // Blue Ocean Seafood Co.
-    const { data: blueOcean, error: blueOceanError } = await supabase
+    // ========== Blue Ocean Seafood Co. ==========
+    console.log('🔄 Checking if Blue Ocean Seafood exists...');
+    
+    const { data: existingBlueOcean } = await supabase
       .from('suppliers')
-      .insert({
-        company_name: 'Blue Ocean Seafood Co.',
-        contact_email: 'info@blueoceanseafood.com',
-        industry: 'Seafood',
-        phone: '(206) 555-0200',
-        address: '1200 Harbor Drive, Seattle, WA 98101',
-        profile_id: user.id
-      })
-      .select()
-      .single();
+      .select('id')
+      .eq('company_name', 'Blue Ocean Seafood Co.')
+      .maybeSingle();
 
-    if (blueOceanError || !blueOcean) {
-      results.push({
-        success: false,
-        message: `Failed to create Blue Ocean Seafood: ${blueOceanError?.message}`
-      });
+    let blueOcean;
+
+    if (existingBlueOcean) {
+      console.log('✅ Found existing Blue Ocean Seafood - updating...');
+      
+      const { data: updatedBlueOcean, error: updateError } = await supabase
+        .from('suppliers')
+        .update({
+          contact_email: 'info@blueoceanseafood.com',
+          industry: 'Seafood',
+          phone: '(206) 555-0200',
+          address: '1200 Harbor Drive, Seattle, WA 98101'
+        })
+        .eq('id', existingBlueOcean.id)
+        .select()
+        .single();
+
+      if (updateError || !updatedBlueOcean) {
+        results.push({
+          success: false,
+          message: `Failed to update Blue Ocean Seafood: ${updateError?.message}`
+        });
+      } else {
+        blueOcean = updatedBlueOcean;
+        
+        // Delete old facilities
+        console.log('🗑️ Deleting old Blue Ocean facilities...');
+        await supabase
+          .from('company_branches')
+          .delete()
+          .eq('company_id', blueOcean.id)
+          .eq('company_type', 'supplier');
+
+        results.push({
+          success: true,
+          message: 'Blue Ocean Seafood Co. updated',
+          data: blueOcean
+        });
+      }
     } else {
-      results.push({
-        success: true,
-        message: 'Blue Ocean Seafood Co. created',
-        data: blueOcean
-      });
+      console.log('➕ Creating new Blue Ocean Seafood...');
+      
+      const { data: newBlueOcean, error: insertError } = await supabase
+        .from('suppliers')
+        .insert({
+          company_name: 'Blue Ocean Seafood Co.',
+          contact_email: 'info@blueoceanseafood.com',
+          industry: 'Seafood',
+          phone: '(206) 555-0200',
+          address: '1200 Harbor Drive, Seattle, WA 98101',
+          profile_id: user.id
+        })
+        .select()
+        .single();
+
+      if (insertError || !newBlueOcean) {
+        results.push({
+          success: false,
+          message: `Failed to create Blue Ocean Seafood: ${insertError?.message}`
+        });
+      } else {
+        blueOcean = newBlueOcean;
+        results.push({
+          success: true,
+          message: 'Blue Ocean Seafood Co. created',
+          data: blueOcean
+        });
+      }
+    }
+
+    if (blueOcean) {
 
       const blueOceanFacilities = [
         {
@@ -244,31 +361,86 @@ export async function addSeafoodSuppliers(): Promise<AddHishōSushiResult[]> {
       }
     }
 
-    // Atlantic Fresh Fish Market
-    const { data: atlantic, error: atlanticError } = await supabase
+    // ========== Atlantic Fresh Fish Market ==========
+    console.log('🔄 Checking if Atlantic Fresh Fish Market exists...');
+    
+    const { data: existingAtlantic } = await supabase
       .from('suppliers')
-      .insert({
-        company_name: 'Atlantic Fresh Fish Market',
-        contact_email: 'info@atlanticfresh.com',
-        industry: 'Seafood',
-        phone: '(617) 555-0400',
-        address: '789 Ocean Avenue, Boston, MA 02110',
-        profile_id: user.id
-      })
-      .select()
-      .single();
+      .select('id')
+      .eq('company_name', 'Atlantic Fresh Fish Market')
+      .maybeSingle();
 
-    if (atlanticError || !atlantic) {
-      results.push({
-        success: false,
-        message: `Failed to create Atlantic Fresh: ${atlanticError?.message}`
-      });
+    let atlantic;
+
+    if (existingAtlantic) {
+      console.log('✅ Found existing Atlantic Fresh - updating...');
+      
+      const { data: updatedAtlantic, error: updateError } = await supabase
+        .from('suppliers')
+        .update({
+          contact_email: 'info@atlanticfresh.com',
+          industry: 'Seafood',
+          phone: '(617) 555-0400',
+          address: '789 Ocean Avenue, Boston, MA 02110'
+        })
+        .eq('id', existingAtlantic.id)
+        .select()
+        .single();
+
+      if (updateError || !updatedAtlantic) {
+        results.push({
+          success: false,
+          message: `Failed to update Atlantic Fresh: ${updateError?.message}`
+        });
+      } else {
+        atlantic = updatedAtlantic;
+        
+        // Delete old facilities
+        console.log('🗑️ Deleting old Atlantic Fresh facilities...');
+        await supabase
+          .from('company_branches')
+          .delete()
+          .eq('company_id', atlantic.id)
+          .eq('company_type', 'supplier');
+
+        results.push({
+          success: true,
+          message: 'Atlantic Fresh Fish Market updated',
+          data: atlantic
+        });
+      }
     } else {
-      results.push({
-        success: true,
-        message: 'Atlantic Fresh Fish Market created',
-        data: atlantic
-      });
+      console.log('➕ Creating new Atlantic Fresh Fish Market...');
+      
+      const { data: newAtlantic, error: insertError } = await supabase
+        .from('suppliers')
+        .insert({
+          company_name: 'Atlantic Fresh Fish Market',
+          contact_email: 'info@atlanticfresh.com',
+          industry: 'Seafood',
+          phone: '(617) 555-0400',
+          address: '789 Ocean Avenue, Boston, MA 02110',
+          profile_id: user.id
+        })
+        .select()
+        .single();
+
+      if (insertError || !newAtlantic) {
+        results.push({
+          success: false,
+          message: `Failed to create Atlantic Fresh: ${insertError?.message}`
+        });
+      } else {
+        atlantic = newAtlantic;
+        results.push({
+          success: true,
+          message: 'Atlantic Fresh Fish Market created',
+          data: atlantic
+        });
+      }
+    }
+
+    if (atlantic) {
 
       const atlanticFacilities = [
         {

@@ -1946,7 +1946,7 @@ export type Database = {
           created_at: string | null
           details: Json | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           resource_id: string | null
           resource_type: string | null
           user_agent: string | null
@@ -1957,7 +1957,7 @@ export type Database = {
           created_at?: string | null
           details?: Json | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           resource_id?: string | null
           resource_type?: string | null
           user_agent?: string | null
@@ -1968,7 +1968,7 @@ export type Database = {
           created_at?: string | null
           details?: Json | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           resource_id?: string | null
           resource_type?: string | null
           user_agent?: string | null
@@ -3190,10 +3190,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      accept_bootstrap_admin: {
-        Args: { p_full_name: string }
-        Returns: Json
-      }
+      accept_bootstrap_admin: { Args: { p_full_name: string }; Returns: Json }
       accept_platform_admin_invitation: {
         Args: { p_full_name: string; p_token: string }
         Returns: Json
@@ -3218,10 +3215,6 @@ export type Database = {
         Args: { p_branch_id: string; p_notes?: string; p_supplier_id: string }
         Returns: Json
       }
-      binary_quantize: {
-        Args: { "": string } | { "": unknown }
-        Returns: unknown
-      }
       can_manage_company_users: {
         Args: {
           p_company_id: string
@@ -3238,10 +3231,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      cleanup_expired_knowledge_entries: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      cleanup_expired_knowledge_entries: { Args: never; Returns: number }
       consume_credits: {
         Args: {
           p_credits_amount: number
@@ -3286,16 +3276,13 @@ export type Database = {
         }
         Returns: Json
       }
-      exec_readonly: {
-        Args: { p: Json }
-        Returns: Json
-      }
+      exec_readonly: { Args: { p: Json }; Returns: Json }
       finalize_onboarding_approval: {
         Args: { p_notes?: string; p_onboarding_request_id: string }
         Returns: Json
       }
       get_admin_user_stats: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           company_name: string
           email: string
@@ -3312,7 +3299,7 @@ export type Database = {
         }[]
       }
       get_all_users_detailed: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           available_credits: number
           chat_sessions_count: number
@@ -3350,7 +3337,7 @@ export type Database = {
         }[]
       }
       get_companies_for_knowledge_refresh: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           company_id: string
           company_name: string
@@ -3359,7 +3346,7 @@ export type Database = {
         }[]
       }
       get_platform_admin_invitations: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           created_at: string
           email: string
@@ -3372,7 +3359,7 @@ export type Database = {
         }[]
       }
       get_platform_admin_stats: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           active_connections: number
           total_buyers: number
@@ -3383,7 +3370,7 @@ export type Database = {
         }[]
       }
       get_platform_admin_users: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           available_credits: number
           company_name: string
@@ -3405,7 +3392,7 @@ export type Database = {
         }[]
       }
       get_super_admin_stats: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           active_connections: number
           pending_requests: number
@@ -3417,26 +3404,7 @@ export type Database = {
           total_users: number
         }[]
       }
-      grant_pg_net_access: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      halfvec_avg: {
-        Args: { "": number[] }
-        Returns: unknown
-      }
-      halfvec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      halfvec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      halfvec_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
+      grant_pg_net_access: { Args: never; Returns: undefined }
       handle_unified_connection_approval: {
         Args: { p_action: string; p_connection_id: string; p_notes?: string }
         Returns: Json
@@ -3448,54 +3416,9 @@ export type Database = {
         }
         Returns: boolean
       }
-      hnsw_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_sparsevec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnswhandler: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      is_admin: {
-        Args: { user_id: string }
-        Returns: boolean
-      }
-      is_platform_admin: {
-        Args: { user_id?: string }
-        Returns: boolean
-      }
-      is_super_admin: {
-        Args: { user_id: string }
-        Returns: boolean
-      }
-      ivfflat_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflat_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflathandler: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      l2_norm: {
-        Args: { "": unknown } | { "": unknown }
-        Returns: number
-      }
-      l2_normalize: {
-        Args: { "": string } | { "": unknown } | { "": unknown }
-        Returns: string
-      }
+      is_admin: { Args: { user_id: string }; Returns: boolean }
+      is_platform_admin: { Args: { user_id?: string }; Returns: boolean }
+      is_super_admin: { Args: { user_id: string }; Returns: boolean }
       log_document_activity: {
         Args: {
           p_action_type: string
@@ -3562,26 +3485,11 @@ export type Database = {
           title: string
         }[]
       }
-      sparsevec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      sparsevec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      sparsevec_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
       super_admin_reset_password: {
         Args: { new_password: string; target_user_id: string }
         Returns: boolean
       }
-      supplier_can_view_buyer: {
-        Args: { buyer_id: string }
-        Returns: boolean
-      }
+      supplier_can_view_buyer: { Args: { buyer_id: string }; Returns: boolean }
       user_has_branch_access: {
         Args: { p_branch_id: string; p_user_id: string }
         Returns: boolean
@@ -3602,30 +3510,6 @@ export type Database = {
           p_user_id: string
         }
         Returns: boolean
-      }
-      vector_avg: {
-        Args: { "": number[] }
-        Returns: string
-      }
-      vector_dims: {
-        Args: { "": string } | { "": unknown }
-        Returns: number
-      }
-      vector_norm: {
-        Args: { "": string }
-        Returns: number
-      }
-      vector_out: {
-        Args: { "": string }
-        Returns: unknown
-      }
-      vector_send: {
-        Args: { "": string }
-        Returns: string
-      }
-      vector_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
       }
     }
     Enums: {

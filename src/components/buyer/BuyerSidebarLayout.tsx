@@ -166,7 +166,8 @@ export function BuyerSidebarLayout({
       value: 'compliance',
       submenu: [
         { title: 'Overview', value: 'compliance', icon: BarChart3 },
-        { title: 'Item Compliance', value: 'item-compliance', icon: Package }
+        { title: 'Item Compliance', value: 'item-compliance', icon: Package },
+        { title: 'Facility Matrix', value: 'facility-matrix', icon: Building2 }
       ]
     },
     {

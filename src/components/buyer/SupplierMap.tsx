@@ -53,20 +53,33 @@ export function SupplierMap() {
   const [isAddingData, setIsAddingData] = useState(false);
 
   const handleAddSampleData = async () => {
-    setIsAddingData(true);
-    toast.info('Setting up HishōSushi supplier data...');
     try {
-      // Clean up old sample data first
+      setIsAddingData(true);
+      
+      // Step 1: Clean up existing data
+      toast.info('Cleaning old sample data...');
       await cleanupSampleData();
       
-      // Add HishōSushi data
+      // Step 2: Add HishōSushi data
+      toast.info('Adding HishōSushi demo data...');
       const results = await addHishōSushiData();
+      
       const successCount = results.filter(r => r.success).length;
-      toast.success(`Added HishōSushi with ${successCount - 1} facilities`);
-      reload();
+      const failureCount = results.filter(r => !r.success).length;
+      
+      if (successCount > 0) {
+        const facilityCount = successCount - 1; // Subtract the supplier itself
+        toast.success(`HishōSushi added with ${facilityCount} facilities!`);
+        // Reload the map data
+        await reload();
+      }
+      
+      if (failureCount > 0) {
+        toast.error(`Failed to add ${failureCount} items`);
+      }
     } catch (error) {
       console.error('Error adding sample data:', error);
-      toast.error('Failed to add HishōSushi data');
+      toast.error('Failed to add demo data');
     } finally {
       setIsAddingData(false);
     }
@@ -174,7 +187,7 @@ export function SupplierMap() {
           <p className="text-destructive mb-4">Error loading map data: {error}</p>
           <Button onClick={handleAddSampleData} disabled={isAddingData}>
             <Plus className="w-4 h-4 mr-2" />
-            {isAddingData ? 'Adding...' : 'Add Sample Data'}
+            {isAddingData ? 'Loading...' : 'Load HishōSushi Demo Data'}
           </Button>
         </CardContent>
       </Card>
@@ -191,7 +204,7 @@ export function SupplierMap() {
           <p className="text-sm text-muted-foreground mb-2">No supplier data available</p>
             <Button onClick={handleAddSampleData} disabled={isAddingData} size="sm">
               <Plus className="w-4 h-4 mr-2" />
-              {isAddingData ? 'Setting up...' : 'Add HishōSushi Data'}
+              {isAddingData ? 'Loading...' : 'Load HishōSushi Demo Data'}
             </Button>
           </CardContent>
         </Card>

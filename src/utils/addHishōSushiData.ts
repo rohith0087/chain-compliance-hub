@@ -7,25 +7,24 @@ export interface AddHishōSushiResult {
 }
 
 /**
- * Cleans up incomplete sample supplier data from the database
+ * Cleans up ALL existing supplier sample data from the database
  */
 export async function cleanupSampleData(): Promise<void> {
-  // Delete suppliers with no valid addresses or incomplete data
+  // Delete ALL existing suppliers (this is demo/sample data only)
   const { error: supplierError } = await supabase
     .from('suppliers')
     .delete()
-    .or('address.is.null,address.eq.,company_name.ilike.%sample%,company_name.ilike.%test%,company_name.ilike.%wain%');
+    .neq('id', '00000000-0000-0000-0000-000000000000'); // Keep only system records if any
 
   if (supplierError) {
     console.error('Error cleaning up suppliers:', supplierError);
   }
 
-  // Delete company_branches with no valid addresses
+  // Delete ALL supplier-type company branches
   const { error: branchError } = await supabase
     .from('company_branches')
     .delete()
-    .eq('company_type', 'supplier')
-    .or('address.is.null,address.eq.');
+    .eq('company_type', 'supplier');
 
   if (branchError) {
     console.error('Error cleaning up branches:', branchError);

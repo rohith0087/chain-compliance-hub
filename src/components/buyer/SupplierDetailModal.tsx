@@ -2,8 +2,9 @@ import React from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, Mail, Phone, MapPin, Calendar, FileText } from 'lucide-react';
+import { Building2, Mail, Phone, MapPin, Calendar, FileText, Package } from 'lucide-react';
 import { format } from 'date-fns';
+import { SupplierItemFacilityView } from './SupplierItemFacilityView';
 
 interface SupplierDetailModalProps {
   supplier: any;
@@ -145,6 +146,19 @@ export const SupplierDetailModal: React.FC<SupplierDetailModalProps> = ({
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Item-Facility Matrix Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Item-Facility Matrix
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SupplierItemFacilityView supplierId={supplier.id} />
             </CardContent>
           </Card>
 

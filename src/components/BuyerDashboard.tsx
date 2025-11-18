@@ -35,6 +35,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { StatCardSkeleton, TimelineItemSkeleton } from '@/components/ui/skeleton-card';
 import { UrgencyBadge, PriorityBadge } from '@/components/ui/priority-badge';
 import { DocumentSetManager } from '@/components/buyer/DocumentSetManager';
+import { BuyerSupplierFacilityMatrix } from '@/components/buyer/BuyerSupplierFacilityMatrix';
 
 import { supabase } from '@/integrations/supabase/client';
 
@@ -483,6 +484,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         {/* Item Compliance Content */}
         {activeTab === 'item-compliance' && buyerProfile && (
           <ItemComplianceView buyerId={buyerProfile.id} />
+        )}
+
+        {/* Facility Matrix Content */}
+        {activeTab === 'facility-matrix' && (
+          <BuyerSupplierFacilityMatrix />
         )}
 
         {/* Onboarding Content - Use Pipeline View */}

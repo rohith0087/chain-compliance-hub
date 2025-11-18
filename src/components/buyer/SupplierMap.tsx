@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
-import { Building2, Warehouse, MapPin, Phone, Filter, Search, Plus } from 'lucide-react';
-import { addSampleSuppliers } from '@/utils/addSampleSuppliers';
+import { Building2, Warehouse, MapPin, Phone, Filter, Search, Store, Truck, Plus } from 'lucide-react';
+import { addHishōSushiData, cleanupSampleData } from '@/utils/addHishōSushiData';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ import { useSupplierMapData, MapMarker } from '@/hooks/useSupplierMapData';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const INDUSTRY_COLORS: Record<string, string> = {
+  'Food Service': '#3b82f6',
   'Food & Beverage': '#3b82f6',
   'Manufacturing': '#8b5cf6',
   'Technology': '#10b981',
@@ -23,9 +24,21 @@ const INDUSTRY_COLORS: Record<string, string> = {
   'default': '#64748b',
 };
 
+const FACILITY_COLORS: Record<string, string> = {
+  'headquarters': '#1e40af',
+  'distribution': '#ea580c',
+  'store': '#16a34a',
+  'default': '#6366f1',
+};
+
 function getIndustryColor(industry?: string): string {
   if (!industry) return INDUSTRY_COLORS.default;
   return INDUSTRY_COLORS[industry] || INDUSTRY_COLORS.default;
+}
+
+function getFacilityColor(facilityType?: string): string {
+  if (!facilityType) return FACILITY_COLORS.default;
+  return FACILITY_COLORS[facilityType as keyof typeof FACILITY_COLORS] || FACILITY_COLORS.default;
 }
 
 export function SupplierMap() {
@@ -35,20 +48,25 @@ export function SupplierMap() {
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [showSuppliers, setShowSuppliers] = useState(true);
   const [showFacilities, setShowFacilities] = useState(true);
+  const [facilityTypeFilter, setFacilityTypeFilter] = useState<string[]>(['headquarters', 'distribution', 'store']);
   const [connectionFilter, setConnectionFilter] = useState<string[]>(['connected', 'pending', 'none']);
   const [isAddingData, setIsAddingData] = useState(false);
 
   const handleAddSampleData = async () => {
     setIsAddingData(true);
-    toast.info('Adding sample suppliers...');
+    toast.info('Setting up HishōSushi supplier data...');
     try {
-      const results = await addSampleSuppliers();
+      // Clean up old sample data first
+      await cleanupSampleData();
+      
+      // Add HishōSushi data
+      const results = await addHishōSushiData();
       const successCount = results.filter(r => r.success).length;
-      toast.success(`Added ${successCount} sample suppliers with real US addresses`);
+      toast.success(`Added HishōSushi with ${successCount - 1} facilities`);
       reload();
     } catch (error) {
       console.error('Error adding sample data:', error);
-      toast.error('Failed to add sample suppliers');
+      toast.error('Failed to add HishōSushi data');
     } finally {
       setIsAddingData(false);
     }
@@ -72,6 +90,13 @@ export function SupplierMap() {
       // Type filter
       if (marker.type === 'supplier' && !showSuppliers) return false;
       if (marker.type === 'facility' && !showFacilities) return false;
+
+      // Facility type filter (only for facilities)
+      if (marker.type === 'facility' && facilityTypeFilter.length > 0) {
+        if (!marker.facilityType || !facilityTypeFilter.includes(marker.facilityType)) {
+          return false;
+        }
+      }
 
       // Search filter
       if (searchQuery) {
@@ -97,7 +122,7 @@ export function SupplierMap() {
 
       return true;
     });
-  }, [markers, searchQuery, selectedIndustries, showSuppliers, showFacilities, connectionFilter]);
+  }, [markers, searchQuery, selectedIndustries, showSuppliers, showFacilities, facilityTypeFilter, connectionFilter]);
 
   const toggleIndustry = (industry: string) => {
     setSelectedIndustries((prev) =>
@@ -112,6 +137,14 @@ export function SupplierMap() {
       prev.includes(status)
         ? prev.filter((s) => s !== status)
         : [...prev, status]
+    );
+  };
+
+  const toggleFacilityType = (type: string) => {
+    setFacilityTypeFilter((prev) =>
+      prev.includes(type)
+        ? prev.filter((t) => t !== type)
+        : [...prev, type]
     );
   };
 
@@ -155,10 +188,10 @@ export function SupplierMap() {
       {showAddDataButton && (
         <Card className="absolute top-4 right-4 z-20">
           <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground mb-2">No supplier data available</p>
+          <p className="text-sm text-muted-foreground mb-2">No supplier data available</p>
             <Button onClick={handleAddSampleData} disabled={isAddingData} size="sm">
               <Plus className="w-4 h-4 mr-2" />
-              {isAddingData ? 'Adding...' : 'Add Sample Suppliers'}
+              {isAddingData ? 'Setting up...' : 'Add HishōSushi Data'}
             </Button>
           </CardContent>
         </Card>
@@ -211,6 +244,37 @@ export function SupplierMap() {
             </div>
           </div>
 
+          {/* Facility Types */}
+          {showFacilities && (
+            <div className="space-y-2">
+              <Label>Facility Type</Label>
+              {[
+                { value: 'headquarters', label: 'Corporate HQ', icon: Building2 },
+                { value: 'distribution', label: 'Distribution Center', icon: Truck },
+                { value: 'store', label: 'Stores', icon: Store }
+              ].map(({ value, label, icon: Icon }) => (
+                <div key={value} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`facility-${value}`}
+                    checked={facilityTypeFilter.includes(value)}
+                    onCheckedChange={() => toggleFacilityType(value)}
+                  />
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-sm"
+                      style={{ backgroundColor: getFacilityColor(value) }}
+                    >
+                      <Icon className="w-3 h-3 text-white" />
+                    </div>
+                    <label htmlFor={`facility-${value}`} className="text-sm cursor-pointer">
+                      {label}
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Connection Status */}
           <div className="space-y-2">
             <Label>Connection Status</Label>
@@ -260,6 +324,7 @@ export function SupplierMap() {
             onClick={() => {
               setSearchQuery('');
               setSelectedIndustries([]);
+              setFacilityTypeFilter(['headquarters', 'distribution', 'store']);
               setConnectionFilter(['connected', 'pending', 'none']);
             }}
             className="w-full"
@@ -324,8 +389,14 @@ export function SupplierMap() {
                     )}
                   </>
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-md border-2 border-white">
-                    <Warehouse className="w-5 h-5 text-primary-foreground" />
+                  <div 
+                    className="w-8 h-8 rounded-full flex items-center justify-center shadow-md border-2 border-white"
+                    style={{ backgroundColor: getFacilityColor(marker.facilityType) }}
+                  >
+                    {marker.facilityType === 'headquarters' && <Building2 className="w-5 h-5 text-white" />}
+                    {marker.facilityType === 'distribution' && <Truck className="w-5 h-5 text-white" />}
+                    {marker.facilityType === 'store' && <Store className="w-5 h-5 text-white" />}
+                    {!marker.facilityType && <Warehouse className="w-5 h-5 text-white" />}
                   </div>
                 )}
               </div>
@@ -342,6 +413,12 @@ export function SupplierMap() {
                   <CardTitle className="flex items-center gap-2 text-base">
                     {selectedMarker.type === 'supplier' ? (
                       <Building2 className="w-5 h-5" />
+                    ) : selectedMarker.facilityType === 'headquarters' ? (
+                      <Building2 className="w-5 h-5" />
+                    ) : selectedMarker.facilityType === 'distribution' ? (
+                      <Truck className="w-5 h-5" />
+                    ) : selectedMarker.facilityType === 'store' ? (
+                      <Store className="w-5 h-5" />
                     ) : (
                       <Warehouse className="w-5 h-5" />
                     )}
@@ -349,19 +426,28 @@ export function SupplierMap() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  {selectedMarker.industry && (
-                    <Badge style={{ backgroundColor: getIndustryColor(selectedMarker.industry) }}>
-                      {selectedMarker.industry}
-                    </Badge>
-                  )}
-                  {selectedMarker.connectionStatus && (
-                    <Badge variant={
-                      selectedMarker.connectionStatus === 'connected' ? 'default' :
-                      selectedMarker.connectionStatus === 'pending' ? 'secondary' : 'outline'
-                    }>
-                      {selectedMarker.connectionStatus === 'none' ? 'Not Connected' : selectedMarker.connectionStatus}
-                    </Badge>
-                  )}
+                  <div className="flex flex-wrap gap-2">
+                    {selectedMarker.industry && (
+                      <Badge style={{ backgroundColor: getIndustryColor(selectedMarker.industry) }}>
+                        {selectedMarker.industry}
+                      </Badge>
+                    )}
+                    {selectedMarker.facilityType && (
+                      <Badge style={{ backgroundColor: getFacilityColor(selectedMarker.facilityType) }}>
+                        {selectedMarker.facilityType === 'headquarters' && 'Corporate HQ'}
+                        {selectedMarker.facilityType === 'distribution' && 'Distribution Center'}
+                        {selectedMarker.facilityType === 'store' && 'Store'}
+                      </Badge>
+                    )}
+                    {selectedMarker.connectionStatus && (
+                      <Badge variant={
+                        selectedMarker.connectionStatus === 'connected' ? 'default' :
+                        selectedMarker.connectionStatus === 'pending' ? 'secondary' : 'outline'
+                      }>
+                        {selectedMarker.connectionStatus === 'none' ? 'Not Connected' : selectedMarker.connectionStatus}
+                      </Badge>
+                    )}
+                  </div>
                   <div className="flex items-start gap-2 text-sm">
                     <MapPin className="w-4 h-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                     <span className="text-muted-foreground">{selectedMarker.address}</span>
@@ -395,10 +481,31 @@ export function SupplierMap() {
             <span>Supplier HQ</span>
           </div>
           <div className="flex items-center gap-2 text-sm">
-            <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center border-2 border-white shadow">
-              <Warehouse className="w-4 h-4 text-primary-foreground" />
+            <div 
+              className="w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow"
+              style={{ backgroundColor: FACILITY_COLORS.headquarters }}
+            >
+              <Building2 className="w-4 h-4 text-white" />
             </div>
-            <span>Facility</span>
+            <span>Corporate HQ</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <div 
+              className="w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow"
+              style={{ backgroundColor: FACILITY_COLORS.distribution }}
+            >
+              <Truck className="w-4 h-4 text-white" />
+            </div>
+            <span>Distribution</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <div 
+              className="w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow"
+              style={{ backgroundColor: FACILITY_COLORS.store }}
+            >
+              <Store className="w-4 h-4 text-white" />
+            </div>
+            <span>Store</span>
           </div>
           {industries.slice(0, 3).map((industry) => (
             <div key={industry} className="flex items-center gap-2 text-sm">

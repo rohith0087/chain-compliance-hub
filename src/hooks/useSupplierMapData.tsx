@@ -16,6 +16,7 @@ export interface MapMarker {
   supplierId: string;
   facilityCount?: number;
   branchId?: string;
+  facilityType?: 'headquarters' | 'distribution' | 'store';
 }
 
 export function useSupplierMapData() {
@@ -74,7 +75,8 @@ export function useSupplierMapData() {
           address,
           phone,
           company_id,
-          company_type
+          company_type,
+          location
         `)
         .eq('company_type', 'supplier');
 
@@ -134,6 +136,7 @@ export function useSupplierMapData() {
             phone: facility.phone || undefined,
             supplierId: facility.company_id,
             branchId: facility.id,
+            facilityType: (facility.location as 'headquarters' | 'distribution' | 'store') || undefined,
           });
         }
       }

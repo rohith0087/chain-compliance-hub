@@ -35,6 +35,7 @@ import { ComplianceFilters } from '../compliance/ComplianceFilters';
 import { useBranchContext } from '@/contexts/BranchContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RefreshCcw } from 'lucide-react';
+import BuyerCorporateDocuments from '../buyer/BuyerCorporateDocuments';
 
 const BuyerComplianceDashboard = () => {
   const { currentBranch, allBranchesView } = useBranchContext();
@@ -477,10 +478,11 @@ const BuyerComplianceDashboard = () => {
       />
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="suppliers">Supplier Compliance</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="corporate">Corporate Documents</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6 animate-fade-in">
@@ -729,6 +731,10 @@ const BuyerComplianceDashboard = () => {
 
         <TabsContent value="analytics">
           <ComplianceDashboard userRole="buyer" data={{ documentRequests }} />
+        </TabsContent>
+
+        <TabsContent value="corporate" className="space-y-6 animate-fade-in">
+          <BuyerCorporateDocuments buyerId={buyerId} />
         </TabsContent>
       </Tabs>
 

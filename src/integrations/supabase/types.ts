@@ -500,6 +500,109 @@ export type Database = {
           },
         ]
       }
+      buyer_document_library: {
+        Row: {
+          access_level: string | null
+          ai_suggested_description: string | null
+          ai_suggested_tags: string[] | null
+          branch_id: string | null
+          buyer_id: string
+          category: string | null
+          content_extracted: string | null
+          content_summary: string | null
+          created_at: string
+          description: string | null
+          document_name: string
+          document_type: string
+          expiration_date: string | null
+          extraction_status: string
+          file_path: string
+          file_size: number | null
+          id: string
+          is_current_version: boolean
+          mime_type: string | null
+          original_document_id: string | null
+          tags: string[] | null
+          updated_at: string
+          uploaded_by: string
+          version: number
+        }
+        Insert: {
+          access_level?: string | null
+          ai_suggested_description?: string | null
+          ai_suggested_tags?: string[] | null
+          branch_id?: string | null
+          buyer_id: string
+          category?: string | null
+          content_extracted?: string | null
+          content_summary?: string | null
+          created_at?: string
+          description?: string | null
+          document_name: string
+          document_type: string
+          expiration_date?: string | null
+          extraction_status?: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          is_current_version?: boolean
+          mime_type?: string | null
+          original_document_id?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          uploaded_by: string
+          version?: number
+        }
+        Update: {
+          access_level?: string | null
+          ai_suggested_description?: string | null
+          ai_suggested_tags?: string[] | null
+          branch_id?: string | null
+          buyer_id?: string
+          category?: string | null
+          content_extracted?: string | null
+          content_summary?: string | null
+          created_at?: string
+          description?: string | null
+          document_name?: string
+          document_type?: string
+          expiration_date?: string | null
+          extraction_status?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          is_current_version?: boolean
+          mime_type?: string | null
+          original_document_id?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          uploaded_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyer_document_library_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_document_library_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_document_library_original_document_id_fkey"
+            columns: ["original_document_id"]
+            isOneToOne: false
+            referencedRelation: "buyer_document_library"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       buyer_supplier_connections: {
         Row: {
           branch_id: string | null

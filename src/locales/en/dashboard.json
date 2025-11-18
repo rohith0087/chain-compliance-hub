@@ -75,7 +75,36 @@
     "highRisk": "High Risk",
     "totalRequests": "Total Requests",
     "recentActivity": "Recent Document Requests",
-    "supplierCompliance": "Supplier Compliance Scores"
+    "supplierCompliance": "Supplier Compliance Scores",
+    "corporateDocuments": {
+      "title": "Corporate Documents",
+      "description": "Manage your company's internal compliance documents",
+      "uploadButton": "Upload Document",
+      "categories": {
+        "all": "All Documents",
+        "sop": "SOP",
+        "gmp": "GMP",
+        "haccp": "HACCP",
+        "other": "Other"
+      },
+      "stats": {
+        "total": "Total Documents",
+        "sop": "SOP Documents",
+        "gmp": "GMP Documents",
+        "haccp": "HACCP Documents"
+      },
+      "empty": {
+        "title": "No corporate documents yet",
+        "description": "Upload your first corporate document to get started"
+      },
+      "actions": {
+        "view": "View Document",
+        "download": "Download",
+        "delete": "Delete",
+        "uploadVersion": "Upload New Version",
+        "edit": "Edit Details"
+      }
+    }
   },
   "company": {
     "title": "Company Management",

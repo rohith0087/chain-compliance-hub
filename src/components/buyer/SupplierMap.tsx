@@ -45,7 +45,7 @@ export function SupplierMap() {
   const { markers, loading, error, reload } = useSupplierMapData();
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
+  
   const [showSuppliers, setShowSuppliers] = useState(true);
   const [showFacilities, setShowFacilities] = useState(true);
   const [facilityTypeFilter, setFacilityTypeFilter] = useState<string[]>(['headquarters', 'distribution', 'store']);
@@ -96,15 +96,6 @@ export function SupplierMap() {
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
-  // Get unique industries
-  const industries = useMemo(() => {
-    const set = new Set(
-      markers
-        .filter((m) => m.type === 'supplier' && m.industry)
-        .map((m) => m.industry!)
-    );
-    return Array.from(set).sort();
-  }, [markers]);
 
   // Filter markers
   const filteredMarkers = useMemo(() => {
@@ -128,12 +119,6 @@ export function SupplierMap() {
         if (!matchesName && !matchesAddress) return false;
       }
 
-      // Industry filter (only for suppliers)
-      if (marker.type === 'supplier' && selectedIndustries.length > 0) {
-        if (!marker.industry || !selectedIndustries.includes(marker.industry)) {
-          return false;
-        }
-      }
 
       // Connection filter (only for suppliers)
       if (marker.type === 'supplier' && connectionFilter.length > 0) {
@@ -144,15 +129,8 @@ export function SupplierMap() {
 
       return true;
     });
-  }, [markers, searchQuery, selectedIndustries, showSuppliers, showFacilities, facilityTypeFilter, connectionFilter]);
+  }, [markers, searchQuery, showSuppliers, showFacilities, facilityTypeFilter, connectionFilter]);
 
-  const toggleIndustry = (industry: string) => {
-    setSelectedIndustries((prev) =>
-      prev.includes(industry)
-        ? prev.filter((i) => i !== industry)
-        : [...prev, industry]
-    );
-  };
 
   const toggleConnectionFilter = (status: string) => {
     setConnectionFilter((prev) =>
@@ -314,30 +292,6 @@ export function SupplierMap() {
             ))}
           </div>
 
-          {/* Industries */}
-          {industries.length > 0 && (
-            <div className="space-y-2">
-              <Label>Industries</Label>
-              {industries.map((industry) => (
-                <div key={industry} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`industry-${industry}`}
-                    checked={selectedIndustries.includes(industry)}
-                    onCheckedChange={() => toggleIndustry(industry)}
-                  />
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: getIndustryColor(industry) }}
-                    />
-                    <label htmlFor={`industry-${industry}`} className="text-sm cursor-pointer">
-                      {industry}
-                    </label>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
 
           {/* Clear All */}
           <Button
@@ -345,7 +299,6 @@ export function SupplierMap() {
             size="sm"
             onClick={() => {
               setSearchQuery('');
-              setSelectedIndustries([]);
               setFacilityTypeFilter(['headquarters', 'distribution', 'store']);
               setConnectionFilter(['connected', 'pending', 'none']);
             }}
@@ -529,15 +482,6 @@ export function SupplierMap() {
             </div>
             <span>Store</span>
           </div>
-          {industries.slice(0, 3).map((industry) => (
-            <div key={industry} className="flex items-center gap-2 text-sm">
-              <div
-                className="w-3 h-3 rounded-full border border-white"
-                style={{ backgroundColor: getIndustryColor(industry) }}
-              />
-              <span>{industry}</span>
-            </div>
-          ))}
         </CardContent>
       </Card>
     </div>

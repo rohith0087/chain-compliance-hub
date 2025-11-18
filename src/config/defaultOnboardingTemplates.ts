@@ -749,6 +749,79 @@ export const DEFAULT_ONBOARDING_TEMPLATES: DefaultOnboardingTemplate[] = [
         field_order: 9
       }
     ]
+  },
+  {
+    industry: 'Sushi & Japanese Cuisine',
+    default_welcome_message: 'Welcome to our sushi supplier network! We are committed to the highest standards for raw fish safety, temperature control, and seafood traceability. Please complete the onboarding process to begin our partnership.',
+    allow_branch_selection: true,
+    require_branch_selection: false,
+    auto_approve_standard_docs: false,
+    require_all_documents: true,
+    expires_days: 14,
+    document_requirements: [
+      ...COMMON_DOCUMENTS,
+      {
+        document_type: 'sashimi_grade_certification',
+        document_name: 'Sashimi Grade Fish Certification',
+        description: 'Required certification for raw fish handling',
+        is_required: true,
+        display_order: 6
+      },
+      {
+        document_type: 'haccp_seafood',
+        document_name: 'HACCP Plan for Seafood',
+        description: 'FDA-compliant HACCP plan for seafood processing',
+        is_required: true,
+        display_order: 7
+      },
+      {
+        document_type: 'seafood_traceability',
+        document_name: 'Seafood Traceability Documentation',
+        description: 'Full supply chain traceability for all seafood',
+        is_required: true,
+        display_order: 8
+      },
+      {
+        document_type: 'cold_chain',
+        document_name: 'Cold Chain Documentation',
+        description: 'Temperature monitoring and control records',
+        is_required: true,
+        display_order: 9
+      }
+    ],
+    form_fields: [
+      ...COMMON_FORM_FIELDS,
+      {
+        field_type: 'text',
+        field_label: 'Primary Fish Species',
+        field_description: 'List main types of fish you supply (tuna, salmon, yellowtail, etc.)',
+        is_required: true,
+        field_order: 7
+      },
+      {
+        field_type: 'select',
+        field_label: 'Freezing Method for Parasite Destruction',
+        field_description: 'How do you ensure parasite destruction in raw fish?',
+        is_required: true,
+        field_order: 8,
+        field_options: ['-20°C for 7 days', '-35°C for 15 hours', 'Flash freezing at -40°C', 'Other FDA-approved method']
+      },
+      {
+        field_type: 'text',
+        field_label: 'Cold Storage Capacity',
+        field_description: 'Total cold storage capacity (in cubic feet or cubic meters)',
+        is_required: true,
+        field_order: 9
+      },
+      {
+        field_type: 'checkbox',
+        field_label: 'Sushi-Specific Certifications',
+        field_description: 'Select all certifications you hold',
+        is_required: false,
+        field_order: 10,
+        field_options: ['FDA Seafood HACCP', 'MSC Certified', 'BAP Certified', 'ASC Certified', 'Organic Certified']
+      }
+    ]
   }
 ];
 

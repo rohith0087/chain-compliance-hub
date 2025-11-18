@@ -579,6 +579,203 @@ export const getComplianceDocuments = (userType: string): ComplianceDocument[] =
     ];
   }
 
+  // Sushi Company-specific document set
+  if (userType === 'Sushi Company') {
+    return [
+      // Food Safety - Raw Fish Handling
+      {
+        id: 'sashimi-grade-certification',
+        title: 'Sashimi Grade Fish Certification',
+        category: 'Seafood Safety',
+        description: 'Certification for handling and serving raw fish products',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'FDA / Local Health Department',
+        template: {
+          sections: [
+            { name: 'Fish Source Documentation', required: true },
+            { name: 'Temperature Control Logs', required: true },
+            { name: 'Parasite Destruction Records', required: true },
+            { name: 'Supplier Verification', required: true }
+          ]
+        }
+      },
+      {
+        id: 'haccp-seafood-plan',
+        title: 'HACCP Plan for Seafood',
+        category: 'Food Safety',
+        description: 'Hazard Analysis Critical Control Points plan specific to seafood',
+        icon: ClipboardCheck,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: {
+          sections: [
+            { name: 'Hazard Analysis', required: true },
+            { name: 'Critical Control Points', required: true },
+            { name: 'Monitoring Procedures', required: true },
+            { name: 'Corrective Actions', required: true },
+            { name: 'Verification Procedures', required: true }
+          ]
+        }
+      },
+      {
+        id: 'raw-fish-handling-sop',
+        title: 'Raw Fish Handling SOP',
+        category: 'Food Safety',
+        description: 'Standard Operating Procedures for raw fish preparation',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: {
+          sections: [
+            { name: 'Receiving Procedures', required: true },
+            { name: 'Storage Requirements', required: true },
+            { name: 'Preparation Guidelines', required: true },
+            { name: 'Cross-contamination Prevention', required: true },
+            { name: 'Staff Training Records', required: true }
+          ]
+        }
+      },
+      {
+        id: 'seafood-traceability',
+        title: 'Seafood Traceability Documentation',
+        category: 'Traceability',
+        description: 'Full supply chain traceability for seafood products',
+        icon: MapPin,
+        required: true,
+        regulatoryBody: 'NOAA / FDA',
+        template: {
+          sections: [
+            { name: 'Catch Information', required: true },
+            { name: 'Processing Facilities', required: true },
+            { name: 'Transportation Records', required: true },
+            { name: 'Chain of Custody', required: true }
+          ]
+        }
+      },
+      // Allergen Management
+      {
+        id: 'shellfish-allergen-program',
+        title: 'Shellfish Allergen Control Program',
+        category: 'Allergen Management',
+        description: 'Program for managing shellfish allergens',
+        icon: AlertTriangle,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: {
+          sections: [
+            { name: 'Allergen Identification', required: true },
+            { name: 'Segregation Procedures', required: true },
+            { name: 'Cleaning Protocols', required: true },
+            { name: 'Labeling Requirements', required: true }
+          ]
+        }
+      },
+      // Rice & Ingredients
+      {
+        id: 'rice-quality-specifications',
+        title: 'Sushi Rice Quality Specifications',
+        category: 'Quality Control',
+        description: 'Quality standards for sushi rice and ingredients',
+        icon: Award,
+        required: false,
+        regulatoryBody: 'Internal Standards',
+        template: {
+          sections: [
+            { name: 'Rice Supplier Details', required: true },
+            { name: 'Quality Parameters', required: true },
+            { name: 'Testing Protocols', required: true },
+            { name: 'Storage Conditions', required: true }
+          ]
+        }
+      },
+      // Temperature Control
+      {
+        id: 'cold-chain-documentation',
+        title: 'Cold Chain Documentation',
+        category: 'Food Safety',
+        description: 'Complete temperature monitoring for cold chain',
+        icon: Clock,
+        required: true,
+        regulatoryBody: 'FDA',
+        template: {
+          sections: [
+            { name: 'Temperature Monitoring Logs', required: true },
+            { name: 'Equipment Calibration', required: true },
+            { name: 'Storage Temperature Records', required: true },
+            { name: 'Transport Temperature Data', required: true }
+          ]
+        }
+      },
+      // Wasabi & Condiments
+      {
+        id: 'condiment-specifications',
+        title: 'Condiment & Seasoning Specifications',
+        category: 'Quality Control',
+        description: 'Quality specs for wasabi, soy sauce, ginger, etc.',
+        icon: Leaf,
+        required: false,
+        regulatoryBody: 'Internal Standards',
+        template: {
+          sections: [
+            { name: 'Supplier Information', required: true },
+            { name: 'Ingredient Lists', required: true },
+            { name: 'Allergen Declarations', required: true },
+            { name: 'Shelf Life Data', required: true }
+          ]
+        }
+      },
+      // Standard Compliance
+      {
+        id: 'business-license',
+        title: 'Business License',
+        category: 'Legal Compliance',
+        description: 'Valid business operation license',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'Local Government',
+        template: {
+          sections: [
+            { name: 'License Details', required: true },
+            { name: 'Validity Period', required: true }
+          ]
+        }
+      },
+      {
+        id: 'food-handler-certifications',
+        title: 'Food Handler Certifications',
+        category: 'Food Safety',
+        description: 'Certifications for all food handling staff',
+        icon: Users,
+        required: true,
+        regulatoryBody: 'Local Health Department',
+        template: {
+          sections: [
+            { name: 'Staff List', required: true },
+            { name: 'Certification Details', required: true },
+            { name: 'Training Records', required: true }
+          ]
+        }
+      },
+      {
+        id: 'general-liability-insurance',
+        title: 'General Liability Insurance',
+        category: 'Insurance',
+        description: 'Current general liability insurance coverage',
+        icon: Shield,
+        required: true,
+        regulatoryBody: 'Insurance Commission',
+        template: {
+          sections: [
+            { name: 'Policy Details', required: true },
+            { name: 'Coverage Amount', required: true },
+            { name: 'Expiration Date', required: true }
+          ]
+        }
+      }
+    ];
+  }
+
   // Legacy support - Keep existing poultry types for backward compatibility
   if (userType === 'Poultry - Egg Supplier') {
     return [

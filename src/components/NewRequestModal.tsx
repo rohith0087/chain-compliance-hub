@@ -30,7 +30,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
   const [selectedSupplierType, setSelectedSupplierType] = useState<string>('General Supplier');
   const [selectedDocuments, setSelectedDocuments] = useState<ComplianceDocument[]>([]);
   const [formData, setFormData] = useState({
-    supplier: '',
+    suppliers: [] as string[],
     priority: 'medium' as 'high' | 'medium' | 'low' | 'urgent',
     dueDate: '',
     notes: '',
@@ -153,13 +153,17 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleSuppliersChange = (suppliers: string[]) => {
+    setFormData(prev => ({ ...prev, suppliers }));
+  };
+
   const handleCreateRequests = async () => {
     console.log('Creating request with currentBranch:', currentBranch);
     
-    if (!user || !buyerProfile || selectedDocuments.length === 0) {
+    if (!user || !buyerProfile || selectedDocuments.length === 0 || formData.suppliers.length === 0) {
       toast({
         title: "Error",
-        description: "Please select at least one document and ensure all fields are filled.",
+        description: "Please select at least one document and one supplier.",
         variant: "destructive",
       });
       return;
@@ -168,59 +172,64 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
     setLoading(true);
 
     try {
-      // Create a separate request for each selected document
+      let totalRequestsCreated = 0;
+      
+      // Create a separate request for each selected document AND each selected supplier
       for (const doc of selectedDocuments) {
-        const insertData: any = {
-          title: doc.title,
-          description: doc.description,
-          document_type: doc.title,
-          category: doc.category,
-          priority: formData.priority,
-          due_date: formData.dueDate || null,
-          supplier_id: formData.supplier,
-          buyer_id: buyerProfile.id,
-          requester_id: user.id,
-          branch_id: currentBranch?.id || null,
-          notes: formData.notes || null,
-          template_sections: doc.template || null,
-        };
+        for (const supplierId of formData.suppliers) {
+          const insertData: any = {
+            title: doc.title,
+            description: doc.description,
+            document_type: doc.title,
+            category: doc.category,
+            priority: formData.priority,
+            due_date: formData.dueDate || null,
+            supplier_id: supplierId,
+            buyer_id: buyerProfile.id,
+            requester_id: user.id,
+            branch_id: currentBranch?.id || null,
+            notes: formData.notes || null,
+            template_sections: doc.template || null,
+          };
 
-        // Add custom template ID if this is a custom template
-        if ((doc as any).isCustomTemplate && (doc as any).customTemplateId) {
-          insertData.custom_template_id = (doc as any).customTemplateId;
-          insertData.template_type = 'custom';
+          // Add custom template ID if this is a custom template
+          if ((doc as any).isCustomTemplate && (doc as any).customTemplateId) {
+            insertData.custom_template_id = (doc as any).customTemplateId;
+            insertData.template_type = 'custom';
+          }
+
+          const { data: request, error } = await supabase
+            .from('document_requests')
+            .insert(insertData)
+            .select()
+            .single();
+
+          if (error) {
+            console.error('Error creating request:', error);
+            throw error;
+          }
+
+          // Create notification for supplier
+          const supplier = connectedSuppliers.find(s => s.id === supplierId);
+          if (supplier) {
+            await supabase.rpc('create_notification', {
+              p_user_id: supplier.profile_id,
+              p_title: 'New Document Request',
+              p_message: `You have received a new document request: ${doc.title}`,
+              p_type: 'request_created',
+              p_reference_id: request.id
+            });
+          }
+
+          // Call the callback to update the parent component
+          onCreateRequest(request);
+          totalRequestsCreated++;
         }
-
-        const { data: request, error } = await supabase
-          .from('document_requests')
-          .insert(insertData)
-          .select()
-          .single();
-
-        if (error) {
-          console.error('Error creating request:', error);
-          throw error;
-        }
-
-        // Create notification for supplier
-        const supplier = connectedSuppliers.find(s => s.id === formData.supplier);
-        if (supplier) {
-          await supabase.rpc('create_notification', {
-            p_user_id: supplier.profile_id,
-            p_title: 'New Document Request',
-            p_message: `You have received a new document request: ${doc.title}`,
-            p_type: 'request_created',
-            p_reference_id: request.id
-          });
-        }
-
-        // Call the callback to update the parent component
-        onCreateRequest(request);
       }
 
       toast({
         title: "Requests Created",
-        description: `Successfully created ${selectedDocuments.length} document request(s).`,
+        description: `Successfully created ${totalRequestsCreated} document request(s) for ${formData.suppliers.length} supplier(s).`,
       });
 
       // Reset form and close modal
@@ -242,7 +251,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
     setStep(1);
     setSelectedDocuments([]);
     setFormData({
-      supplier: '',
+      suppliers: [],
       priority: 'medium' as 'high' | 'medium' | 'low' | 'urgent',
       dueDate: '',
       notes: '',
@@ -351,6 +360,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
             selectedDocuments={selectedDocuments}
             formData={formData}
             onFormDataChange={handleFormDataChange}
+            onSuppliersChange={handleSuppliersChange}
             onBack={() => setStep(1)}
             onCreateRequests={handleCreateRequests}
             onCancel={onClose}

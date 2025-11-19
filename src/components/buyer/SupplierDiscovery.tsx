@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Search, ArrowLeft, Mail, Phone, MapPin, Package } from 'lucide-react';
+import { Building2, Search, ArrowLeft, Mail, Phone, MapPin, Package, Send, RefreshCw, Eye, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -123,11 +123,28 @@ const SupplierDiscovery = () => {
           console.error('Error fetching all suppliers:', allSuppliersError);
         }
 
-        // Filter out already connected suppliers
+        // Get pending connection requests
+        const { data: pendingConnectionsData, error: pendingError } = await supabase
+          .from('buyer_supplier_connections')
+          .select('*, supplier:suppliers(*)')
+          .eq('buyer_id', buyer.id)
+          .eq('status', 'pending');
+
+        if (pendingError) throw pendingError;
+
+        // Create a map of pending requests
+        const pendingMap = new Map();
+        (pendingConnectionsData || []).forEach(conn => {
+          pendingMap.set(conn.supplier_id, conn);
+        });
+        setPendingRequests(pendingMap);
+
+        // Filter out connected suppliers (approved connections only)
         if (allSuppliersData && connectionsData) {
           const connectedSupplierIds = connectionsData.map(c => c.suppliers?.id).filter(Boolean);
           const available = allSuppliersData.filter(s => !connectedSupplierIds.includes(s.id));
           setAvailableSuppliers(available);
+          setFilteredAvailableSuppliers(available);
         }
 
         // Fetch pending connection requests count
@@ -204,42 +221,93 @@ const SupplierDiscovery = () => {
     return connection?.assigned_at || null;
   };
 
-  const handleSendConnectionRequest = async (supplierId: string) => {
-    if (!buyerProfile || !currentBranch) {
-      toast({
-        title: "Error",
-        description: "Please select a branch first",
-        variant: "destructive"
-      });
-      return;
-    }
+  const handleSendConnectionRequest = async (supplier: any) => {
+    if (!buyerProfile) return;
 
     try {
-      const { error } = await supabase
+      // First, create the onboarding request
+      const { data: onboardingRequest, error: onboardingError } = await supabase
+        .from('supplier_onboarding_requests')
+        .insert([{
+          buyer_id: buyerProfile.id,
+          supplier_id: supplier.id,
+          supplier_email: supplier.contact_email,
+          supplier_company_name: supplier.company_name,
+          status: 'requested',
+          can_choose_branches: true,
+          created_by: user?.id || buyerProfile.profile_id,
+        }])
+        .select()
+        .single();
+
+      if (onboardingError) throw onboardingError;
+
+      // Then create the connection request linked to the onboarding request
+      const { error: connectionError } = await supabase
         .from('buyer_supplier_connections')
         .insert({
           buyer_id: buyerProfile.id,
-          supplier_id: supplierId,
-          branch_id: currentBranch.id,
+          supplier_id: supplier.id,
           status: 'pending',
-          initiated_by: 'buyer'
+          initiated_by: 'buyer',
+          onboarding_request_id: onboardingRequest.id,
         });
 
-      if (error) throw error;
+      if (connectionError) throw connectionError;
 
       toast({
-        title: "Success",
-        description: "Connection request sent successfully"
+        title: "Connection Request Sent",
+        description: `Request sent to ${supplier.company_name}`,
       });
 
       // Refresh data
-      fetchData();
+      await fetchData();
     } catch (error: any) {
       console.error('Error sending connection request:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to send connection request",
-        variant: "destructive"
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleResendRequest = async (supplier: any) => {
+    if (!buyerProfile) return;
+
+    try {
+      const pendingRequest = pendingRequests.get(supplier.id);
+      if (!pendingRequest) return;
+
+      // Update the connection request timestamp
+      const { error: connectionError } = await supabase
+        .from('buyer_supplier_connections')
+        .update({ requested_at: new Date().toISOString() })
+        .eq('id', pendingRequest.id);
+
+      if (connectionError) throw connectionError;
+
+      // Update the onboarding request timestamp if it exists
+      if (pendingRequest.onboarding_request_id) {
+        await supabase
+          .from('supplier_onboarding_requests')
+          .update({ updated_at: new Date().toISOString() })
+          .eq('id', pendingRequest.onboarding_request_id);
+      }
+
+      toast({
+        title: "Request Resent",
+        description: `Connection request resent to ${supplier.company_name}`,
+      });
+
+      // Refresh data
+      await fetchData();
+    } catch (error: any) {
+      console.error('Error resending connection request:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to resend connection request",
+        variant: "destructive",
       });
     }
   };
@@ -484,15 +552,39 @@ const SupplierDiscovery = () => {
                         onClick={() => handleViewSupplier(supplier)}
                         className="flex-1"
                       >
+                        <Eye className="h-4 w-4 mr-2" />
                         View Details
                       </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => handleSendConnectionRequest(supplier.id)}
-                        className="flex-1"
-                      >
-                        Send Request
-                      </Button>
+                      {pendingRequests.has(supplier.id) ? (
+                        <div className="flex gap-2 flex-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled
+                            className="flex-1"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Request Sent
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleResendRequest(supplier)}
+                          >
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Resend
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => handleSendConnectionRequest(supplier)}
+                          className="flex-1"
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          Send Request
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -644,6 +736,7 @@ const SupplierSection = ({ title, subtitle, suppliers, onViewSupplier }: Supplie
                       onClick={() => onViewSupplier(supplier)}
                       className="flex-1"
                     >
+                      <Eye className="h-4 w-4 mr-2" />
                       View Details
                     </Button>
                   </div>

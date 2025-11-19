@@ -730,6 +730,7 @@ URL.revokeObjectURL(url);
                       document={{
                         ...doc,
                         supplier: doc.suppliers,
+                        branch: doc.branches,
                         ...(doc.document_uploads?.[0] && {
                           file_name: doc.document_uploads[0].file_name,
                           file_size: doc.document_uploads[0].file_size,

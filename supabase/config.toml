@@ -102,3 +102,6 @@ verify_jwt = false
 
 [functions.check-onboarding-deadlines]
 verify_jwt = false
+
+[functions.populate-onboarding-requirements]
+verify_jwt = false

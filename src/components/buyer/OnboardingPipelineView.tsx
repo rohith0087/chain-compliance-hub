@@ -28,6 +28,7 @@ import { useBranchContext } from '@/contexts/BranchContext';
 import { Building2 } from 'lucide-react';
 
 const PIPELINE_STAGES = [
+  { id: 'requested', name: 'Requested', color: 'bg-purple-100' },
   { id: 'pending', name: 'Invited', color: 'bg-slate-100' },
   { id: 'onboarding_initiated', name: 'Started', color: 'bg-blue-100' },
   { id: 'under_review', name: 'Under Review', color: 'bg-yellow-100' },

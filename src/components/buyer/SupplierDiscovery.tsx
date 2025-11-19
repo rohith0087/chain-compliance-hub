@@ -41,6 +41,7 @@ const SupplierDiscovery = () => {
   const [viewMode, setViewMode] = useState<'connected' | 'available'>('connected');
   const [availableSuppliers, setAvailableSuppliers] = useState<any[]>([]);
   const [filteredAvailableSuppliers, setFilteredAvailableSuppliers] = useState<any[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<Map<string, any>>(new Map());
   const { user } = useAuth();
   const { getBuyerProfile } = useBuyerSetup();
   const { toast } = useToast();

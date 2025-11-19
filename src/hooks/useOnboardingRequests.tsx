@@ -251,6 +251,23 @@ export const useOnboardingRequests = () => {
         throw new Error('Failed to create onboarding request');
       }
 
+      // Link the onboarding request to the buyer-supplier connection
+      if (data && supplierId) {
+        const { error: updateError } = await supabase
+          .from('buyer_supplier_connections')
+          .update({ 
+            onboarding_request_id: data.id,
+          })
+          .eq('buyer_id', buyerId)
+          .eq('supplier_id', supplierId)
+          .eq('status', 'approved');
+
+        if (updateError) {
+          console.error('Warning: Failed to link onboarding request to connection:', updateError);
+          // Don't throw - the request was created successfully
+        }
+      }
+
       await fetchOnboardingRequests();
       return data;
     } catch (err) {

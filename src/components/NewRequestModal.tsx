@@ -178,6 +178,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
           supplier_id: formData.supplier,
           buyer_id: buyerProfile.id,
           requester_id: user.id,
+          branch_id: currentBranch?.id || null,
           notes: formData.notes || null,
           template_sections: doc.template || null,
         };

@@ -149,11 +149,11 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
         try {
           if (useDefaults) {
             await createOnboardingRequestFromDefaults(
-              buyerId, supplier.contact_email, supplier.company_name, supplierId, formData.custom_message
+              buyerId, supplier.contact_email, supplier.company_name, formData.custom_message, supplierId
             );
           } else {
             const request = await createOnboardingRequest(
-              buyerId, supplier.contact_email, supplier.company_name, supplierId, formData.custom_message, formData.can_choose_branches
+              buyerId, supplier.contact_email, supplier.company_name, formData.can_choose_branches, formData.custom_message, supplierId
             );
 
             for (const docReq of documentRequirements) {

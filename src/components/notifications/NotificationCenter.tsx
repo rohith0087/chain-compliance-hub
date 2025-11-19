@@ -50,6 +50,8 @@ const NotificationCenter = ({ onNavigate }: NotificationCenterProps) => {
       case 'connection_request':
       case 'connection_response':
         return 'connections';
+      case 'onboarding_request':
+        return 'onboarding';
       default:
         return 'overview';
     }

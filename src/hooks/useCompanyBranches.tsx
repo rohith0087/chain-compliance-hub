@@ -71,10 +71,24 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
 
       setBranches(branchesData as CompanyBranch[] || []);
 
-      // Set default current branch to the first one or Main Office
+      // Restore previously selected branch from localStorage or use default
       if (branchesData && branchesData.length > 0) {
-        const mainBranch = branchesData.find(b => b.branch_name === 'Main Office') || branchesData[0];
-        setCurrentBranch(mainBranch as CompanyBranch);
+        const savedBranchId = localStorage.getItem('selectedBranchId');
+        let branchToSet: CompanyBranch | null = null;
+
+        // Try to find the saved branch
+        if (savedBranchId) {
+          branchToSet = branchesData.find(b => b.id === savedBranchId) as CompanyBranch || null;
+          console.log('Restoring saved branch:', branchToSet?.branch_name);
+        }
+
+        // Fall back to Main Office or first branch if no saved selection
+        if (!branchToSet) {
+          branchToSet = branchesData.find(b => b.branch_name === 'Main Office') as CompanyBranch || branchesData[0] as CompanyBranch;
+          console.log('Using default branch:', branchToSet?.branch_name);
+        }
+
+        setCurrentBranch(branchToSet);
       }
 
     } catch (err) {

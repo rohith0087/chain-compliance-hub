@@ -129,13 +129,27 @@ export const useSubscription = () => {
     }
 
     try {
+      // Verify we have a valid session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        toast.error('Your session has expired. Please log in again.');
+        return null;
+      }
+
       const { data, error } = await supabase.functions.invoke('create-credit-purchase', {
         body: { priceId, quantity }
       });
 
       if (error) {
         console.error('Error creating credit purchase:', error);
-        toast.error('Failed to create checkout session');
+        
+        // Check if it's an auth error
+        if (error.message?.includes('Authentication') || error.message?.includes('session')) {
+          toast.error('Your session has expired. Please log in again.');
+        } else {
+          toast.error('Failed to create checkout session');
+        }
         return null;
       }
 

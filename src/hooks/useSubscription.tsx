@@ -41,11 +41,40 @@ export const useSubscription = () => {
 
     try {
       setError(null);
+      
+      // Verify we have a valid session before calling the edge function
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        console.error('Session validation failed:', sessionError);
+        toast.error('Your session has expired. Please log in again.');
+        setError('Session expired');
+        setSubscriptionData({
+          subscribed: false,
+          plan_type: null,
+          subscription_end: null,
+          credits: 0,
+          stripe_customer_exists: false,
+          total_purchased_credits: 0,
+          total_consumed_credits: 0
+        });
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('check-subscription-status');
 
       if (error) {
         console.error('Error checking subscription status:', error);
-        setError('Failed to check subscription status');
+        
+        // Check if it's an auth-related error
+        if (error.message?.includes('Authentication') || error.message?.includes('session')) {
+          toast.error('Your session has expired. Please log in again.');
+          setError('Authentication failed');
+        } else {
+          setError('Failed to check subscription status');
+        }
+        
         // Set safe fallback data
         setSubscriptionData({
           subscribed: false,
@@ -63,7 +92,6 @@ export const useSubscription = () => {
     } catch (err) {
       console.error('Error in checkSubscriptionStatus:', err);
       setError('Failed to check subscription status');
-      // Set safe fallback data
       setSubscriptionData({
         subscribed: false,
         plan_type: null,

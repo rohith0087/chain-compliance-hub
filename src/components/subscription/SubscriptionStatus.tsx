@@ -3,16 +3,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Crown, Zap, Building2, CreditCard, Coins } from 'lucide-react';
+import { Crown, Zap, Building2, CreditCard, Coins, RefreshCw } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
+import { toast } from 'sonner';
 
 export const SubscriptionStatus: React.FC = () => {
   const { 
     subscriptionData, 
     loading, 
     error,
+    checkSubscriptionStatus,
     manageSubscription 
   } = useSubscription();
+  
+  const [refreshing, setRefreshing] = React.useState(false);
 
   if (loading) {
     return (
@@ -42,6 +46,20 @@ export const SubscriptionStatus: React.FC = () => {
     const { url } = await manageSubscription();
     if (url) {
       window.open(url, '_blank');
+    }
+  };
+
+  const handleRefreshStatus = async () => {
+    setRefreshing(true);
+    toast.info('Syncing subscription status with Stripe...');
+    
+    try {
+      await checkSubscriptionStatus();
+      toast.success('Subscription status updated!');
+    } catch (err) {
+      toast.error('Failed to refresh subscription status');
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -122,15 +140,26 @@ export const SubscriptionStatus: React.FC = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
+          <Button 
+            onClick={handleRefreshStatus}
+            variant="outline"
+            className="flex-1 min-w-[200px]"
+            disabled={refreshing}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Syncing...' : 'Refresh Status'}
+          </Button>
+          
           <Button 
             onClick={handleManageSubscription}
             variant="outline"
-            className="flex-1"
+            className="flex-1 min-w-[200px]"
           >
             <CreditCard className="mr-2 h-4 w-4" />
             Manage Billing
           </Button>
+          
           {!isEnterprise && (
             <Button 
               onClick={() => {
@@ -139,7 +168,7 @@ export const SubscriptionStatus: React.FC = () => {
                   creditsSection.scrollIntoView({ behavior: 'smooth' });
                 }
               }}
-              className="flex-1"
+              className="flex-1 min-w-[200px]"
             >
               <Coins className="mr-2 h-4 w-4" />
               Buy Credits

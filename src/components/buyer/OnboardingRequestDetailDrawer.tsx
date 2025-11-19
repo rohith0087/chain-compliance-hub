@@ -73,6 +73,46 @@ export const OnboardingRequestDetailDrawer = ({
     }
   };
 
+  const handleApproveRequest = async () => {
+    try {
+      setActionLoading(true);
+
+      // Update status to 'pending' and trigger requirements population
+      const { error: updateError } = await supabase
+        .from('supplier_onboarding_requests')
+        .update({ 
+          status: 'pending',
+          responded_at: new Date().toISOString()
+        })
+        .eq('id', request.id);
+
+      if (updateError) throw updateError;
+
+      // Call edge function to populate requirements
+      const { error: functionError } = await supabase.functions.invoke('populate-onboarding-requirements', {
+        body: { onboarding_request_id: request.id }
+      });
+
+      if (functionError) throw functionError;
+
+      toast({
+        title: 'Request Approved',
+        description: 'The onboarding request has been approved and requirements have been set up.'
+      });
+
+      onStatusChange?.();
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: 'Failed to approve request',
+        variant: 'destructive'
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleApprove = async () => {
     try {
       setActionLoading(true);

@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Clock, CheckCircle, XCircle, Search, RefreshCw, Eye, Send, AlertCircle, BarChart3, Activity, Keyboard, Download, ChevronDown } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Search, RefreshCw, Eye, Send, AlertCircle, BarChart3, Activity, Keyboard, Download, ChevronDown, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -206,6 +206,71 @@ export const OnboardingPipelineView = () => {
 
   const getRequestsForStage = (stageId: string) => {
     return filteredRequests.filter(r => r.status === stageId);
+  };
+
+  const handleApproveRequest = async (requestId: string) => {
+    try {
+      // Update status to 'pending'
+      const { error: updateError } = await supabase
+        .from('supplier_onboarding_requests')
+        .update({ 
+          status: 'pending',
+          responded_at: new Date().toISOString()
+        })
+        .eq('id', requestId);
+
+      if (updateError) throw updateError;
+
+      // Populate requirements
+      const { error: functionError } = await supabase.functions.invoke('populate-onboarding-requirements', {
+        body: { onboarding_request_id: requestId }
+      });
+
+      if (functionError) throw functionError;
+
+      toast({
+        title: 'Request Approved',
+        description: 'The onboarding request has been approved and requirements have been set up.'
+      });
+
+      loadRequests();
+    } catch (error: any) {
+      console.error('Error approving request:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to approve request',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleRejectRequest = async (requestId: string, reason: string) => {
+    try {
+      const { error } = await supabase
+        .from('supplier_onboarding_requests')
+        .update({ 
+          status: 'rejected',
+          responded_at: new Date().toISOString(),
+          rejection_reason: reason
+        })
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Request Declined',
+        description: 'The onboarding request has been declined.'
+      });
+
+      loadRequests();
+    } catch (error: any) {
+      console.error('Error rejecting request:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to decline request',
+        variant: 'destructive'
+      });
+    }
   };
 
   const handleCardClick = (request: any) => {

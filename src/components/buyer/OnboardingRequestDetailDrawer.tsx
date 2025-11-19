@@ -25,7 +25,9 @@ import {
   Send,
   ThumbsUp,
   ThumbsDown,
-  MessageSquare
+  MessageSquare,
+  Eye,
+  Download
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -60,43 +62,94 @@ export const OnboardingRequestDetailDrawer = ({
   }, [open, request]);
 
   const loadDocuments = async () => {
+    if (!request) return;
+    
+    setLoading(true);
     try {
-      setLoading(true);
-
-      // Fetch document requirements for this onboarding request
-      const { data: docsData, error: docsError } = await supabase
+      const { data: requirements, error: reqError } = await supabase
         .from('onboarding_document_requirements')
         .select('*')
         .eq('onboarding_request_id', request.id)
-        .order('created_at', { ascending: true });
+        .order('document_name');
 
-      if (docsError) {
-        console.error('Error loading document requirements:', docsError);
-        throw docsError;
-      }
+      if (reqError) throw reqError;
 
-      // Fetch document submissions (if any)
-      const { data: submissionsData, error: submissionsError } = await supabase
+      const { data: subs, error: subsError } = await supabase
         .from('onboarding_document_submissions')
         .select('*')
         .eq('onboarding_request_id', request.id);
 
-      if (submissionsError) {
-        console.error('Error loading submissions:', submissionsError);
-        // Don't throw - submissions might not exist yet
-      }
+      if (subsError) throw subsError;
 
-      setDocuments(docsData || []);
-      setSubmissions(submissionsData || []);
-    } catch (error: any) {
+      setDocuments(requirements || []);
+      setSubmissions(subs || []);
+    } catch (error) {
       console.error('Error loading documents:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load document requirements',
-        variant: 'destructive'
-      });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const viewDocument = async (submission: any) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('compliance-documents')
+        .createSignedUrl(submission.file_path, 300); // 5 minutes
+
+      if (error) {
+        console.error('Error creating signed URL:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load document",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, '_blank');
+      }
+    } catch (error) {
+      console.error('Error viewing document:', error);
+      toast({
+        title: "Error",
+        description: "Failed to view document",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const downloadDocument = async (submission: any) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('compliance-documents')
+        .createSignedUrl(submission.file_path, 300);
+
+      if (error) {
+        console.error('Error creating signed URL:', error);
+        toast({
+          title: "Error",
+          description: "Failed to download document",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data?.signedUrl) {
+        const link = document.createElement('a');
+        link.href = data.signedUrl;
+        link.download = submission.file_name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      toast({
+        title: "Error",
+        description: "Failed to download document",
+        variant: "destructive"
+      });
     }
   };
 
@@ -373,24 +426,61 @@ export const OnboardingRequestDetailDrawer = ({
                   {documents.map((doc) => {
                     const statusInfo = getDocumentStatus(doc);
                     const StatusIcon = statusInfo.icon;
+                    const submission = submissions.find(s => s.requirement_id === doc.id);
                     
                     return (
                       <div
                         key={doc.id}
                         className="flex items-center justify-between p-3 rounded-lg border bg-card"
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-1">
                           <StatusIcon className={`h-5 w-5 ${statusInfo.color}`} />
-                          <div>
+                          <div className="flex-1">
                             <div className="font-medium text-sm">{doc.document_name}</div>
                             {doc.description && (
                               <div className="text-xs text-muted-foreground">{doc.description}</div>
                             )}
+                            {submission && submission.is_document_available !== false && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {submission.file_name} • {Math.round((submission.file_size || 0) / 1024)}KB
+                              </div>
+                            )}
+                            {submission && submission.is_document_available === false && (
+                              <div className="text-xs text-orange-600 mt-1">
+                                Reason: {submission.unavailability_reason || 'Not provided'}
+                              </div>
+                            )}
                           </div>
                         </div>
-                        <Badge variant="outline" className="capitalize">
-                          {statusInfo.status}
-                        </Badge>
+                        
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="capitalize">
+                            {statusInfo.status}
+                          </Badge>
+                          
+                          {submission && submission.is_document_available !== false && (
+                            <div className="flex items-center gap-1 ml-2">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => viewDocument(submission)}
+                                className="h-8 px-2"
+                              >
+                                <Eye className="w-3 h-3 mr-1" />
+                                View
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => downloadDocument(submission)}
+                                className="h-8 px-2"
+                              >
+                                <Download className="w-3 h-3 mr-1" />
+                                Download
+                              </Button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })}

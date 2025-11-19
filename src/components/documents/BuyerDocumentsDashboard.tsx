@@ -208,12 +208,6 @@ const BuyerDocumentsDashboard = () => {
         `)
         .eq('buyer_id', buyerProfile.id);
 
-      // Filter by branch if not viewing all branches
-      // Include documents assigned to this branch OR documents with no branch assignment (legacy data)
-      if (!allBranchesView && currentBranch) {
-        query = query.or(`branch_id.eq.${currentBranch.id},branch_id.is.null`);
-      }
-
       query = query.order('created_at', { ascending: false });
 
       // Apply filters with proper type checking
@@ -231,9 +225,15 @@ const BuyerDocumentsDashboard = () => {
         query = query.eq('supplier_id', filters.supplier);
       }
 
+      // Unified branch filtering: User-selected filter > Context filter
       if (filters.facilityLocation) {
+        // User explicitly selected a branch filter - use it
         query = query.eq('branch_id', filters.facilityLocation);
+      } else if (!allBranchesView && currentBranch) {
+        // User is in a specific branch context - filter by current branch
+        query = query.eq('branch_id', currentBranch.id);
       }
+      // If allBranchesView is true and no facilityLocation filter, show all documents
 
       const { data, error } = await query;
 

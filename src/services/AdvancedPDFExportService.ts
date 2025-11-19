@@ -134,26 +134,24 @@ export class AdvancedPDFExportService {
 
     this.resetDocument();
 
-    // Page 1: Executive Summary (multi-supplier)
+    // Page 1: AI Insights & Recommendations
+    await this.addComparisonAIInsights(comparisonData, aiInsights);
+
+    // Page 2: Executive Summary (multi-supplier)
+    this.addNewPage();
     await this.addComparisonExecutiveSummary(comparisonData);
 
-    // Page 2: Comparative Analytics
+    // Page 3: Comparative Analytics
     this.addNewPage();
     await this.addComparativeAnalytics(comparisonData);
 
-    // Page 3: Document Status Analysis
+    // Page 4: Document Status Analysis
     this.addNewPage();
     this.addDocumentStatusAnalysis(30, comparisonData);
 
-    // Page 4: Benchmarking Analysis
+    // Page 5: Benchmarking Analysis
     this.addNewPage();
     await this.addBenchmarkingAnalysis(comparisonData);
-
-    // Page 5: AI Insights & Recommendations (portfolio)
-    if (options.includeRiskAssessment || options.includeRecommendations) {
-      this.addNewPage();
-      await this.addComparisonAIInsights(comparisonData, aiInsights);
-    }
 
     // Page 6+: Detailed Supplier Profiles
     for (const supplier of comparisonData.suppliers) {

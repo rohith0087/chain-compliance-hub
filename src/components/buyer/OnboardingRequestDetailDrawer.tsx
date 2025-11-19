@@ -247,18 +247,17 @@ export const OnboardingRequestDetailDrawer = ({
   };
 
   const getDocumentStatus = (docReq: any) => {
-    const submission = submissions.find(s => s.document_requirement_id === docReq.id);
+    const submission = submissions.find(s => s.requirement_id === docReq.id);
     if (!submission) return { status: 'missing', icon: XCircle, color: 'text-destructive' };
-    if (submission.status === 'approved') return { status: 'approved', icon: CheckCircle, color: 'text-success' };
-    if (submission.status === 'rejected') return { status: 'rejected', icon: XCircle, color: 'text-destructive' };
-    return { status: 'pending', icon: Clock, color: 'text-warning' };
+    if (submission.is_document_available === false) return { status: 'unavailable', icon: XCircle, color: 'text-muted-foreground' };
+    return { status: 'submitted', icon: CheckCircle, color: 'text-success' };
   };
 
   const calculateProgress = () => {
     if (documents.length === 0) return 0;
     const submitted = documents.filter(doc => {
-      const submission = submissions.find(s => s.document_requirement_id === doc.id);
-      return submission && submission.status === 'approved';
+      const submission = submissions.find(s => s.requirement_id === doc.id);
+      return submission && submission.is_document_available !== false;
     }).length;
     return Math.round((submitted / documents.length) * 100);
   };
@@ -350,9 +349,9 @@ export const OnboardingRequestDetailDrawer = ({
               <Progress value={progress} className="h-3" />
               <p className="text-sm text-muted-foreground">
                 {documents.filter(doc => {
-                  const submission = submissions.find(s => s.document_requirement_id === doc.id);
-                  return submission && submission.status === 'approved';
-                }).length} of {documents.length} documents approved
+                  const submission = submissions.find(s => s.requirement_id === doc.id);
+                  return submission && submission.is_document_available !== false;
+                }).length} of {documents.length} documents submitted
               </p>
             </div>
 

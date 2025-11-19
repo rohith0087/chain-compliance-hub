@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Clock, Upload, Building2, FileText, Send } from 'lucide-react';
+import { CheckCircle, Clock, Upload, Building2, FileText, Send, AlertCircle } from 'lucide-react';
 import { useOnboardingRequests } from '@/hooks/useOnboardingRequests';
 import { OnboardingBranchSelection } from './OnboardingBranchSelection';
 import { OnboardingDocumentUpload } from './OnboardingDocumentUpload';
@@ -128,6 +128,22 @@ export const OnboardingProcess: React.FC<OnboardingProcessProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Rejection Feedback Banner */}
+      {request.rejection_reason && (
+        <div className="bg-amber-50 border-l-4 border-amber-500 p-4">
+          <div className="flex items-start">
+            <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 mr-3 flex-shrink-0" />
+            <div>
+              <h4 className="font-semibold text-amber-800">Changes Requested</h4>
+              <p className="text-sm text-amber-700 mt-1">{request.rejection_reason}</p>
+              <p className="text-xs text-amber-600 mt-2">
+                Please review the feedback and update your submission accordingly.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Progress Header */}
       <Card>
         <CardHeader>

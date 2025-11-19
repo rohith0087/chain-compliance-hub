@@ -241,7 +241,7 @@ export const OnboardingRequestDetailDrawer = ({
       const { error } = await supabase
         .from('supplier_onboarding_requests')
         .update({ 
-          status: 'rejected',
+          status: 'pending',
           responded_at: new Date().toISOString(),
           rejection_reason: rejectionNote
         })
@@ -251,7 +251,7 @@ export const OnboardingRequestDetailDrawer = ({
 
       toast({
         title: 'Request Declined',
-        description: 'The supplier request has been declined.'
+        description: 'The supplier has been notified and can resubmit their documents.'
       });
 
       onStatusChange?.();

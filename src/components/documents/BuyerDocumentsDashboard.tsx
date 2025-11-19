@@ -209,8 +209,9 @@ const BuyerDocumentsDashboard = () => {
         .eq('buyer_id', buyerProfile.id);
 
       // Filter by branch if not viewing all branches
+      // Include documents assigned to this branch OR documents with no branch assignment (legacy data)
       if (!allBranchesView && currentBranch) {
-        query = query.eq('branch_id', currentBranch.id);
+        query = query.or(`branch_id.eq.${currentBranch.id},branch_id.is.null`);
       }
 
       query = query.order('created_at', { ascending: false });

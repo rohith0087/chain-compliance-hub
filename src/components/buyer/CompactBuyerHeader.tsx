@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { UserCheck, Users, UserPlus } from 'lucide-react';
+import { UserCheck, Users, UserPlus, Zap } from 'lucide-react';
 
 interface CompactBuyerHeaderProps {
   buyerId: string;
@@ -9,6 +9,7 @@ interface CompactBuyerHeaderProps {
   onInviteClick: () => void;
   onConnectionsClick: () => void;
   onBranchesClick: () => void;
+  onQuickOnboardingClick: () => void;
 }
 
 export const CompactBuyerHeader = ({
@@ -16,6 +17,7 @@ export const CompactBuyerHeader = ({
   onInviteClick,
   onConnectionsClick,
   onBranchesClick,
+  onQuickOnboardingClick,
 }: CompactBuyerHeaderProps) => {
   return (
     <Card className="border-border/50">
@@ -27,6 +29,16 @@ export const CompactBuyerHeader = ({
 
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={onQuickOnboardingClick}
+              className="gap-2 bg-primary hover:bg-primary/90"
+            >
+              <Zap className="h-4 w-4" />
+              Quick Onboarding
+            </Button>
+
             <Button
               variant="outline"
               size="sm"
@@ -53,6 +65,7 @@ export const CompactBuyerHeader = ({
             </Button>
 
             <Button
+              variant="outline"
               size="sm"
               onClick={onInviteClick}
               className="gap-2"

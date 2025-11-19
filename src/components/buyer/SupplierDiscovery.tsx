@@ -257,46 +257,41 @@ const SupplierDiscovery = () => {
 
       {/* Search and Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Manage your supplier connections and discover new suppliers
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by company name..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <SafeSelect 
-                value={selectedIndustry} 
-                onValueChange={handleIndustryChange}
-                placeholder="All Industries"
-              >
-                <SafeSelectItem value="all">All Industries</SafeSelectItem>
-                {VALID_INDUSTRIES.map((industry) => (
-                  <SafeSelectItem key={industry} value={industry}>
-                    {industry}
-                  </SafeSelectItem>
-                ))}
-              </SafeSelect>
-              <SafeSelect
-                value={selectedItemCategory}
-                onValueChange={(value) => setSelectedItemCategory(createSafeSelectValue(value, 'all'))}
-                placeholder="All Items"
-              >
-                <SafeSelectItem value="all">All Items</SafeSelectItem>
-                {[...new Set(suppliers.flatMap(s => s.supplier_items?.map((item: any) => item.item_category) || []))].map((category) => (
-                  <SafeSelectItem key={category} value={category}>
-                    {category}
-                  </SafeSelectItem>
-                ))}
-              </SafeSelect>
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by company name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
+            <SafeSelect 
+              value={selectedIndustry} 
+              onValueChange={handleIndustryChange}
+              placeholder="All Industries"
+            >
+              <SafeSelectItem value="all">All Industries</SafeSelectItem>
+              {VALID_INDUSTRIES.map((industry) => (
+                <SafeSelectItem key={industry} value={industry}>
+                  {industry}
+                </SafeSelectItem>
+              ))}
+            </SafeSelect>
+            <SafeSelect
+              value={selectedItemCategory}
+              onValueChange={(value) => setSelectedItemCategory(createSafeSelectValue(value, 'all'))}
+              placeholder="All Items"
+            >
+              <SafeSelectItem value="all">All Items</SafeSelectItem>
+              {[...new Set(suppliers.flatMap(s => s.supplier_items?.map((item: any) => item.item_category) || []))].map((category) => (
+                <SafeSelectItem key={category} value={category}>
+                  {category}
+                </SafeSelectItem>
+              ))}
+            </SafeSelect>
           </div>
         </CardContent>
       </Card>

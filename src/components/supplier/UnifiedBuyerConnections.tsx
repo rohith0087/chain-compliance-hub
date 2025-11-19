@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  CheckCircle, XCircle, Clock, Building2, AlertCircle, Users, Mail, Phone, MapPin, Send, RefreshCw
+  CheckCircle, XCircle, Clock, Building2, AlertCircle, Users, Mail, Phone, MapPin, Send, RefreshCw, Upload
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { ConnectWithBuyerModal } from './ConnectWithBuyerModal';
+import { OnboardingProcess } from './OnboardingProcess';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -24,6 +25,8 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterTab, setFilterTab] = useState<'all' | 'active_onboarding' | 'connected_only'>('all');
+  const [selectedOnboardingRequest, setSelectedOnboardingRequest] = useState<any>(null);
+  const [showOnboardingProcess, setShowOnboardingProcess] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -121,6 +124,22 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
           {displayStatus.action === 'request_onboarding' && (
             <div className="mt-4"><Button size="sm" variant="outline" onClick={() => handleRequestOnboarding(connection)} className="w-full"><Send className="w-4 h-4 mr-2" />Request Onboarding</Button></div>
           )}
+          
+          {displayStatus.action === 'start_onboarding' && onboardingRequest && (
+            <div className="mt-4">
+              <Button 
+                size="sm" 
+                onClick={() => {
+                  setSelectedOnboardingRequest(onboardingRequest);
+                  setShowOnboardingProcess(true);
+                }} 
+                className="w-full"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Start Onboarding
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     );
@@ -157,6 +176,27 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
           {requests.length > 0 ? <div className="space-y-4">{requests.map(c => renderBuyerCard(c, true))}</div> : <Card><CardContent className="py-12 text-center"><Clock className="w-12 h-12 text-gray-400 mb-4 mx-auto" /><p className="text-gray-600">No pending requests</p></CardContent></Card>}
         </TabsContent>
       </Tabs>
+
+      {/* Onboarding Process Dialog */}
+      {showOnboardingProcess && selectedOnboardingRequest && (
+        <Dialog open={showOnboardingProcess} onOpenChange={setShowOnboardingProcess}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Onboarding Process</DialogTitle>
+              <DialogDescription>
+                Complete the onboarding requirements for this buyer
+              </DialogDescription>
+            </DialogHeader>
+            <OnboardingProcess
+              request={selectedOnboardingRequest}
+              onComplete={() => {
+                setShowOnboardingProcess(false);
+                fetchData();
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };

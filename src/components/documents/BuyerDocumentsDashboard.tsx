@@ -45,8 +45,7 @@ const BuyerDocumentsDashboard = () => {
     documentType: '',
     supplier: '',
     expirationStatus: '',
-    dateRange: '',
-    facilityLocation: ''
+    dateRange: ''
   });
   const [availableSuppliers, setAvailableSuppliers] = useState<any[]>([]);
   const [availableFacilities, setAvailableFacilities] = useState<any[]>([]);
@@ -225,30 +224,12 @@ const BuyerDocumentsDashboard = () => {
         query = query.eq('supplier_id', filters.supplier);
       }
 
-      // Unified branch filtering: User-selected filter > Context filter
-      if (filters.facilityLocation) {
-        // User explicitly selected a branch filter - use it
-        query = query.eq('branch_id', filters.facilityLocation);
-      } else if (!allBranchesView && currentBranch) {
-        // User is in a specific branch context - filter by current branch
+      // Filter by branch if not viewing all branches (same as Document Requests)
+      if (!allBranchesView && currentBranch) {
         query = query.eq('branch_id', currentBranch.id);
       }
-      // If allBranchesView is true and no facilityLocation filter, show all documents
 
       const { data, error } = await query;
-
-      // Debug logging
-      console.log('=== Document Query Debug ===');
-      console.log('allBranchesView:', allBranchesView);
-      console.log('currentBranch:', currentBranch);
-      console.log('filters.facilityLocation:', filters.facilityLocation);
-      console.log('Query returned documents:', data?.length);
-      console.log('First 3 documents:', data?.slice(0, 3).map(d => ({ 
-        id: d.id, 
-        type: d.document_type, 
-        branch_id: d.branch_id,
-        branch_name: d.branch?.branch_name 
-      })));
 
       if (error) {
         console.error('Error loading documents:', error);

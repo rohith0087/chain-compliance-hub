@@ -253,6 +253,7 @@ const SupplierDiscovery = () => {
         onInviteClick={() => setShowInviteModal(true)}
         onConnectionsClick={() => setShowConnectionRequests(true)}
         onBranchesClick={() => setCurrentView('branches')}
+        onQuickOnboardingClick={() => setCurrentView('onboarding')}
       />
 
       {/* Search and Filters */}

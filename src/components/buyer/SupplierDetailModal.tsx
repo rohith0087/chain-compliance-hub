@@ -64,7 +64,7 @@ export const SupplierDetailModal: React.FC<SupplierDetailModalProps> = ({
                   >
                     {connectionStatus.charAt(0).toUpperCase() + connectionStatus.slice(1)}
                   </Badge>
-                  {connectionDate && (
+                  {connectionDate && !isNaN(new Date(connectionDate).getTime()) && (
                     <span className="text-sm text-muted-foreground">
                       Connected {format(new Date(connectionDate), 'MMM d, yyyy')}
                     </span>
@@ -96,7 +96,9 @@ export const SupplierDetailModal: React.FC<SupplierDetailModalProps> = ({
                   <div>
                     <p className="font-medium">Joined</p>
                     <p className="text-sm text-muted-foreground">
-                      {format(new Date(supplier.created_at), 'MMM d, yyyy')}
+                      {supplier.created_at && !isNaN(new Date(supplier.created_at).getTime())
+                        ? format(new Date(supplier.created_at), 'MMM d, yyyy')
+                        : 'N/A'}
                     </p>
                   </div>
                 </div>

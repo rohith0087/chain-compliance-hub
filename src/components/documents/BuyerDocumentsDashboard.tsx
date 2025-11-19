@@ -237,6 +237,19 @@ const BuyerDocumentsDashboard = () => {
 
       const { data, error } = await query;
 
+      // Debug logging
+      console.log('=== Document Query Debug ===');
+      console.log('allBranchesView:', allBranchesView);
+      console.log('currentBranch:', currentBranch);
+      console.log('filters.facilityLocation:', filters.facilityLocation);
+      console.log('Query returned documents:', data?.length);
+      console.log('First 3 documents:', data?.slice(0, 3).map(d => ({ 
+        id: d.id, 
+        type: d.document_type, 
+        branch_id: d.branch_id,
+        branch_name: d.branch?.branch_name 
+      })));
+
       if (error) {
         console.error('Error loading documents:', error);
         toast({

@@ -12,7 +12,6 @@ import BuyerComplianceDashboard from '@/components/dashboard/BuyerComplianceDash
 import { Building2, Users, ListChecks, Plus, BarChart3, FileCheck, UserCheck, Settings, Calendar, AlertTriangle, Clock, MessageSquare, Compass, FileText, Send, CheckCircle, TrendingUp, MapPin } from 'lucide-react';
 import AgentManagementDashboard from '@/components/agents/AgentManagementDashboard';
 import BuyerDocumentsDashboard from '@/components/documents/BuyerDocumentsDashboard';
-import { BuyerIdCard } from '@/components/buyer/BuyerIdCard';
 import BuyerConnectionRequests from '@/components/buyer/BuyerConnectionRequests';
 import { BuyerSettingsModal } from '@/components/settings/BuyerSettingsModal';
 import { CompanyManagementDashboard } from '@/components/company/CompanyManagementDashboard';
@@ -510,16 +509,6 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         {/* Suppliers Content */}
         {activeTab === 'suppliers' && (
           <div className="space-y-6">
-            {/* Buyer ID Card - Show at top of suppliers section */}
-            {buyerProfile?.buyer_id_number && profile && (
-              <BuyerIdCard 
-                buyerId={buyerProfile.buyer_id_number}
-                buyerProfile={buyerProfile}
-                userProfile={{ full_name: profile.full_name }}
-              />
-            )}
-            
-            {/* Supplier Discovery Component */}
             <SupplierDiscovery />
           </div>
         )}

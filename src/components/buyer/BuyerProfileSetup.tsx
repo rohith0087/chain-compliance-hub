@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,18 +17,28 @@ interface BuyerProfileSetupProps {
 }
 
 const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
+  const { user, profile } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     companyName: '',
-    industry: 'Technology', // Set a default value instead of empty string
+    industry: 'Technology',
     contactEmail: '',
     phone: '',
     address: '',
     description: ''
   });
 
-  const { user } = useAuth();
-  const { toast } = useToast();
+  // Pre-populate form with user data from signup
+  useEffect(() => {
+    if (user || profile) {
+      setFormData(prev => ({
+        ...prev,
+        companyName: user?.user_metadata?.company_name || profile?.company_name || prev.companyName,
+        contactEmail: user?.email || profile?.email || prev.contactEmail,
+      }));
+    }
+  }, [user, profile]);
 
   console.log('VALID_INDUSTRIES array in BuyerProfileSetup:', VALID_INDUSTRIES);
   console.log('Current industry value:', formData.industry);
@@ -200,8 +210,13 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid md:grid-cols-2 gap-4">
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="companyName">Company Name *</Label>
+                {user?.user_metadata?.company_name && (
+                  <p className="text-xs text-muted-foreground">
+                    Pre-filled from your signup. You can edit if needed.
+                  </p>
+                )}
                 <Input
                   id="companyName"
                   value={formData.companyName}
@@ -230,8 +245,13 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="contactEmail">Contact Email *</Label>
+                {user?.email && (
+                  <p className="text-xs text-muted-foreground">
+                    Pre-filled from your account. You can edit if needed.
+                  </p>
+                )}
                 <Input
                   id="contactEmail"
                   type="email"

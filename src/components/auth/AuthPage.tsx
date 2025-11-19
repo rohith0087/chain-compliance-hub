@@ -54,7 +54,7 @@ const AuthPage = () => {
     
     setLoading(true);
     
-    const { error } = await signUp(email, password, fullName, selectedRoles);
+    const { error } = await signUp(email, password, fullName, selectedRoles, companyName);
     
     if (error) {
       toast({

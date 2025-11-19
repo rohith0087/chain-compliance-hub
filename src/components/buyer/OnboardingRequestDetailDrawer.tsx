@@ -63,11 +63,38 @@ export const OnboardingRequestDetailDrawer = ({
     try {
       setLoading(true);
 
-      // Simple array fallback to avoid type issues
-      setDocuments([]);
-      setSubmissions([]);
+      // Fetch document requirements for this onboarding request
+      const { data: docsData, error: docsError } = await supabase
+        .from('onboarding_document_requirements')
+        .select('*')
+        .eq('onboarding_request_id', request.id)
+        .order('created_at', { ascending: true });
+
+      if (docsError) {
+        console.error('Error loading document requirements:', docsError);
+        throw docsError;
+      }
+
+      // Fetch document submissions (if any)
+      const { data: submissionsData, error: submissionsError } = await supabase
+        .from('onboarding_document_submissions')
+        .select('*')
+        .eq('onboarding_request_id', request.id);
+
+      if (submissionsError) {
+        console.error('Error loading submissions:', submissionsError);
+        // Don't throw - submissions might not exist yet
+      }
+
+      setDocuments(docsData || []);
+      setSubmissions(submissionsData || []);
     } catch (error: any) {
       console.error('Error loading documents:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load document requirements',
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
     }

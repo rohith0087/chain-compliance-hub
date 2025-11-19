@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Upload, FileText, Send, Check, X, AlertCircle, Users } from 'lucide-react';
+import { Upload, FileText, Send, Check, X, AlertCircle, Users, Copy, Eye, EyeOff, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOnboardingRequests } from '@/hooks/useOnboardingRequests';
 
@@ -33,6 +33,8 @@ export const BulkInviteModal = ({
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<{ success: string[], failed: string[] }>({ success: [], failed: [] });
   const [showResults, setShowResults] = useState(false);
+  const [showId, setShowId] = useState(false);
+  const [copied, setCopied] = useState(false);
   
   const { createOnboardingRequestFromDefaults } = useOnboardingRequests();
 
@@ -123,6 +125,19 @@ export const BulkInviteModal = ({
     .map(email => email.trim())
     .filter(email => email && email.includes('@')).length;
 
+  const maskedId = buyerId.replace(/(.{4})(.*)(.{4})/, '$1****$3');
+
+  const handleCopyId = async () => {
+    try {
+      await navigator.clipboard.writeText(buyerId);
+      setCopied(true);
+      toast.success('Buyer ID copied to clipboard');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      toast.error('Failed to copy to clipboard');
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -132,6 +147,75 @@ export const BulkInviteModal = ({
             Bulk Supplier Onboarding
           </DialogTitle>
         </DialogHeader>
+
+        {/* Buyer ID Card */}
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                  <span className="text-primary-foreground text-xs font-bold">ID</span>
+                </div>
+                Your Buyer ID
+              </CardTitle>
+              <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-100">
+                Unique Identifier
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-background rounded-lg border border-border">
+              <div className="flex items-center gap-3">
+                <code className="font-mono text-lg font-semibold tracking-wider">
+                  {showId ? buyerId : maskedId}
+                </code>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowId(!showId)}
+                  className="h-6 w-6 p-0"
+                >
+                  {showId ? (
+                    <EyeOff className="h-3 w-3" />
+                  ) : (
+                    <Eye className="h-3 w-3" />
+                  )}
+                </Button>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopyId}
+                className="gap-2"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-3 w-3" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3 w-3" />
+                    Copy
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-100 dark:border-blue-900">
+              <div className="flex items-start gap-2">
+                <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-blue-800 dark:text-blue-200">
+                  <p className="font-medium mb-1">Share this ID with suppliers to connect</p>
+                  <p className="text-blue-700 dark:text-blue-300">
+                    Suppliers can use this unique ID to send you connection requests directly. 
+                    This makes it easier for trusted suppliers to connect with your company.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {!showResults ? (
           <Tabs defaultValue="manual" className="w-full">

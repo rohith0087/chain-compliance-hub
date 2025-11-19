@@ -84,18 +84,15 @@ export const BranchSupplierManagement: React.FC<BranchSupplierManagementProps> =
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Branch Supplier Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="branch-select">Select Branch</Label>
+        <CardContent className="p-6 space-y-6">
+          {/* Branch Selector */}
+          <div className="space-y-3">
+            <Label htmlFor="branch-select" className="text-base font-medium">
+              Select a branch to manage its suppliers
+            </Label>
             <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
-              <SelectTrigger id="branch-select">
-                <SelectValue placeholder="Choose a branch to manage suppliers" />
+              <SelectTrigger id="branch-select" className="w-full">
+                <SelectValue placeholder="Choose a branch..." />
               </SelectTrigger>
               <SelectContent>
                 {branches.map((branch) => (

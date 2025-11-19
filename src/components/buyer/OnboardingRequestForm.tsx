@@ -7,8 +7,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Plus, Upload, X, Settings, Zap } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft, Plus, X, Settings, Zap, Users, Loader2 } from 'lucide-react';
 import { useOnboardingRequests } from '@/hooks/useOnboardingRequests';
+import { useConnectedSuppliersWithOnboarding } from '@/hooks/useConnectedSuppliersWithOnboarding';
 import { useToast } from '@/hooks/use-toast';
 
 interface OnboardingRequestFormProps {
@@ -22,7 +24,6 @@ interface DocumentRequirement {
   document_name: string;
   description: string;
   is_required: boolean;
-  template_file?: File;
 }
 
 interface FormField {
@@ -39,9 +40,8 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
   onSuccess
 }) => {
   const [useDefaults, setUseDefaults] = useState(true);
+  const [selectedSupplierIds, setSelectedSupplierIds] = useState<string[]>([]);
   const [formData, setFormData] = useState({
-    supplier_email: '',
-    supplier_company_name: '',
     can_choose_branches: false,
     custom_message: ''
   });
@@ -50,6 +50,8 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [loadingDefaults, setLoadingDefaults] = useState(false);
   const [defaultsLoaded, setDefaultsLoaded] = useState(false);
+  
+  const { suppliers, loading: loadingSuppliers } = useConnectedSuppliersWithOnboarding(buyerId);
   const { 
     createOnboardingRequest, 
     createOnboardingRequestFromDefaults,
@@ -59,7 +61,9 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
   } = useOnboardingRequests();
   const { toast } = useToast();
 
-  // Load default settings on mount
+  const availableSuppliers = suppliers.filter(s => !s.has_active_onboarding);
+  const selectedSuppliers = suppliers.filter(s => selectedSupplierIds.includes(s.id));
+
   useEffect(() => {
     if (buyerId) {
       loadDefaults();
@@ -103,109 +107,83 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
       setDefaultsLoaded(true);
     } catch (error) {
       console.error('Error loading defaults:', error);
-      // Continue without defaults
       setDefaultsLoaded(true);
     } finally {
       setLoadingDefaults(false);
     }
   };
 
+  const handleSupplierSelect = (supplierId: string) => {
+    if (!selectedSupplierIds.includes(supplierId)) {
+      setSelectedSupplierIds([...selectedSupplierIds, supplierId]);
+    }
+  };
+
+  const removeSupplier = (supplierId: string) => {
+    setSelectedSupplierIds(selectedSupplierIds.filter(id => id !== supplierId));
+  };
+
   const clearDefaults = () => {
-    setFormData({
-      supplier_email: formData.supplier_email,
-      supplier_company_name: formData.supplier_company_name,
-      can_choose_branches: false,
-      custom_message: ''
-    });
+    setFormData({ can_choose_branches: false, custom_message: '' });
     setDocumentRequirements([]);
     setFormFields([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.supplier_email) {
-      toast({
-        title: "Error",
-        description: "Supplier email is required",
-        variant: "destructive"
-      });
+    
+    if (selectedSupplierIds.length === 0) {
+      toast({ title: "Error", description: "Please select at least one supplier", variant: "destructive" });
       return;
     }
 
     setLoading(true);
+    let successCount = 0;
+    let failureCount = 0;
+
     try {
-      let request;
-      
-      if (useDefaults) {
-        // Use streamlined creation with defaults
-        request = await createOnboardingRequestFromDefaults(
-          buyerId,
-          formData.supplier_email,
-          formData.supplier_company_name,
-          formData.custom_message
-        );
-      } else {
-        // Create with custom settings
-        request = await createOnboardingRequest(
-          buyerId,
-          formData.supplier_email,
-          formData.supplier_company_name,
-          formData.can_choose_branches,
-          formData.custom_message
-        );
+      for (const supplierId of selectedSupplierIds) {
+        const supplier = suppliers.find(s => s.id === supplierId);
+        if (!supplier) continue;
 
-        // Add document requirements
-        for (const docReq of documentRequirements) {
-          await addDocReq(
-            request.id,
-            docReq.document_type,
-            docReq.document_name,
-            docReq.description,
-            docReq.is_required
-          );
-        }
+        try {
+          if (useDefaults) {
+            await createOnboardingRequestFromDefaults(
+              buyerId, supplier.contact_email, supplier.company_name, supplierId, formData.custom_message
+            );
+          } else {
+            const request = await createOnboardingRequest(
+              buyerId, supplier.contact_email, supplier.company_name, supplierId, formData.custom_message, formData.can_choose_branches
+            );
 
-        // Add form fields
-        for (let i = 0; i < formFields.length; i++) {
-          const field = formFields[i];
-          await addFormFieldReq(
-            request.id,
-            field.field_type,
-            field.field_label,
-            field.field_description,
-            field.field_options,
-            field.is_required,
-            i
-          );
+            for (const docReq of documentRequirements) {
+              await addDocReq(request.id, docReq.document_type, docReq.document_name, docReq.description, docReq.is_required);
+            }
+
+            for (let i = 0; i < formFields.length; i++) {
+              const field = formFields[i];
+              await addFormFieldReq(request.id, field.field_type, field.field_label, field.field_description, field.field_options, field.is_required, i);
+            }
+          }
+          successCount++;
+        } catch (error) {
+          failureCount++;
         }
       }
 
-      toast({
-        title: "Success",
-        description: useDefaults 
-          ? "Onboarding request created with default settings" 
-          : "Custom onboarding request created successfully"
-      });
-      onSuccess();
-    } catch (error) {
-      console.error('Error creating onboarding request:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create onboarding request",
-        variant: "destructive"
-      });
+      if (successCount > 0) {
+        toast({ title: "Success", description: `Created ${successCount} request(s)${failureCount > 0 ? `, ${failureCount} failed` : ''}` });
+        onSuccess();
+      } else {
+        toast({ title: "Error", description: "Failed to create requests", variant: "destructive" });
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const addDocumentRequirementLocal = () => {
-    setDocumentRequirements([...documentRequirements, {
-      document_type: '',
-      document_name: '',
-      description: '',
-      is_required: true
-    }]);
+    setDocumentRequirements([...documentRequirements, { document_type: '', document_name: '', description: '', is_required: true }]);
   };
 
   const removeDocumentRequirement = (index: number) => {
@@ -219,12 +197,7 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
   };
 
   const addFormFieldLocal = () => {
-    setFormFields([...formFields, {
-      field_type: 'text',
-      field_label: '',
-      field_description: '',
-      is_required: false
-    }]);
+    setFormFields([...formFields, { field_type: 'text', field_label: '', field_description: '', is_required: false }]);
   };
 
   const removeFormField = (index: number) => {
@@ -239,115 +212,95 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          onClick={onBack}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </Button>
+        <Button variant="ghost" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
         <div>
           <h2 className="text-2xl font-semibold">Create Onboarding Request</h2>
-          <p className="text-muted-foreground">Set up a new supplier onboarding process</p>
+          <p className="text-muted-foreground">Select suppliers and create bulk onboarding requests</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Use Defaults Toggle */}
         {!loadingDefaults && defaultsLoaded && (
           <Card>
-            <CardHeader>
-              <CardTitle>Creation Mode</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>Creation Mode</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
                     <Label className="text-base font-medium">Use Default Settings</Label>
-                    {useDefaults && <Badge variant="secondary" className="flex items-center gap-1">
-                      <Zap className="h-3 w-3" />
-                      Quick Setup
-                    </Badge>}
+                    {useDefaults && <Badge variant="secondary"><Zap className="h-3 w-3 mr-1" />Quick Setup</Badge>}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {useDefaults 
-                      ? "Use your pre-configured default onboarding settings for faster setup" 
-                      : "Customize all settings manually for this specific request"
-                    }
+                    {useDefaults ? "Use pre-configured settings" : "Customize settings manually"}
                   </div>
                 </div>
-                <Switch
-                  checked={useDefaults}
-                  onCheckedChange={(checked) => {
-                    setUseDefaults(checked);
-                    if (!checked) {
-                      clearDefaults();
-                    } else {
-                      loadDefaults();
-                    }
-                  }}
-                />
+                <Switch checked={useDefaults} onCheckedChange={(checked) => { setUseDefaults(checked); checked ? loadDefaults() : clearDefaults(); }} />
               </div>
-              {!useDefaults && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Settings className="h-4 w-4" />
-                  Configure all settings below manually
-                </div>
-              )}
             </CardContent>
           </Card>
         )}
 
-        {/* Basic Information */}
         <Card>
-          <CardHeader>
-            <CardTitle>Supplier Information</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="flex items-center gap-2"><Users className="w-5 h-5" />Select Suppliers</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="supplier_email">Supplier Email *</Label>
-                <Input
-                  id="supplier_email"
-                  type="email"
-                  value={formData.supplier_email}
-                  onChange={(e) => setFormData({ ...formData, supplier_email: e.target.value })}
-                  required
-                />
+            {loadingSuppliers ? (
+              <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
+            ) : availableSuppliers.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p className="font-medium">No available suppliers</p>
+                <p className="text-sm">Connect suppliers first or check existing onboarding requests.</p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="supplier_company_name">Company Name</Label>
-                <Input
-                  id="supplier_company_name"
-                  value={formData.supplier_company_name}
-                  onChange={(e) => setFormData({ ...formData, supplier_company_name: e.target.value })}
-                />
-              </div>
-            </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label>Select Connected Suppliers</Label>
+                  <Select onValueChange={handleSupplierSelect}>
+                    <SelectTrigger><SelectValue placeholder="Choose suppliers..." /></SelectTrigger>
+                    <SelectContent>
+                      {availableSuppliers.map(supplier => (
+                        <SelectItem key={supplier.id} value={supplier.id} disabled={selectedSupplierIds.includes(supplier.id)}>
+                          {supplier.company_name} {supplier.contact_email && `(${supplier.contact_email})`}
+                        </SelectItem>
+                      ))
+                      }
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Select multiple suppliers to create bulk requests</p>
+                </div>
+
+                {selectedSuppliers.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Selected ({selectedSuppliers.length})</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedSuppliers.map(supplier => (
+                        <Badge key={supplier.id} variant="secondary" className="flex items-center gap-1 px-3 py-1">
+                          {supplier.company_name}
+                          <button type="button" onClick={() => removeSupplier(supplier.id)} className="ml-1 hover:text-destructive">
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      ))
+                      }
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            <Separator />
             <div className="space-y-2">
-              <Label htmlFor="custom_message">Custom Message</Label>
-              <Textarea
-                id="custom_message"
-                placeholder="Add a personal message for the supplier..."
-                value={formData.custom_message}
-                onChange={(e) => setFormData({ ...formData, custom_message: e.target.value })}
-              />
+              <Label>Custom Message</Label>
+              <Textarea placeholder="Add a message for suppliers..." value={formData.custom_message} onChange={(e) => setFormData({ ...formData, custom_message: e.target.value })} rows={3} />
             </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="can_choose_branches"
-                checked={formData.can_choose_branches}
-                onCheckedChange={(checked) => setFormData({ ...formData, can_choose_branches: checked })}
-                disabled={useDefaults}
-              />
-              <Label htmlFor="can_choose_branches">Allow supplier to choose branches</Label>
-              {useDefaults && (
-                <Badge variant="outline" className="text-xs">From defaults</Badge>
-              )}
-            </div>
+            
+            {!useDefaults && (
+              <div className="flex items-center space-x-2">
+                <Switch id="branches" checked={formData.can_choose_branches} onCheckedChange={(checked) => setFormData({ ...formData, can_choose_branches: checked })} />
+                <Label htmlFor="branches">Allow supplier to choose branches</Label>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -490,7 +443,7 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
                     </Badge>
                   )}
                   <div className="flex items-center justify-between">
-                    <h4 className="font-medium">Form Field {index + 1}</h4>
+                    <h4 className="font-medium">Custom Field {index + 1}</h4>
                     {!useDefaults && (
                       <Button
                         type="button"
@@ -502,41 +455,54 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
                       </Button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Field Type</Label>
-                      <select
-                        className="w-full px-3 py-2 border rounded-md"
-                        value={field.field_type}
-                        onChange={(e) => updateFormField(index, 'field_type', e.target.value as FormField['field_type'])}
-                        disabled={useDefaults}
-                      >
-                        <option value="text">Text</option>
-                        <option value="textarea">Textarea</option>
-                        <option value="select">Select</option>
-                        <option value="checkbox">Checkbox</option>
-                        <option value="date">Date</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Field Label</Label>
-                      <Input
-                        value={field.field_label}
-                        onChange={(e) => updateFormField(index, 'field_label', e.target.value)}
-                        placeholder="Field label"
-                        disabled={useDefaults}
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label>Field Type</Label>
+                    <Select
+                      value={field.field_type}
+                      onValueChange={(value) => updateFormField(index, 'field_type', value)}
+                      disabled={useDefaults}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="text">Text</SelectItem>
+                        <SelectItem value="textarea">Textarea</SelectItem>
+                        <SelectItem value="select">Select</SelectItem>
+                        <SelectItem value="checkbox">Checkbox</SelectItem>
+                        <SelectItem value="date">Date</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Description</Label>
+                    <Label>Field Label</Label>
                     <Input
-                      value={field.field_description}
-                      onChange={(e) => updateFormField(index, 'field_description', e.target.value)}
-                      placeholder="Field description"
+                      value={field.field_label}
+                      onChange={(e) => updateFormField(index, 'field_label', e.target.value)}
+                      placeholder="e.g., Company Size"
                       disabled={useDefaults}
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Description</Label>
+                    <Textarea
+                      value={field.field_description}
+                      onChange={(e) => updateFormField(index, 'field_description', e.target.value)}
+                      placeholder="Describe the purpose of this field..."
+                      disabled={useDefaults}
+                    />
+                  </div>
+                  {field.field_type === 'select' && (
+                    <div className="space-y-2">
+                      <Label>Field Options (comma-separated)</Label>
+                      <Input
+                        value={field.field_options ? field.field_options.join(',') : ''}
+                        onChange={(e) => updateFormField(index, 'field_options', e.target.value.split(','))}
+                        placeholder="e.g., Small, Medium, Large"
+                        disabled={useDefaults}
+                      />
+                    </div>
+                  )}
                   <div className="flex items-center space-x-2">
                     <Switch
                       checked={field.is_required}
@@ -551,13 +517,10 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
           </CardContent>
         </Card>
 
-        {/* Submit */}
-        <div className="flex items-center gap-4">
-          <Button type="submit" disabled={loading || loadingDefaults}>
-            {loading ? 'Creating...' : useDefaults ? 'Create with Defaults' : 'Create Custom Request'}
-          </Button>
-          <Button type="button" variant="outline" onClick={onBack}>
-            Cancel
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={onBack} disabled={loading}>Cancel</Button>
+          <Button type="submit" disabled={loading || selectedSupplierIds.length === 0}>
+            {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating...</> : `Create (${selectedSupplierIds.length}) Request${selectedSupplierIds.length !== 1 ? 's' : ''}`}
           </Button>
         </div>
       </form>

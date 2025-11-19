@@ -9,14 +9,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { demoSuppliers, demoFacilities } from '@/data/demoSuppliers';
+import { demoSuppliers, demoFacilities, demoBuyerBranches } from '@/data/demoSuppliers';
 
 interface MapMarker {
   id: string;
   lat: number;
   lng: number;
   title: string;
-  type: 'supplier' | 'facility';
+  type: 'supplier' | 'facility' | 'buyer-branch';
   industry?: string;
   facilityType?: string;
   address?: string;
@@ -44,6 +44,12 @@ const FACILITY_COLORS: Record<string, string> = {
   'default': '#6366f1',
 };
 
+const BUYER_BRANCH_COLORS: Record<string, string> = {
+  'headquarters': '#10b981',
+  'branch': '#059669',
+  'default': '#10b981',
+};
+
 function getIndustryColor(industry?: string): string {
   if (!industry) return INDUSTRY_COLORS.default;
   return INDUSTRY_COLORS[industry] || INDUSTRY_COLORS.default;
@@ -52,6 +58,11 @@ function getIndustryColor(industry?: string): string {
 function getFacilityColor(facilityType?: string): string {
   if (!facilityType) return FACILITY_COLORS.default;
   return FACILITY_COLORS[facilityType as keyof typeof FACILITY_COLORS] || FACILITY_COLORS.default;
+}
+
+function getBuyerBranchColor(locationType?: string): string {
+  if (!locationType) return BUYER_BRANCH_COLORS.default;
+  return BUYER_BRANCH_COLORS[locationType as keyof typeof BUYER_BRANCH_COLORS] || BUYER_BRANCH_COLORS.default;
 }
 
 // Hardcoded coordinates for demo locations (approximate)
@@ -76,6 +87,12 @@ const DEMO_COORDINATES: Record<string, { lat: number; lng: number }> = {
   'demo-atlantic-newark': { lat: 40.7357, lng: -74.1724 }, // Newark, NJ
   'demo-atlantic-quincy': { lat: 42.3601, lng: -71.0545 }, // Quincy Market
   'demo-atlantic-chelsea': { lat: 40.7425, lng: -74.0064 }, // Chelsea Market, NYC
+  
+  // Buyer Branches
+  'demo-buyer-elizabeth': { lat: 40.6640, lng: -74.2107 }, // Elizabeth, NJ (HQ)
+  'demo-buyer-monticello': { lat: 41.6556, lng: -74.6893 }, // Monticello, NY
+  'demo-buyer-newhampton': { lat: 43.0594, lng: -92.3168 }, // New Hampton, IA
+  'demo-buyer-sherburne': { lat: 42.6784, lng: -75.4988 }, // Sherburne, NY
 };
 
 // Static demo marker data - generated from demo suppliers and facilities
@@ -95,6 +112,21 @@ const generateDemoMarkers = (): MapMarker[] => {
       email: supplier.contact_email,
       phone: supplier.phone,
       connectionStatus: 'none'
+    });
+  });
+  
+  // Add buyer branch markers
+  demoBuyerBranches.forEach(branch => {
+    markers.push({
+      id: branch.id,
+      lat: DEMO_COORDINATES[branch.id]?.lat || 0,
+      lng: DEMO_COORDINATES[branch.id]?.lng || 0,
+      title: branch.branch_name,
+      type: 'buyer-branch',
+      facilityType: branch.location,
+      address: branch.address,
+      email: branch.email,
+      phone: branch.phone
     });
   });
   
@@ -128,6 +160,7 @@ export function SupplierMap() {
   
   const [showSuppliers, setShowSuppliers] = useState(true);
   const [showFacilities, setShowFacilities] = useState(true);
+  const [showBuyerBranches, setShowBuyerBranches] = useState(true);
   const [facilityTypeFilter, setFacilityTypeFilter] = useState<string[]>(['headquarters', 'distribution', 'store']);
   const [connectionFilter, setConnectionFilter] = useState<string[]>(['connected', 'pending', 'none']);
 
@@ -139,6 +172,7 @@ export function SupplierMap() {
       // Type filter
       if (marker.type === 'supplier' && !showSuppliers) return false;
       if (marker.type === 'facility' && !showFacilities) return false;
+      if (marker.type === 'buyer-branch' && !showBuyerBranches) return false;
 
       // Facility type filter (only for facilities)
       if (marker.type === 'facility' && marker.facilityType) {
@@ -168,7 +202,7 @@ export function SupplierMap() {
 
       return true;
     });
-  }, [allMarkers, searchQuery, showSuppliers, showFacilities, facilityTypeFilter, connectionFilter]);
+  }, [allMarkers, searchQuery, showSuppliers, showFacilities, showBuyerBranches, facilityTypeFilter, connectionFilter]);
 
   const toggleConnectionFilter = (status: string) => {
     setConnectionFilter((prev) =>
@@ -234,6 +268,16 @@ export function SupplierMap() {
             />
             <label htmlFor="show-facilities" className="text-sm cursor-pointer">
               Facilities
+            </label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="show-buyer-branches"
+              checked={showBuyerBranches}
+              onCheckedChange={(checked) => setShowBuyerBranches(checked === true)}
+            />
+            <label htmlFor="show-buyer-branches" className="text-sm cursor-pointer">
+              My Branches
             </label>
           </div>
         </div>
@@ -402,6 +446,17 @@ export function SupplierMap() {
                   >
                     <Building2 className="w-6 h-6 text-white" />
                   </div>
+                ) : marker.type === 'buyer-branch' ? (
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg cursor-pointer ring-2 ring-white"
+                    style={{ backgroundColor: getBuyerBranchColor(marker.facilityType) }}
+                  >
+                    {marker.facilityType === 'headquarters' ? (
+                      <Building2 className="w-6 h-6 text-white" />
+                    ) : (
+                      <MapPin className="w-6 h-6 text-white" />
+                    )}
+                  </div>
                 ) : (
                   <div
                     className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg cursor-pointer"
@@ -432,11 +487,18 @@ export function SupplierMap() {
                   </Badge>
                 )}
                 
+                {selectedMarker.type === 'buyer-branch' && (
+                  <Badge className="mb-2 bg-emerald-600 hover:bg-emerald-700">
+                    Your Branch
+                  </Badge>
+                )}
+                
                 {selectedMarker.facilityType && (
                   <Badge variant="outline" className="mb-2 ml-2">
                     {selectedMarker.facilityType === 'headquarters' && 'HQ'}
                     {selectedMarker.facilityType === 'distribution' && 'Distribution'}
                     {selectedMarker.facilityType === 'store' && 'Store'}
+                    {selectedMarker.facilityType === 'branch' && 'Branch'}
                   </Badge>
                 )}
 
@@ -467,7 +529,7 @@ export function SupplierMap() {
           <div className="space-y-1 text-xs">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded-full bg-blue-700"></div>
-              <span>Headquarters</span>
+              <span>Supplier HQ</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded-full bg-orange-600"></div>
@@ -476,6 +538,14 @@ export function SupplierMap() {
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded-full bg-green-600"></div>
               <span>Store</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-emerald-500"></div>
+              <span>Your HQ</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-emerald-600"></div>
+              <span>Your Branch</span>
             </div>
           </div>
         </CardContent>

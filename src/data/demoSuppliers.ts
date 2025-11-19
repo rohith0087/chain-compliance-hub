@@ -49,6 +49,50 @@ export const demoSuppliers: DemoSupplier[] = [
   }
 ];
 
+export interface DemoBuyerBranch {
+  id: string;
+  branch_name: string;
+  address: string;
+  location: 'headquarters' | 'branch';
+  email: string;
+  phone: string;
+}
+
+export const demoBuyerBranches: DemoBuyerBranch[] = [
+  {
+    id: 'demo-buyer-elizabeth',
+    branch_name: 'Elizabeth - Corporate HQ',
+    address: 'Elizabeth, NJ',
+    location: 'headquarters',
+    email: 'hq@company.com',
+    phone: '(908) 555-0100'
+  },
+  {
+    id: 'demo-buyer-monticello',
+    branch_name: 'Monticello Branch',
+    address: 'Monticello, NY',
+    location: 'branch',
+    email: 'monticello@company.com',
+    phone: '(845) 555-0200'
+  },
+  {
+    id: 'demo-buyer-newhampton',
+    branch_name: 'New Hampton Branch',
+    address: 'New Hampton, IA',
+    location: 'branch',
+    email: 'newhampton@company.com',
+    phone: '(641) 555-0300'
+  },
+  {
+    id: 'demo-buyer-sherburne',
+    branch_name: 'Sherburne Branch',
+    address: 'Sherburne, NY',
+    location: 'branch',
+    email: 'sherburne@company.com',
+    phone: '(607) 555-0400'
+  }
+];
+
 export const demoFacilities: DemoFacility[] = [
   // HishōSushi facilities
   {

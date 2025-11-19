@@ -42,6 +42,7 @@ export const OnboardingPipelineView = () => {
   const { currentBranch, allBranchesView } = useBranchContext();
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState<any[]>([]);
+  const [requirementCounts, setRequirementCounts] = useState<Record<string, number>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -114,40 +115,53 @@ export const OnboardingPipelineView = () => {
   }, [user]);
 
   const loadRequests = async () => {
-    if (!user) return;
-
     try {
       setLoading(true);
-
-      const { data: buyer } = await supabase
+      const { data: buyerData } = await supabase
         .from('buyers')
         .select('id')
-        .eq('profile_id', user.id)
+        .eq('profile_id', user?.id)
         .single();
 
-      if (!buyer) return;
-      setBuyerId(buyer.id);
+      if (!buyerData) {
+        setRequests([]);
+        return;
+      }
+
+      setBuyerId(buyerData.id);
+
+      // Simple query without complex chaining
+      const queryParams: any = {
+        buyer_id: buyerData.id
+      };
+
+      if (currentBranch && !allBranchesView) {
+        queryParams.branch_id = currentBranch.id;
+      }
 
       const { data, error } = await supabase
         .from('supplier_onboarding_requests')
         .select('*')
-        .eq('buyer_id', buyer.id)
+        .match(queryParams)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      // Apply search filter
-      let filtered = data || [];
-      if (searchQuery.trim()) {
-        filtered = filtered.filter(r => 
-          r.supplier_company_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          r.supplier_email?.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-      }
-      
-      setRequests(filtered);
+      setRequests(data || []);
 
-    } catch (error: any) {
+      // Load requirement counts
+      const counts: Record<string, number> = {};
+      if (data) {
+        for (const req of data) {
+          const { count } = await supabase
+            .from('onboarding_document_requirements')
+            .select('id', { count: 'exact', head: true })
+            .eq('onboarding_request_id', req.id);
+          
+          counts[req.id] = count ?? 0;
+        }
+      }
+      setRequirementCounts(counts);
+    } catch (error) {
       console.error('Error loading requests:', error);
       toast({
         title: 'Error',
@@ -245,6 +259,45 @@ export const OnboardingPipelineView = () => {
 
   const handleBulkArchive = () => {
     toast({ title: 'Archive', description: 'Archive functionality coming soon' });
+  };
+
+  const handlePopulateRequirements = async (requestId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('populate-onboarding-requirements', {
+        body: { onboarding_request_id: requestId }
+      });
+
+      if (error) throw error;
+
+      if (data?.skipped) {
+        toast({
+          title: 'Already Populated',
+          description: 'This request already has requirements',
+        });
+      } else {
+        toast({
+          title: 'Requirements Populated',
+          description: `Added ${data?.documents_added || 0} documents and ${data?.fields_added || 0} form fields`,
+        });
+        // Refresh the requests to update UI
+        loadRequests();
+      }
+    } catch (error: any) {
+      console.error('Failed to populate requirements:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to populate requirements',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const checkHasRequirements = (requestId: string) => {
+    // This will be checked in real-time from the database
+    // For now, we'll add a state to track this
+    return true; // Placeholder - will be replaced with actual check
   };
 
   const getStageStats = () => {
@@ -470,22 +523,45 @@ export const OnboardingPipelineView = () => {
                           </Tooltip>
                         </TooltipProvider>
 
+
                         {(stage.id === 'pending' || stage.id === 'onboarding_initiated') && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="flex-1"
-                                  onClick={(e) => handleSendReminder(request, e)}
-                                >
-                                  <Send className="h-3 w-3" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Send Reminder</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <>
+                            {/* Populate Requirements Button (only if empty) */}
+                            {requirementCounts[request.id] === 0 && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="flex-1 border-yellow-500"
+                                      onClick={(e) => handlePopulateRequirements(request.id, e)}
+                                    >
+                                      <AlertCircle className="h-3 w-3 text-yellow-500" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Populate Requirements (Empty!)</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+
+                            {/* Send Reminder Button */}
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="flex-1"
+                                    onClick={(e) => handleSendReminder(request, e)}
+                                  >
+                                    <Send className="h-3 w-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Send Reminder</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </>
                         )}
                       </div>
                     </CardContent>

@@ -74,29 +74,33 @@ export class AdvancedPDFExportService {
 
     this.resetDocument();
 
-    // Page 1: Executive Dashboard (AI insights now at top)
-    await this.addExecutiveDashboard(data, aiInsights);
+    // PAGE 1: EXECUTIVE SUMMARY – AI INSIGHTS & RECOMMENDATIONS
+    await this.addExecutiveSummaryAIPage(data, aiInsights);
 
-    // Page 2: Detailed Analytics
+    // PAGE 2: EXECUTIVE DASHBOARD (metrics + category performance)
+    this.addNewPage();
+    await this.addExecutiveDashboard(data);
+
+    // PAGE 3: DETAILED ANALYTICS
     this.addNewPage();
     await this.addDetailedAnalytics(data);
 
-    // Page 3: AI Risk Assessment
+    // PAGE 4: FULL AI RISK ASSESSMENT (deeper dive)
     if (options.includeRiskAssessment) {
       this.addNewPage();
       await this.addAIRiskAssessment(data, aiInsights);
     }
 
-    // Page 4: Performance Timeline
-    if (options.includeDocumentHistory) {
-      this.addNewPage();
-      await this.addPerformanceTimeline(data);
-    }
-
-    // Page 5: AI Recommendations
+    // PAGE 5: FULL AI RECOMMENDATIONS PAGE (detailed actions)
     if (options.includeRecommendations) {
       this.addNewPage();
       await this.addAIRecommendations(data, aiInsights);
+    }
+
+    // PAGE 6: PERFORMANCE TIMELINE / DOC HISTORY (if requested)
+    if (options.includeDocumentHistory) {
+      this.addNewPage();
+      await this.addPerformanceTimeline(data);
     }
 
     // Add footer to all pages
@@ -130,7 +134,7 @@ export class AdvancedPDFExportService {
 
     this.resetDocument();
 
-    // Page 1: Executive Summary
+    // Page 1: Executive Summary (multi-supplier)
     await this.addComparisonExecutiveSummary(comparisonData);
 
     // Page 2: Comparative Analytics
@@ -145,7 +149,7 @@ export class AdvancedPDFExportService {
     this.addNewPage();
     await this.addBenchmarkingAnalysis(comparisonData);
 
-    // Page 5: AI Insights & Recommendations
+    // Page 5: AI Insights & Recommendations (portfolio)
     if (options.includeRiskAssessment || options.includeRecommendations) {
       this.addNewPage();
       await this.addComparisonAIInsights(comparisonData, aiInsights);
@@ -188,23 +192,107 @@ export class AdvancedPDFExportService {
   }
 
   // =========================================================
-  // SINGLE SUPPLIER: EXECUTIVE DASHBOARD
+  // PAGE 1: EXECUTIVE SUMMARY (AI INSIGHTS & RECOMMENDATIONS)
   // =========================================================
 
-  private async addExecutiveDashboard(data: SupplierComplianceData, aiInsights: AIInsights): Promise<void> {
-    // Professional header
-    this.addReportHeader("SUPPLIER COMPLIANCE DASHBOARD", `${data.supplier.company_name}`);
+  private async addExecutiveSummaryAIPage(data: SupplierComplianceData, aiInsights: AIInsights): Promise<void> {
+    // Header: EXECUTIVE SUMMARY
+    this.addReportHeader("EXECUTIVE SUMMARY", data.supplier.company_name);
 
-    // Start content slightly below header
     this.currentY = 55;
 
-    // 1. AI Insights at top
-    const insightsHeight = 60;
-    this.checkPageBreak(insightsHeight);
-    this.addAIInsightsBox(this.currentY, aiInsights);
-    this.currentY += insightsHeight + 12;
+    // Section title: AI INSIGHTS & RECOMMENDATIONS
+    this.doc.setTextColor(this.primaryColor[0], this.primaryColor[1], this.primaryColor[2]);
+    this.doc.setFont("helvetica", "bold");
+    this.doc.setFontSize(14);
+    this.doc.text("AI INSIGHTS & RECOMMENDATIONS", this.margin, this.currentY);
 
-    // 2. Key metrics – 4-column layout
+    this.currentY += 10;
+
+    // --- AI RISK ASSESSMENT (SUMMARY BLOCK) ---
+    this.doc.setTextColor(this.errorColor[0], this.errorColor[1], this.errorColor[2]);
+    this.doc.setFont("helvetica", "bold");
+    this.doc.setFontSize(11);
+    this.doc.text("AI RISK ASSESSMENT (SUMMARY)", this.margin, this.currentY);
+
+    this.currentY += 8;
+
+    this.doc.setTextColor(31, 41, 55);
+    this.doc.setFont("helvetica", "normal");
+    this.doc.setFontSize(9);
+
+    const riskSummaryLines = this.splitText(aiInsights.riskAssessment, this.pageWidth - 2 * this.margin);
+    const maxRiskLines = 6;
+
+    riskSummaryLines.slice(0, maxRiskLines).forEach((line, idx) => {
+      this.doc.text(line, this.margin, this.currentY + idx * 5.5);
+    });
+
+    this.currentY += Math.min(riskSummaryLines.length, maxRiskLines) * 5.5 + 12;
+
+    // --- TOP RECOMMENDATIONS (EXECUTIVE VIEW) ---
+    this.doc.setTextColor(this.primaryColor[0], this.primaryColor[1], this.primaryColor[2]);
+    this.doc.setFont("helvetica", "bold");
+    this.doc.setFontSize(11);
+    this.doc.text("TOP RECOMMENDATIONS (NEXT 90 DAYS)", this.margin, this.currentY);
+
+    this.currentY += 8;
+
+    this.doc.setTextColor(31, 41, 55);
+    this.doc.setFont("helvetica", "normal");
+    this.doc.setFontSize(9);
+
+    const maxRecs = 3;
+    aiInsights.recommendations.slice(0, maxRecs).forEach((rec, index) => {
+      const baseY = this.currentY + index * 16;
+
+      // Number badge
+      const badgeX = this.margin;
+      const badgeY = baseY - 5;
+      this.doc.setFillColor(this.secondaryColor[0], this.secondaryColor[1], this.secondaryColor[2]);
+      this.doc.roundedRect(badgeX, badgeY, 10, 10, 3, 3, "F");
+
+      this.doc.setTextColor(255, 255, 255);
+      this.doc.setFont("helvetica", "bold");
+      this.doc.setFontSize(8);
+      this.doc.text(`${index + 1}`, badgeX + 5, badgeY + 7, { align: "center" });
+
+      // Recommendation text
+      this.doc.setTextColor(31, 41, 55);
+      this.doc.setFont("helvetica", "normal");
+      this.doc.setFontSize(9);
+
+      const recLines = this.splitText(rec, this.pageWidth - (this.margin + 16) - this.margin);
+      recLines.slice(0, 3).forEach((line, lineIndex) => {
+        this.doc.text(line, this.margin + 16, baseY + lineIndex * 5);
+      });
+    });
+
+    this.currentY += maxRecs * 16 + 10;
+
+    // --- OPTIONAL OUTLOOK TEASER ---
+    if (aiInsights.futureOutlook) {
+      this.doc.setTextColor(this.mediumGray[0], this.mediumGray[1], this.mediumGray[2]);
+      this.doc.setFont("helvetica", "italic");
+      this.doc.setFontSize(8);
+      const outlookLines = this.splitText(aiInsights.futureOutlook, this.pageWidth - 2 * this.margin);
+      outlookLines.slice(0, 2).forEach((line, idx) => {
+        this.doc.text(line, this.margin, this.currentY + idx * 5);
+      });
+    }
+  }
+
+  // =========================================================
+  // PAGE 2: EXECUTIVE DASHBOARD (METRICS + CATEGORY PERFORMANCE)
+  // =========================================================
+
+  private async addExecutiveDashboard(data: SupplierComplianceData): Promise<void> {
+    // Header for this page
+    this.addReportHeader("SUPPLIER COMPLIANCE DASHBOARD", data.supplier.company_name);
+
+    this.currentY = 55;
+
+    // 1. Key metrics – 4-column layout
     const cardSpacing = 6;
     const cardHeight = 42;
     const cardWidth = (this.pageWidth - 2 * this.margin - 3 * cardSpacing) / 4;
@@ -260,7 +348,7 @@ export class AdvancedPDFExportService {
 
     this.currentY += cardHeight + 18;
 
-    // 3. Category performance analysis
+    // 2. Category performance analysis
     const categoryCount = Math.min(data.categoryStats.length, 6);
     const chartHeight = 40 + categoryCount * 20;
     this.checkPageBreak(chartHeight);
@@ -317,56 +405,6 @@ export class AdvancedPDFExportService {
     const subtitleLines = this.splitText(subtitle, width - 12);
     subtitleLines.slice(0, 2).forEach((line, idx) => {
       this.doc.text(line, paddingX, subtitleY + idx * 6);
-    });
-  }
-
-  // AI insights box: pill + clean text
-  private addAIInsightsBox(y: number, aiInsights: AIInsights): void {
-    const boxHeight = 60;
-    const boxX = this.margin;
-    const boxWidth = this.pageWidth - 2 * this.margin;
-
-    // Background
-    this.doc.setFillColor(248, 250, 252);
-    this.doc.roundedRect(boxX, y, boxWidth, boxHeight, 4, 4, "F");
-
-    // Border
-    this.doc.setDrawColor(209, 213, 219);
-    this.doc.setLineWidth(0.5);
-    this.doc.roundedRect(boxX, y, boxWidth, boxHeight, 4, 4, "S");
-
-    // AI pill badge
-    const pillX = boxX + 10;
-    const pillY = y + 10;
-    const pillWidth = 32;
-    const pillHeight = 12;
-
-    this.doc.setFillColor(this.secondaryColor[0], this.secondaryColor[1], this.secondaryColor[2]);
-    this.doc.roundedRect(pillX, pillY, pillWidth, pillHeight, 6, 6, "F");
-
-    this.doc.setTextColor(255, 255, 255);
-    this.doc.setFont("helvetica", "bold");
-    this.doc.setFontSize(8);
-    this.doc.text("AI", pillX + pillWidth / 2, pillY + 8, { align: "center" });
-
-    // Title
-    this.doc.setTextColor(this.primaryColor[0], this.primaryColor[1], this.primaryColor[2]);
-    this.doc.setFont("helvetica", "bold");
-    this.doc.setFontSize(12);
-    this.doc.text("AI RISK ASSESSMENT", pillX + pillWidth + 6, pillY + 9);
-
-    // Assessment text
-    this.doc.setTextColor(31, 41, 55);
-    this.doc.setFont("helvetica", "normal");
-    this.doc.setFontSize(9);
-
-    const textX = boxX + 10;
-    const textY = y + 28;
-    const maxWidth = boxWidth - 20;
-
-    const lines = this.splitText(aiInsights.riskAssessment, maxWidth);
-    lines.slice(0, 4).forEach((line, idx) => {
-      this.doc.text(line, textX, textY + idx * 6);
     });
   }
 
@@ -552,7 +590,7 @@ export class AdvancedPDFExportService {
     }
 
     // Background
-    this.doc.setFillColor(248, 250, 252);
+    this.doc.setFillColor(248, 250, 251);
     this.doc.roundedRect(this.margin, chartStartY, chartWidth, chartHeight, 4, 4, "F");
 
     const maxValue = Math.max(...trends.map((t) => t.complianceScore));
@@ -745,7 +783,7 @@ export class AdvancedPDFExportService {
   }
 
   // =========================================================
-  // AI RECOMMENDATIONS
+  // AI RECOMMENDATIONS PAGE (DEEP DIVE)
   // =========================================================
 
   private async addAIRecommendations(data: SupplierComplianceData, aiInsights: AIInsights): Promise<void> {
@@ -764,7 +802,7 @@ export class AdvancedPDFExportService {
     this.doc.setFont("helvetica", "normal");
     this.doc.setFontSize(9);
 
-    aiInsights.recommendations.slice(0, 3).forEach((rec, index) => {
+    aiInsights.recommendations.slice(0, 5).forEach((rec, index) => {
       const baseY = 60 + index * 18;
 
       // Number badge
@@ -789,7 +827,7 @@ export class AdvancedPDFExportService {
     });
 
     // Future outlook
-    const outlookY = 60 + aiInsights.recommendations.slice(0, 3).length * 18 + 10;
+    const outlookY = 60 + aiInsights.recommendations.slice(0, 5).length * 18 + 10;
     this.doc.setTextColor(this.primaryColor[0], this.primaryColor[1], this.primaryColor[2]);
     this.doc.setFont("helvetica", "bold");
     this.doc.setFontSize(12);

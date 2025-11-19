@@ -390,6 +390,106 @@ export const useOnboardingRequests = () => {
     }
   };
 
+  const updateOnboardingRequest = async (
+    requestId: string,
+    updates: {
+      supplier_company_name?: string;
+      custom_message?: string;
+      can_choose_branches?: boolean;
+      supplier_email?: string;
+    }
+  ): Promise<void> => {
+    try {
+      const { error } = await supabase
+        .from('supplier_onboarding_requests')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      await fetchOnboardingRequests();
+    } catch (error) {
+      console.error('Error updating onboarding request:', error);
+      throw error;
+    }
+  };
+
+  const resendOnboardingRequest = async (requestId: string): Promise<void> => {
+    try {
+      // Generate new token and extend expiry
+      const newToken = crypto.randomUUID();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      // Get current resent_count first
+      const { data: currentRequest } = await supabase
+        .from('supplier_onboarding_requests')
+        .select('resent_count')
+        .eq('id', requestId)
+        .single();
+
+      const { error: updateError } = await supabase
+        .from('supplier_onboarding_requests')
+        .update({
+          invitation_token: newToken,
+          expires_at: expiresAt.toISOString(),
+          last_sent_at: new Date().toISOString(),
+          resent_count: (currentRequest?.resent_count || 0) + 1,
+          status: 'pending', // Reset from expired to pending
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', requestId);
+
+      if (updateError) throw updateError;
+
+      // Get the request details to send email
+      const { data: request, error: fetchError } = await supabase
+        .from('supplier_onboarding_requests')
+        .select('*')
+        .eq('id', requestId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Trigger email notification
+      await supabase.functions.invoke('send-supplier-invitation', {
+        body: {
+          email: request.supplier_email,
+          buyerId: request.buyer_id,
+          invitationToken: newToken,
+          customMessage: request.custom_message
+        }
+      });
+
+      await fetchOnboardingRequests();
+    } catch (error) {
+      console.error('Error resending onboarding request:', error);
+      throw error;
+    }
+  };
+
+  const cancelOnboardingRequest = async (requestId: string): Promise<void> => {
+    try {
+      const { error } = await supabase
+        .from('supplier_onboarding_requests')
+        .update({
+          status: 'cancelled',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      await fetchOnboardingRequests();
+    } catch (error) {
+      console.error('Error cancelling onboarding request:', error);
+      throw error;
+    }
+  };
+
   return {
     requests,
     loading,
@@ -402,6 +502,9 @@ export const useOnboardingRequests = () => {
     addFormField,
     getDocumentRequirements,
     getFormFields,
+    updateOnboardingRequest,
+    resendOnboardingRequest,
+    cancelOnboardingRequest,
     refetch: fetchOnboardingRequests
   };
 };

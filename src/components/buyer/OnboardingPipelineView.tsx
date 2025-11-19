@@ -159,6 +159,47 @@ export const OnboardingPipelineView = () => {
     }
   };
 
+  const getRequestAlertStatus = (request: any) => {
+    const now = new Date();
+    const daysSinceCreated = Math.floor((now.getTime() - new Date(request.created_at).getTime()) / (1000 * 60 * 60 * 24));
+    const daysSinceUpdated = Math.floor((now.getTime() - new Date(request.updated_at || request.created_at).getTime()) / (1000 * 60 * 60 * 24));
+    if (request.status === 'pending' && daysSinceCreated > 7) return { level: 'warning', message: `${daysSinceCreated} days since invitation`, variant: 'default' as const };
+    if (request.status === 'onboarding_initiated' && daysSinceUpdated > 14) return { level: 'danger', message: `${daysSinceUpdated} days in progress`, variant: 'destructive' as const };
+    if (request.status === 'under_review' && daysSinceUpdated > 7) return { level: 'warning', message: `${daysSinceUpdated} days awaiting review`, variant: 'default' as const };
+    return null;
+  };
+
+  const getRequestAlertStatus = (request: any) => {
+    const now = new Date();
+    const createdAt = new Date(request.created_at);
+    const updatedAt = new Date(request.updated_at || request.created_at);
+    const daysSinceCreated = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+    const daysSinceUpdated = Math.floor((now.getTime() - updatedAt.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (request.status === 'pending' && daysSinceCreated > 7) {
+      return { 
+        level: 'warning', 
+        message: `${daysSinceCreated} days since invitation`,
+        variant: 'default' as const
+      };
+    }
+    if (request.status === 'onboarding_initiated' && daysSinceUpdated > 14) {
+      return { 
+        level: 'danger', 
+        message: `${daysSinceUpdated} days in progress`,
+        variant: 'destructive' as const
+      };
+    }
+    if (request.status === 'under_review' && daysSinceUpdated > 7) {
+      return { 
+        level: 'warning', 
+        message: `${daysSinceUpdated} days awaiting review`,
+        variant: 'default' as const
+      };
+    }
+    return null;
+  };
+
   const getRequestsForStage = (stageId: string) => {
     return filteredRequests.filter(r => r.status === stageId);
   };
@@ -362,6 +403,7 @@ export const OnboardingPipelineView = () => {
             <div className="space-y-3">
               {stageRequests.map(request => {
                 const alert = getAlertStatus(request);
+                const overdueAlert = getRequestAlertStatus(request);
                 return (
                   <Card 
                     key={request.id} 

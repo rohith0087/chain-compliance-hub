@@ -99,3 +99,6 @@ verify_jwt = false
 
 [functions.chat-session-manager]
 verify_jwt = false
+
+[functions.check-onboarding-deadlines]
+verify_jwt = false

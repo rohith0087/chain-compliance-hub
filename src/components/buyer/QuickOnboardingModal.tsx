@@ -9,12 +9,15 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Check, Send, Mail, Clock, FileText, Users, Zap, Edit, RefreshCw, XCircle, AlertCircle } from 'lucide-react';
+import { Check, Send, Mail, Clock, FileText, Users, Zap, Edit, RefreshCw, XCircle, AlertCircle, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useOnboardingRequests } from '@/hooks/useOnboardingRequests';
 import { EditOnboardingRequestDialog } from './EditOnboardingRequestDialog';
 import { formatDistanceToNow } from 'date-fns';
+import { useConnectedSuppliersWithOnboarding, SupplierWithOnboardingStatus } from '@/hooks/useConnectedSuppliersWithOnboarding';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface QuickOnboardingModalProps {
   isOpen: boolean;
@@ -37,7 +40,7 @@ export const QuickOnboardingModal = ({
   buyerProfile, 
   userProfile 
 }: QuickOnboardingModalProps) => {
-  const [emails, setEmails] = useState('');
+  const [selectedSuppliers, setSelectedSuppliers] = useState<SupplierWithOnboardingStatus[]>([]);
   const [customMessage, setCustomMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [previewDefaults, setPreviewDefaults] = useState<any>(null);
@@ -46,6 +49,7 @@ export const QuickOnboardingModal = ({
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [requestToCancel, setRequestToCancel] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [comboboxOpen, setComboboxOpen] = useState(false);
   
   const { 
     createOnboardingRequestFromDefaults, 
@@ -53,6 +57,8 @@ export const QuickOnboardingModal = ({
     resendOnboardingRequest, 
     cancelOnboardingRequest 
   } = useOnboardingRequests();
+
+  const { suppliers, loading: suppliersLoading, refetch: refetchSuppliers } = useConnectedSuppliersWithOnboarding(buyerId);
 
   useEffect(() => {
     if (isOpen) {
@@ -77,18 +83,8 @@ export const QuickOnboardingModal = ({
   };
 
   const handleQuickSend = async () => {
-    if (!emails.trim()) {
-      toast.error('Please enter at least one email address');
-      return;
-    }
-
-    const emailList = emails
-      .split(',')
-      .map(email => email.trim())
-      .filter(email => email && email.includes('@'));
-
-    if (emailList.length === 0) {
-      toast.error('Please enter valid email addresses');
+    if (selectedSuppliers.length === 0) {
+      toast.error('Please select at least one supplier');
       return;
     }
 
@@ -97,29 +93,46 @@ export const QuickOnboardingModal = ({
       const successCount = [];
       const failureCount = [];
 
-      for (const email of emailList) {
+      for (const supplier of selectedSuppliers) {
         try {
-          // Create onboarding request with defaults
-          await createOnboardingRequestFromDefaults(buyerId, email, '', customMessage);
-          successCount.push(email);
+          // Check one more time for active onboarding
+          const { data: existingOnboarding } = await supabase
+            .from('supplier_onboarding_requests')
+            .select('id, status')
+            .eq('buyer_id', buyerId)
+            .eq('supplier_id', supplier.id)
+            .in('status', ['pending', 'requested', 'onboarding_initiated', 'under_review'])
+            .maybeSingle();
+
+          if (existingOnboarding) {
+            toast.error(`${supplier.company_name} already has an active onboarding request`);
+            failureCount.push(supplier.company_name);
+            continue;
+          }
+
+          // Create onboarding request with supplier ID
+          await createOnboardingRequestFromDefaults(
+            buyerId, 
+            supplier.contact_email, 
+            supplier.company_name, 
+            customMessage,
+            supplier.id
+          );
+          successCount.push(supplier.company_name);
         } catch (error) {
-          console.error(`Failed to create request for ${email}:`, error);
-          failureCount.push(email);
+          console.error(`Failed to create request for ${supplier.company_name}:`, error);
+          failureCount.push(supplier.company_name);
         }
       }
 
       if (successCount.length > 0) {
         toast.success(`Quick onboarding sent to ${successCount.length} supplier(s)!`);
         loadExistingRequests();
+        onClose();
       }
       
       if (failureCount.length > 0) {
-        toast.error(`Failed to send to ${failureCount.length} email(s)`);
-      }
-
-      if (successCount.length > 0) {
-        setEmails('');
-        setCustomMessage('');
+        toast.error(`Failed to send to ${failureCount.length} supplier(s)`);
       }
     } catch (error) {
       console.error('Error in quick send:', error);
@@ -127,6 +140,23 @@ export const QuickOnboardingModal = ({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSelectSupplier = (supplier: SupplierWithOnboardingStatus) => {
+    if (supplier.has_active_onboarding) {
+      toast.error(`${supplier.company_name} already has an active onboarding request`);
+      return;
+    }
+
+    if (selectedSuppliers.find(s => s.id === supplier.id)) {
+      setSelectedSuppliers(prev => prev.filter(s => s.id !== supplier.id));
+    } else {
+      setSelectedSuppliers(prev => [...prev, supplier]);
+    }
+  };
+
+  const handleRemoveSupplier = (supplierId: string) => {
+    setSelectedSuppliers(prev => prev.filter(s => s.id !== supplierId));
   };
 
   const handleEditRequest = (request: any) => {
@@ -240,18 +270,88 @@ export const QuickOnboardingModal = ({
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium">Supplier Email Addresses</label>
-                  <Textarea
-                    placeholder="supplier1@company.com, supplier2@company.com"
-                    value={emails}
-                    onChange={(e) => setEmails(e.target.value)}
-                    rows={3}
-                    className="mt-1"
-                  />
+                  <label className="text-sm font-medium mb-2 block">Select Connected Suppliers *</label>
+                  <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between"
+                        disabled={suppliersLoading}
+                      >
+                        {suppliersLoading ? (
+                          "Loading suppliers..."
+                        ) : selectedSuppliers.length > 0 ? (
+                          `${selectedSuppliers.length} supplier${selectedSuppliers.length === 1 ? '' : 's'} selected`
+                        ) : (
+                          "Select suppliers..."
+                        )}
+                        <Check className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput placeholder="Search suppliers..." />
+                        <CommandEmpty>No suppliers found.</CommandEmpty>
+                        <CommandGroup className="max-h-64 overflow-auto">
+                          {suppliers.map((supplier) => {
+                            const isSelected = selectedSuppliers.some(s => s.id === supplier.id);
+                            const hasActiveOnboarding = supplier.has_active_onboarding;
+                            
+                            return (
+                              <CommandItem
+                                key={supplier.id}
+                                value={supplier.company_name}
+                                onSelect={() => handleSelectSupplier(supplier)}
+                                disabled={hasActiveOnboarding}
+                                className={hasActiveOnboarding ? 'opacity-50' : ''}
+                              >
+                                <div className="flex items-center justify-between w-full">
+                                  <div className="flex-1">
+                                    <div className="font-medium">{supplier.company_name}</div>
+                                    <div className="text-xs text-muted-foreground">{supplier.contact_email}</div>
+                                  </div>
+                                  {hasActiveOnboarding ? (
+                                    <Badge variant="secondary" className="ml-2">
+                                      <AlertCircle className="w-3 h-3 mr-1" />
+                                      Onboarding in Progress
+                                    </Badge>
+                                  ) : isSelected ? (
+                                    <Check className="h-4 w-4 text-primary ml-2" />
+                                  ) : null}
+                                </div>
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Separate multiple emails with commas
+                    Only connected suppliers without active onboarding can be selected
                   </p>
                 </div>
+
+                {selectedSuppliers.length > 0 && (
+                  <div className="border rounded-md p-3 space-y-2">
+                    <label className="text-sm font-medium">Selected Suppliers ({selectedSuppliers.length})</label>
+                    {selectedSuppliers.map((supplier) => (
+                      <div key={supplier.id} className="flex items-center justify-between bg-muted/50 p-2 rounded">
+                        <div>
+                          <div className="font-medium text-sm">{supplier.company_name}</div>
+                          <div className="text-xs text-muted-foreground">{supplier.contact_email}</div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveSupplier(supplier.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div>
                   <label className="text-sm font-medium">Additional Message (Optional)</label>
@@ -266,7 +366,7 @@ export const QuickOnboardingModal = ({
 
                 <Button 
                   onClick={handleQuickSend} 
-                  disabled={isLoading || !emails.trim()} 
+                  disabled={isLoading || selectedSuppliers.length === 0} 
                   className="w-full"
                   size="lg"
                 >
@@ -278,7 +378,7 @@ export const QuickOnboardingModal = ({
                   ) : (
                     <>
                       <Zap className="w-4 h-4 mr-2" />
-                      Send Quick Onboarding
+                      Send Quick Onboarding to {selectedSuppliers.length} Supplier{selectedSuppliers.length === 1 ? '' : 's'}
                     </>
                   )}
                 </Button>

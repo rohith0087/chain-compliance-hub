@@ -270,12 +270,32 @@ export const OnboardingRequestDetailDrawer = ({
     try {
       setActionLoading(true);
 
+      // Get buyer data for the email
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: buyerProfile } = await supabase
+        .from('profiles')
+        .select('full_name, company_name')
+        .eq('id', user?.id)
+        .single();
+
+      const { data: buyer } = await supabase
+        .from('buyers')
+        .select('company_name, contact_email, buyer_id_number')
+        .eq('id', request.buyer_id)
+        .single();
+
       // Call edge function to send reminder email
       const { error } = await supabase.functions.invoke('send-supplier-invitation', {
         body: {
-          email: request.supplier_email,
-          isReminder: true,
-          requestId: request.id
+          emails: [request.supplier_email],
+          subject: 'Reminder: Complete Your Onboarding',
+          customMessage: `This is a friendly reminder to complete your onboarding process. We're looking forward to working with you!`,
+          buyerData: {
+            name: buyerProfile?.full_name || 'Buyer Representative',
+            company: buyer?.company_name || 'Our Company',
+            email: buyer?.contact_email || user?.email || '',
+            buyerId: buyer?.buyer_id_number || ''
+          }
         }
       });
 

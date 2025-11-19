@@ -50,6 +50,13 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
     }
   }, [isOpen, user]);
 
+  // Auto-populate selectedBranch from currentBranch when form opens
+  useEffect(() => {
+    if (isOpen && currentBranch) {
+      setSelectedBranch(currentBranch.id);
+    }
+  }, [isOpen, currentBranch]);
+
   useEffect(() => {
     if (selectedSupplier) {
       fetchContactCounts();
@@ -150,8 +157,11 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
     e.preventDefault();
     if (!user || !buyerProfile) return;
 
+    // Use currentBranch as fallback if selectedBranch is not set
+    const branchId = selectedBranch || currentBranch?.id;
+
     // Validate branch selection
-    if (!selectedBranch) {
+    if (!branchId) {
       toast({
         title: "Branch Required",
         description: "Please select a branch for this document request.",
@@ -175,7 +185,7 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
           due_date: dueDate?.toISOString().split('T')[0],
           supplier_id: selectedSupplier,
           buyer_id: buyerProfile.id,
-          branch_id: selectedBranch,
+          branch_id: branchId,
           requester_id: user.id,
           template_type: templateType,
           custom_template_id: templateType === 'custom' ? selectedTemplate : null,

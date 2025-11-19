@@ -154,6 +154,8 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
   };
 
   const handleCreateRequests = async () => {
+    console.log('Creating request with currentBranch:', currentBranch);
+    
     if (!user || !buyerProfile || selectedDocuments.length === 0) {
       toast({
         title: "Error",

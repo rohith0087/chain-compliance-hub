@@ -87,7 +87,8 @@ export const useOnboardingRequests = () => {
     buyerId: string,
     supplierEmail: string,
     supplierCompanyName: string,
-    customMessage?: string
+    customMessage?: string,
+    supplierId?: string
   ) => {
     try {
       // Load default settings (including industry templates)
@@ -103,7 +104,8 @@ export const useOnboardingRequests = () => {
         supplierEmail,
         supplierCompanyName,
         canChooseBranches,
-        finalMessage
+        finalMessage,
+        supplierId
       );
 
       // Add default document requirements
@@ -225,13 +227,15 @@ export const useOnboardingRequests = () => {
     supplierEmail: string,
     supplierCompanyName: string,
     canChooseBranches: boolean,
-    customMessage?: string
+    customMessage?: string,
+    supplierId?: string
   ) => {
     try {
       const { data, error } = await supabase
         .from('supplier_onboarding_requests')
         .insert({
           buyer_id: buyerId,
+          supplier_id: supplierId || null,
           supplier_email: supplierEmail,
           supplier_company_name: supplierCompanyName,
           can_choose_branches: canChooseBranches,

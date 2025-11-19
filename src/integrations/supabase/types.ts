@@ -2591,6 +2591,9 @@ export type Database = {
           expires_at: string | null
           id: string
           invitation_token: string
+          last_sent_at: string | null
+          rejection_reason: string | null
+          resent_count: number | null
           status: string
           supplier_company_name: string | null
           supplier_email: string
@@ -2609,6 +2612,9 @@ export type Database = {
           expires_at?: string | null
           id?: string
           invitation_token?: string
+          last_sent_at?: string | null
+          rejection_reason?: string | null
+          resent_count?: number | null
           status?: string
           supplier_company_name?: string | null
           supplier_email: string
@@ -2627,6 +2633,9 @@ export type Database = {
           expires_at?: string | null
           id?: string
           invitation_token?: string
+          last_sent_at?: string | null
+          rejection_reason?: string | null
+          resent_count?: number | null
           status?: string
           supplier_company_name?: string | null
           supplier_email?: string

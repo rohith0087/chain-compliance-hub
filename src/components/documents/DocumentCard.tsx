@@ -13,7 +13,8 @@ import {
   Upload,
   ThumbsUp,
   ThumbsDown,
-  Link
+  Link,
+  MapPin
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ITEM_CATEGORIES } from '@/hooks/useSupplierItems';
@@ -31,6 +32,12 @@ interface DocumentCardProps {
     file_name?: string;
     file_size?: number;
     linked_item_ids?: string[];
+    branch?: {
+      id: string;
+      branch_name: string;
+      location?: string;
+      address?: string;
+    };
     uploader?: {
       full_name: string;
     };
@@ -174,13 +181,19 @@ const DocumentCard = ({
                 <Badge variant="outline" className="text-xs">
                   {document.document_type}
                 </Badge>
-                <Badge variant="outline" className="text-xs">
-                  {document.category}
+              <Badge variant="outline" className="text-xs">
+                {document.category}
+              </Badge>
+              <Badge className={getStatusColor(document.status)} variant="secondary">
+                {getStatusIcon(document.status)}
+                <span className="ml-1 capitalize">{document.status}</span>
+              </Badge>
+              {document.branch && (
+                <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800">
+                  <MapPin className="w-3 h-3 mr-1" />
+                  {document.branch.branch_name}
                 </Badge>
-                <Badge className={getStatusColor(document.status)} variant="secondary">
-                  {getStatusIcon(document.status)}
-                  <span className="ml-1 capitalize">{document.status}</span>
-                </Badge>
+              )}
               </div>
             </div>
           </div>

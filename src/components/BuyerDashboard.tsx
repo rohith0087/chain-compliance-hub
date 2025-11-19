@@ -553,6 +553,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         onClose={() => setShowRequestForm(false)}
         onCreateRequest={handleCreateRequest}
         userType="buyer"
+        currentBranch={currentBranch}
       />
 
       <BuyerSettingsModal

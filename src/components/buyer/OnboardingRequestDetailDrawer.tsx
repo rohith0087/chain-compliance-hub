@@ -161,8 +161,7 @@ export const OnboardingRequestDetailDrawer = ({
       const { error: updateError } = await supabase
         .from('supplier_onboarding_requests')
         .update({ 
-          status: 'pending',
-          responded_at: new Date().toISOString()
+          status: 'pending'
         })
         .eq('id', request.id);
 
@@ -200,8 +199,7 @@ export const OnboardingRequestDetailDrawer = ({
       const { error } = await supabase
         .from('supplier_onboarding_requests')
         .update({ 
-          status: 'approved',
-          responded_at: new Date().toISOString()
+          status: 'approved'
         })
         .eq('id', request.id);
 
@@ -242,7 +240,6 @@ export const OnboardingRequestDetailDrawer = ({
         .from('supplier_onboarding_requests')
         .update({ 
           status: 'pending',
-          responded_at: new Date().toISOString(),
           rejection_reason: rejectionNote
         })
         .eq('id', request.id);

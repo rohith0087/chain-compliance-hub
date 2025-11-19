@@ -497,18 +497,25 @@ const SupplierDiscovery = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredAvailableSuppliers.map((supplier) => (
                 <Card key={supplier.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg mb-2">{supplier.company_name}</CardTitle>
-                        {supplier.industry && (
-                          <Badge variant="secondary" className="mb-2">
-                            {supplier.industry}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </CardHeader>
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <CardTitle className="text-lg mb-2">{supplier.company_name}</CardTitle>
+                  <div className="flex gap-2 flex-wrap">
+                    {supplier.industry && (
+                      <Badge variant="secondary" className="mb-2">
+                        {supplier.industry}
+                      </Badge>
+                    )}
+                    {pendingRequests.has(supplier.id) && (
+                      <Badge className="mb-2 bg-green-100 text-black hover:bg-green-200 border-green-300">
+                        Requested
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
                   <CardContent className="space-y-3">
                     {supplier.contact_email && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -556,25 +563,15 @@ const SupplierDiscovery = () => {
                         View Details
                       </Button>
                       {pendingRequests.has(supplier.id) ? (
-                        <div className="flex gap-2 flex-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled
-                            className="flex-1"
-                          >
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Request Sent
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleResendRequest(supplier)}
-                          >
-                            <RefreshCw className="h-4 w-4 mr-2" />
-                            Resend
-                          </Button>
-                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleResendRequest(supplier)}
+                          className="flex-1"
+                        >
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Resend
+                        </Button>
                       ) : (
                         <Button
                           size="sm"

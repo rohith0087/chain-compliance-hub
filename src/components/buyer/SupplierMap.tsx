@@ -95,27 +95,11 @@ const DEMO_COORDINATES: Record<string, { lat: number; lng: number }> = {
   'demo-buyer-sherburne': { lat: 42.6784, lng: -75.4988 }, // Sherburne, NY
 };
 
-// Static demo marker data - generated from demo suppliers and facilities
+// Static demo marker data - only buyer branches
 const generateDemoMarkers = (): MapMarker[] => {
   const markers: MapMarker[] = [];
   
-  // Add supplier HQ markers
-  demoSuppliers.forEach(supplier => {
-    markers.push({
-      id: supplier.id,
-      lat: DEMO_COORDINATES[supplier.id]?.lat || 0,
-      lng: DEMO_COORDINATES[supplier.id]?.lng || 0,
-      title: supplier.company_name,
-      type: 'supplier',
-      industry: supplier.industry,
-      address: supplier.address,
-      email: supplier.contact_email,
-      phone: supplier.phone,
-      connectionStatus: 'none'
-    });
-  });
-  
-  // Add buyer branch markers
+  // Add buyer branch markers only
   demoBuyerBranches.forEach(branch => {
     markers.push({
       id: branch.id,
@@ -127,24 +111,6 @@ const generateDemoMarkers = (): MapMarker[] => {
       address: branch.address,
       email: branch.email,
       phone: branch.phone
-    });
-  });
-  
-  // Add facility markers
-  demoFacilities.forEach(facility => {
-    const supplier = demoSuppliers.find(s => s.id === facility.supplier_id);
-    markers.push({
-      id: facility.id,
-      lat: DEMO_COORDINATES[facility.id]?.lat || 0,
-      lng: DEMO_COORDINATES[facility.id]?.lng || 0,
-      title: facility.branch_name,
-      type: 'facility',
-      facilityType: facility.location,
-      industry: supplier?.industry,
-      address: facility.address,
-      email: facility.email,
-      phone: facility.phone,
-      connectionStatus: 'none'
     });
   });
   

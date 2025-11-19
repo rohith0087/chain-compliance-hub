@@ -29,7 +29,8 @@ export const useOnboardingPipeline = (requests: any[]) => {
   const calculateProgress = (request: any): number => {
     // Simple calculation based on status
     const statusProgress: Record<string, number> = {
-      'pending': 0,
+      'requested': 0,
+      'pending': 10,
       'onboarding_initiated': 25,
       'under_review': 75,
       'approved': 100,

@@ -38,6 +38,9 @@ const SupplierDiscovery = () => {
   const [currentView, setCurrentView] = useState<'suppliers' | 'branches' | 'onboarding'>('suppliers');
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [pendingConnectionsCount, setPendingConnectionsCount] = useState(0);
+  const [viewMode, setViewMode] = useState<'connected' | 'available'>('connected');
+  const [availableSuppliers, setAvailableSuppliers] = useState<any[]>([]);
+  const [filteredAvailableSuppliers, setFilteredAvailableSuppliers] = useState<any[]>([]);
   const { user } = useAuth();
   const { getBuyerProfile } = useBuyerSetup();
   const { toast } = useToast();
@@ -97,6 +100,35 @@ const SupplierDiscovery = () => {
           setSuppliers(suppliers);
         }
 
+        // Fetch all suppliers from the database
+        const { data: allSuppliersData, error: allSuppliersError } = await supabase
+          .from('suppliers')
+          .select(`
+            id,
+            company_name,
+            contact_email,
+            industry,
+            phone,
+            address,
+            description,
+            supplier_items (
+              id,
+              item_name,
+              item_category
+            )
+          `);
+
+        if (allSuppliersError) {
+          console.error('Error fetching all suppliers:', allSuppliersError);
+        }
+
+        // Filter out already connected suppliers
+        if (allSuppliersData && connectionsData) {
+          const connectedSupplierIds = connectionsData.map(c => c.suppliers?.id).filter(Boolean);
+          const available = allSuppliersData.filter(s => !connectedSupplierIds.includes(s.id));
+          setAvailableSuppliers(available);
+        }
+
         // Fetch pending connection requests count
         const { count } = await supabase
           .from('buyer_supplier_connections')
@@ -119,7 +151,8 @@ const SupplierDiscovery = () => {
   };
 
   useEffect(() => {
-    let filtered = suppliers;
+    const currentSuppliers = viewMode === 'connected' ? suppliers : availableSuppliers;
+    let filtered = currentSuppliers;
 
     if (selectedIndustry !== 'all') {
       filtered = filtered.filter(s => s.industry === selectedIndustry);
@@ -138,8 +171,12 @@ const SupplierDiscovery = () => {
       );
     }
 
-    setFilteredSuppliers(filtered);
-  }, [selectedIndustry, selectedItemCategory, searchTerm, suppliers]);
+    if (viewMode === 'connected') {
+      setFilteredSuppliers(filtered);
+    } else {
+      setFilteredAvailableSuppliers(filtered);
+    }
+  }, [selectedIndustry, selectedItemCategory, searchTerm, suppliers, availableSuppliers, viewMode]);
 
   const handleIndustrySetupComplete = () => {
     setShowIndustrySetup(false);
@@ -164,6 +201,46 @@ const SupplierDiscovery = () => {
   const getConnectionDate = (supplierId: string) => {
     const connection = connections.find(c => c.supplier_id === supplierId);
     return connection?.assigned_at || null;
+  };
+
+  const handleSendConnectionRequest = async (supplierId: string) => {
+    if (!buyerProfile || !currentBranch) {
+      toast({
+        title: "Error",
+        description: "Please select a branch first",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('buyer_supplier_connections')
+        .insert({
+          buyer_id: buyerProfile.id,
+          supplier_id: supplierId,
+          branch_id: currentBranch.id,
+          status: 'pending',
+          initiated_by: 'buyer'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Connection request sent successfully"
+      });
+
+      // Refresh data
+      fetchData();
+    } catch (error: any) {
+      console.error('Error sending connection request:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send connection request",
+        variant: "destructive"
+      });
+    }
   };
 
   if (loading) {
@@ -256,6 +333,24 @@ const SupplierDiscovery = () => {
         onQuickOnboardingClick={() => setCurrentView('onboarding')}
       />
 
+      {/* View Mode Tabs */}
+      <div className="flex gap-2 mb-4">
+        <Button
+          variant={viewMode === 'connected' ? 'default' : 'outline'}
+          onClick={() => setViewMode('connected')}
+          className="flex-1"
+        >
+          Connected Suppliers ({suppliers.length})
+        </Button>
+        <Button
+          variant={viewMode === 'available' ? 'default' : 'outline'}
+          onClick={() => setViewMode('available')}
+          className="flex-1"
+        >
+          Discover Suppliers ({availableSuppliers.length})
+        </Button>
+      </div>
+
       {/* Search and Filters */}
       <Card>
         <CardContent className="p-6">
@@ -287,7 +382,7 @@ const SupplierDiscovery = () => {
               placeholder="All Items"
             >
               <SafeSelectItem value="all">All Items</SafeSelectItem>
-              {[...new Set(suppliers.flatMap(s => s.supplier_items?.map((item: any) => item.item_category) || []))].map((category) => (
+              {[...new Set((viewMode === 'connected' ? suppliers : availableSuppliers).flatMap(s => s.supplier_items?.map((item: any) => item.item_category) || []))].map((category) => (
                 <SafeSelectItem key={category} value={category}>
                   {category}
                 </SafeSelectItem>
@@ -297,14 +392,114 @@ const SupplierDiscovery = () => {
         </CardContent>
       </Card>
 
-      {/* Connected Suppliers */}
-      <SupplierSection
-        title="Connected Suppliers"
-        subtitle="Suppliers actively connected to your organization"
-        suppliers={filteredSuppliers}
-        status="approved"
-        onViewSupplier={handleViewSupplier}
-      />
+      {/* Suppliers Section */}
+      {viewMode === 'connected' ? (
+        <SupplierSection
+          title="Connected Suppliers"
+          subtitle="Suppliers actively connected to your organization"
+          suppliers={filteredSuppliers}
+          status="approved"
+          onViewSupplier={handleViewSupplier}
+        />
+      ) : (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-semibold">Available Suppliers</h3>
+              <p className="text-sm text-muted-foreground">
+                Discover and connect with new suppliers ({filteredAvailableSuppliers.length} found)
+              </p>
+            </div>
+          </div>
+
+          {filteredAvailableSuppliers.length === 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <Building2 className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">No Suppliers Found</h3>
+                <p className="text-muted-foreground mb-4">
+                  {searchTerm || selectedIndustry !== 'all' || selectedItemCategory !== 'all'
+                    ? "Try adjusting your filters to see more results"
+                    : "No new suppliers available at the moment"}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredAvailableSuppliers.map((supplier) => (
+                <Card key={supplier.id} className="hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg mb-2">{supplier.company_name}</CardTitle>
+                        {supplier.industry && (
+                          <Badge variant="secondary" className="mb-2">
+                            {supplier.industry}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {supplier.contact_email && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Mail className="w-4 h-4" />
+                        <span className="truncate">{supplier.contact_email}</span>
+                      </div>
+                    )}
+                    {supplier.phone && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Phone className="w-4 h-4" />
+                        <span>{supplier.phone}</span>
+                      </div>
+                    )}
+                    {supplier.address && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <MapPin className="w-4 h-4" />
+                        <span className="truncate">{supplier.address}</span>
+                      </div>
+                    )}
+                    {supplier.supplier_items && supplier.supplier_items.length > 0 && (
+                      <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <Package className="w-4 h-4 mt-0.5" />
+                        <div className="flex flex-wrap gap-1">
+                          {supplier.supplier_items.slice(0, 3).map((item: any, idx: number) => (
+                            <Badge key={idx} variant="outline" className="text-xs">
+                              {item.item_name}
+                            </Badge>
+                          ))}
+                          {supplier.supplier_items.length > 3 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{supplier.supplier_items.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewSupplier(supplier)}
+                        className="flex-1"
+                      >
+                        View Details
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleSendConnectionRequest(supplier.id)}
+                        className="flex-1"
+                      >
+                        Send Request
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Modals */}
       {showConnectionRequests && (

@@ -28,6 +28,8 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
     error,
     createBranch,
     updateBranch,
+    deleteBranch,
+    removeUser,
     inviteUserToBranch,
     resendInvitation,
     switchBranch,
@@ -211,6 +213,7 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
             companyType={companyType}
             onCreateBranch={createBranch}
             onUpdateBranch={updateBranch}
+            onDeleteBranch={deleteBranch}
             loading={loading}
           />
         </TabsContent>
@@ -221,6 +224,7 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
             companyUsers={companyUsers}
             onInviteUser={inviteUserToBranch}
             onResendInvitation={resendInvitation}
+            onRemoveUser={removeUser}
             loading={loading}
           />
         </TabsContent>

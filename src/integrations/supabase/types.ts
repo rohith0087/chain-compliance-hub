@@ -3388,6 +3388,10 @@ export type Database = {
         }
         Returns: Json
       }
+      delete_branch_with_validation: {
+        Args: { p_branch_id: string }
+        Returns: Json
+      }
       exec_readonly: { Args: { p: Json }; Returns: Json }
       finalize_onboarding_approval: {
         Args: { p_notes?: string; p_onboarding_request_id: string }
@@ -3554,6 +3558,10 @@ export type Database = {
       }
       reject_document_request: {
         Args: { p_reason: string; p_request_id: string }
+        Returns: Json
+      }
+      remove_company_user: {
+        Args: { p_company_user_id: string; p_force_delete?: boolean }
         Returns: Json
       }
       revoke_platform_admin_invitation: {

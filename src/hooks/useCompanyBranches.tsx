@@ -246,6 +246,121 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
     }
   };
 
+  const deleteBranch = async (branchId: string) => {
+    if (!user) {
+      toast.error('You must be logged in to delete branches');
+      return { error: 'Not authenticated' };
+    }
+
+    // Prevent deletion of Main Office
+    const branch = branches.find(b => b.id === branchId);
+    if (branch?.branch_name === 'Main Office') {
+      toast.error('Cannot delete Main Office branch');
+      return { error: 'Cannot delete main office' };
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('delete_branch_with_validation', {
+        p_branch_id: branchId
+      });
+
+      if (error) {
+        console.error('Error deleting branch:', error);
+        toast.error('Failed to delete branch');
+        return { error };
+      }
+
+      const result = data as { 
+        success: boolean; 
+        error?: string; 
+        message: string; 
+        action?: string;
+      };
+
+      if (!result.success) {
+        toast.error(result.message);
+        return { error: result.error };
+      }
+
+      // Update local state
+      if (result.action === 'soft_delete') {
+        setBranches(prev => prev.map(b => 
+          b.id === branchId ? { ...b, status: 'inactive' as const } : b
+        ));
+        toast.warning(result.message);
+      } else {
+        setBranches(prev => prev.filter(b => b.id !== branchId));
+        toast.success(result.message);
+      }
+
+      // Switch to another branch if current was deleted
+      if (currentBranch?.id === branchId) {
+        const mainOffice = branches.find(b => b.branch_name === 'Main Office');
+        if (mainOffice) {
+          setCurrentBranch(mainOffice);
+        }
+      }
+
+      return { data: result, error: null };
+    } catch (err) {
+      console.error('Error in deleteBranch:', err);
+      toast.error('Failed to delete branch');
+      return { error: err };
+    }
+  };
+
+  const removeUser = async (companyUserId: string, forceDelete: boolean = false) => {
+    if (!user) {
+      toast.error('You must be logged in to remove users');
+      return { error: 'Not authenticated' };
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('remove_company_user', {
+        p_company_user_id: companyUserId,
+        p_force_delete: forceDelete
+      });
+
+      if (error) {
+        console.error('Error removing user:', error);
+        toast.error('Failed to remove user');
+        return { error };
+      }
+
+      const result = data as {
+        success: boolean;
+        error?: string;
+        message: string;
+        action?: string;
+        requires_confirmation?: boolean;
+        pending_assignments?: number;
+      };
+
+      if (!result.success) {
+        if (result.requires_confirmation) {
+          return { error: result.error, data: result };
+        }
+        toast.error(result.message);
+        return { error: result.error };
+      }
+
+      // Refresh users list
+      await fetchCompanyUsers();
+      
+      if (result.action === 'deleted_invitation') {
+        toast.success(result.message);
+      } else {
+        toast.warning(result.message);
+      }
+
+      return { data: result, error: null };
+    } catch (err) {
+      console.error('Error in removeUser:', err);
+      toast.error('Failed to remove user');
+      return { error: err };
+    }
+  };
+
   const inviteUserToBranch = async (email: string, branchId: string, role: string) => {
     if (!user || !companyId || !companyType) {
       toast.error('Missing required information to send invitation');
@@ -468,6 +583,8 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
     error,
     createBranch,
     updateBranch,
+    deleteBranch,
+    removeUser,
     inviteUserToBranch,
     resendInvitation,
     switchBranch,

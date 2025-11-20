@@ -15,6 +15,7 @@ interface CompanyUserManagementProps {
   companyUsers: CompanyUser[];
   onInviteUser: (email: string, branchId: string, role: string) => Promise<any>;
   onResendInvitation?: (email: string, branchId: string, role: string) => Promise<any>;
+  onRemoveUser?: (companyUserId: string, forceDelete?: boolean) => Promise<any>;
   loading?: boolean;
 }
 
@@ -37,10 +38,15 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
   companyUsers,
   onInviteUser,
   onResendInvitation,
+  onRemoveUser,
   loading = false
 }) => {
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [viewUserModalOpen, setViewUserModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<CompanyUser | null>(null);
+  const [forceDelete, setForceDelete] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<any>(null);
   const [selectedUser, setSelectedUser] = useState<CompanyUser | null>(null);
   const [inviteForm, setInviteForm] = useState({
     email: '',
@@ -114,12 +120,36 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
     });
   };
 
+  const handleRemoveUser = async () => {
+    if (!userToDelete || !onRemoveUser) return;
+    
+    setInviting(true);
+    try {
+      const result = await onRemoveUser(userToDelete.id, forceDelete);
+      
+      if (result.data?.requires_confirmation) {
+        setDeleteConfirmation(result.data);
+        return;
+      }
+      
+      if (!result.error) {
+        setDeleteDialogOpen(false);
+        setUserToDelete(null);
+        setForceDelete(false);
+        setDeleteConfirmation(null);
+      }
+    } finally {
+      setInviting(false);
+    }
+  };
+
   const isInvitationExpired = (expiresAt?: string) => {
     if (!expiresAt) return false;
     return new Date(expiresAt) < new Date();
   };
 
   return (
+    <>
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -422,14 +452,26 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
                          )}
                        </Button>
                      )}
-                     <Button 
-                       variant="ghost" 
-                       size="sm"
-                       onClick={() => handleViewUser(user)}
-                       title="View user details"
-                     >
-                       <Eye className="h-4 w-4" />
-                     </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleViewUser(user)}
+                        title="View user details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => {
+                          setUserToDelete(user);
+                          setDeleteDialogOpen(true);
+                        }}
+                        className="text-destructive hover:text-destructive"
+                        title="Remove user"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                    </div>
                  </div>
               </div>
@@ -438,5 +480,60 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
         )}
       </CardContent>
     </Card>
+    
+    {/* Delete User Dialog */}
+    <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Remove User?</DialogTitle>
+          <DialogDescription>
+            {userToDelete?.status === 'pending' 
+              ? `Are you sure you want to cancel the invitation for ${userToDelete?.email}?`
+              : `Are you sure you want to remove ${userToDelete?.full_name || userToDelete?.email}?`
+            }
+          </DialogDescription>
+        </DialogHeader>
+        
+        {deleteConfirmation && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+            <p className="text-sm text-yellow-800 mb-2">
+              ⚠️ {deleteConfirmation.message}
+            </p>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="force-delete"
+                checked={forceDelete}
+                onChange={(e) => setForceDelete(e.target.checked)}
+              />
+              <label htmlFor="force-delete" className="text-sm">
+                I understand and want to proceed anyway
+              </label>
+            </div>
+          </div>
+        )}
+        
+        <div className="flex justify-end space-x-2">
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              setDeleteDialogOpen(false);
+              setForceDelete(false);
+              setDeleteConfirmation(null);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="destructive" 
+            onClick={handleRemoveUser}
+            disabled={inviting || (deleteConfirmation && !forceDelete)}
+          >
+            {inviting ? 'Removing...' : userToDelete?.status === 'pending' ? 'Cancel Invitation' : 'Remove User'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };

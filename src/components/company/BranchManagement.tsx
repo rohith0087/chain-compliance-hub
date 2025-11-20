@@ -206,14 +206,17 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({
       <div className="space-y-2">
         <Label htmlFor="manager">Branch Manager (Optional)</Label>
         <Select
-          value={formData.manager_id}
-          onValueChange={(value) => setFormData(prev => ({ ...prev, manager_id: value }))}
+          value={formData.manager_id || "__none__"}
+          onValueChange={(value) => setFormData(prev => ({ 
+            ...prev, 
+            manager_id: value === "__none__" ? '' : value 
+          }))}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select a manager" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">No Manager Assigned</SelectItem>
+            <SelectItem value="__none__">No Manager Assigned</SelectItem>
             {companyUsers
               .filter(u => u.status === 'active' && u.role !== 'viewer')
               .map(user => (

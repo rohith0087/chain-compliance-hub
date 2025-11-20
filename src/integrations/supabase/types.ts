@@ -3132,6 +3132,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          granted_at: string
+          granted_by: string | null
+          id: string
+          is_active: boolean
+          metadata: Json | null
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       workflow_execution_logs: {
         Row: {
           ai_response: Json | null
@@ -3520,15 +3559,46 @@ export type Database = {
           total_users: number
         }[]
       }
+      get_user_roles: {
+        Args: { _user_id: string }
+        Returns: {
+          expires_at: string
+          granted_at: string
+          role: Database["public"]["Enums"]["app_role"]
+        }[]
+      }
       grant_pg_net_access: { Args: never; Returns: undefined }
+      grant_role: {
+        Args: {
+          _expires_at?: string
+          _metadata?: Json
+          _role: Database["public"]["Enums"]["app_role"]
+          _target_user_id: string
+        }
+        Returns: string
+      }
       handle_unified_connection_approval: {
         Args: { p_action: string; p_connection_id: string; p_notes?: string }
         Returns: Json
+      }
+      has_any_role: {
+        Args: {
+          _roles: Database["public"]["Enums"]["app_role"][]
+          _user_id: string
+        }
+        Returns: boolean
       }
       has_platform_role: {
         Args: {
           role: Database["public"]["Enums"]["platform_role"]
           user_id: string
+        }
+        Returns: boolean
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
         }
         Returns: boolean
       }
@@ -3567,6 +3637,13 @@ export type Database = {
       revoke_platform_admin_invitation: {
         Args: { p_invitation_id: string }
         Returns: Json
+      }
+      revoke_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _target_user_id: string
+        }
+        Returns: boolean
       }
       search_knowledge_entries: {
         Args: {
@@ -3633,6 +3710,17 @@ export type Database = {
       }
     }
     Enums: {
+      app_role:
+        | "buyer"
+        | "supplier"
+        | "admin"
+        | "super_admin"
+        | "platform_admin"
+        | "company_admin"
+        | "branch_manager"
+        | "document_manager"
+        | "approver"
+        | "viewer"
       contact_role: "recall" | "sales" | "quality" | "compliance" | "general"
       permission_type:
         | "read"
@@ -3796,6 +3884,18 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: [
+        "buyer",
+        "supplier",
+        "admin",
+        "super_admin",
+        "platform_admin",
+        "company_admin",
+        "branch_manager",
+        "document_manager",
+        "approver",
+        "viewer",
+      ],
       contact_role: ["recall", "sales", "quality", "compliance", "general"],
       permission_type: [
         "read",

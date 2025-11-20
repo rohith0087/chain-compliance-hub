@@ -52,17 +52,14 @@ class SelectErrorBoundary extends React.Component<
 
 // Safe Select Item that validates values
 export const SafeSelectItem: React.FC<SafeSelectItemProps> = ({ value, children, ...props }) => {
-  // Validate that value is not empty string
-  const safeValue = React.useMemo(() => {
-    if (!value || value.trim() === '') {
-      console.warn('SafeSelectItem: Empty value detected, using fallback');
-      return 'fallback-value';
-    }
-    return value;
-  }, [value]);
+  // Don't render if value is invalid
+  if (!value || value.trim() === '') {
+    console.warn('SafeSelectItem: Empty value detected, skipping render');
+    return null;
+  }
 
   return (
-    <SelectItem value={safeValue} {...props}>
+    <SelectItem value={value} {...props}>
       {children}
     </SelectItem>
   );

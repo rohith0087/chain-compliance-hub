@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Building, Plus, Edit2, MapPin, Phone, Mail, Users } from 'lucide-react';
+import { Building, Plus, Edit2, MapPin, Phone, Mail, Users, Trash2, Shield } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { CompanyBranch, CompanyUser } from '@/hooks/useCompanyBranches';
 
@@ -17,6 +18,7 @@ interface BranchManagementProps {
   companyType: 'buyer' | 'supplier';
   onCreateBranch: (branchData: Omit<CompanyBranch, 'id' | 'created_at' | 'updated_at'>) => Promise<any>;
   onUpdateBranch: (branchId: string, updates: Partial<CompanyBranch>) => Promise<any>;
+  onDeleteBranch?: (branchId: string) => Promise<any>;
   loading?: boolean;
 }
 
@@ -27,17 +29,21 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({
   companyType,
   onCreateBranch,
   onUpdateBranch,
+  onDeleteBranch,
   loading = false
 }) => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [branchToDelete, setBranchToDelete] = useState<CompanyBranch | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<CompanyBranch | null>(null);
   const [formData, setFormData] = useState({
     branch_name: '',
     location: '',
     address: '',
     phone: '',
-    email: ''
+    email: '',
+    manager_id: ''
   });
   const [saving, setSaving] = useState(false);
 
@@ -47,7 +53,8 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({
       location: '',
       address: '',
       phone: '',
-      email: ''
+      email: '',
+      manager_id: ''
     });
   };
 
@@ -110,9 +117,25 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({
       location: branch.location || '',
       address: branch.address || '',
       phone: branch.phone || '',
-      email: branch.email || ''
+      email: branch.email || '',
+      manager_id: branch.manager_id || ''
     });
     setEditModalOpen(true);
+  };
+
+  const handleDeleteBranch = async () => {
+    if (!branchToDelete || !onDeleteBranch) return;
+    
+    setSaving(true);
+    try {
+      const result = await onDeleteBranch(branchToDelete.id);
+      if (!result.error) {
+        setDeleteDialogOpen(false);
+        setBranchToDelete(null);
+      }
+    } finally {
+      setSaving(false);
+    }
   };
 
   const getBranchUserCount = (branchId: string) => {
@@ -179,6 +202,30 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({
           />
         </div>
       </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="manager">Branch Manager (Optional)</Label>
+        <Select
+          value={formData.manager_id}
+          onValueChange={(value) => setFormData(prev => ({ ...prev, manager_id: value }))}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select a manager" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">No Manager Assigned</SelectItem>
+            {companyUsers
+              .filter(u => u.status === 'active' && u.role !== 'viewer')
+              .map(user => (
+                <SelectItem key={user.id} value={user.profile_id}>
+                  {user.full_name} ({user.email})
+                </SelectItem>
+              ))
+            }
+          </SelectContent>
+        </Select>
+      </div>
+
 
       <div className="flex justify-end space-x-2">
         <Button 
@@ -281,6 +328,12 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({
                       <Users className="h-3 w-3" />
                       {getBranchUserCount(branch.id)} users
                     </Badge>
+                    {branch.manager_id && (
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        <Shield className="h-3 w-3" />
+                        Manager: {companyUsers.find(u => u.profile_id === branch.manager_id)?.full_name || 'Unknown'}
+                      </Badge>
+                    )}
                     <Button 
                       variant="ghost" 
                       size="sm"
@@ -288,6 +341,19 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({
                     >
                       <Edit2 className="h-4 w-4" />
                     </Button>
+                    {branch.branch_name !== 'Main Office' && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => {
+                          setBranchToDelete(branch);
+                          setDeleteDialogOpen(true);
+                        }}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
 
@@ -317,6 +383,31 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({
             ))}
           </div>
         )}
+        
+        {/* Delete Branch Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Branch?</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete "{branchToDelete?.branch_name}"?
+                This action cannot be undone if the branch has no historical data.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteBranch}
+                disabled={saving}
+              >
+                {saving ? 'Deleting...' : 'Delete Branch'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
           <DialogContent className="max-w-md">

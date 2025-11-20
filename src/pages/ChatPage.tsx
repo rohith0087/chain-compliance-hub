@@ -581,15 +581,10 @@ const ChatPage: React.FC = () => {
 
         {/* Narrative / markdown */}
         {!isError && (parsed.response || parsed.content) && (
-          <div className="text-muted-foreground leading-relaxed">
-            <div
-              dangerouslySetInnerHTML={{
-                __html: (parsed.response || parsed.content || "")
-                  .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                  .replace(/\*(.*?)\*/g, "<em>$1</em>")
-                  .replace(/\n/g, "<br />"),
-              }}
-            />
+          <div className="text-muted-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+            <ReactMarkdown>
+              {parsed.response || parsed.content || ""}
+            </ReactMarkdown>
           </div>
         )}
 

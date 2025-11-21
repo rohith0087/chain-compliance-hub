@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import { SubscriptionStatus } from '@/components/subscription/SubscriptionStatus';
 import { SubscriptionPlans } from '@/components/subscription/SubscriptionPlans';
 import { CreditPackages } from '@/components/subscription/CreditPackages';
@@ -7,9 +8,10 @@ import { Badge } from '@/components/ui/badge';
 
 export default function SubscriptionPage() {
   const { profile } = useAuth();
+  const { hasRole } = useUserRoles();
   
   // Determine user type based on roles
-  const userType = profile?.roles?.includes('buyer') ? 'buyer' : 'supplier';
+  const userType = hasRole('buyer') ? 'buyer' : 'supplier';
 
   return (
     <div className="min-h-screen bg-gradient-subtle">

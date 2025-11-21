@@ -28,6 +28,7 @@ import {
   UserCog
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import { useTranslation } from 'react-i18next';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
 
@@ -113,6 +114,7 @@ export function SupplierSidebarLayout({
   const location = useLocation();
   const { t } = useTranslation(['supplier', 'common']);
   const { profile } = useAuth();
+  const { hasRole } = useUserRoles();
   const sidebar = useSidebar();
   const collapsed = sidebar?.state === 'collapsed';
 
@@ -334,7 +336,7 @@ export function SupplierSidebarLayout({
                   <Settings className="mr-2 h-4 w-4" />
                   {t('supplier:settings')}
                 </DropdownMenuItem>
-                {profile?.roles?.includes('buyer') && (
+                {hasRole('buyer') && (
                   <DropdownMenuItem onClick={() => onRoleSwitch('buyer')}>
                     <User className="mr-2 h-4 w-4" />
                     {t('common:navigation.switchTo', { role: 'buyer' })}

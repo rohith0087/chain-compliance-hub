@@ -719,6 +719,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "buyers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       chat_messages: {
@@ -1198,6 +1205,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "document_activity_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       document_approvals: {
@@ -1319,10 +1333,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "fk_assigned_by"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fk_assigned_to"
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_assigned_to"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
             referencedColumns: ["id"]
           },
         ]
@@ -1521,6 +1549,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "document_requests_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "document_requests_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
@@ -1581,6 +1616,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "document_sets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       document_shared_links: {
@@ -1626,6 +1668,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_shared_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
             referencedColumns: ["id"]
           },
           {
@@ -1730,6 +1779,13 @@ export type Database = {
             columns: ["uploader_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_uploads_uploader_id_fkey"
+            columns: ["uploader_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
             referencedColumns: ["id"]
           },
         ]
@@ -1864,6 +1920,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
             referencedColumns: ["id"]
           },
         ]
@@ -2842,6 +2905,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "suppliers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       system_metrics: {
@@ -3338,7 +3408,19 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profiles_with_roles: {
+        Row: {
+          company_name: string | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string | null
+          roles: Database["public"]["Enums"]["user_role"][] | null
+          roles_from_table: string[] | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       accept_bootstrap_admin: { Args: { p_full_name: string }; Returns: Json }
@@ -3456,25 +3538,16 @@ export type Database = {
       get_all_users_detailed: {
         Args: never
         Returns: {
-          available_credits: number
-          chat_sessions_count: number
           company_name: string
           created_at: string
-          document_count: number
+          credits_balance: number
           email: string
           full_name: string
           id: string
-          is_buyer: boolean
-          is_supplier: boolean
           last_sign_in_at: string
-          roles: Database["public"]["Enums"]["user_role"][]
-          stripe_customer_id: string
-          stripe_subscription_id: string
-          subscription_end_date: string
-          subscription_plan_type: string
+          roles: string[]
           subscription_status: string
-          total_consumed_credits: number
-          total_purchased_credits: number
+          subscription_tier: string
         }[]
       }
       get_branch_suppliers: {
@@ -3546,19 +3619,7 @@ export type Database = {
           total_purchased_credits: number
         }[]
       }
-      get_super_admin_stats: {
-        Args: never
-        Returns: {
-          active_connections: number
-          pending_requests: number
-          recent_signups: number
-          total_buyers: number
-          total_chat_sessions: number
-          total_documents: number
-          total_suppliers: number
-          total_users: number
-        }[]
-      }
+      get_super_admin_stats: { Args: never; Returns: Json }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: {
@@ -3567,6 +3628,7 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"]
         }[]
       }
+      get_user_roles_array: { Args: { _user_id: string }; Returns: string[] }
       grant_pg_net_access: { Args: never; Returns: undefined }
       grant_role: {
         Args: {

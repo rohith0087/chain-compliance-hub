@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ import { useToast } from '@/hooks/use-toast';
 const AdminDashboard = () => {
   const { t } = useTranslation(['admin', 'common']);
   const { user, profile, loading } = useAuth();
+  const { hasRole, loading: rolesLoading } = useUserRoles();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [stats, setStats] = useState({
@@ -37,10 +39,10 @@ const AdminDashboard = () => {
   });
 
   // Check if user is admin
-  const isAdmin = profile?.roles?.includes('admin');
+  const isAdmin = hasRole('admin');
 
   useEffect(() => {
-    if (!loading && (!user || !isAdmin)) {
+    if (!loading && !rolesLoading && (!user || !isAdmin)) {
       toast({
         title: t('admin:accessDenied'),
         description: t('admin:accessDeniedDescription'),

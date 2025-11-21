@@ -4,12 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, Users, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import { supabase } from '@/integrations/supabase/client';
 
 const RequestsListEmpty = () => {
   const [hasConnections, setHasConnections] = useState(false);
   const [loading, setLoading] = useState(true);
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
+  const { hasRole } = useUserRoles();
 
   useEffect(() => {
     const checkConnections = async () => {
@@ -47,8 +49,8 @@ const RequestsListEmpty = () => {
     return <div className="text-center py-8">Loading...</div>;
   }
 
-  const isBuyer = profile?.roles?.includes('buyer');
-  const isSupplier = profile?.roles?.includes('supplier');
+  const isBuyer = hasRole('buyer');
+  const isSupplier = hasRole('supplier');
 
   if (isBuyer && !hasConnections) {
     return (

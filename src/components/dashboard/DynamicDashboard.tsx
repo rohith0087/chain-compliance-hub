@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import { useCompanySetup } from '@/hooks/useCompanySetup';
 import BuyerDashboard from '@/components/BuyerDashboard';
 import SupplierDashboard from '@/components/SupplierDashboard';
@@ -11,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const DynamicDashboard = () => {
   const { user, profile, signOut, loading: authLoading } = useAuth();
+  const { hasRole, roles } = useUserRoles();
   const { getSupplierProfile, getBuyerProfile } = useCompanySetup();
   const [currentRole, setCurrentRole] = useState<'buyer' | 'supplier'>('buyer');
   const [supplierProfile, setSupplierProfile] = useState<any>(null);
@@ -18,26 +20,26 @@ const DynamicDashboard = () => {
   const [profilesLoading, setProfilesLoading] = useState(true);
 
   useEffect(() => {
-    if (user && profile && profile.roles?.length > 0) {
-      console.log('User profile loaded with roles:', profile.roles);
+    if (user && roles.length > 0) {
+      console.log('User profile loaded with roles:', roles);
       // Set default role to the first role the user has
-      setCurrentRole(profile.roles.includes('buyer') ? 'buyer' : 'supplier');
+      setCurrentRole(hasRole('buyer') ? 'buyer' : 'supplier');
       loadProfiles();
     }
-  }, [user, profile]);
+  }, [user, roles]);
 
   const loadProfiles = async () => {
     console.log('Loading profiles...');
     setProfilesLoading(true);
     try {
-      if (profile?.roles?.includes('supplier')) {
+      if (hasRole('supplier')) {
         console.log('Loading supplier profile...');
         const supplier = await getSupplierProfile();
         console.log('Loaded supplier profile:', supplier);
         setSupplierProfile(supplier);
       }
       
-      if (profile?.roles?.includes('buyer')) {
+      if (hasRole('buyer')) {
         console.log('Loading buyer profile...');
         const buyer = await getBuyerProfile();
         console.log('Loaded buyer profile:', buyer);

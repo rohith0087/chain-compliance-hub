@@ -30,6 +30,7 @@ import {
   FolderKanban
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import { useTranslation } from 'react-i18next';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
 import { useBranchContext } from '@/contexts/BranchContext';
@@ -114,6 +115,7 @@ export function BuyerSidebarLayout({
   const location = useLocation();
   const { t } = useTranslation(['dashboard', 'common']);
   const { profile } = useAuth();
+  const { hasRole } = useUserRoles();
   const sidebar = useSidebar();
   const collapsed = sidebar?.state === 'collapsed';
 
@@ -418,7 +420,7 @@ export function BuyerSidebarLayout({
                   <Settings className="mr-2 h-4 w-4" />
                   Settings
                 </DropdownMenuItem>
-                {profile?.roles?.includes('supplier') && (
+                {hasRole('supplier') && (
                   <DropdownMenuItem onClick={() => onRoleSwitch('supplier')}>
                     <User className="mr-2 h-4 w-4" />
                     {t('common:navigation.switchTo', { role: 'supplier' })}

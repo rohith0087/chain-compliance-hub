@@ -6,7 +6,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { useUserRoles } from "@/hooks/useUserRoles";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { Loader2 } from "lucide-react";
 
 import AuthPage from "./components/auth/AuthPage";
 import ResetPassword from "./pages/ResetPassword";
@@ -56,17 +58,22 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, profile, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { hasRole, loading: rolesLoading } = useUserRoles();
   
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (authLoading || rolesLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
   }
   
   if (!user) {
     return <Navigate to="/" replace />;
   }
   
-  if (!profile?.roles?.includes('admin')) {
+  if (!hasRole('admin')) {
     return <Navigate to="/dashboard" replace />;
   }
   
@@ -74,17 +81,22 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const SuperAdminRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, profile, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { hasRole, loading: rolesLoading } = useUserRoles();
   
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (authLoading || rolesLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
   }
   
   if (!user) {
     return <Navigate to="/" replace />;
   }
   
-  if (!profile?.roles?.includes('super_admin')) {
+  if (!hasRole('super_admin')) {
     return <Navigate to="/dashboard" replace />;
   }
   

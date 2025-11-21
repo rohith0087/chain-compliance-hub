@@ -35,7 +35,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           id: user.id,
           email: user.email || '',
           full_name: user.user_metadata?.full_name || user.email || 'User',
-          roles: userRoles,
           company_name: user.user_metadata?.company_name || null
         })
         .select()
@@ -47,6 +46,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       console.log('Profile created successfully:', data);
+      
+      // Grant roles using the grant_role function for security
+      for (const role of userRoles) {
+        const { error: roleError } = await supabase.rpc('grant_role', {
+          _target_user_id: user.id,
+          _role: role
+        });
+        
+        if (roleError) {
+          console.error('Error granting role:', role, roleError);
+        }
+      }
+      
       return data;
     } catch (error) {
       console.error('Error in createMissingProfile:', error);

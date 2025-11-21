@@ -6,14 +6,16 @@ import { Shield, FileCheck, Users, BarChart3, AlertTriangle, Clock, CheckCircle,
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import RegionSelector from '@/components/RegionSelector';
 
 const Index = () => {
   const navigate = useNavigate();
   const { t } = useTranslation(['home', 'common']);
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
+  const { hasRole } = useUserRoles();
   
-  const isAdmin = profile?.roles?.includes('admin');
+  const isAdmin = hasRole('admin');
 
   const coreFeatures = [
     {

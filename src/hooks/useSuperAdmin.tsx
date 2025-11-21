@@ -15,27 +15,29 @@ interface SuperAdminStats {
   recent_signups: number;
 }
 
-interface DetailedUser {
+export interface DetailedUser {
   id: string;
   email: string;
   full_name: string;
-  roles: UserRole[];
+  roles: string[];
   company_name: string;
   created_at: string;
   last_sign_in_at: string;
-  is_buyer: boolean;
-  is_supplier: boolean;
-  document_count: number;
-  chat_sessions_count: number;
-  // Subscription fields
   subscription_status: string;
-  subscription_plan_type: string;
-  subscription_end_date: string | null;
-  available_credits: number;
-  total_purchased_credits: number;
-  total_consumed_credits: number;
-  stripe_customer_id: string | null;
-  stripe_subscription_id: string | null;
+  subscription_tier: string;
+  credits_balance: number;
+  // Optional fields for backward compatibility
+  is_buyer?: boolean;
+  is_supplier?: boolean;
+  document_count?: number;
+  chat_sessions_count?: number;
+  subscription_plan_type?: string;
+  subscription_end_date?: string | null;
+  available_credits?: number;
+  total_purchased_credits?: number;
+  total_consumed_credits?: number;
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
 }
 
 export const useSuperAdmin = () => {
@@ -45,6 +47,8 @@ export const useSuperAdmin = () => {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
+  // Check super_admin role from user_roles table using useUserRoles would be better
+  // but for backwards compatibility during migration, check user_metadata
   const isSuperAdmin = user?.user_metadata?.roles?.includes('super_admin') || false;
 
   const fetchStats = async () => {
@@ -79,12 +83,34 @@ export const useSuperAdmin = () => {
 
   const updateUserRole = async (userId: string, newRoles: UserRole[]) => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ roles: newRoles as any })
-        .eq('id', userId);
-
-      if (error) throw error;
+      // Use the new role system - grant/revoke roles
+      // First, get current roles
+      const { data: currentRoles } = await supabase.rpc('get_user_roles_array', {
+        _user_id: userId
+      });
+      
+      const currentRoleSet = new Set(currentRoles || []);
+      const newRoleSet = new Set(newRoles);
+      
+      // Revoke roles that are no longer needed
+      for (const role of currentRoleSet) {
+        if (!newRoleSet.has(role as UserRole)) {
+          await supabase.rpc('revoke_role', {
+            _target_user_id: userId,
+            _role: role as any
+          });
+        }
+      }
+      
+      // Grant new roles
+      for (const role of newRoles) {
+        if (!currentRoleSet.has(role)) {
+          await supabase.rpc('grant_role', {
+            _target_user_id: userId,
+            _role: role as any
+          });
+        }
+      }
 
       // Refresh users list
       await fetchAllUsers();

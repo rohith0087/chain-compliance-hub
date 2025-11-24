@@ -400,7 +400,9 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
                       <div className="text-sm text-muted-foreground">
                         <div className="flex items-center space-x-1 mb-1">
                           <Mail className="h-3 w-3" />
-                          <span>{user.email}</span>
+                          <span className={user.email === 'Invitation data unavailable' ? 'text-orange-600' : ''}>
+                            {user.email}
+                          </span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Building className="h-3 w-3" />
@@ -411,7 +413,9 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
                           {user.status === 'pending' && user.inviter_name && (
                             <>
                               <span>•</span>
-                              <span>Invited by {user.inviter_name}</span>
+                              <span className={user.inviter_name === 'Unknown' ? 'text-orange-600' : ''}>
+                                Invited by {user.inviter_name}
+                              </span>
                             </>
                           )}
                         </div>

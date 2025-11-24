@@ -36,6 +36,9 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
     company_logo_url: '',
   });
   const [loading, setLoading] = useState(false);
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [isTeamMember, setIsTeamMember] = useState(false);
+  const [canEdit, setCanEdit] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -49,25 +52,59 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
     if (!user) return;
 
     try {
-      const { data: buyer, error } = await supabase
+      // First, check if user is a team member
+      const { data: teamMember } = await supabase
+        .from('company_users')
+        .select('company_id, company_type, role')
+        .eq('profile_id', user.id)
+        .eq('company_type', 'buyer')
+        .eq('status', 'active')
+        .single();
+
+      let buyerId: string;
+      
+      if (teamMember) {
+        // Team member - use company_id from company_users
+        buyerId = teamMember.company_id;
+        setIsTeamMember(true);
+        setCanEdit(teamMember.role === 'company_admin');
+      } else {
+        // Company owner - get their buyer profile
+        const { data: buyer } = await supabase
+          .from('buyers')
+          .select('id')
+          .eq('profile_id', user.id)
+          .single();
+        
+        if (!buyer) throw new Error('No buyer profile found');
+        buyerId = buyer.id;
+        setIsTeamMember(false);
+        setCanEdit(true); // Company owners can always edit
+      }
+
+      setCompanyId(buyerId);
+
+      // Now fetch buyer data using the resolved buyer ID
+      const { data: buyerData, error } = await supabase
         .from('buyers')
         .select('*')
-        .eq('profile_id', user.id)
+        .eq('id', buyerId)
         .single();
 
       if (error) throw error;
 
-      if (buyer) {
+      if (buyerData) {
         setBuyerData({
-          company_name: buyer.company_name || '',
-          industry: buyer.industry || '',
-          contact_email: buyer.contact_email || '',
-          phone: buyer.phone || '',
-          address: buyer.address || '',
-          company_logo_url: buyer.company_logo_url || '',
+          company_name: buyerData.company_name || '',
+          industry: buyerData.industry || '',
+          contact_email: buyerData.contact_email || '',
+          phone: buyerData.phone || '',
+          address: buyerData.address || '',
+          company_logo_url: buyerData.company_logo_url || '',
         });
       }
     } catch (error: any) {
+      console.error('Error loading buyer data:', error);
       toast({
         title: "Error",
         description: "Failed to load company information",
@@ -78,7 +115,7 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
 
   const handleCompanySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !companyId || !canEdit) return;
 
     setLoading(true);
 
@@ -93,7 +130,7 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
           address: buyerData.address,
           company_logo_url: buyerData.company_logo_url,
         })
-        .eq('profile_id', user.id);
+        .eq('id', companyId);
 
       if (error) throw error;
 
@@ -116,16 +153,25 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
   };
 
   const handleLogoUpdate = async (url: string | null) => {
+    if (!canEdit) {
+      toast({
+        title: "Permission Denied",
+        description: "Only company admins can update the logo",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setBuyerData(prev => ({ ...prev, company_logo_url: url || '' }));
     
     // Auto-save logo to database immediately
-    if (!user) return;
+    if (!user || !companyId) return;
     
     try {
       const { error } = await supabase
         .from('buyers')
         .update({ company_logo_url: url || '' })
-        .eq('profile_id', user.id);
+        .eq('id', companyId);
 
       if (error) throw error;
 
@@ -231,9 +277,14 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
                     />
                   </div>
 
-                  <Button type="submit" disabled={loading} className="w-full">
-                    {loading ? "Updating..." : "Update Company Information"}
+                  <Button type="submit" disabled={loading || !canEdit} className="w-full">
+                    {!canEdit ? "View Only (Contact Admin to Edit)" : loading ? "Updating..." : "Update Company Information"}
                   </Button>
+                  {!canEdit && (
+                    <p className="text-sm text-muted-foreground text-center">
+                      You are viewing company settings. Only company admins can make changes.
+                    </p>
+                  )}
                 </form>
               </CardContent>
             </Card>

@@ -107,23 +107,8 @@ const InvitePage = () => {
         branchName = branch?.branch_name || 'Main Branch';
       }
 
-      // Get company name based on company type
-      let companyName = '';
-      if (invitationData.company_type === 'buyer') {
-        const { data: buyer } = await supabase
-          .from('buyers')
-          .select('company_name')
-          .eq('id', invitationData.company_id)
-          .single();
-        companyName = buyer?.company_name || 'Unknown Company';
-      } else {
-        const { data: supplier } = await supabase
-          .from('suppliers')
-          .select('company_name')
-          .eq('id', invitationData.company_id)
-          .single();
-        companyName = supplier?.company_name || 'Unknown Company';
-      }
+      // Use denormalized company_name from invitation data (no RLS issues)
+      const companyName = invitationData.company_name || 'Unknown Company';
 
       const invitation: InvitationDetails = {
         email: invitationData.email,
@@ -237,14 +222,33 @@ const InvitePage = () => {
       });
 
       if (error) {
-        toast.error('Failed to sign in. Please check your credentials.');
+        console.error('Sign in error details:', error);
+        
+        // Provide specific error messages based on error type
+        if (error.message.includes('Invalid login credentials')) {
+          toast.error('Authentication failed', {
+            description: 'The temporary password may be incorrect. Please copy it exactly from your invitation email, or contact your administrator for a new invitation.',
+            duration: 10000,
+          });
+        } else if (error.message.includes('Email not confirmed')) {
+          toast.error('Email verification required', {
+            description: 'Please check your email for a verification link before signing in.',
+            duration: 8000,
+          });
+        } else {
+          toast.error('Failed to sign in', {
+            description: `${error.message}. Please contact your administrator if the issue persists.`,
+            duration: 8000,
+          });
+        }
         return;
       }
 
+      toast.success('Signed in successfully!');
       setStep('password-reset');
     } catch (error) {
-      console.error('Sign in error:', error);
-      toast.error('Failed to sign in');
+      console.error('Unexpected sign in error:', error);
+      toast.error('An unexpected error occurred. Please try again or contact your administrator.');
     } finally {
       setProcessing(false);
     }

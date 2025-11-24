@@ -55,10 +55,38 @@ const SupplierDiscovery = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const buyer = await getBuyerProfile();
-      setBuyerProfile(buyer);
+      // Check if user is a team member first
+      const { data: teamMember } = await supabase
+        .from('company_users')
+        .select('company_id, company_type')
+        .eq('profile_id', user.id)
+        .eq('company_type', 'buyer')
+        .eq('status', 'active')
+        .single();
 
-      if (buyer) {
+      let buyerId: string | undefined;
+      let buyerData: any;
+
+      if (teamMember) {
+        // Team member - fetch company using company_id
+        console.log('Team member detected, fetching company data with company_id:', teamMember.company_id);
+        buyerId = teamMember.company_id;
+        const { data: buyer } = await supabase
+          .from('buyers')
+          .select('*')
+          .eq('id', buyerId)
+          .single();
+        buyerData = buyer;
+      } else {
+        // Company owner - use getBuyerProfile
+        console.log('Company owner detected, using getBuyerProfile');
+        buyerData = await getBuyerProfile();
+        buyerId = buyerData?.id;
+      }
+
+      setBuyerProfile(buyerData);
+
+      if (buyerId) {
         let connectionsQuery = supabase
           .from('branch_supplier_connections')
           .select(`
@@ -78,7 +106,7 @@ const SupplierDiscovery = () => {
               )
             )
           `)
-          .eq('buyer_id', buyer.id)
+          .eq('buyer_id', buyerId)
           .eq('status', 'active');
 
         if (!allBranchesView && currentBranch) {
@@ -127,7 +155,7 @@ const SupplierDiscovery = () => {
         const { data: pendingConnectionsData, error: pendingError } = await supabase
           .from('buyer_supplier_connections')
           .select('*, supplier:suppliers(*)')
-          .eq('buyer_id', buyer.id)
+          .eq('buyer_id', buyerId)
           .eq('status', 'pending');
 
         if (pendingError) throw pendingError;
@@ -151,7 +179,7 @@ const SupplierDiscovery = () => {
         const { count } = await supabase
           .from('buyer_supplier_connections')
           .select('*', { count: 'exact', head: true })
-          .eq('buyer_id', buyer.id)
+          .eq('buyer_id', buyerId)
           .eq('status', 'pending');
         
         setPendingConnectionsCount(count || 0);

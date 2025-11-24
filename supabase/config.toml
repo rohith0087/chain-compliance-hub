@@ -105,3 +105,6 @@ verify_jwt = false
 
 [functions.populate-onboarding-requirements]
 verify_jwt = false
+
+[functions.delete-auth-user]
+verify_jwt = true

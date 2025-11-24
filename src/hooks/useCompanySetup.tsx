@@ -164,67 +164,10 @@ export const useCompanySetup = () => {
     }
   };
 
-  useEffect(() => {
-    if (user && profile) {
-      console.log('[useCompanySetup] Effect triggered - user:', user.id, 'roles:', profile.roles);
-      
-      const checkAndCreateProfiles = async () => {
-        console.log('[useCompanySetup] Starting profile check...');
-        
-        // Check if user is a team member first (active OR pending)
-        const { data: teamMember, error } = await supabase
-          .from('company_users')
-          .select('id, status, company_type')
-          .eq('profile_id', user.id)
-          .in('status', ['active', 'pending'])
-          .limit(1)
-          .maybeSingle();
-        
-        console.log('[useCompanySetup] Team member check:', { teamMember, error });
-        
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error checking team membership:', error);
-        }
-        
-        // ALSO check if user has ANY invitation (pending OR accepted)
-        // This prevents duplicate profile creation for invited users
-        const { data: userInvitation, error: inviteError } = await supabase
-          .from('user_invitations')
-          .select('id, company_type, used_at')
-          .eq('user_id', user.id)
-          .limit(1)
-          .maybeSingle();
-        
-        console.log('[useCompanySetup] Invitation check:', { userInvitation, inviteError });
-        
-        // Only create profiles if NOT a team member AND NOT invited
-        if (!teamMember && !userInvitation) {
-          console.log('[useCompanySetup] User is a company owner, creating profiles as needed');
-          if (profile.roles?.includes('supplier')) {
-            console.log('[useCompanySetup] Creating supplier profile...');
-            createSupplierRecord();
-          }
-          if (profile.roles?.includes('buyer')) {
-            console.log('[useCompanySetup] Creating buyer profile...');
-            createBuyerRecord();
-          }
-        } else {
-          const reason = teamMember 
-            ? `team member (status: ${teamMember.status}, company_type: ${teamMember.company_type})` 
-            : 'invited user (invitation found)';
-          console.log(`[useCompanySetup] Skipping auto-profile creation - ${reason}`);
-        }
-      };
-        
-      // Small delay to ensure profile is fully loaded
-      const timer = setTimeout(checkAndCreateProfiles, 1000);
-
-      return () => {
-        console.log('[useCompanySetup] Effect cleanup - cancelling timer');
-        clearTimeout(timer);
-      };
-    }
-  }, [user?.id, profile?.roles]);
+  // NO automatic profile creation - profiles are only created via:
+  // 1. Manual form submission (BuyerProfileSetup/SupplierProfileSetup)
+  // 2. Invitation acceptance (send-user-invitation edge function)
+  // This prevents duplicate profiles and race conditions
 
   return { 
     createSupplierRecord, 

@@ -177,21 +177,14 @@ const DynamicDashboard = () => {
     }
   };
 
-  // Check if buyer profile is properly set up (not just auto-created with defaults)
+  // Check if buyer profile is properly set up
   const isBuyerProfileComplete = (buyer: any) => {
+    // Team members don't need their own buyer profiles
+    if (isTeamMember) return true;
+    
     if (!buyer) return false;
     
-    // Check if it's an auto-created profile with default values
-    const hasDefaultCompanyName = buyer.company_name === "James's Company" || 
-                                  buyer.company_name === `${profile?.full_name}'s Company`;
-    const hasDefaultIndustry = buyer.industry === 'General Business';
-    
-    // If both company name and industry are defaults, consider it incomplete
-    if (hasDefaultCompanyName && hasDefaultIndustry) {
-      return false;
-    }
-    
-    // Also check if essential fields are missing
+    // Company owners need these fields filled
     return !!(buyer.company_name && buyer.industry && 
              buyer.company_name.trim() !== '' && 
              buyer.industry !== 'General Business');
@@ -199,18 +192,12 @@ const DynamicDashboard = () => {
 
   // Check if supplier profile is properly set up
   const isSupplierProfileComplete = (supplier: any) => {
+    // Team members don't need their own supplier profiles
+    if (isTeamMember) return true;
+    
     if (!supplier) return false;
     
-    // Check if it's an auto-created profile with default values
-    const hasDefaultCompanyName = supplier.company_name === "James's Company" || 
-                                  supplier.company_name === `${profile?.full_name}'s Company`;
-    const hasDefaultIndustry = supplier.industry === 'General Business';
-    
-    // If both are defaults, consider it incomplete
-    if (hasDefaultCompanyName && hasDefaultIndustry) {
-      return false;
-    }
-    
+    // Company owners need these fields filled
     return !!(supplier.company_name && supplier.industry && 
              supplier.company_name.trim() !== '' && 
              supplier.industry !== 'General Business');

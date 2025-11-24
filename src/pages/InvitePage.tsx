@@ -25,7 +25,8 @@ const InvitePage = () => {
   const navigate = useNavigate();
   const [invitation, setInvitation] = useState<InvitationDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [step, setStep] = useState<'verify' | 'signin' | 'password-reset' | 'complete'>('verify');
+  const [step, setStep] = useState<'verify' | 'signin' | 'password-reset' | 'complete' | 'session-mismatch'>('verify');
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -141,8 +142,18 @@ const InvitePage = () => {
       // Check if user already has a session (for existing users)
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        // User is already signed in, just accept the invitation
-        await acceptInvitation(invitationData);
+        // Validate that the logged-in user matches the invitation
+        const loggedInEmail = session.user.email?.toLowerCase();
+        const invitationEmail = invitation.email.toLowerCase();
+        
+        if (loggedInEmail === invitationEmail) {
+          // User matches, accept invitation
+          await acceptInvitation(invitationData);
+        } else {
+          // User mismatch - show warning
+          setCurrentUserEmail(session.user.email || null);
+          setStep('session-mismatch');
+        }
       } else {
         setStep('signin');
       }
@@ -157,6 +168,20 @@ const InvitePage = () => {
 
   const acceptInvitation = async (invitationData: any) => {
     try {
+      // Additional server-side validation: verify current session matches invitation
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const loggedInEmail = session.user.email?.toLowerCase();
+        const invitationEmail = invitationData.email.toLowerCase();
+        
+        if (loggedInEmail !== invitationEmail) {
+          toast.error('Session mismatch: You must be logged in as the invited user');
+          setCurrentUserEmail(session.user.email || null);
+          setStep('session-mismatch');
+          return;
+        }
+      }
+      
       // Update company_users status to active
       const { error: companyUserError } = await supabase
         .from('company_users')
@@ -183,6 +208,21 @@ const InvitePage = () => {
     } catch (error) {
       console.error('Error accepting invitation:', error);
       toast.error('Failed to complete invitation acceptance');
+    }
+  };
+
+  const handleSignOutAndContinue = async () => {
+    setProcessing(true);
+    try {
+      await supabase.auth.signOut();
+      setCurrentUserEmail(null);
+      setStep('signin');
+      toast.success('Signed out. Please sign in with the invited email.');
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast.error('Failed to sign out');
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -306,15 +346,71 @@ const InvitePage = () => {
             {step === 'signin' && 'Welcome to Your Team!'}
             {step === 'password-reset' && 'Set Up Your Password'}
             {step === 'complete' && 'Welcome Aboard! 🎉'}
+            {step === 'session-mismatch' && 'Session Mismatch Detected'}
           </CardTitle>
           <CardDescription>
             {step === 'signin' && 'Complete your account setup to get started'}
             {step === 'password-reset' && 'Create a secure password for your account'}
             {step === 'complete' && 'Your account is ready! Redirecting to dashboard...'}
+            {step === 'session-mismatch' && 'You need to sign in as the invited user'}
           </CardDescription>
         </CardHeader>
         
         <CardContent>
+          {invitation && step === 'session-mismatch' && (
+            <div className="space-y-6">
+              <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-amber-900">Wrong Account Detected</h4>
+                    <p className="text-sm text-amber-800">
+                      You are currently logged in as <strong>{currentUserEmail}</strong>, but this invitation is for <strong>{invitation.email}</strong>.
+                    </p>
+                    <p className="text-sm text-amber-700">
+                      To accept this invitation, you need to sign out and then sign in with the correct email address.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-slate-900 mb-3">Invitation Details</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Company:</span>
+                    <span className="font-medium">{invitation.company_name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Role:</span>
+                    <span className="font-medium">{invitation.role?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Invited Email:</span>
+                    <span className="font-medium">{invitation.email}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <Button 
+                  onClick={handleSignOutAndContinue}
+                  disabled={processing}
+                  className="w-full"
+                >
+                  {processing ? 'Signing Out...' : 'Sign Out and Continue'}
+                </Button>
+                <Button 
+                  onClick={() => navigate('/dashboard')}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+
           {invitation && step === 'signin' && (
             <div className="space-y-6">
               {/* Company Info */}

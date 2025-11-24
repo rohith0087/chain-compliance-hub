@@ -618,21 +618,21 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         onSettingsUpdated={refreshBuyerProfile}
       />
 
-      {buyerProfile && profile && (
+      {companyId && profile && (
         <>
           <QuickOnboardingModal
             isOpen={showQuickOnboarding}
             onClose={() => setShowQuickOnboarding(false)}
-            buyerId={buyerProfile.id}
-            buyerProfile={buyerProfile}
+            buyerId={companyId}
+            buyerProfile={buyerProfile || { id: companyId }}
             userProfile={profile}
           />
 
           <BulkInviteModal
             isOpen={showBulkInvite}
             onClose={() => setShowBulkInvite(false)}
-            buyerId={buyerProfile.id}
-            buyerProfile={buyerProfile}
+            buyerId={companyId}
+            buyerProfile={buyerProfile || { id: companyId, company_name: 'Your Company', contact_email: profile.email }}
           />
         </>
       )}

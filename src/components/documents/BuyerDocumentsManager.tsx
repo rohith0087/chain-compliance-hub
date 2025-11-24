@@ -570,6 +570,7 @@ const BuyerDocumentsManager = ({
                     })
                   }}
                   userRole="buyer"
+                  showActions={true}
                   onView={() => handleView(doc)}
                   onDownload={() => handleDownload(doc)}
                   downloadLoading={downloading === doc.id}

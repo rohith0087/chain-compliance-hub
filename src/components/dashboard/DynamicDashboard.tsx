@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useCompanySetup } from '@/hooks/useCompanySetup';
@@ -11,12 +12,14 @@ import BuyerProfileSetup from '@/components/buyer/BuyerProfileSetup';
 import RoleSwitcher from '@/components/RoleSwitcher';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Lock } from 'lucide-react';
+import { toast } from 'sonner';
 
 const DynamicDashboard = () => {
   const { user, profile, signOut, loading: authLoading } = useAuth();
   const { hasRole, roles } = useUserRoles();
   const { getSupplierProfile, getBuyerProfile } = useCompanySetup();
+  const navigate = useNavigate();
   const [currentRole, setCurrentRole] = useState<'buyer' | 'supplier'>('buyer');
   const [supplierProfile, setSupplierProfile] = useState<any>(null);
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
@@ -25,6 +28,7 @@ const DynamicDashboard = () => {
   const [membershipLoading, setMembershipLoading] = useState(true);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
+  const [passwordResetRequired, setPasswordResetRequired] = useState(false);
 
   // Timeout detection for infinite loading
   useEffect(() => {
@@ -75,27 +79,35 @@ const DynamicDashboard = () => {
       setMembershipLoading(true);
       
       // Check if user has any company_users records (active OR pending)
-      // Use maybeSingle to gracefully handle duplicates
       const { data, error } = await supabase
         .from('company_users')
-        .select('id, company_type, status')
+        .select('id, company_type, status, password_reset_required')
         .eq('profile_id', user.id)
         .in('status', ['active', 'pending'])
-        .order('created_at', { ascending: false }) // Get newest if duplicates exist
+        .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (error) {
-        if (error.code !== 'PGRST116') { // Ignore "no rows" error
+        if (error.code !== 'PGRST116') {
           console.error('Error checking team membership:', error);
         }
         setIsTeamMember(false);
+        setPasswordResetRequired(false);
         return;
       }
 
       const isMember = !!data;
-      console.log('Team membership check:', isMember, 'status:', data?.status, 'company_type:', data?.company_type);
+      console.log('Team membership check:', isMember, 'password_reset_required:', data?.password_reset_required);
       setIsTeamMember(isMember);
+      
+      // Check if password reset is required
+      if (data?.password_reset_required) {
+        setPasswordResetRequired(true);
+        toast.info('Please set your password before continuing');
+        navigate('/reset-password');
+        return;
+      }
       
       // If user is a team member, set their role based on company_type (overrides profiles.roles)
       if (isMember && data?.company_type) {

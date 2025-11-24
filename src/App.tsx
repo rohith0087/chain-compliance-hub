@@ -12,14 +12,12 @@ import { Loader2 } from "lucide-react";
 
 import AuthPage from "./components/auth/AuthPage";
 import ResetPassword from "./pages/ResetPassword";
-import InvitePage from "./pages/InvitePage";
 import DynamicDashboard from "./components/dashboard/DynamicDashboard";
 import ChatPage from "./pages/ChatPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import AgentManagementDashboard from "./components/agents/AgentManagementDashboard";
 import PlatformAdminLogin from "./pages/PlatformAdminLogin";
 import PlatformAdminDashboard from "./pages/PlatformAdminDashboard";
-import PlatformAdminInvitationAccept from "./pages/PlatformAdminInvitationAccept";
 import PlatformAdminBootstrap from "./pages/PlatformAdminBootstrap";
 import SharedDocumentViewer from "./components/shared/SharedDocumentViewer";
 import NotFound from "./pages/NotFound";
@@ -116,7 +114,6 @@ const AppRoutes = () => {
                 </PublicRoute>
               } />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/invite/:token" element={<InvitePage />} />
               <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <DynamicDashboard />
@@ -144,7 +141,6 @@ const AppRoutes = () => {
               } />
               <Route path="/platform-admin/login" element={<PlatformAdminLogin />} />
               <Route path="/platform-admin/dashboard" element={<PlatformAdminDashboard />} />
-              <Route path="/platform-admin/accept-invitation" element={<PlatformAdminInvitationAccept />} />
               <Route path="/platform-admin/bootstrap" element={<PlatformAdminBootstrap />} />
               <Route path="/shared-document/:token" element={<SharedDocumentViewer />} />
               <Route path="*" element={<NotFound />} />

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, UserPlus, Mail, Shield, Building, Trash2, Eye, RotateCcw, Clock } from 'lucide-react';
+import { Users, UserPlus, Mail, Shield, Building, Trash2, Eye, RotateCcw, Clock, Link, Check } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -55,6 +55,7 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
   });
   const [inviting, setInviting] = useState(false);
   const [resending, setResending] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const handleInviteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,6 +153,19 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
   const isInvitationExpired = (expiresAt?: string) => {
     if (!expiresAt) return false;
     return new Date(expiresAt) < new Date();
+  };
+
+  const handleCopyInvitationLink = async (token: string) => {
+    try {
+      const invitationUrl = `${window.location.origin}/invite/${token}`;
+      await navigator.clipboard.writeText(invitationUrl);
+      setCopiedLink(true);
+      toast.success('Invitation link copied to clipboard!');
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy link:', error);
+      toast.error('Failed to copy link to clipboard');
+    }
   };
 
   return (
@@ -327,23 +341,46 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
                       )}
                       
                       {onResendInvitation && (
-                        <Button 
-                          onClick={() => handleResendInvitation(selectedUser)}
-                          disabled={resending === selectedUser.id}
-                          className="w-full"
-                        >
-                          {resending === selectedUser.id ? (
-                            <>
-                              <RotateCcw className="h-4 w-4 mr-2 animate-spin" />
-                              Resending...
-                            </>
-                          ) : (
-                            <>
-                              <Mail className="h-4 w-4 mr-2" />
-                              Resend Invitation
-                            </>
+                        <>
+                          <Button 
+                            onClick={() => handleResendInvitation(selectedUser)}
+                            disabled={resending === selectedUser.id}
+                            className="w-full"
+                          >
+                            {resending === selectedUser.id ? (
+                              <>
+                                <RotateCcw className="h-4 w-4 mr-2 animate-spin" />
+                                Resending...
+                              </>
+                            ) : (
+                              <>
+                                <Mail className="h-4 w-4 mr-2" />
+                                Resend Invitation
+                              </>
+                            )}
+                          </Button>
+                          
+                          {selectedUser.invitation_token && (
+                            <Button 
+                              onClick={() => handleCopyInvitationLink(selectedUser.invitation_token!)}
+                              disabled={copiedLink}
+                              variant="outline"
+                              className="w-full"
+                            >
+                              {copiedLink ? (
+                                <>
+                                  <Check className="h-4 w-4 mr-2" />
+                                  Copied!
+                                </>
+                              ) : (
+                                <>
+                                  <Link className="h-4 w-4 mr-2" />
+                                  Copy Invitation Link
+                                </>
+                              )}
+                            </Button>
                           )}
-                        </Button>
+                        </>
                       )}
                     </>
                   )}

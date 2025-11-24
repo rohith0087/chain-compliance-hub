@@ -34,6 +34,7 @@ import { useUserRoles } from '@/hooks/useUserRoles';
 import { useTranslation } from 'react-i18next';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
 import { useBranchContext } from '@/contexts/BranchContext';
+import { useCompanyPermissions } from '@/hooks/useCompanyPermissions';
 
 import {
   Sidebar,
@@ -128,12 +129,16 @@ export function BuyerSidebarLayout({
   } = useCompanyBranches(buyerProfile?.id, 'buyer');
 
   const { setCurrentBranch } = useBranchContext();
+  
+  // Get permissions for the current user
+  const { canAccessRoute, role } = useCompanyPermissions(buyerProfile?.id, 'buyer');
 
   // Sync branch context with local branch state
   useEffect(() => {
     setCurrentBranch(currentBranch);
   }, [currentBranch, setCurrentBranch]);
 
+  // Define navigation items with role requirements
   const navigationItems: NavigationItem[] = [
     {
       title: t('common:navigation.dashboard'),
@@ -197,7 +202,21 @@ export function BuyerSidebarLayout({
       icon: CreditCard,
       value: 'subscription'
     }
-  ];
+  ].filter(item => {
+    // Filter out items based on permissions
+    // Company Management and Subscription require company_admin role
+    if (item.value === 'company' && !canAccessRoute('company')) {
+      return false;
+    }
+    if (item.value === 'subscription' && !canAccessRoute('subscription')) {
+      return false;
+    }
+    // Check other navigation permissions
+    if (!canAccessRoute(item.value)) {
+      return false;
+    }
+    return true;
+  });
 
   const isActiveRoute = (value: string) => activeTab === value;
   

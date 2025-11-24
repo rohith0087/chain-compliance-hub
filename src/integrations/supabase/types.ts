@@ -3676,6 +3676,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_company_role: {
+        Args: {
+          _company_id: string
+          _company_type: string
+          _required_role: Database["public"]["Enums"]["user_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_platform_role: {
         Args: {
           role: Database["public"]["Enums"]["platform_role"]

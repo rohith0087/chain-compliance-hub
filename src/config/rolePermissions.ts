@@ -30,7 +30,7 @@ export const hasPermission = (userRole: UserRole | null, feature: string): boole
 
 // Helper to get human-readable role name
 export const getRoleDisplayName = (role: UserRole): string => {
-  const roleNames: Record<UserRole, string> = {
+  const roleNames: Partial<Record<UserRole, string>> = {
     company_admin: 'Company Admin',
     branch_manager: 'Branch Manager',
     document_manager: 'Document Manager',

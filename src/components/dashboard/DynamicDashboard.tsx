@@ -10,6 +10,8 @@ import SupplierProfileSetup from '@/components/supplier/SupplierProfileSetup';
 import BuyerProfileSetup from '@/components/buyer/BuyerProfileSetup';
 import RoleSwitcher from '@/components/RoleSwitcher';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { AlertCircle } from 'lucide-react';
 
 const DynamicDashboard = () => {
   const { user, profile, signOut, loading: authLoading } = useAuth();
@@ -20,10 +22,27 @@ const DynamicDashboard = () => {
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
   const [profilesLoading, setProfilesLoading] = useState(true);
   const [isTeamMember, setIsTeamMember] = useState<boolean>(false);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+
+  // Timeout detection for infinite loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if ((authLoading || profilesLoading) && !sessionError) {
+        console.error('Session timeout: Loading took too long');
+        setLoadingTimeout(true);
+        setSessionError('Session initialization is taking longer than expected. Your profile data may be missing.');
+      }
+    }, 10000); // 10 second timeout
+
+    return () => clearTimeout(timer);
+  }, [authLoading, profilesLoading, sessionError]);
 
   useEffect(() => {
     if (user && roles.length > 0) {
       console.log('User profile loaded with roles:', roles);
+      setLoadingTimeout(false); // Clear timeout flag
+      setSessionError(null); // Clear any errors
       // Set default role to the first role the user has
       setCurrentRole(hasRole('buyer') ? 'buyer' : 'supplier');
       loadProfiles();
@@ -112,6 +131,18 @@ const DynamicDashboard = () => {
     }
   };
 
+  const handleResetSession = async () => {
+    console.log('Resetting session...');
+    try {
+      await signOut();
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Error resetting session:', error);
+      // Force redirect anyway
+      window.location.href = '/';
+    }
+  };
+
   // Check if buyer profile is properly set up (not just auto-created with defaults)
   const isBuyerProfileComplete = (buyer: any) => {
     if (!buyer) return false;
@@ -151,14 +182,41 @@ const DynamicDashboard = () => {
              supplier.industry !== 'General Business');
   };
 
+  // Show error state if loading timeout or session error occurs
+  if (loadingTimeout || sessionError) {
+    return (
+      <Card className="max-w-md mx-auto mt-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <AlertCircle className="h-5 w-5" />
+            Session Error
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-muted-foreground">
+            {sessionError || 'Unable to load your profile. This usually happens when your user profile data is missing from the database.'}
+          </p>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Try resetting your session by signing out and signing back in. If the problem persists, you may need to create a new account.
+            </p>
+            <Button onClick={handleResetSession} className="w-full">
+              Reset Session & Sign Out
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   // Show loading while auth is loading or we don't have user/profile yet
   if (authLoading || !user || !profile) {
     return (
       <Card className="max-w-md mx-auto mt-8">
         <CardContent className="pt-6">
           <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
-            <p className="text-gray-600">Loading your profile...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
+            <p className="text-muted-foreground">Loading your profile...</p>
           </div>
         </CardContent>
       </Card>
@@ -170,8 +228,8 @@ const DynamicDashboard = () => {
       <Card className="max-w-md mx-auto mt-8">
         <CardContent className="pt-6">
           <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
-            <p className="text-gray-600">Setting up your dashboard...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
+            <p className="text-muted-foreground">Setting up your dashboard...</p>
           </div>
         </CardContent>
       </Card>

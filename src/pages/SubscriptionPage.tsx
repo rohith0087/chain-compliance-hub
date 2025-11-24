@@ -1,17 +1,30 @@
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
+import { useCompanyPermissions } from '@/hooks/useCompanyPermissions';
 import { SubscriptionStatus } from '@/components/subscription/SubscriptionStatus';
 import { SubscriptionPlans } from '@/components/subscription/SubscriptionPlans';
 import { CreditPackages } from '@/components/subscription/CreditPackages';
 import { Badge } from '@/components/ui/badge';
+import UnauthorizedAccess from '@/components/auth/UnauthorizedAccess';
 
 export default function SubscriptionPage() {
   const { profile } = useAuth();
   const { hasRole } = useUserRoles();
   
-  // Determine user type based on roles
+  // Determine user type and company based on roles
   const userType = hasRole('buyer') ? 'buyer' : 'supplier';
+  
+  // Get the buyer or supplier ID from profile
+  // This assumes the profile has buyer_id or supplier_id stored
+  const companyId = profile?.id; // Adjust based on your data structure
+  
+  const { canViewSubscription, role, loading } = useCompanyPermissions(companyId, userType);
+
+  // Check permission
+  if (!loading && !canViewSubscription()) {
+    return <UnauthorizedAccess requiredRoles={['company_admin']} currentRole={role} />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-subtle">

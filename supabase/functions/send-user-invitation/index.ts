@@ -382,20 +382,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('User account created successfully:', authUser.user.id);
 
-    // Create profile record
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({
-        id: authUser.user.id,
-        email: recipientEmail,
-        full_name: recipientEmail.split('@')[0], // Will be updated on first login
-        roles: ['supplier'] // Default role, will be updated based on company
-      });
-
-    if (profileError) {
-      console.error('Error creating profile:', profileError);
-      throw new Error(`Failed to create profile: ${profileError.message}`);
-    }
+    // Note: Profile is automatically created via database trigger (on_auth_user_created)
+    // No need to manually create it here
 
     // Store invitation details for later verification
     const expiresAt = new Date();

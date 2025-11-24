@@ -168,33 +168,45 @@ export const useCompanySetup = () => {
     if (user && profile) {
       console.log('User and profile available, setting up company records...');
       
-      const checkAndCreateProfiles = async () => {
-        // Check if user is a team member first (active OR pending)
-        const { data: teamMember, error } = await supabase
-          .from('company_users')
-          .select('id, status, company_type')
-          .eq('profile_id', user.id)
-          .in('status', ['active', 'pending'])
-          .limit(1)
-          .single();
-        
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error checking team membership:', error);
+    const checkAndCreateProfiles = async () => {
+      // Check if user is a team member first (active OR pending)
+      const { data: teamMember, error } = await supabase
+        .from('company_users')
+        .select('id, status, company_type')
+        .eq('profile_id', user.id)
+        .in('status', ['active', 'pending'])
+        .limit(1)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error checking team membership:', error);
+      }
+      
+      // ALSO check if user has a pending invitation (they were invited but haven't accepted yet)
+      const { data: pendingInvitation } = await supabase
+        .from('user_invitations')
+        .select('id, company_type')
+        .eq('user_id', user.id)
+        .is('used_at', null)  // Not yet used
+        .limit(1)
+        .single();
+      
+      // Only create profiles if NOT a team member AND NOT invited
+      if (!teamMember && !pendingInvitation) {
+        console.log('User is a company owner, creating profiles as needed');
+        if (profile.roles?.includes('supplier')) {
+          createSupplierRecord();
         }
-        
-        // Only create profiles if NOT a team member
-        if (!teamMember) {
-          console.log('User is a company owner, creating profiles as needed');
-          if (profile.roles?.includes('supplier')) {
-            createSupplierRecord();
-          }
-          if (profile.roles?.includes('buyer')) {
-            createBuyerRecord();
-          }
-        } else {
-          console.log('User is a team member (status:', teamMember.status, 'company_type:', teamMember.company_type, '), skipping auto-profile creation');
+        if (profile.roles?.includes('buyer')) {
+          createBuyerRecord();
         }
-      };
+      } else {
+        const reason = teamMember 
+          ? `team member (status: ${teamMember.status}, company_type: ${teamMember.company_type})` 
+          : 'invited user';
+        console.log(`User is a ${reason}, skipping auto-profile creation`);
+      }
+    };
       
       // Small delay to ensure profile is fully loaded
       const timer = setTimeout(checkAndCreateProfiles, 1000);

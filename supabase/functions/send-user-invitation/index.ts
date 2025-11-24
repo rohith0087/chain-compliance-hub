@@ -60,6 +60,18 @@ const handler = async (req: Request): Promise<Response> => {
     }: UserInvitationRequest = await req.json();
 
     console.log("Processing user invitation for:", recipientEmail);
+    
+    // Get inviter's user ID from their email
+    const { data: inviterProfile, error: inviterError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', inviterEmail)
+      .single();
+    
+    const inviterId = inviterProfile?.id || null;
+    if (!inviterId) {
+      console.warn('Could not find inviter profile for email:', inviterEmail);
+    }
 
     // Check if user already exists
     const { data: existingUser, error: userCheckError } = await supabase.auth.admin.listUsers();
@@ -107,7 +119,8 @@ const handler = async (req: Request): Promise<Response> => {
           branch_id: branchId,
           role: role,
           status: 'pending',
-          invitation_token: inviteToken
+          invitation_token: inviteToken,
+          invited_by: inviterId
         });
 
       if (companyUserError) {
@@ -126,7 +139,7 @@ const handler = async (req: Request): Promise<Response> => {
           company_type: companyType,
           branch_id: branchId,
           role: role,
-          invited_by: inviterEmail,
+          invited_by: inviterId,
           expires_at: expiresAt.toISOString(),
           temp_password: null // No temp password for existing users
         });
@@ -295,7 +308,7 @@ const handler = async (req: Request): Promise<Response> => {
         company_type: companyType,
         branch_id: branchId,
         role: role,
-        invited_by: inviterEmail,
+        invited_by: inviterId,
         expires_at: expiresAt.toISOString(),
         temp_password: tempPassword
       });
@@ -315,7 +328,8 @@ const handler = async (req: Request): Promise<Response> => {
         branch_id: branchId,
         role: role,
         status: 'pending',
-        invitation_token: inviteToken
+        invitation_token: inviteToken,
+        invited_by: inviterId
       });
 
     if (companyUserError) {

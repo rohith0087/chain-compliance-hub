@@ -120,31 +120,29 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
       const enhancedUsers = await Promise.all(
         (usersData || []).map(async (user) => {
           if (user.status === 'pending') {
-            // For pending users, get email from user_invitations table
+            // For pending users, get email from user_invitations using invitation_token
             const { data: invitationData } = await supabase
               .from('user_invitations')
-              .select('email, expires_at')
-              .eq('company_id', companyId)
-              .eq('company_type', companyType)
-              .eq('role', user.role)
-              .order('created_at', { ascending: false })
-              .limit(1)
+              .select('email, expires_at, invited_by')
+              .eq('token', user.invitation_token)
               .maybeSingle();
 
-            // Get inviter data
+            // Get inviter data from invited_by UUID (prefer company_users.invited_by, fallback to invitation)
             let inviterData = null;
-            if (user.invited_by) {
+            const inviterId = user.invited_by || invitationData?.invited_by;
+            
+            if (inviterId) {
               const { data } = await supabase
                 .from('profiles')
                 .select('email, full_name')
-                .eq('id', user.invited_by)
-                .single();
+                .eq('id', inviterId)
+                .maybeSingle();
               inviterData = data;
             }
 
             return {
               ...user,
-              email: invitationData?.email || 'No email found',
+              email: invitationData?.email || 'Invitation data unavailable',
               full_name: `Pending invitation`,
               inviter_name: inviterData?.full_name || inviterData?.email || 'Unknown',
               invitation_expires_at: invitationData?.expires_at

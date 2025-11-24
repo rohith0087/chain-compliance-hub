@@ -115,26 +115,49 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
     if (!companyId || !companyType) return;
 
     try {
-      // Single query with JOIN to get all data at once - eliminates race conditions
+      setLoading(true);
+      
+      // Step 1: Fetch company_users
       const { data: usersData, error: usersError } = await supabase
         .from('company_users')
-        .select(`
-          *,
-          profile:profile_id(email, full_name),
-          inviter:invited_by(email, full_name)
-        `)
+        .select('*')
         .eq('company_id', companyId)
         .eq('company_type', companyType)
         .order('joined_at', { ascending: false });
 
       if (usersError) {
         console.error('Error fetching company users:', usersError);
+        toast.error('Failed to load company users');
         return;
       }
 
-      // Process users with profile data already joined
+      if (!usersData || usersData.length === 0) {
+        setCompanyUsers([]);
+        return;
+      }
+
+      // Step 2: Batch fetch all profiles
+      const profileIds = [...new Set([
+        ...usersData.map(u => u.profile_id),
+        ...usersData.map(u => u.invited_by).filter(Boolean)
+      ])].filter(Boolean) as string[];
+
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, email, full_name')
+        .in('id', profileIds);
+
+      // Create profile map for fast lookups
+      const profileMap = new Map(
+        (profilesData || []).map(p => [p.id, p])
+      );
+
+      // Step 3: Enrich users with profile data
       const enhancedUsers = await Promise.all(
-        (usersData || []).map(async (user: any) => {
+        usersData.map(async (user) => {
+          const profile = profileMap.get(user.profile_id);
+          const inviter = user.invited_by ? profileMap.get(user.invited_by) : null;
+
           if (user.status === 'pending') {
             // For pending users, get invitation data
             const { data: invitationData } = await supabase
@@ -147,16 +170,16 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
               ...user,
               email: invitationData?.email || 'Invitation data unavailable',
               full_name: 'Pending invitation',
-              inviter_name: user.inviter?.full_name || user.inviter?.email || 'Unknown',
+              inviter_name: inviter?.full_name || inviter?.email || 'Unknown',
               invitation_expires_at: invitationData?.expires_at
             };
           } else {
-            // For active users, use joined profile data
+            // For active users, use profile data from map
             return {
               ...user,
-              email: user.profile?.email || 'No email',
-              full_name: user.profile?.full_name || 'No name',
-              inviter_name: user.inviter?.full_name || user.inviter?.email || 'Unknown'
+              email: profile?.email || 'No email',
+              full_name: profile?.full_name || 'No name',
+              inviter_name: inviter?.full_name || inviter?.email || 'Unknown'
             };
           }
         })
@@ -165,6 +188,9 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
       setCompanyUsers(enhancedUsers as CompanyUser[]);
     } catch (err) {
       console.error('Error in fetchCompanyUsers:', err);
+      toast.error('Failed to load company users');
+    } finally {
+      setLoading(false);
     }
   };
 

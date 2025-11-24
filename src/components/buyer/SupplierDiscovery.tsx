@@ -87,8 +87,9 @@ const SupplierDiscovery = () => {
       setBuyerProfile(buyerData);
 
       if (buyerId) {
+        // Query buyer_supplier_connections for approved company-level connections
         let connectionsQuery = supabase
-          .from('branch_supplier_connections')
+          .from('buyer_supplier_connections')
           .select(`
             *,
             suppliers (
@@ -107,11 +108,7 @@ const SupplierDiscovery = () => {
             )
           `)
           .eq('buyer_id', buyerId)
-          .eq('status', 'active');
-
-        if (!allBranchesView && currentBranch) {
-          connectionsQuery = connectionsQuery.eq('branch_id', currentBranch.id);
-        }
+          .eq('status', 'approved'); // Only show approved connections
 
         const { data: connectionsData, error: connectionsError } = await connectionsQuery;
 

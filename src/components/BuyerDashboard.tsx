@@ -186,7 +186,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
             .lte('due_date', thirtyDaysFromNow.toISOString().split('T')[0]);
 
           // Filter by branch if not viewing all branches
-          if (!allBranchesView && currentBranch) {
+          if (currentBranch?.id && !allBranchesView) {
             deadlinesQuery = deadlinesQuery.eq('branch_id', currentBranch.id);
           }
 
@@ -218,7 +218,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
             .in('status', ['pending', 'submitted']);
 
           // Filter by branch if not viewing all branches
-          if (!allBranchesView && currentBranch) {
+          if (currentBranch?.id && !allBranchesView) {
             pendingQuery = pendingQuery.eq('branch_id', currentBranch.id);
           }
 

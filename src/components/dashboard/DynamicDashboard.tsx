@@ -39,17 +39,31 @@ const DynamicDashboard = () => {
     return () => clearTimeout(timer);
   }, [authLoading, profilesLoading, sessionError]);
 
+  // Effect 1: Check team membership when user and roles are available
   useEffect(() => {
     if (user && roles.length > 0) {
       console.log('User profile loaded with roles:', roles);
-      setLoadingTimeout(false); // Clear timeout flag
-      setSessionError(null); // Clear any errors
-      // Check team membership FIRST, then load profiles
-      checkTeamMembership().then(() => {
-        loadProfiles();
-      });
+      setLoadingTimeout(false);
+      setSessionError(null);
+      checkTeamMembership(); // Just check membership, don't chain
     }
   }, [user, roles]);
+
+  // Effect 2: Load profiles AFTER membership check completes
+  useEffect(() => {
+    // Wait for membership check to complete
+    if (membershipLoading) {
+      return;
+    }
+    
+    // Skip if no user or no roles
+    if (!user || roles.length === 0) {
+      return;
+    }
+    
+    console.log('Membership check complete, isTeamMember:', isTeamMember);
+    loadProfiles();
+  }, [membershipLoading, user, roles, isTeamMember]);
 
   const checkTeamMembership = async () => {
     if (!user) {

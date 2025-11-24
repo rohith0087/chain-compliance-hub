@@ -59,30 +59,29 @@ const handler = async (req: Request): Promise<Response> => {
       inviterEmail
     }: UserInvitationRequest = await req.json();
 
-    console.log("Processing user invitation for:", recipientEmail);
-    
-    // Get inviter's user ID from their email
-    const { data: inviterProfile, error: inviterError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', inviterEmail)
-      .single();
-    
-    if (inviterError || !inviterProfile) {
-      console.error('Could not find inviter profile for email:', inviterEmail, inviterError);
+    // Get the authenticated user from the JWT token
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Inviter profile not found. Please contact support.'
-        }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json", ...corsHeaders }
-        }
+        JSON.stringify({ success: false, error: 'Not authenticated' }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     
-    const inviterId = inviterProfile.id;
+    if (userError || !user) {
+      console.error('Error getting user from token:', userError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid authentication token' }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Use the authenticated user's ID as inviter
+    const inviterId = user.id;
+    console.log("Processing user invitation for:", recipientEmail, "by inviter:", inviterId);
 
     // Check if user already exists
     const { data: existingUser, error: userCheckError } = await supabase.auth.admin.listUsers();

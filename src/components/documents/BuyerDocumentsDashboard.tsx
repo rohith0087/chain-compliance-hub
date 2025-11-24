@@ -769,6 +769,7 @@ URL.revokeObjectURL(url);
                       onDecline={() => openDeclineDialog(doc.id, doc.document_type)}
                       approveLoading={approveLoading === doc.id}
                       declineLoading={declineLoading === doc.id}
+                      showActions={true}
                     />
                   ))}
                 </div>

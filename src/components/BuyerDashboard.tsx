@@ -70,18 +70,48 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
     if (!authUser) return;
     
     try {
-      const { data: buyer, error: buyerError } = await supabase
-        .from('buyers')
-        .select('*')
+      // Check if user is a team member first
+      const { data: teamMember } = await supabase
+        .from('company_users')
+        .select('company_id, company_type')
         .eq('profile_id', authUser.id)
+        .eq('company_type', 'buyer')
+        .eq('status', 'active')
         .single();
 
-      if (buyerError && buyerError.code !== 'PGRST116') {
-        console.error('Error fetching buyer profile:', buyerError);
-        return;
-      }
+      if (teamMember) {
+        // Team member - fetch company data using company_id
+        console.log('Refreshing profile for team member, company_id:', teamMember.company_id);
+        const { data: buyer, error: buyerError } = await supabase
+          .from('buyers')
+          .select('*')
+          .eq('id', teamMember.company_id)
+          .single();
 
-      setBuyerProfile(buyer);
+        if (buyerError && buyerError.code !== 'PGRST116') {
+          console.error('Error fetching buyer profile:', buyerError);
+          return;
+        }
+
+        setBuyerProfile(buyer);
+        setCompanyId(teamMember.company_id);
+      } else {
+        // Company owner - fetch using profile_id
+        console.log('Refreshing profile for company owner');
+        const { data: buyer, error: buyerError } = await supabase
+          .from('buyers')
+          .select('*')
+          .eq('profile_id', authUser.id)
+          .single();
+
+        if (buyerError && buyerError.code !== 'PGRST116') {
+          console.error('Error fetching buyer profile:', buyerError);
+          return;
+        }
+
+        setBuyerProfile(buyer);
+        setCompanyId(buyer?.id);
+      }
     } catch (error) {
       console.error('Error refreshing buyer profile:', error);
     }

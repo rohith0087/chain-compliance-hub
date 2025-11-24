@@ -893,15 +893,7 @@ export type Database = {
           status?: string | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "company_users_invitation_token_fkey"
-            columns: ["invitation_token"]
-            isOneToOne: false
-            referencedRelation: "user_invitations"
-            referencedColumns: ["token"]
-          },
-        ]
+        Relationships: []
       }
       credit_transactions: {
         Row: {
@@ -3119,72 +3111,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      user_invitations: {
-        Row: {
-          branch_id: string | null
-          company_id: string
-          company_name: string | null
-          company_type: string
-          created_at: string
-          email: string
-          expires_at: string
-          id: string
-          invited_by: string | null
-          role: string
-          temp_password: string
-          token: string
-          used_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          branch_id?: string | null
-          company_id: string
-          company_name?: string | null
-          company_type: string
-          created_at?: string
-          email: string
-          expires_at: string
-          id?: string
-          invited_by?: string | null
-          role: string
-          temp_password: string
-          token: string
-          used_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          branch_id?: string | null
-          company_id?: string
-          company_name?: string | null
-          company_type?: string
-          created_at?: string
-          email?: string
-          expires_at?: string
-          id?: string
-          invited_by?: string | null
-          role?: string
-          temp_password?: string
-          token?: string
-          used_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_invitations_invited_by_fkey"
-            columns: ["invited_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_invitations_invited_by_fkey"
-            columns: ["invited_by"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_roles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       user_permissions: {
         Row: {

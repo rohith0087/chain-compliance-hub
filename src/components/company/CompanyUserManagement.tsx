@@ -13,7 +13,7 @@ import { CompanyBranch, CompanyUser } from '@/hooks/useCompanyBranches';
 interface CompanyUserManagementProps {
   branches: CompanyBranch[];
   companyUsers: CompanyUser[];
-  onInviteUser: (email: string, branchId: string, role: string) => Promise<any>;
+  onInviteUser: (fullName: string, email: string, branchId: string, role: string) => Promise<any>;
   onResendInvitation?: (email: string, branchId: string, role: string) => Promise<any>;
   onRemoveUser?: (companyUserId: string, forceDelete?: boolean) => Promise<any>;
   loading?: boolean;
@@ -49,6 +49,7 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
   const [deleteConfirmation, setDeleteConfirmation] = useState<any>(null);
   const [selectedUser, setSelectedUser] = useState<CompanyUser | null>(null);
   const [inviteForm, setInviteForm] = useState({
+    fullName: '',
     email: '',
     branchId: '',
     role: 'viewer'
@@ -60,20 +61,20 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
   const handleInviteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!inviteForm.email || !inviteForm.branchId || !inviteForm.role) {
+    if (!inviteForm.fullName || !inviteForm.email || !inviteForm.branchId || !inviteForm.role) {
       toast.error('Please fill in all fields');
       return;
     }
 
     setInviting(true);
     try {
-      const result = await onInviteUser(inviteForm.email, inviteForm.branchId, inviteForm.role);
+      const result = await onInviteUser(inviteForm.fullName, inviteForm.email, inviteForm.branchId, inviteForm.role);
       if (!result.error) {
         setInviteModalOpen(false);
-        setInviteForm({ email: '', branchId: '', role: 'viewer' });
+        setInviteForm({ fullName: '', email: '', branchId: '', role: 'viewer' });
       }
     } catch (error) {
-      console.error('Error inviting user:', error);
+      console.error('Error creating user:', error);
     } finally {
       setInviting(false);
     }
@@ -186,17 +187,29 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
             <DialogTrigger asChild>
               <Button>
                 <UserPlus className="h-4 w-4 mr-2" />
-                Invite User
+                Add User
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Invite New User</DialogTitle>
+                <DialogTitle>Add New User</DialogTitle>
                 <DialogDescription>
-                  Send an invitation to join your company with specific branch access and role.
+                  Create a new user account. They will receive an email with instructions to set their password.
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleInviteSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input
+                    id="fullName"
+                    type="text"
+                    value={inviteForm.fullName || ''}
+                    onChange={(e) => setInviteForm(prev => ({ ...prev, fullName: e.target.value }))}
+                    placeholder="John Doe"
+                    required
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
                   <Input
@@ -266,12 +279,12 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
                     {inviting ? (
                       <>
                         <Mail className="h-4 w-4 mr-2 animate-spin" />
-                        Sending...
+                        Creating...
                       </>
                     ) : (
                       <>
-                        <Mail className="h-4 w-4 mr-2" />
-                        Send Invitation
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Create User
                       </>
                     )}
                   </Button>

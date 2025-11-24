@@ -159,19 +159,12 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
           const inviter = user.invited_by ? profileMap.get(user.invited_by) : null;
 
           if (user.status === 'pending') {
-            // For pending users, get invitation data
-            const { data: invitationData } = await supabase
-              .from('user_invitations')
-              .select('email, expires_at')
-              .eq('token', user.invitation_token)
-              .maybeSingle();
-
+            // For pending users, use profile data if available
             return {
               ...user,
-              email: invitationData?.email || 'Invitation data unavailable',
-              full_name: 'Pending invitation',
+              email: profile?.email || 'No email',
+              full_name: profile?.full_name || 'Pending user',
               inviter_name: inviter?.full_name || inviter?.email || 'Unknown',
-              invitation_expires_at: invitationData?.expires_at
             };
           } else {
             // For active users, use profile data from map
@@ -388,49 +381,30 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
     }
   };
 
-  const inviteUserToBranch = async (email: string, branchId: string, role: string) => {
+  const inviteUserToBranch = async (fullName: string, email: string, branchId: string, role: string) => {
     if (!user || !companyId || !companyType) {
-      toast.error('Missing required information to send invitation');
+      toast.error('Missing required information to create user');
       return { error: 'Missing required data' };
     }
 
     try {
-      // First, check if a profile exists for this email
-      const { data: profileData, error: profileError } = await supabase
+      // Check if user already exists
+      const { data: profileData } = await supabase
         .from('profiles')
-        .select('id, full_name')
+        .select('id')
         .eq('email', email)
         .single();
 
-      // If profile exists, check if that specific user is already part of the same branch
-      if (profileData && !profileError) {
-        const { data: existingUser } = await supabase
-          .from('company_users')
-          .select('*')
-          .eq('company_id', companyId)
-          .eq('company_type', companyType)
-          .eq('profile_id', profileData.id)
-          .eq('branch_id', branchId)
-          .single();
-
-        if (existingUser) {
-          console.log('User already exists in this branch, resending invitation');
-          toast.info('User already invited to this branch - resending invitation email');
-          // Continue to send email but don't create duplicate record
-        }
+      if (profileData) {
+        toast.error('A user with this email already exists');
+        return { error: 'User already exists' };
       }
 
-      // Get current user's profile and branch details for email
+      // Get current user's profile and company details for email
       const { data: currentUserProfile } = await supabase
         .from('profiles')
         .select('full_name')
         .eq('id', user.id)
-        .single();
-
-      const { data: branchDetails } = await supabase
-        .from('company_branches')
-        .select('branch_name')
-        .eq('id', branchId)
         .single();
 
       const { data: companyDetails } = await supabase
@@ -439,72 +413,45 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
         .eq('id', companyId)
         .single();
 
-      // Let edge function handle all database operations (no frontend pre-insertion)
-      try {
-        const response = await supabase.functions.invoke('send-user-invitation', {
-          body: {
-            recipientEmail: email,
-            companyName: companyDetails?.company_name || 'Unknown Company',
-            companyType: companyType,
-            branchName: branchDetails?.branch_name || 'Unknown Branch',
-            branchId: branchId,
-            companyId: companyId,
-            role: role,
-            inviterName: currentUserProfile?.full_name || user.email || 'Team Administrator',
-            inviterEmail: user.email || ''
-          }
-        });
-        
-        if (response.error) {
-          throw new Error(response.error.message || 'Failed to send email');
+      // Call new create-company-user edge function
+      const response = await supabase.functions.invoke('create-company-user', {
+        body: {
+          email: email,
+          full_name: fullName,
+          role: role,
+          company_id: companyId,
+          company_type: companyType,
+          branch_id: branchId,
+          inviter_name: currentUserProfile?.full_name || user.email || 'Team Administrator',
+          company_name: companyDetails?.company_name || 'Unknown Company'
         }
-        
-        // Handle different response types
-        if (response.data?.userExists && response.data?.alreadyInCompany) {
-          toast.error('User is already part of this company');
-          return { error: 'User already in company' };
-        } else if (response.data?.userExists && !response.data?.alreadyInCompany) {
-          toast.success(`Existing user invited to join company!`);
-        } else {
-          toast.success(`New user account created and invitation sent!`);
-        }
-        
-        console.log(`Invitation processed successfully for ${email} for ${role} role in branch ${branchDetails?.branch_name}`);
-        
-        // If invitation was successful and we have a profile_id, sync branch manager
-        if (response.data?.company_users?.profile_id) {
-          await syncBranchManager(branchId, response.data.company_users.profile_id, role);
-        } else if (profileData?.id) {
-          // For existing users, use their profile_id
-          await syncBranchManager(branchId, profileData.id, role);
-        }
-      } catch (emailError) {
-        console.error('Error sending invitation email:', emailError);
-        
-        // Handle specific error messages
-        if (emailError.message?.includes('already been registered') || emailError.message?.includes('User already exists')) {
-          toast.error('This email is already registered. Please contact support.');
-        } else if (emailError.message?.includes('already part of this company')) {
-          toast.error('User is already part of this company');
-          return { error: 'User already in company' };
-        } else if (emailError.message?.includes('domain')) {
-          toast.error(`Email delivery failed: Please verify your domain in Resend dashboard`);
-        } else {
-          toast.error(`Email delivery failed: ${emailError.message || 'Please check your email configuration'}`);
-        }
-        // Still show the invitation was created in the system for general errors
-        if (!emailError.message?.includes('already')) {
-          toast.info(`User invitation created for ${email} (manual follow-up may be needed)`);
-        }
+      });
+      
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to create user');
       }
 
-      await fetchCompanyUsers(); // Refresh the users list
-      await fetchBranches(); // Refresh branches to show updated manager
-      return { data: null, error: null };
-    } catch (err) {
-      console.error('Error in inviteUserToBranch:', err);
-      toast.error('Failed to send invitation');
-      return { error: err };
+      if (!response.data?.success) {
+        throw new Error(response.data?.error || 'Failed to create user');
+      }
+
+      toast.success('User created successfully! They will receive an email with instructions.');
+      
+      console.log(`User created successfully: ${email} with ${role} role in branch ${branchId}`);
+      
+      // Sync branch manager if needed
+      if (response.data?.user?.id) {
+        await syncBranchManager(branchId, response.data.user.id, role);
+      }
+
+      // Refresh users list
+      await fetchCompanyUsers();
+      
+      return { data: response.data, error: null };
+    } catch (err: any) {
+      console.error('Error creating user:', err);
+      toast.error(err.message || 'Failed to create user');
+      return { error: err.message || 'Failed to create user' };
     }
   };
 

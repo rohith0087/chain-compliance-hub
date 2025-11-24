@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Shield, Lock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
@@ -14,7 +15,7 @@ const ResetPassword = () => {
   const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { updatePassword, session } = useAuth();
+  const { updatePassword, session, user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -62,8 +63,17 @@ const ResetPassword = () => {
         description: "Your password has been successfully updated.",
         variant: "default",
       });
-      // Redirect to home/dashboard
-      navigate('/');
+
+      // Clear password_reset_required flag if user exists
+      if (user) {
+        await supabase
+          .from('company_users')
+          .update({ password_reset_required: false })
+          .eq('profile_id', user.id);
+      }
+
+      // Redirect to dashboard
+      navigate('/dashboard');
     }
     setLoading(false);
   };

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useCompanySetup } from '@/hooks/useCompanySetup';
+import { supabase } from '@/integrations/supabase/client';
 import BuyerDashboard from '@/components/BuyerDashboard';
 import SupplierDashboard from '@/components/SupplierDashboard';
 import SupplierProfileSetup from '@/components/supplier/SupplierProfileSetup';
@@ -18,6 +19,7 @@ const DynamicDashboard = () => {
   const [supplierProfile, setSupplierProfile] = useState<any>(null);
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
   const [profilesLoading, setProfilesLoading] = useState(true);
+  const [isTeamMember, setIsTeamMember] = useState<boolean>(false);
 
   useEffect(() => {
     if (user && roles.length > 0) {
@@ -25,8 +27,34 @@ const DynamicDashboard = () => {
       // Set default role to the first role the user has
       setCurrentRole(hasRole('buyer') ? 'buyer' : 'supplier');
       loadProfiles();
+      checkTeamMembership();
     }
   }, [user, roles]);
+
+  const checkTeamMembership = async () => {
+    if (!user) return;
+    
+    try {
+      // Check if user has any active company_users records (indicating they're a team member)
+      const { data, error } = await supabase
+        .from('company_users')
+        .select('id')
+        .eq('profile_id', user.id)
+        .eq('status', 'active')
+        .limit(1);
+
+      if (error) {
+        console.error('Error checking team membership:', error);
+        return;
+      }
+
+      const isMember = data && data.length > 0;
+      console.log('Team membership check:', isMember);
+      setIsTeamMember(isMember);
+    } catch (error) {
+      console.error('Error in checkTeamMembership:', error);
+    }
+  };
 
   const loadProfiles = async () => {
     console.log('Loading profiles...');
@@ -145,13 +173,17 @@ const DynamicDashboard = () => {
   // Check if user has multiple roles
   const hasMultipleRoles = profile.roles?.length > 1;
 
-  // Check if current role needs profile setup using the new complete check functions
+  // Check if current role needs profile setup
+  // Team members (users with company_users records) should NOT see profile setup
+  // Only company owners who don't have a complete profile should see setup
   const needsSupplierSetup = currentRole === 'supplier' && 
                             profile.roles?.includes('supplier') && 
+                            !isTeamMember && 
                             !isSupplierProfileComplete(supplierProfile);
                             
   const needsBuyerSetup = currentRole === 'buyer' && 
                          profile.roles?.includes('buyer') && 
+                         !isTeamMember && 
                          !isBuyerProfileComplete(buyerProfile);
 
   console.log('Dashboard state:', {
@@ -160,6 +192,7 @@ const DynamicDashboard = () => {
     buyerProfile: !!buyerProfile,
     supplierProfileComplete: isSupplierProfileComplete(supplierProfile),
     buyerProfileComplete: isBuyerProfileComplete(buyerProfile),
+    isTeamMember,
     needsSupplierSetup,
     needsBuyerSetup,
     hasMultipleRoles,

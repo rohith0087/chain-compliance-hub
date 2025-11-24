@@ -75,13 +75,15 @@ const DynamicDashboard = () => {
       setMembershipLoading(true);
       
       // Check if user has any company_users records (active OR pending)
+      // Use maybeSingle to gracefully handle duplicates
       const { data, error } = await supabase
         .from('company_users')
         .select('id, company_type, status')
         .eq('profile_id', user.id)
         .in('status', ['active', 'pending'])
+        .order('created_at', { ascending: false }) // Get newest if duplicates exist
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (error) {
         if (error.code !== 'PGRST116') { // Ignore "no rows" error

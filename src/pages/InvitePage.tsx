@@ -155,26 +155,63 @@ const InvitePage = () => {
     try {
       // Additional server-side validation: verify current session matches invitation
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const loggedInEmail = session.user.email?.toLowerCase();
-        const invitationEmail = invitationData.email.toLowerCase();
-        
-        if (loggedInEmail !== invitationEmail) {
-          toast.error('Session mismatch: You must be logged in as the invited user');
-          setCurrentUserEmail(session.user.email || null);
-          setStep('session-mismatch');
+      if (!session) {
+        toast.error('No active session. Please sign in first.');
+        setStep('signin');
+        return;
+      }
+
+      const loggedInEmail = session.user.email?.toLowerCase();
+      const invitationEmail = invitationData.email.toLowerCase();
+      
+      if (loggedInEmail !== invitationEmail) {
+        toast.error('Session mismatch: You must be logged in as the invited user');
+        setCurrentUserEmail(session.user.email || null);
+        setStep('session-mismatch');
+        return;
+      }
+
+      // Check if company_users record already exists from invitation
+      const { data: existingRecord } = await supabase
+        .from('company_users')
+        .select('id, status')
+        .eq('profile_id', session.user.id)
+        .eq('invitation_token', token)
+        .maybeSingle();
+
+      if (existingRecord) {
+        // Just activate the existing record
+        const { error: updateError } = await supabase
+          .from('company_users')
+          .update({ status: 'active', joined_at: new Date().toISOString() })
+          .eq('id', existingRecord.id);
+
+        if (updateError) {
+          console.error('Error activating company_users:', updateError);
+          toast.error('Failed to accept invitation');
           return;
         }
-      }
-      
-      // Update company_users status to active
-      const { error: companyUserError } = await supabase
-        .from('company_users')
-        .update({ status: 'active' })
-        .eq('invitation_token', token);
+      } else {
+        // Create new company_users record from invitation data (auto-link)
+        const { error: insertError } = await supabase
+          .from('company_users')
+          .insert({
+            profile_id: session.user.id,
+            company_id: invitationData.company_id,
+            company_type: invitationData.company_type,
+            branch_id: invitationData.branch_id,
+            role: invitationData.role,
+            status: 'active',
+            joined_at: new Date().toISOString(),
+            invitation_token: token,
+            invited_by: invitationData.invited_by
+          });
 
-      if (companyUserError) {
-        console.error('Error updating company_users:', companyUserError);
+        if (insertError) {
+          console.error('Error creating company_users:', insertError);
+          toast.error('Failed to accept invitation');
+          return;
+        }
       }
 
       // Mark invitation as used
@@ -183,6 +220,7 @@ const InvitePage = () => {
         .update({ used_at: new Date().toISOString() })
         .eq('token', token);
 
+      toast.success('Successfully joined the company!');
       setStep('complete');
       
       // Redirect to dashboard
@@ -284,30 +322,23 @@ const InvitePage = () => {
         return;
       }
 
-      // Update company_users status to active
-      const { error: companyUserError } = await supabase
-        .from('company_users')
-        .update({ status: 'active' })
-        .eq('invitation_token', token);
+      toast.success('Password updated successfully!');
+      
+      // Fetch invitation data from DB (we need all fields for auto-link)
+      const { data: invitationData, error: inviteError } = await supabase
+        .from('user_invitations')
+        .select('*')
+        .eq('token', token)
+        .single();
 
-      if (companyUserError) {
-        console.error('Error updating company_users:', companyUserError);
+      if (inviteError || !invitationData) {
+        console.error('Error fetching invitation for auto-link:', inviteError);
+        toast.error('Failed to complete setup');
+        return;
       }
 
-      // Mark invitation as used
-      await supabase
-        .from('user_invitations')
-        .update({ used_at: new Date().toISOString() })
-        .eq('token', token);
-
-      toast.success('Account setup complete!');
-      setStep('complete');
-      
-      // Redirect to dashboard after success
-      setTimeout(() => {
-        navigate('/dashboard');
-        window.location.reload(); // Refresh to update auth context
-      }, 2000);
+      // Automatically accept invitation (auto-link to company)
+      await acceptInvitation(invitationData);
       
     } catch (error) {
       console.error('Password reset error:', error);

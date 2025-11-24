@@ -161,15 +161,32 @@ export const useCompanySetup = () => {
   useEffect(() => {
     if (user && profile) {
       console.log('User and profile available, setting up company records...');
+      
+      const checkAndCreateProfiles = async () => {
+        // Check if user is a team member first
+        const { data: teamMember } = await supabase
+          .from('company_users')
+          .select('id')
+          .eq('profile_id', user.id)
+          .eq('status', 'active')
+          .limit(1)
+          .single();
+        
+        // Only create profiles if NOT a team member
+        if (!teamMember) {
+          if (profile.roles?.includes('supplier')) {
+            createSupplierRecord();
+          }
+          if (profile.roles?.includes('buyer')) {
+            createBuyerRecord();
+          }
+        } else {
+          console.log('User is a team member, skipping auto-profile creation');
+        }
+      };
+      
       // Small delay to ensure profile is fully loaded
-      const timer = setTimeout(() => {
-        if (profile.roles?.includes('supplier')) {
-          createSupplierRecord();
-        }
-        if (profile.roles?.includes('buyer')) {
-          createBuyerRecord();
-        }
-      }, 1000);
+      const timer = setTimeout(checkAndCreateProfiles, 1000);
 
       return () => clearTimeout(timer);
     }

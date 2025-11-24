@@ -117,13 +117,28 @@ export const OnboardingPipelineView = () => {
   const loadRequests = async () => {
     try {
       setLoading(true);
-      const { data: buyerData } = await supabase
+      
+      // Step 1: Check if user is a team member
+      const { data: teamMember } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('profile_id', user?.id)
+        .eq('company_type', 'buyer')
+        .eq('status', 'active')
+        .maybeSingle();
+
+      // Step 2: Resolve buyer ID (team member uses company_id, owner uses profile_id)
+      const buyerId = teamMember?.company_id || user?.id;
+
+      // Step 3: Get buyer profile using resolved ID
+      const { data: buyerData, error: buyerError } = await supabase
         .from('buyers')
         .select('id')
-        .eq('profile_id', user?.id)
+        .eq('id', buyerId)
         .single();
 
-      if (!buyerData) {
+      if (buyerError || !buyerData) {
+        console.error('Error fetching buyer:', buyerError);
         setRequests([]);
         return;
       }

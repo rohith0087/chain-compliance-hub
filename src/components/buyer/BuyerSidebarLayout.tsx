@@ -97,6 +97,7 @@ interface BuyerSidebarLayoutProps {
   onShowQuickOnboarding: () => void;
   onShowBulkInvite: () => void;
   buyerProfile: any;
+  companyId?: string;
 }
 
 export function BuyerSidebarLayout({
@@ -110,7 +111,8 @@ export function BuyerSidebarLayout({
   onShowSettings,
   onShowQuickOnboarding,
   onShowBulkInvite,
-  buyerProfile
+  buyerProfile,
+  companyId
 }: BuyerSidebarLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -131,7 +133,9 @@ export function BuyerSidebarLayout({
   const { setCurrentBranch } = useBranchContext();
   
   // Get permissions for the current user
-  const { canAccessRoute, role } = useCompanyPermissions(buyerProfile?.id, 'buyer');
+  // Use explicit companyId prop OR fallback to buyerProfile.id for backward compatibility
+  const effectiveCompanyId = companyId || buyerProfile?.id;
+  const { canAccessRoute, role } = useCompanyPermissions(effectiveCompanyId, 'buyer');
 
   // Sync branch context with local branch state
   useEffect(() => {

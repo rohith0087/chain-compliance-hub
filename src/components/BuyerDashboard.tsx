@@ -57,6 +57,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
   const [showQuickOnboarding, setShowQuickOnboarding] = useState(false);
   const [showBulkInvite, setShowBulkInvite] = useState(false);
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
+  const [companyId, setCompanyId] = useState<string | undefined>(undefined);
   const [upcomingDeadlines, setUpcomingDeadlines] = useState<any[]>([]);
   const [actionItems, setActionItems] = useState<any[]>([]);
   const [dashboardLoading, setDashboardLoading] = useState(true);
@@ -94,21 +95,45 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
       try {
         setDashboardLoading(true);
 
-        // Fetch buyer profile
-        const { data: buyer, error: buyerError } = await supabase
-          .from('buyers')
-          .select('*')
+        // Check if user is a team member first
+        const { data: teamMember, error: teamError } = await supabase
+          .from('company_users')
+          .select('company_id, company_type, role, status')
           .eq('profile_id', authUser.id)
+          .eq('company_type', 'buyer')
+          .in('status', ['active', 'pending'])
           .single();
 
-        if (buyerError && buyerError.code !== 'PGRST116') {
-          console.error('Error fetching buyer profile:', buyerError);
-          return;
+        if (teamError && teamError.code !== 'PGRST116') {
+          console.error('Error checking team membership:', teamError);
         }
 
-        setBuyerProfile(buyer);
+        if (teamMember) {
+          // User is a team member - use company_id from company_users
+          console.log('User is team member, using company_id:', teamMember.company_id);
+          setCompanyId(teamMember.company_id);
+          setBuyerProfile(null); // No buyer profile for team members
+        } else {
+          // User is a company owner - fetch buyer profile
+          const { data: buyer, error: buyerError } = await supabase
+            .from('buyers')
+            .select('*')
+            .eq('profile_id', authUser.id)
+            .single();
 
-        if (buyer) {
+          if (buyerError && buyerError.code !== 'PGRST116') {
+            console.error('Error fetching buyer profile:', buyerError);
+            return;
+          }
+
+          console.log('User is company owner, using buyer profile:', buyer?.id);
+          setCompanyId(buyer?.id);
+          setBuyerProfile(buyer);
+        }
+
+        const effectiveBuyerId = teamMember?.company_id || buyerProfile?.id;
+
+        if (effectiveBuyerId) {
           // Fetch upcoming deadlines - requests with due dates in next 30 days
           const thirtyDaysFromNow = new Date();
           thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
@@ -125,7 +150,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                 company_name
               )
             `)
-            .eq('buyer_id', buyer.id)
+            .eq('buyer_id', effectiveBuyerId)
             .not('due_date', 'is', null)
             .gte('due_date', new Date().toISOString().split('T')[0])
             .lte('due_date', thirtyDaysFromNow.toISOString().split('T')[0]);
@@ -159,7 +184,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                 company_name
               )
             `)
-            .eq('buyer_id', buyer.id)
+            .eq('buyer_id', effectiveBuyerId)
             .in('status', ['pending', 'submitted']);
 
           // Filter by branch if not viewing all branches
@@ -228,6 +253,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         onShowQuickOnboarding={() => setShowQuickOnboarding(true)}
         onShowBulkInvite={() => setShowBulkInvite(true)}
         buyerProfile={buyerProfile}
+        companyId={companyId}
       >
         {/* Dashboard Content */}
         {activeTab === 'dashboard' && (

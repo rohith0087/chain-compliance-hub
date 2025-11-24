@@ -31,7 +31,18 @@ export interface CompanyUser {
   joined_at?: string;
   created_at: string;
   updated_at: string;
-  // Additional profile fields
+  
+  // Enhanced fields from JOIN queries
+  profile?: {
+    email: string;
+    full_name: string;
+  };
+  inviter?: {
+    email: string;
+    full_name: string;
+  };
+  
+  // Computed fields
   email?: string;
   full_name?: string;
   inviter_name?: string;
@@ -104,10 +115,14 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
     if (!companyId || !companyType) return;
 
     try {
-      // First get company users
+      // Single query with JOIN to get all data at once - eliminates race conditions
       const { data: usersData, error: usersError } = await supabase
         .from('company_users')
-        .select('*')
+        .select(`
+          *,
+          profile:profile_id(email, full_name),
+          inviter:invited_by(email, full_name)
+        `)
         .eq('company_id', companyId)
         .eq('company_type', companyType)
         .order('joined_at', { ascending: false });
@@ -117,61 +132,31 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
         return;
       }
 
-      // Enhanced user data processing
+      // Process users with profile data already joined
       const enhancedUsers = await Promise.all(
-        (usersData || []).map(async (user) => {
+        (usersData || []).map(async (user: any) => {
           if (user.status === 'pending') {
-            // For pending users, get email from user_invitations using invitation_token
+            // For pending users, get invitation data
             const { data: invitationData } = await supabase
               .from('user_invitations')
-              .select('email, expires_at, invited_by')
+              .select('email, expires_at')
               .eq('token', user.invitation_token)
               .maybeSingle();
-
-            // Get inviter data from invited_by UUID (prefer company_users.invited_by, fallback to invitation)
-            let inviterData = null;
-            const inviterId = user.invited_by || invitationData?.invited_by;
-            
-            if (inviterId) {
-              const { data } = await supabase
-                .from('profiles')
-                .select('email, full_name')
-                .eq('id', inviterId)
-                .maybeSingle();
-              inviterData = data;
-            }
 
             return {
               ...user,
               email: invitationData?.email || 'Invitation data unavailable',
-              full_name: `Pending invitation`,
-              inviter_name: inviterData?.full_name || inviterData?.email || 'Unknown',
+              full_name: 'Pending invitation',
+              inviter_name: user.inviter?.full_name || user.inviter?.email || 'Unknown',
               invitation_expires_at: invitationData?.expires_at
             };
           } else {
-            // For active users, get profile data
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('email, full_name')
-              .eq('id', user.profile_id)
-              .single();
-
-            // Get inviter data if exists
-            let inviterData = null;
-            if (user.invited_by) {
-              const { data } = await supabase
-                .from('profiles')
-                .select('email, full_name')
-                .eq('id', user.invited_by)
-                .single();
-              inviterData = data;
-            }
-
+            // For active users, use joined profile data
             return {
               ...user,
-              email: profileData?.email || 'No email',
-              full_name: profileData?.full_name || 'No name',
-              inviter_name: inviterData?.full_name || inviterData?.email || 'Unknown'
+              email: user.profile?.email || 'No email',
+              full_name: user.profile?.full_name || 'No name',
+              inviter_name: user.inviter?.full_name || user.inviter?.email || 'Unknown'
             };
           }
         })
@@ -360,6 +345,23 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
     }
   };
 
+  // Sync branch manager when assigning branch_manager role
+  const syncBranchManager = async (branchId: string, profileId: string, role: string) => {
+    // If user is assigned as branch_manager, update the branch's manager_id
+    if (role === 'branch_manager') {
+      const { error } = await supabase
+        .from('company_branches')
+        .update({ manager_id: profileId })
+        .eq('id', branchId);
+
+      if (error) {
+        console.error('Error syncing branch manager:', error);
+      } else {
+        console.log(`Branch manager synced: ${profileId} for branch ${branchId}`);
+      }
+    }
+  };
+
   const inviteUserToBranch = async (email: string, branchId: string, role: string) => {
     if (!user || !companyId || !companyType) {
       toast.error('Missing required information to send invitation');
@@ -442,6 +444,14 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
         }
         
         console.log(`Invitation processed successfully for ${email} for ${role} role in branch ${branchDetails?.branch_name}`);
+        
+        // If invitation was successful and we have a profile_id, sync branch manager
+        if (response.data?.company_users?.profile_id) {
+          await syncBranchManager(branchId, response.data.company_users.profile_id, role);
+        } else if (profileData?.id) {
+          // For existing users, use their profile_id
+          await syncBranchManager(branchId, profileData.id, role);
+        }
       } catch (emailError) {
         console.error('Error sending invitation email:', emailError);
         
@@ -463,6 +473,7 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
       }
 
       await fetchCompanyUsers(); // Refresh the users list
+      await fetchBranches(); // Refresh branches to show updated manager
       return { data: null, error: null };
     } catch (err) {
       console.error('Error in inviteUserToBranch:', err);

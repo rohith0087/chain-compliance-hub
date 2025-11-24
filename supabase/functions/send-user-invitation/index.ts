@@ -117,14 +117,14 @@ const handler = async (req: Request): Promise<Response> => {
       // Add existing user to company
       const inviteToken = await generateInviteToken();
       
-      // Get company name for denormalized storage
+      // Get company name for denormalized storage (use companyNameForDb to avoid duplicate with parameter)
       const { data: companyData } = await supabase
         .from(companyType === 'buyer' ? 'buyers' : 'suppliers')
         .select('company_name')
         .eq('id', companyId)
         .single();
       
-      const companyName = companyData?.company_name || 'Unknown Company';
+      const companyNameForDb = companyData?.company_name || companyName;
       
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
@@ -167,7 +167,7 @@ const handler = async (req: Request): Promise<Response> => {
           email: recipientEmail,
           company_id: companyId,
           company_type: companyType,
-          company_name: companyName,
+          company_name: companyNameForDb,
           branch_id: branchId,
           role: role,
           invited_by: inviterId,
@@ -401,14 +401,14 @@ const handler = async (req: Request): Promise<Response> => {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
 
-    // Get company name for denormalized storage
-    const { data: companyData } = await supabase
+    // Fetch company name for denormalized storage  
+    const { data: newUserCompanyData } = await supabase
       .from(companyType === 'buyer' ? 'buyers' : 'suppliers')
       .select('company_name')
       .eq('id', companyId)
       .single();
     
-    const companyName = companyData?.company_name || 'Unknown Company';
+    const companyNameForDb = newUserCompanyData?.company_name || companyName;
 
     // Insert into user_invitations FIRST (due to foreign key constraint)
     const { error: inviteError } = await supabase
@@ -419,7 +419,7 @@ const handler = async (req: Request): Promise<Response> => {
         email: recipientEmail,
         company_id: companyId,
         company_type: companyType,
-        company_name: companyName,
+        company_name: companyNameForDb,
         branch_id: branchId,
         role: role,
         invited_by: inviterId,

@@ -41,14 +41,27 @@ const RequestsList = ({ onNewRequest }: RequestsListProps) => {
   const loadRequests = async () => {
     setLoading(true);
     try {
-      // Get buyer profile first
-      const { data: buyerProfile } = await supabase
+      // Step 1: Check if user is a team member
+      const { data: teamMember } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('profile_id', profile?.id)
+        .eq('company_type', 'buyer')
+        .eq('status', 'active')
+        .maybeSingle();
+
+      // Step 2: Resolve buyer ID (team member uses company_id, owner uses profile_id)
+      const buyerId = teamMember?.company_id || profile?.id;
+
+      // Step 3: Get buyer profile using resolved ID
+      const { data: buyerProfile, error: buyerError } = await supabase
         .from('buyers')
         .select('id')
-        .eq('profile_id', profile?.id)
+        .eq('id', buyerId)
         .single();
 
-      if (!buyerProfile) {
+      if (buyerError || !buyerProfile) {
+        console.error('Error fetching buyer profile:', buyerError);
         setRequests([]);
         return;
       }

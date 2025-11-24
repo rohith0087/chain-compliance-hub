@@ -18,16 +18,20 @@ const ResetPassword = () => {
   const { updatePassword, session, user } = useAuth();
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Check if we have the necessary recovery session
-    if (!session) {
-      // If no session, redirect to login
-      navigate('/');
-    }
-  }, [session, navigate]);
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check for session at submission time
+    if (!session) {
+      toast({
+        title: "Session Expired",
+        description: "Your password reset link has expired. Please request a new one.",
+        variant: "destructive",
+      });
+      setTimeout(() => navigate('/'), 2000);
+      return;
+    }
     
     if (password !== confirmPassword) {
       toast({

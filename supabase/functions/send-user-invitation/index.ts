@@ -116,6 +116,16 @@ const handler = async (req: Request): Promise<Response> => {
 
       // Add existing user to company
       const inviteToken = await generateInviteToken();
+      
+      // Get company name for denormalized storage
+      const { data: companyData } = await supabase
+        .from(companyType === 'buyer' ? 'buyers' : 'suppliers')
+        .select('company_name')
+        .eq('id', companyId)
+        .single();
+      
+      const companyName = companyData?.company_name || 'Unknown Company';
+      
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
 
@@ -157,6 +167,7 @@ const handler = async (req: Request): Promise<Response> => {
           email: recipientEmail,
           company_id: companyId,
           company_type: companyType,
+          company_name: companyName,
           branch_id: branchId,
           role: role,
           invited_by: inviterId,
@@ -168,6 +179,22 @@ const handler = async (req: Request): Promise<Response> => {
         console.error('Error creating user_invitations record:', inviteError);
         throw new Error(`Failed to create invitation: ${inviteError.message}`);
       }
+
+      // CRITICAL: Update the auth password for existing users so temp password works
+      console.log('Updating auth password for existing user:', userExists.id);
+      const { error: passwordError } = await supabase.auth.admin.updateUserById(
+        userExists.id,
+        { password: tempPassword }
+      );
+
+      if (passwordError) {
+        console.error('Error updating auth password:', passwordError);
+        // Rollback: delete the invitation
+        await supabase.from('user_invitations').delete().eq('token', newInviteToken);
+        throw new Error(`Failed to set temporary password: ${passwordError.message}`);
+      }
+
+      console.log('Successfully updated auth password for existing user');
 
       if (existingPendingInvitation) {
         // Update existing company_users record
@@ -250,23 +277,34 @@ const handler = async (req: Request): Promise<Response> => {
               </table>
             </div>
 
+            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+              <h3 style="color: #856404; margin-top: 0;">⚠️ Your Password Has Been Reset</h3>
+              <p style="color: #856404; margin: 10px 0;"><strong>Important:</strong> For security reasons, we've reset your account password. Your old password will no longer work.</p>
+              <p style="color: #856404; margin: 10px 0;">Use the temporary password below to sign in, then you'll be prompted to create a new password of your choice.</p>
+              
+              <div style="background: white; padding: 15px; border-radius: 6px; margin: 15px 0; border: 2px dashed #ffc107;">
+                <p style="margin: 0 0 8px 0; font-size: 14px; color: #856404; font-weight: 600;">Temporary Password:</p>
+                <p style="margin: 0; font-family: 'Courier New', monospace; font-size: 20px; font-weight: bold; color: #000; letter-spacing: 1px;">${tempPassword}</p>
+              </div>
+            </div>
+
             <div style="text-align: center; margin: 30px 0;">
               <a href="${joinUrl}" 
                  style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
-                🏢 Accept Invitation & Join Company
+                🏢 Accept Invitation & Sign In
               </a>
               <br>
               <small style="color: #666; font-size: 12px;">This link expires in 7 days</small>
             </div>
 
             <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; border-left: 4px solid #2196f3;">
-              <h3 style="color: #1976d2; margin-top: 0;">What's next:</h3>
-              <ol style="margin: 0; padding-left: 20px; color: #1976d2;">
-                <li>Click "Accept Invitation & Join Company" above</li>
-                <li>Sign in with your existing account credentials</li>
-                <li>Complete the setup process</li>
-                <li>Start collaborating with your new team!</li>
-              </ol>
+              <h3 style="color: #1976d2; margin-top: 0;">📋 Troubleshooting Tips:</h3>
+              <ul style="margin: 0; padding-left: 20px; color: #1565c0;">
+                <li>Copy the temporary password exactly as shown (it's case-sensitive)</li>
+                <li>Your old password has been disabled for security</li>
+                <li>After signing in, you'll create a new password</li>
+                <li>If you have trouble signing in, contact ${inviterName}</li>
+              </ul>
             </div>
 
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #666;">
@@ -363,6 +401,15 @@ const handler = async (req: Request): Promise<Response> => {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
 
+    // Get company name for denormalized storage
+    const { data: companyData } = await supabase
+      .from(companyType === 'buyer' ? 'buyers' : 'suppliers')
+      .select('company_name')
+      .eq('id', companyId)
+      .single();
+    
+    const companyName = companyData?.company_name || 'Unknown Company';
+
     // Insert into user_invitations FIRST (due to foreign key constraint)
     const { error: inviteError } = await supabase
       .from('user_invitations')
@@ -372,6 +419,7 @@ const handler = async (req: Request): Promise<Response> => {
         email: recipientEmail,
         company_id: companyId,
         company_type: companyType,
+        company_name: companyName,
         branch_id: branchId,
         role: role,
         invited_by: inviterId,

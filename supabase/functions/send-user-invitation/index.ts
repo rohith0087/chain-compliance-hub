@@ -120,7 +120,7 @@ const handler = async (req: Request): Promise<Response> => {
       expiresAt.setDate(expiresAt.getDate() + 7);
 
       // Check for existing pending invitation (duplicate prevention)
-      const { data: existingCompanyUser } = await supabase
+      const { data: existingPendingInvitation } = await supabase
         .from('company_users')
         .select('id, invitation_token')
         .eq('profile_id', userExists.id)
@@ -130,21 +130,21 @@ const handler = async (req: Request): Promise<Response> => {
         .eq('status', 'pending')
         .single();
 
-      let inviteToken = inviteToken;
+      let newInviteToken = inviteToken;
       
-      if (existingCompanyUser) {
+      if (existingPendingInvitation) {
         console.log('Found existing pending invitation - updating instead of creating duplicate');
         
         // Delete old invitation token if exists
-        if (existingCompanyUser.invitation_token) {
+        if (existingPendingInvitation.invitation_token) {
           await supabase
             .from('user_invitations')
             .delete()
-            .eq('token', existingCompanyUser.invitation_token);
+            .eq('token', existingPendingInvitation.invitation_token);
         }
         
         // Generate new token for resend
-        inviteToken = await generateInviteToken();
+        newInviteToken = await generateInviteToken();
       }
 
       // Store invitation for existing user FIRST (due to foreign key constraint)
@@ -152,7 +152,7 @@ const handler = async (req: Request): Promise<Response> => {
       const { error: inviteError } = await supabase
         .from('user_invitations')
         .insert({
-          token: inviteToken,
+          token: newInviteToken,
           user_id: userExists.id,
           email: recipientEmail,
           company_id: companyId,
@@ -169,21 +169,21 @@ const handler = async (req: Request): Promise<Response> => {
         throw new Error(`Failed to create invitation: ${inviteError.message}`);
       }
 
-      if (existingCompanyUser) {
+      if (existingPendingInvitation) {
         // Update existing company_users record
         const { error: updateError } = await supabase
           .from('company_users')
           .update({
-            invitation_token: inviteToken,
+            invitation_token: newInviteToken,
             invited_by: inviterId,
             updated_at: new Date().toISOString()
           })
-          .eq('id', existingCompanyUser.id);
+          .eq('id', existingPendingInvitation.id);
 
         if (updateError) {
           console.error('Error updating company_users record:', updateError);
           // Rollback: delete the invitation we just created
-          await supabase.from('user_invitations').delete().eq('token', inviteToken);
+          await supabase.from('user_invitations').delete().eq('token', newInviteToken);
           throw new Error(`Failed to update invitation: ${updateError.message}`);
         }
       } else {
@@ -197,14 +197,14 @@ const handler = async (req: Request): Promise<Response> => {
             branch_id: branchId,
             role: role,
             status: 'pending',
-            invitation_token: inviteToken,
+            invitation_token: newInviteToken,
             invited_by: inviterId
           });
 
         if (companyUserError) {
           console.error('Error creating company_users record:', companyUserError);
           // Rollback: delete the invitation we just created
-          await supabase.from('user_invitations').delete().eq('token', inviteToken);
+          await supabase.from('user_invitations').delete().eq('token', newInviteToken);
           throw new Error(`Failed to add user to company: ${companyUserError.message}`);
         }
       }
@@ -212,7 +212,7 @@ const handler = async (req: Request): Promise<Response> => {
       // Send different email for existing users
       const baseUrl = "https://chain-compliance-hub.lovable.app";
       const roleDisplayName = role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-      const joinUrl = `${baseUrl}/invite/${inviteToken}`;
+      const joinUrl = `${baseUrl}/invite/${newInviteToken}`;
 
       const htmlContent = `
         <!DOCTYPE html>

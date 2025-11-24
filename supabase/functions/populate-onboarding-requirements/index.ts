@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
     // Get the onboarding request
     const { data: request, error: requestError } = await supabase
       .from('supplier_onboarding_requests')
-      .select('*, buyers!inner(industry)')
+      .select('*')
       .eq('id', onboarding_request_id)
       .single();
 
@@ -89,7 +89,14 @@ Deno.serve(async (req) => {
       throw new Error('Onboarding request not found');
     }
 
-    console.log('Found request for buyer industry:', request.buyers?.industry);
+    // Get buyer's industry separately
+    const { data: buyer, error: buyerError } = await supabase
+      .from('buyers')
+      .select('industry')
+      .eq('id', request.buyer_id)
+      .single();
+
+    console.log('Found request for buyer industry:', buyer?.industry);
 
     // Check if requirements already exist
     const { data: existingDocs } = await supabase

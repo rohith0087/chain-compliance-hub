@@ -38,19 +38,27 @@ const DynamicDashboard = () => {
       // Check if user has any active company_users records (indicating they're a team member)
       const { data, error } = await supabase
         .from('company_users')
-        .select('id')
+        .select('id, company_type')
         .eq('profile_id', user.id)
         .eq('status', 'active')
-        .limit(1);
+        .limit(1)
+        .single();
 
       if (error) {
-        console.error('Error checking team membership:', error);
+        if (error.code !== 'PGRST116') { // Ignore "no rows" error
+          console.error('Error checking team membership:', error);
+        }
         return;
       }
 
-      const isMember = data && data.length > 0;
-      console.log('Team membership check:', isMember);
+      const isMember = !!data;
+      console.log('Team membership check:', isMember, 'company_type:', data?.company_type);
       setIsTeamMember(isMember);
+      
+      // If user is a team member, set their role based on company_type instead of profiles.roles
+      if (isMember && data?.company_type) {
+        setCurrentRole(data.company_type === 'buyer' ? 'buyer' : 'supplier');
+      }
     } catch (error) {
       console.error('Error in checkTeamMembership:', error);
     }

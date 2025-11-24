@@ -64,14 +64,27 @@ export const CustomTemplateManager = () => {
     try {
       setIsLoading(true);
 
-      // Get buyer ID
+      // Step 1: Check if user is a team member
+      const { data: teamMember } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('profile_id', user?.id)
+        .eq('company_type', 'buyer')
+        .eq('status', 'active')
+        .maybeSingle();
+
+      // Step 2: Resolve buyer ID
+      const buyerId = teamMember?.company_id || user?.id;
+
+      // Step 3: Get buyer profile using resolved ID
       const { data: buyerData, error: buyerError } = await supabase
         .from('buyers')
         .select('id')
-        .eq('profile_id', user?.id)
+        .eq('id', buyerId)
         .single();
 
       if (buyerError || !buyerData) {
+        console.error('Error fetching buyer profile:', buyerError);
         throw new Error('Buyer profile not found');
       }
 

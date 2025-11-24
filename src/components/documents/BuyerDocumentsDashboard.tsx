@@ -74,14 +74,29 @@ const BuyerDocumentsDashboard = () => {
 
   const loadConnectedSuppliers = async () => {
     try {
-      // Get the buyer profile
-      const { data: buyerProfile } = await supabase
+      // Step 1: Check if user is a team member
+      const { data: teamMember } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('profile_id', user?.id)
+        .eq('company_type', 'buyer')
+        .eq('status', 'active')
+        .maybeSingle();
+
+      // Step 2: Resolve buyer ID
+      const buyerId = teamMember?.company_id || user?.id;
+
+      // Step 3: Get buyer profile using resolved ID
+      const { data: buyerProfile, error: buyerError } = await supabase
         .from('buyers')
         .select('id')
-        .eq('profile_id', user?.id)
+        .eq('id', buyerId)
         .single();
 
-      if (!buyerProfile) return;
+      if (buyerError || !buyerProfile) {
+        console.error('Error fetching buyer profile:', buyerError);
+        return;
+      }
 
       // Load ALL suppliers that have documents for this buyer
       const { data: documentsData } = await supabase
@@ -166,14 +181,29 @@ const BuyerDocumentsDashboard = () => {
     abortControllerRef.current = new AbortController();
     setLoading(true);
     try {
-      // Get the buyer profile
-      const { data: buyerProfile } = await supabase
+      // Step 1: Check if user is a team member
+      const { data: teamMember } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('profile_id', user?.id)
+        .eq('company_type', 'buyer')
+        .eq('status', 'active')
+        .maybeSingle();
+
+      // Step 2: Resolve buyer ID
+      const buyerId = teamMember?.company_id || user?.id;
+
+      // Step 3: Get buyer profile using resolved ID
+      const { data: buyerProfile, error: buyerError } = await supabase
         .from('buyers')
         .select('id')
-        .eq('profile_id', user?.id)
+        .eq('id', buyerId)
         .single();
 
-      if (!buyerProfile) return;
+      if (buyerError || !buyerProfile) {
+        console.error('Error fetching buyer profile:', buyerError);
+        return;
+      }
 
       // Load documents with uploads and supplier info
       let query = supabase

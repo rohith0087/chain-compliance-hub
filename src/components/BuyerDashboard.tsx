@@ -538,8 +538,8 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         )}
 
         {/* Item Compliance Content */}
-        {activeTab === 'item-compliance' && buyerProfile && (
-          <ItemComplianceView buyerId={buyerProfile.id} />
+        {activeTab === 'item-compliance' && companyId && (
+          <ItemComplianceView buyerId={companyId} />
         )}
 
         {/* Facility Matrix Content */}
@@ -558,8 +558,8 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         )}
 
         {/* Document Sets Content */}
-        {activeTab === 'document-sets' && buyerProfile && (
-          <DocumentSetManager buyerId={buyerProfile.id} />
+        {activeTab === 'document-sets' && companyId && (
+          <DocumentSetManager buyerId={companyId} />
         )}
 
         {/* Suppliers Content */}

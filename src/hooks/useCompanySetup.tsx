@@ -182,17 +182,17 @@ export const useCompanySetup = () => {
         console.error('Error checking team membership:', error);
       }
       
-      // ALSO check if user has a pending invitation (they were invited but haven't accepted yet)
-      const { data: pendingInvitation } = await supabase
+      // ALSO check if user has ANY invitation (pending OR accepted)
+      // This prevents duplicate profile creation for invited users
+      const { data: userInvitation } = await supabase
         .from('user_invitations')
-        .select('id, company_type')
-        .eq('user_id', user.id)
-        .is('used_at', null)  // Not yet used
+        .select('id, company_type, used_at')
+        .eq('user_id', user.id)  // Finds ANY invitation for this user
         .limit(1)
-        .single();
+        .maybeSingle();
       
       // Only create profiles if NOT a team member AND NOT invited
-      if (!teamMember && !pendingInvitation) {
+      if (!teamMember && !userInvitation) {
         console.log('User is a company owner, creating profiles as needed');
         if (profile.roles?.includes('supplier')) {
           createSupplierRecord();

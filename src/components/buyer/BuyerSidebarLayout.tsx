@@ -35,6 +35,7 @@ import { useTranslation } from 'react-i18next';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
 import { useBranchContext } from '@/contexts/BranchContext';
 import { useCompanyPermissions } from '@/hooks/useCompanyPermissions';
+import { supabase } from '@/integrations/supabase/client';
 
 import {
   Sidebar,
@@ -122,19 +123,46 @@ export function BuyerSidebarLayout({
   const sidebar = useSidebar();
   const collapsed = sidebar?.state === 'collapsed';
 
-  // Company branches management
+  // Resolve company ID for team members vs owners
+  const [resolvedCompanyId, setResolvedCompanyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const resolveCompanyId = async () => {
+      if (!profile?.id) return;
+      
+      // Check if user is a team member first
+      const { data: companyUserData } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('profile_id', profile.id)
+        .eq('company_type', 'buyer')
+        .in('status', ['active', 'pending'])
+        .maybeSingle();
+      
+      if (companyUserData?.company_id) {
+        // Team member - use company_id from company_users
+        setResolvedCompanyId(companyUserData.company_id);
+      } else {
+        // Company owner - use buyerProfile.id
+        setResolvedCompanyId(buyerProfile?.id || null);
+      }
+    };
+    
+    resolveCompanyId();
+  }, [profile?.id, buyerProfile?.id, supabase]);
+
+  // Company branches management - use resolved company ID
   const {
     branches,
     currentBranch,
     switchBranch,
     loading: branchesLoading
-  } = useCompanyBranches(buyerProfile?.id, 'buyer');
+  } = useCompanyBranches(resolvedCompanyId, 'buyer');
 
   const { setCurrentBranch } = useBranchContext();
   
-  // Get permissions for the current user
-  // Use explicit companyId prop OR fallback to buyerProfile.id for backward compatibility
-  const effectiveCompanyId = companyId || buyerProfile?.id;
+  // Get permissions for the current user - use resolved company ID
+  const effectiveCompanyId = companyId || resolvedCompanyId;
   const { canAccessRoute, role } = useCompanyPermissions(effectiveCompanyId, 'buyer');
 
   // Sync branch context with local branch state

@@ -3,11 +3,13 @@ import { Building2, Users, Settings, BarChart3, Shield } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
+import { useCompanyPermissions } from '@/hooks/useCompanyPermissions';
 import { BranchSelector } from './BranchSelector';
 import { BranchManagement } from './BranchManagement';
 import { CompanyUserManagement } from './CompanyUserManagement';
 import { PermissionManagementInterface } from './PermissionManagementInterface';
 import { AgentTimeline } from '../agents/AgentTimeline';
+import UnauthorizedAccess from '@/components/auth/UnauthorizedAccess';
 
 interface CompanyManagementDashboardProps {
   companyId: string;
@@ -36,7 +38,13 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
     refetch
   } = useCompanyBranches(companyId, companyType);
 
+  const { canViewCompanyManagement, role } = useCompanyPermissions(companyId, companyType);
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Check permission - only company_admin can access
+  if (!loading && !canViewCompanyManagement()) {
+    return <UnauthorizedAccess requiredRoles={['company_admin']} currentRole={role} />;
+  }
 
   const stats = {
     totalBranches: branches.length,

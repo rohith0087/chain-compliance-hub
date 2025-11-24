@@ -43,10 +43,10 @@ const DynamicDashboard = () => {
       console.log('User profile loaded with roles:', roles);
       setLoadingTimeout(false); // Clear timeout flag
       setSessionError(null); // Clear any errors
-      // Set default role to the first role the user has
-      setCurrentRole(hasRole('buyer') ? 'buyer' : 'supplier');
-      loadProfiles();
-      checkTeamMembership();
+      // Check team membership FIRST, then load profiles
+      checkTeamMembership().then(() => {
+        loadProfiles();
+      });
     }
   }, [user, roles]);
 
@@ -54,12 +54,12 @@ const DynamicDashboard = () => {
     if (!user) return;
     
     try {
-      // Check if user has any active company_users records (indicating they're a team member)
+      // Check if user has any company_users records (active OR pending)
       const { data, error } = await supabase
         .from('company_users')
-        .select('id, company_type')
+        .select('id, company_type, status')
         .eq('profile_id', user.id)
-        .eq('status', 'active')
+        .in('status', ['active', 'pending'])
         .limit(1)
         .single();
 
@@ -67,24 +67,36 @@ const DynamicDashboard = () => {
         if (error.code !== 'PGRST116') { // Ignore "no rows" error
           console.error('Error checking team membership:', error);
         }
+        setIsTeamMember(false);
         return;
       }
 
       const isMember = !!data;
-      console.log('Team membership check:', isMember, 'company_type:', data?.company_type);
+      console.log('Team membership check:', isMember, 'status:', data?.status, 'company_type:', data?.company_type);
       setIsTeamMember(isMember);
       
-      // If user is a team member, set their role based on company_type instead of profiles.roles
+      // If user is a team member, set their role based on company_type (overrides profiles.roles)
       if (isMember && data?.company_type) {
-        setCurrentRole(data.company_type === 'buyer' ? 'buyer' : 'supplier');
+        const teamRole = data.company_type === 'buyer' ? 'buyer' : 'supplier';
+        console.log('Setting team member role to:', teamRole);
+        setCurrentRole(teamRole);
       }
     } catch (error) {
       console.error('Error in checkTeamMembership:', error);
+      setIsTeamMember(false);
     }
   };
 
   const loadProfiles = async () => {
-    console.log('Loading profiles...');
+    console.log('Loading profiles...', { isTeamMember });
+    
+    // Skip profile loading for team members - they don't need supplier/buyer records
+    if (isTeamMember) {
+      console.log('User is a team member, skipping profile loading');
+      setProfilesLoading(false);
+      return;
+    }
+    
     setProfilesLoading(true);
     try {
       if (hasRole('supplier')) {

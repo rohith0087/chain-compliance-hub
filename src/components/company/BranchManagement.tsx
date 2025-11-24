@@ -97,14 +97,19 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({
 
     setSaving(true);
     try {
-      const result = await onUpdateBranch(selectedBranch.id, formData);
+      const result = await onUpdateBranch(selectedBranch.id, {
+        ...formData,
+        manager_id: formData.manager_id || null  // Ensure NULL if empty
+      });
       if (!result.error) {
         setEditModalOpen(false);
         setSelectedBranch(null);
         resetForm();
+        toast.success('Branch updated successfully');
       }
     } catch (error) {
       console.error('Error updating branch:', error);
+      toast.error('Failed to update branch');
     } finally {
       setSaving(false);
     }

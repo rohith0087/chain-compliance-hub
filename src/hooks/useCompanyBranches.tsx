@@ -319,6 +319,7 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
     }
 
     try {
+      // Step 1: Call RPC to delete DB records
       const { data, error } = await supabase.rpc('remove_company_user', {
         p_company_user_id: companyUserId,
         p_force_delete: forceDelete
@@ -335,6 +336,8 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
         error?: string;
         message: string;
         action?: string;
+        profile_id?: string;
+        email?: string;
         requires_confirmation?: boolean;
         pending_assignments?: number;
       };
@@ -347,16 +350,28 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
         return { error: result.error };
       }
 
+      // Step 2: If hard delete required, call edge function to delete auth user
+      if (result.action === 'hard_delete_required' && result.profile_id) {
+        console.log('Deleting auth user:', result.profile_id);
+        
+        const { error: authDeleteError } = await supabase.functions.invoke('delete-auth-user', {
+          body: { profile_id: result.profile_id }
+        });
+
+        if (authDeleteError) {
+          console.error('Error deleting auth user:', authDeleteError);
+          toast.warning('User removed from company, but auth account deletion failed. They may still be able to log in.');
+        } else {
+          console.log('Auth user deleted successfully');
+        }
+      }
+
       // Refresh users list
       await fetchCompanyUsers();
       
-      if (result.action === 'deleted_invitation') {
-        toast.success(result.message);
-      } else {
-        toast.warning(result.message);
-      }
-
+      toast.success(result.message);
       return { data: result, error: null };
+      
     } catch (err) {
       console.error('Error in removeUser:', err);
       toast.error('Failed to remove user');

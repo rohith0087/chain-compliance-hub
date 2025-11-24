@@ -37,13 +37,20 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [branchToDelete, setBranchToDelete] = useState<CompanyBranch | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<CompanyBranch | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    branch_name: string;
+    location: string;
+    address: string;
+    phone: string;
+    email: string;
+    manager_id: string | null;
+  }>({
     branch_name: '',
     location: '',
     address: '',
     phone: '',
     email: '',
-    manager_id: ''
+    manager_id: null
   });
   const [saving, setSaving] = useState(false);
 
@@ -54,7 +61,7 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({
       address: '',
       phone: '',
       email: '',
-      manager_id: ''
+      manager_id: null
     });
   };
 
@@ -70,6 +77,7 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({
     try {
       const branchData = {
         ...formData,
+        manager_id: formData.manager_id || null,  // Ensure NULL if empty
         company_id: companyId,
         company_type: companyType,
         status: 'active' as const
@@ -123,7 +131,7 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({
       address: branch.address || '',
       phone: branch.phone || '',
       email: branch.email || '',
-      manager_id: branch.manager_id || ''
+      manager_id: branch.manager_id || null
     });
     setEditModalOpen(true);
   };
@@ -214,7 +222,7 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({
           value={formData.manager_id || "__none__"}
           onValueChange={(value) => setFormData(prev => ({ 
             ...prev, 
-            manager_id: value === "__none__" ? '' : value 
+            manager_id: value === "__none__" ? null : value 
           }))}
         >
           <SelectTrigger>

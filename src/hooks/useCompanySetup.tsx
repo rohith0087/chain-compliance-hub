@@ -169,17 +169,22 @@ export const useCompanySetup = () => {
       console.log('User and profile available, setting up company records...');
       
       const checkAndCreateProfiles = async () => {
-        // Check if user is a team member first
-        const { data: teamMember } = await supabase
+        // Check if user is a team member first (active OR pending)
+        const { data: teamMember, error } = await supabase
           .from('company_users')
-          .select('id')
+          .select('id, status, company_type')
           .eq('profile_id', user.id)
-          .eq('status', 'active')
+          .in('status', ['active', 'pending'])
           .limit(1)
           .single();
         
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error checking team membership:', error);
+        }
+        
         // Only create profiles if NOT a team member
         if (!teamMember) {
+          console.log('User is a company owner, creating profiles as needed');
           if (profile.roles?.includes('supplier')) {
             createSupplierRecord();
           }
@@ -187,7 +192,7 @@ export const useCompanySetup = () => {
             createBuyerRecord();
           }
         } else {
-          console.log('User is a team member, skipping auto-profile creation');
+          console.log('User is a team member (status:', teamMember.status, 'company_type:', teamMember.company_type, '), skipping auto-profile creation');
         }
       };
       

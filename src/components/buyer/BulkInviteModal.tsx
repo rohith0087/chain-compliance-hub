@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Upload, FileText, Send, Check, X, AlertCircle, Users, Copy, Eye, EyeOff, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOnboardingRequests } from '@/hooks/useOnboardingRequests';
+import { supabase } from '@/integrations/supabase/client';
 
 interface BulkInviteModalProps {
   isOpen: boolean;
@@ -87,11 +88,37 @@ export const BulkInviteModal = ({
     for (let i = 0; i < emailList.length; i++) {
       const email = emailList[i];
       try {
-        await createOnboardingRequestFromDefaults(buyerId, email, '');
-        success.push(email);
-        toast.success(`Sent to ${email}`, { duration: 1000 });
+        // Create onboarding request with status='invited'
+        await createOnboardingRequestFromDefaults(buyerId, email, '', '', undefined);
+        
+        // Send email invitation
+        const { error: emailError } = await supabase.functions.invoke(
+          'send-supplier-invitation',
+          {
+            body: {
+              emails: [email],
+              subject: `Invitation to Connect - ${buyerProfile.company_name}`,
+              customMessage: '',
+              buyerData: {
+                name: buyerProfile.contact_email.split('@')[0], // Fallback name
+                company: buyerProfile.company_name,
+                email: buyerProfile.contact_email,
+                industry: buyerProfile.industry || 'General',
+                buyerId: buyerId
+              }
+            }
+          }
+        );
+        
+        if (emailError) {
+          console.error(`Failed to send email to ${email}:`, emailError);
+          failed.push(email);
+        } else {
+          success.push(email);
+          toast.success(`Sent to ${email}`, { duration: 1000 });
+        }
       } catch (error) {
-        console.error(`Failed to send to ${email}:`, error);
+        console.error(`Failed to process ${email}:`, error);
         failed.push(email);
       }
       

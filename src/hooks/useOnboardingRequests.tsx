@@ -231,7 +231,7 @@ export const useOnboardingRequests = () => {
     supplierId?: string
   ) => {
     try {
-      const { data, error } = await supabase
+      const { data, error} = await supabase
         .from('supplier_onboarding_requests')
         .insert({
           buyer_id: buyerId,
@@ -241,7 +241,7 @@ export const useOnboardingRequests = () => {
           can_choose_branches: canChooseBranches,
           custom_message: customMessage,
           created_by: user?.id,
-          status: 'pending'
+          status: supplierId ? 'pending' : 'invited' // invited if no supplier yet, pending if supplier exists
         })
         .select()
         .single();

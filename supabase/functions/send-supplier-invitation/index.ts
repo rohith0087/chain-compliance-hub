@@ -48,73 +48,47 @@ const handler = async (req: Request): Promise<Response> => {
             body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f9fafb; }
             .container { max-width: 600px; margin: 0 auto; background-color: white; }
             .header { background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; padding: 32px 24px; text-align: center; }
-            .content { padding: 32px 24px; }
-            .buyer-card { background: linear-gradient(to right, #eff6ff, #e0e7ff); border: 1px solid #bfdbfe; border-radius: 8px; padding: 20px; margin: 20px 0; }
-            .buyer-id { background-color: #dbeafe; color: #1e40af; padding: 8px 12px; border-radius: 4px; font-family: monospace; font-weight: bold; display: inline-block; margin: 10px 0; }
-            .cta-button { display: inline-block; background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
-            .steps { background-color: #f8fafc; border-radius: 8px; padding: 20px; margin: 20px 0; }
-            .step { margin: 10px 0; padding-left: 20px; position: relative; }
-            .step::before { content: counter(step-counter); counter-increment: step-counter; position: absolute; left: 0; top: 0; background: #2563eb; color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; }
-            .steps { counter-reset: step-counter; }
+            .content { padding: 32px 24px; color: #1f2937; }
+            .buyer-id { background-color: #dbeafe; color: #1e40af; padding: 12px 16px; border-radius: 6px; font-family: monospace; font-weight: bold; font-size: 18px; display: inline-block; margin: 16px 0; letter-spacing: 1px; }
+            .cta-button { display: inline-block; background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; margin: 24px 0; font-weight: bold; font-size: 16px; }
+            .instructions { background-color: #f0f9ff; border-left: 4px solid #2563eb; padding: 20px; margin: 24px 0; border-radius: 4px; }
             .footer { background-color: #f8fafc; padding: 24px; text-align: center; color: #6b7280; font-size: 14px; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1>You're Invited to Join Our Supplier Network</h1>
-              <p>Connect with ${buyerData.company} and expand your business opportunities</p>
+              <h1>You're Invited to Join Tracer2c Compliance Platform</h1>
+              <p style="margin: 8px 0 0 0; font-size: 18px;">Connect with ${buyerData.company} as a supplier</p>
             </div>
             
             <div class="content">
               <h2>Hello!</h2>
-              <p><strong>${buyerData.name}</strong> from <strong>${buyerData.company}</strong> would like to connect with you on our supplier platform.</p>
+              <p style="font-size: 16px; line-height: 1.6;"><strong>${buyerData.company}</strong> has invited you to join our supplier compliance platform.</p>
               
-              ${customMessage ? `<div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 4px;">
-                <h3 style="margin: 0 0 8px 0; color: #92400e;">Personal Message:</h3>
-                <p style="margin: 0; color: #92400e;">${customMessage}</p>
-              </div>` : ''}
+              <div class="instructions">
+                <h3 style="margin: 0 0 16px 0; color: #1e40af;">How to Get Started:</h3>
+                <ol style="margin: 0; padding-left: 20px; line-height: 1.8;">
+                  <li>Click the "Sign Up Now" button below</li>
+                  <li>Create your supplier account with your company details</li>
+                  <li>Use this Buyer ID to connect: <strong style="color: #1e40af;">${buyerData.buyerId}</strong></li>
+                  <li>Start collaborating on compliance documents</li>
+                </ol>
+              </div>
               
-              <div class="buyer-card">
-                <h3 style="margin: 0 0 16px 0; color: #1e40af;">Company Details</h3>
-                <table style="width: 100%; font-size: 14px;">
-                  <tr><td style="padding: 4px 0;"><strong>Company:</strong></td><td style="padding: 4px 0;">${buyerData.company}</td></tr>
-                  <tr><td style="padding: 4px 0;"><strong>Contact Person:</strong></td><td style="padding: 4px 0;">${buyerData.name}</td></tr>
-                  <tr><td style="padding: 4px 0;"><strong>Email:</strong></td><td style="padding: 4px 0;">${buyerData.email}</td></tr>
-                  ${buyerData.industry ? `<tr><td style="padding: 4px 0;"><strong>Industry:</strong></td><td style="padding: 4px 0;">${buyerData.industry}</td></tr>` : ''}
-                </table>
-                
-                <div style="margin-top: 16px;">
-                  <strong>Buyer ID for Direct Connection:</strong><br>
+              <div style="text-align: center; margin: 32px 0;">
+                <div style="margin-bottom: 16px;">
+                  <strong style="font-size: 14px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">Buyer ID</strong><br>
                   <span class="buyer-id">${buyerData.buyerId}</span>
                 </div>
+                <a href="${signupUrl}" class="cta-button">Sign Up Now</a>
               </div>
               
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${signupUrl}" class="cta-button">Join the Platform Now</a>
-              </div>
-              
-              <div class="steps">
-                <h3 style="margin: 0 0 16px 0;">How to Get Started:</h3>
-                <div class="step">Click the "Join the Platform Now" button above</div>
-                <div class="step">Create your supplier account with your company details</div>
-                <div class="step">Once registered, use the Buyer ID <strong>${buyerData.buyerId}</strong> to send a connection request</div>
-                <div class="step">Start collaborating and manage compliance documents together</div>
-              </div>
-              
-              <p><strong>Benefits of joining:</strong></p>
-              <ul style="color: #374151;">
-                <li>Streamlined compliance document management</li>
-                <li>Direct communication with buyers</li>
-                <li>Secure document sharing and tracking</li>
-                <li>Professional supplier network access</li>
-              </ul>
-              
-              <p>If you have any questions, feel free to reach out to ${buyerData.name} at <a href="mailto:${buyerData.email}">${buyerData.email}</a>.</p>
+              <p style="font-size: 14px; color: #6b7280; line-height: 1.6;">If you have questions, contact ${buyerData.company} at <a href="mailto:${buyerData.email}" style="color: #2563eb;">${buyerData.email}</a>.</p>
             </div>
             
             <div class="footer">
-              <p>This invitation was sent by ${buyerData.company} via our supplier compliance platform.</p>
+              <p>This invitation was sent by ${buyerData.company}.</p>
               <p>If you didn't expect this invitation, you can safely ignore this email.</p>
             </div>
           </div>

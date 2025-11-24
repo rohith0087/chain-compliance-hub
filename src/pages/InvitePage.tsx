@@ -57,21 +57,40 @@ const InvitePage = () => {
 
       if (inviteError || !invitationData) {
         console.error('Invitation lookup error:', inviteError);
-        toast.error('Invalid or expired invitation link');
+        
+        // Provide specific error messages
+        if (inviteError?.code === 'PGRST116') {
+          toast.error('Invitation not found in the system. Please contact your administrator.', {
+            description: `Token: ${token?.substring(0, 8)}...`,
+            duration: 10000,
+          });
+        } else {
+          toast.error('Invalid or expired invitation link', {
+            description: 'Please contact your administrator for a new invitation.',
+            duration: 10000,
+          });
+        }
+        
         navigate('/auth');
         return;
       }
 
       // Check if invitation has expired
       if (new Date(invitationData.expires_at) < new Date()) {
-        toast.error('This invitation has expired. Please request a new one.');
+        toast.error('This invitation has expired', {
+          description: 'Please contact your administrator to request a new invitation.',
+          duration: 10000,
+        });
         navigate('/auth');
         return;
       }
 
       // Check if invitation was already used
       if (invitationData.used_at) {
-        toast.error('This invitation has already been used.');
+        toast.error('This invitation has already been used', {
+          description: 'If you need to log in, please use the regular login page.',
+          duration: 10000,
+        });
         navigate('/auth');
         return;
       }

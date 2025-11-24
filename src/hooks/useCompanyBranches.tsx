@@ -27,6 +27,7 @@ export interface CompanyUser {
   role: string;
   status: 'active' | 'inactive' | 'pending';
   invited_by?: string;
+  invitation_token?: string;
   joined_at?: string;
   created_at: string;
   updated_at: string;

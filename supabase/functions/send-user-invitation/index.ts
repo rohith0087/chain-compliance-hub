@@ -120,6 +120,7 @@ const handler = async (req: Request): Promise<Response> => {
       expiresAt.setDate(expiresAt.getDate() + 7);
 
       // Store invitation for existing user FIRST (due to foreign key constraint)
+      const tempPassword = generateSecurePassword(); // Generate even for existing users (required by schema)
       const { error: inviteError } = await supabase
         .from('user_invitations')
         .insert({
@@ -132,7 +133,7 @@ const handler = async (req: Request): Promise<Response> => {
           role: role,
           invited_by: inviterId,
           expires_at: expiresAt.toISOString(),
-          temp_password: null // No temp password for existing users
+          temp_password: tempPassword // Schema requires temp_password to be NOT NULL
         });
 
       if (inviteError) {

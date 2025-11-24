@@ -157,14 +157,11 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
     e.preventDefault();
     if (!user || !buyerProfile) return;
 
-    // Use currentBranch as fallback if selectedBranch is not set
-    const branchId = selectedBranch || currentBranch?.id;
-
-    // Validate branch selection
-    if (!branchId) {
+    // ALWAYS require explicit branch selection
+    if (!selectedBranch) {
       toast({
-        title: "Branch Required",
-        description: "Please select a branch for this document request.",
+        title: "Branch Selection Required",
+        description: "Please select which branch this document request is for.",
         variant: "destructive",
       });
       return;
@@ -185,7 +182,7 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
           due_date: dueDate?.toISOString().split('T')[0],
           supplier_id: selectedSupplier,
           buyer_id: buyerProfile.id,
-          branch_id: branchId,
+          branch_id: selectedBranch, // Always use explicitly selected branch
           requester_id: user.id,
           template_type: templateType,
           custom_template_id: templateType === 'custom' ? selectedTemplate : null,

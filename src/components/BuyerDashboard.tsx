@@ -560,11 +560,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         )}
 
         {/* Company Content */}
-        {activeTab === 'company' && buyerProfile && (
+        {activeTab === 'company' && companyId && (
           <CompanyManagementDashboard 
-            companyId={buyerProfile.id}
+            companyId={companyId}
             companyType="buyer"
-            companyName={buyerProfile.company_name || 'Company'}
+            companyName={buyerProfile?.company_name || 'Company'}
           />
         )}
 

@@ -22,6 +22,7 @@ const DynamicDashboard = () => {
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
   const [profilesLoading, setProfilesLoading] = useState(true);
   const [isTeamMember, setIsTeamMember] = useState<boolean>(false);
+  const [membershipLoading, setMembershipLoading] = useState(true);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
 
@@ -51,9 +52,14 @@ const DynamicDashboard = () => {
   }, [user, roles]);
 
   const checkTeamMembership = async () => {
-    if (!user) return;
+    if (!user) {
+      setMembershipLoading(false);
+      return;
+    }
     
     try {
+      setMembershipLoading(true);
+      
       // Check if user has any company_users records (active OR pending)
       const { data, error } = await supabase
         .from('company_users')
@@ -84,6 +90,8 @@ const DynamicDashboard = () => {
     } catch (error) {
       console.error('Error in checkTeamMembership:', error);
       setIsTeamMember(false);
+    } finally {
+      setMembershipLoading(false);
     }
   };
 
@@ -229,6 +237,20 @@ const DynamicDashboard = () => {
           <div className="flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
             <p className="text-muted-foreground">Loading your profile...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show loading while checking team membership
+  if (membershipLoading) {
+    return (
+      <Card className="max-w-md mx-auto mt-8">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
+            <p className="text-muted-foreground">Checking your account type...</p>
           </div>
         </CardContent>
       </Card>

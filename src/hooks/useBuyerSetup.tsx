@@ -37,17 +37,42 @@ export const useBuyerSetup = () => {
     if (!user) return null;
 
     try {
-      const { data: buyer, error } = await supabase
-        .from('buyers')
-        .select('*')
+      // Check if user is a team member first
+      const { data: teamMember } = await supabase
+        .from('company_users')
+        .select('company_id, company_type')
         .eq('profile_id', user.id)
+        .eq('company_type', 'buyer')
+        .eq('status', 'active')
         .single();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching buyer profile:', error);
-      }
+      if (teamMember) {
+        // Team member - fetch company using company_id
+        const { data: buyer, error } = await supabase
+          .from('buyers')
+          .select('*')
+          .eq('id', teamMember.company_id)
+          .single();
 
-      return buyer;
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching buyer profile for team member:', error);
+        }
+
+        return buyer;
+      } else {
+        // Company owner - fetch using profile_id
+        const { data: buyer, error } = await supabase
+          .from('buyers')
+          .select('*')
+          .eq('profile_id', user.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching buyer profile for owner:', error);
+        }
+
+        return buyer;
+      }
     } catch (error) {
       console.error('Error in getBuyerProfile:', error);
       return null;

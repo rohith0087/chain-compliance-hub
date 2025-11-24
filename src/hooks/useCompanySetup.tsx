@@ -30,7 +30,7 @@ export const useCompanySetup = () => {
 
         if (!existingSuppliers || existingSuppliers.length === 0) {
           console.log('Creating new supplier record...');
-          const { error: supplierError } = await supabase
+          const { data: newSupplier, error: supplierError } = await supabase
             .from('suppliers')
             .insert({
               profile_id: user.id,
@@ -41,12 +41,15 @@ export const useCompanySetup = () => {
               address: '',
               auto_approve_connections: false,
               description: ''
-            });
+            })
+            .select()
+            .single();
 
           if (supplierError) {
             console.error('Error creating supplier record:', supplierError);
           } else {
             console.log('Supplier record created successfully');
+            // Note: Database trigger automatically creates Main Office branch and company_users record
           }
         } else {
           console.log('Supplier record already exists');
@@ -81,7 +84,7 @@ export const useCompanySetup = () => {
 
         if (!existingBuyers || existingBuyers.length === 0) {
           console.log('Creating new buyer record...');
-          const { error: buyerError } = await supabase
+          const { data: newBuyer, error: buyerError } = await supabase
             .from('buyers')
             .insert({
               profile_id: user.id,
@@ -90,12 +93,15 @@ export const useCompanySetup = () => {
               industry: 'General Business',
               phone: '',
               address: ''
-            });
+            })
+            .select()
+            .single();
 
           if (buyerError) {
             console.error('Error creating buyer record:', buyerError);
           } else {
             console.log('Buyer record created successfully');
+            // Note: Database trigger automatically creates Main Office branch and company_users record
           }
         } else {
           console.log('Buyer record already exists');

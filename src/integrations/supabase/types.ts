@@ -893,7 +893,15 @@ export type Database = {
           status?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "company_users_invitation_token_fkey"
+            columns: ["invitation_token"]
+            isOneToOne: false
+            referencedRelation: "user_invitations"
+            referencedColumns: ["token"]
+          },
+        ]
       }
       credit_transactions: {
         Row: {

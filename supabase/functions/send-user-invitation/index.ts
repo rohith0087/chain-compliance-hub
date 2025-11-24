@@ -68,10 +68,21 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('email', inviterEmail)
       .single();
     
-    const inviterId = inviterProfile?.id || null;
-    if (!inviterId) {
-      console.warn('Could not find inviter profile for email:', inviterEmail);
+    if (inviterError || !inviterProfile) {
+      console.error('Could not find inviter profile for email:', inviterEmail, inviterError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Inviter profile not found. Please contact support.'
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders }
+        }
+      );
     }
+    
+    const inviterId = inviterProfile.id;
 
     // Check if user already exists
     const { data: existingUser, error: userCheckError } = await supabase.auth.admin.listUsers();
@@ -109,6 +120,27 @@ const handler = async (req: Request): Promise<Response> => {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
 
+      // Store invitation for existing user FIRST (due to foreign key constraint)
+      const { error: inviteError } = await supabase
+        .from('user_invitations')
+        .insert({
+          token: inviteToken,
+          user_id: userExists.id,
+          email: recipientEmail,
+          company_id: companyId,
+          company_type: companyType,
+          branch_id: branchId,
+          role: role,
+          invited_by: inviterId,
+          expires_at: expiresAt.toISOString(),
+          temp_password: null // No temp password for existing users
+        });
+
+      if (inviteError) {
+        console.error('Error creating user_invitations record:', inviteError);
+        throw new Error(`Failed to create invitation: ${inviteError.message}`);
+      }
+
       // Create company_users record for existing user
       const { error: companyUserError } = await supabase
         .from('company_users')
@@ -125,24 +157,10 @@ const handler = async (req: Request): Promise<Response> => {
 
       if (companyUserError) {
         console.error('Error creating company_users record:', companyUserError);
+        // Rollback: delete the invitation we just created
+        await supabase.from('user_invitations').delete().eq('token', inviteToken);
         throw new Error(`Failed to add user to company: ${companyUserError.message}`);
       }
-
-      // Store invitation for existing user
-      const { error: inviteError } = await supabase
-        .from('user_invitations')
-        .insert({
-          token: inviteToken,
-          user_id: userExists.id,
-          email: recipientEmail,
-          company_id: companyId,
-          company_type: companyType,
-          branch_id: branchId,
-          role: role,
-          invited_by: inviterId,
-          expires_at: expiresAt.toISOString(),
-          temp_password: null // No temp password for existing users
-        });
 
       // Send different email for existing users
       const baseUrl = "https://chain-compliance-hub.lovable.app";
@@ -291,13 +309,14 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (profileError) {
       console.error('Error creating profile:', profileError);
-      // Don't throw here as user account is already created
+      throw new Error(`Failed to create profile: ${profileError.message}`);
     }
 
     // Store invitation details for later verification
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
 
+    // Insert into user_invitations FIRST (due to foreign key constraint)
     const { error: inviteError } = await supabase
       .from('user_invitations')
       .insert({
@@ -313,9 +332,9 @@ const handler = async (req: Request): Promise<Response> => {
         temp_password: tempPassword
       });
 
-    if (inviteError && !inviteError.message.includes('does not exist')) {
+    if (inviteError) {
       console.error('Error storing invitation details:', inviteError);
-      // Continue as this is not critical for the invitation flow
+      throw new Error(`Failed to create invitation: ${inviteError.message}`);
     }
 
     // Create company_users record for new user
@@ -334,7 +353,10 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (companyUserError) {
       console.error('Error creating company_users record:', companyUserError);
-      // Continue as this is not critical for the invitation flow
+      // Rollback: delete the auth user and invitation
+      await supabase.auth.admin.deleteUser(authUser.user.id);
+      await supabase.from('user_invitations').delete().eq('token', inviteToken);
+      throw new Error(`Failed to create company user: ${companyUserError.message}`);
     }
 
     const roleDisplayName = role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());

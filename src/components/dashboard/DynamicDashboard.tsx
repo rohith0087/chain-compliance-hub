@@ -186,10 +186,8 @@ const DynamicDashboard = () => {
     
     if (!buyer) return false;
     
-    // Company owners need these fields filled
-    return !!(buyer.company_name && buyer.industry && 
-             buyer.company_name.trim() !== '' && 
-             buyer.industry !== 'General Business');
+    // Company owners need these fields filled (removed 'General Business' check since we don't auto-create anymore)
+    return !!(buyer.company_name && buyer.industry);
   };
 
   // Check if supplier profile is properly set up
@@ -199,10 +197,8 @@ const DynamicDashboard = () => {
     
     if (!supplier) return false;
     
-    // Company owners need these fields filled
-    return !!(supplier.company_name && supplier.industry && 
-             supplier.company_name.trim() !== '' && 
-             supplier.industry !== 'General Business');
+    // Company owners need these fields filled (removed 'General Business' check since we don't auto-create anymore)
+    return !!(supplier.company_name && supplier.industry);
   };
 
   // Show error state if loading timeout or session error occurs

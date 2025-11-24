@@ -119,6 +119,34 @@ const handler = async (req: Request): Promise<Response> => {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
 
+      // Check for existing pending invitation (duplicate prevention)
+      const { data: existingCompanyUser } = await supabase
+        .from('company_users')
+        .select('id, invitation_token')
+        .eq('profile_id', userExists.id)
+        .eq('company_id', companyId)
+        .eq('company_type', companyType)
+        .eq('branch_id', branchId)
+        .eq('status', 'pending')
+        .single();
+
+      let inviteToken = inviteToken;
+      
+      if (existingCompanyUser) {
+        console.log('Found existing pending invitation - updating instead of creating duplicate');
+        
+        // Delete old invitation token if exists
+        if (existingCompanyUser.invitation_token) {
+          await supabase
+            .from('user_invitations')
+            .delete()
+            .eq('token', existingCompanyUser.invitation_token);
+        }
+        
+        // Generate new token for resend
+        inviteToken = await generateInviteToken();
+      }
+
       // Store invitation for existing user FIRST (due to foreign key constraint)
       const tempPassword = generateSecurePassword(); // Generate even for existing users (required by schema)
       const { error: inviteError } = await supabase
@@ -141,25 +169,44 @@ const handler = async (req: Request): Promise<Response> => {
         throw new Error(`Failed to create invitation: ${inviteError.message}`);
       }
 
-      // Create company_users record for existing user
-      const { error: companyUserError } = await supabase
-        .from('company_users')
-        .insert({
-          profile_id: userExists.id,
-          company_id: companyId,
-          company_type: companyType,
-          branch_id: branchId,
-          role: role,
-          status: 'pending',
-          invitation_token: inviteToken,
-          invited_by: inviterId
-        });
+      if (existingCompanyUser) {
+        // Update existing company_users record
+        const { error: updateError } = await supabase
+          .from('company_users')
+          .update({
+            invitation_token: inviteToken,
+            invited_by: inviterId,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingCompanyUser.id);
 
-      if (companyUserError) {
-        console.error('Error creating company_users record:', companyUserError);
-        // Rollback: delete the invitation we just created
-        await supabase.from('user_invitations').delete().eq('token', inviteToken);
-        throw new Error(`Failed to add user to company: ${companyUserError.message}`);
+        if (updateError) {
+          console.error('Error updating company_users record:', updateError);
+          // Rollback: delete the invitation we just created
+          await supabase.from('user_invitations').delete().eq('token', inviteToken);
+          throw new Error(`Failed to update invitation: ${updateError.message}`);
+        }
+      } else {
+        // Create new company_users record for existing user
+        const { error: companyUserError } = await supabase
+          .from('company_users')
+          .insert({
+            profile_id: userExists.id,
+            company_id: companyId,
+            company_type: companyType,
+            branch_id: branchId,
+            role: role,
+            status: 'pending',
+            invitation_token: inviteToken,
+            invited_by: inviterId
+          });
+
+        if (companyUserError) {
+          console.error('Error creating company_users record:', companyUserError);
+          // Rollback: delete the invitation we just created
+          await supabase.from('user_invitations').delete().eq('token', inviteToken);
+          throw new Error(`Failed to add user to company: ${companyUserError.message}`);
+        }
       }
 
       // Send different email for existing users

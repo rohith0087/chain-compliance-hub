@@ -410,35 +410,7 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
         .eq('id', companyId)
         .single();
 
-      // Create database record first (with duplicate handling)
-      const invitationData = {
-        company_id: companyId,
-        company_type: companyType,
-        branch_id: branchId,
-        role: role as 'company_admin' | 'branch_manager' | 'document_manager' | 'viewer' | 'approver',
-        status: 'pending' as const,
-        invited_by: user.id,
-        profile_id: profileData?.id || '00000000-0000-0000-0000-000000000000'
-      };
-
-      let isResendingInvite = false;
-      const { error: insertError } = await supabase
-        .from('company_users')
-        .insert(invitationData);
-
-      if (insertError) {
-        // Check if it's a duplicate key constraint violation
-        if (insertError.message?.includes('duplicate key') || insertError.code === '23505') {
-          console.log('Duplicate invitation detected - this is a resend');
-          isResendingInvite = true;
-          // Continue to send email despite duplicate record
-        } else {
-          console.error('Error creating invitation record:', insertError);
-          throw insertError;
-        }
-      }
-
-      // Send invitation email
+      // Let edge function handle all database operations (no frontend pre-insertion)
       try {
         const response = await supabase.functions.invoke('send-user-invitation', {
           body: {
@@ -465,8 +437,7 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
         } else if (response.data?.userExists && !response.data?.alreadyInCompany) {
           toast.success(`Existing user invited to join company!`);
         } else {
-          const actionType = isResendingInvite ? 'resent' : 'sent';
-          toast.success(`New user account created and invitation ${actionType}!`);
+          toast.success(`New user account created and invitation sent!`);
         }
         
         console.log(`Invitation processed successfully for ${email} for ${role} role in branch ${branchDetails?.branch_name}`);
@@ -491,7 +462,7 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
       }
 
       await fetchCompanyUsers(); // Refresh the users list
-      return { data: invitationData, error: null };
+      return { data: null, error: null };
     } catch (err) {
       console.error('Error in inviteUserToBranch:', err);
       toast.error('Failed to send invitation');

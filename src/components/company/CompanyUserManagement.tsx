@@ -94,6 +94,12 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
       return;
     }
 
+    // Validate email format
+    if (user.email === 'Invitation data unavailable' || user.email === 'No email' || !user.email.includes('@')) {
+      toast.error('Cannot resend invitation - invalid email address. Please delete and re-invite this user.');
+      return;
+    }
+
     setResending(user.id);
     try {
       await onResendInvitation(user.email, user.branch_id, user.role);

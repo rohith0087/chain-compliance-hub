@@ -30,6 +30,8 @@ interface ActivityEvent {
   supplier?: string;
   priority?: 'high' | 'medium' | 'low';
   category?: string;
+  userName?: string;
+  userEmail?: string;
 }
 
 interface MetricData {
@@ -180,6 +182,11 @@ const DocumentActivityDashboard = ({ events, documents = [] }: DocumentActivityD
                   <div>
                     <h4 className="text-sm font-medium text-foreground">{event.title}</h4>
                     <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
+                    {event.userName && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        by {event.userName}
+                      </p>
+                    )}
                   </div>
                   <span className="text-xs text-muted-foreground whitespace-nowrap">
                     {format(new Date(event.date), 'MMM d, HH:mm')}

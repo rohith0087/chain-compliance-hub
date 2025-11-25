@@ -29,6 +29,7 @@ const BuyerDocumentsDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [approveLoading, setApproveLoading] = useState<string | null>(null);
   const [declineLoading, setDeclineLoading] = useState<string | null>(null);
+  const [buyerId, setBuyerId] = useState<string | null>(null);
   const [declineDialog, setDeclineDialog] = useState<{
     isOpen: boolean;
     documentId: string;
@@ -84,13 +85,14 @@ const BuyerDocumentsDashboard = () => {
         .maybeSingle();
 
       // Step 2: Resolve buyer ID
-      const buyerId = teamMember?.company_id || user?.id;
+      const resolvedBuyerId = teamMember?.company_id || user?.id;
+      setBuyerId(resolvedBuyerId);
 
       // Step 3: Get buyer profile using resolved ID
       const { data: buyerProfile, error: buyerError } = await supabase
         .from('buyers')
         .select('id')
-        .eq('id', buyerId)
+        .eq('id', resolvedBuyerId)
         .single();
 
       if (buyerError || !buyerProfile) {
@@ -375,6 +377,17 @@ const BuyerDocumentsDashboard = () => {
         throw new Error(result?.error || 'Failed to approve document');
       }
 
+      // Log the approval activity
+      const upload = document.document_uploads?.[0];
+      if (upload?.id && user?.id) {
+        await supabase.from('document_activity_logs').insert({
+          document_upload_id: upload.id,
+          action_type: 'approved',
+          user_id: user.id,
+          notes: 'Document approved'
+        });
+      }
+
       toast({
         title: "Document Approved",
         description: `"${document.document_type}" has been successfully approved.`,
@@ -418,6 +431,17 @@ const BuyerDocumentsDashboard = () => {
       const result = data as { success: boolean; error?: string; message?: string };
       if (!result?.success) {
         throw new Error(result?.error || 'Failed to reject document');
+      }
+
+      // Log the rejection activity
+      const upload = document.document_uploads?.[0];
+      if (upload?.id && user?.id) {
+        await supabase.from('document_activity_logs').insert({
+          document_upload_id: upload.id,
+          action_type: 'rejected',
+          user_id: user.id,
+          notes: reason
+        });
       }
 
       toast({
@@ -620,18 +644,57 @@ URL.revokeObjectURL(url);
     rejected: documents.filter(doc => doc.effectiveStatus === 'rejected').length
   };
 
-  // Generate activity events for the new dashboard
-  const activityEvents = documents.map(doc => ({
-    id: doc.id,
-    type: doc.effectiveStatus as 'created' | 'submitted' | 'approved' | 'rejected' | 'expired' | 'reminder',
-    title: `Document ${doc.effectiveStatus}`,
-    description: `${doc.document_type} - ${doc.suppliers?.company_name || 'Unknown Supplier'}`,
-    date: doc.updated_at || doc.created_at,
-    documentTitle: doc.document_type,
-    supplier: doc.suppliers?.company_name,
-    priority: doc.priority as 'high' | 'medium' | 'low',
-    category: doc.category
-  }));
+  // Fetch activity events from database with user attribution
+  const [activityEvents, setActivityEvents] = useState<any[]>([]);
+  
+  useEffect(() => {
+    const fetchActivities = async () => {
+      if (!buyerId) return;
+      
+      const { data, error } = await supabase
+        .from('document_activity_logs')
+        .select(`
+          *,
+          user:profiles!document_activity_logs_user_id_fkey(full_name, email),
+          document_upload:document_uploads!document_activity_logs_document_upload_id_fkey(
+            id,
+            file_name,
+            document_request:document_requests!document_uploads_request_id_fkey(
+              id,
+              document_type,
+              category,
+              priority,
+              supplier:suppliers!document_requests_supplier_id_fkey(company_name)
+            )
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      
+      if (error) {
+        console.error('Error fetching activities:', error);
+        return;
+      }
+      
+      const formattedEvents = (data || []).map(log => ({
+        id: log.id,
+        type: log.action_type as 'created' | 'submitted' | 'approved' | 'rejected' | 'expired' | 'reminder',
+        title: `Document ${log.action_type}`,
+        description: `${log.document_upload?.document_request?.document_type || 'Document'} - ${log.document_upload?.document_request?.supplier?.company_name || 'Unknown Supplier'}`,
+        date: log.created_at,
+        documentTitle: log.document_upload?.document_request?.document_type,
+        supplier: log.document_upload?.document_request?.supplier?.company_name,
+        priority: log.document_upload?.document_request?.priority as 'high' | 'medium' | 'low',
+        category: log.document_upload?.document_request?.category,
+        userName: log.user?.full_name,
+        userEmail: log.user?.email
+      }));
+      
+      setActivityEvents(formattedEvents);
+    };
+    
+    fetchActivities();
+  }, [buyerId, documents]);
 
   // Generate roadmap items with proper status mapping
   const roadmapItems = documents

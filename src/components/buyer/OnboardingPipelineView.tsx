@@ -87,8 +87,10 @@ export const OnboardingPipelineView = () => {
   }, { preventDefault: true });
 
   useEffect(() => {
-    loadRequests();
-  }, [user]);
+    if (user?.id) {
+      loadRequests();
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     // Set up real-time subscription
@@ -146,19 +148,19 @@ export const OnboardingPipelineView = () => {
 
       setBuyerId(buyerData.id);
 
-      // Simple query without complex chaining
-      const queryParams: any = {
-        buyer_id: buyerData.id
-      };
-
-      if (currentBranch && !allBranchesView) {
-        queryParams.branch_id = currentBranch.id;
+      // Add defensive check to prevent queries with empty buyer_id
+      if (!buyerData.id) {
+        console.error('No buyer ID resolved');
+        setRequests([]);
+        return;
       }
 
+      // Onboarding requests are company-level, not branch-level
+      // No branch filtering needed - show all onboarding requests for the company
       const { data, error } = await supabase
         .from('supplier_onboarding_requests')
         .select('*')
-        .match(queryParams)
+        .eq('buyer_id', buyerData.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

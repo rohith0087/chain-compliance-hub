@@ -219,11 +219,11 @@ export function BuyerSidebarLayout({
       icon: GitBranch,
       value: 'onboarding'
     },
-    {
-      title: 'Agents',
-      icon: Bot,
-      value: 'agents'
-    },
+    // {
+    //   title: 'Agents',
+    //   icon: Bot,
+    //   value: 'agents'
+    // },
     {
       title: t('dashboard:company.title'),
       icon: Building2,

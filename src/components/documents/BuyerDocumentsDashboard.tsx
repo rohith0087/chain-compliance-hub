@@ -377,16 +377,20 @@ const BuyerDocumentsDashboard = () => {
         throw new Error(result?.error || 'Failed to approve document');
       }
 
-      // Log the approval activity
-      const upload = document.document_uploads?.[0];
-      if (upload?.id && user?.id) {
-        await supabase.from('document_activity_logs').insert({
-          document_upload_id: upload.id,
-          action_type: 'approved',
-          user_id: user.id,
-          notes: 'Document approved'
-        });
+    // Log the approval activity
+    const upload = document.document_uploads?.[0];
+    if (upload?.id && user?.id) {
+      const { error: logError } = await supabase.from('document_activity_logs').insert({
+        document_upload_id: upload.id,
+        action_type: 'approved',
+        user_id: user.id,
+        notes: 'Document approved'
+      });
+      
+      if (logError) {
+        console.error('Failed to log approval activity:', logError);
       }
+    }
 
       toast({
         title: "Document Approved",
@@ -436,12 +440,16 @@ const BuyerDocumentsDashboard = () => {
       // Log the rejection activity
       const upload = document.document_uploads?.[0];
       if (upload?.id && user?.id) {
-        await supabase.from('document_activity_logs').insert({
+        const { error: logError } = await supabase.from('document_activity_logs').insert({
           document_upload_id: upload.id,
           action_type: 'rejected',
           user_id: user.id,
           notes: reason
         });
+        
+        if (logError) {
+          console.error('Failed to log decline activity:', logError);
+        }
       }
 
       toast({
@@ -664,10 +672,12 @@ URL.revokeObjectURL(url);
               document_type,
               category,
               priority,
+              buyer_id,
               supplier:suppliers!document_requests_supplier_id_fkey(company_name)
             )
           )
         `)
+        .eq('document_upload.document_request.buyer_id', buyerId)
         .order('created_at', { ascending: false })
         .limit(50);
       

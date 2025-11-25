@@ -258,6 +258,10 @@ export function BuyerSidebarLayout({
   };
 
   const handleMenuClick = (value: string) => {
+    // Switch to All Branches view when clicking Onboarding Pipeline
+    if (value === 'onboarding') {
+      setCurrentBranch(null); // Set to null for all branches view
+    }
     onTabChange(value);
   };
 

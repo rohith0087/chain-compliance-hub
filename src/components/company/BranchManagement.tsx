@@ -22,6 +22,131 @@ interface BranchManagementProps {
   loading?: boolean;
 }
 
+interface BranchFormData {
+  branch_name: string;
+  location: string;
+  address: string;
+  phone: string;
+  email: string;
+  manager_id: string | null;
+}
+
+interface BranchFormProps {
+  formData: BranchFormData;
+  setFormData: React.Dispatch<React.SetStateAction<BranchFormData>>;
+  companyUsers: CompanyUser[];
+  onSubmit: (e: React.FormEvent) => void;
+  onCancel: () => void;
+  submitLabel: string;
+  saving: boolean;
+}
+
+const BranchForm: React.FC<BranchFormProps> = ({ 
+  formData,
+  setFormData,
+  companyUsers,
+  onSubmit, 
+  onCancel,
+  submitLabel,
+  saving
+}) => (
+  <form onSubmit={onSubmit} className="space-y-4">
+    <div className="space-y-2">
+      <Label htmlFor="branch_name">Branch Name</Label>
+      <Input
+        id="branch_name"
+        value={formData.branch_name}
+        onChange={(e) => setFormData(prev => ({ ...prev, branch_name: e.target.value }))}
+        placeholder="e.g., West Coast Office"
+        required
+      />
+    </div>
+    
+    <div className="space-y-2">
+      <Label htmlFor="location">Location</Label>
+      <Input
+        id="location"
+        value={formData.location}
+        onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+        placeholder="e.g., San Francisco, CA"
+      />
+    </div>
+
+    <div className="space-y-2">
+      <Label htmlFor="address">Address</Label>
+      <Textarea
+        id="address"
+        value={formData.address}
+        onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+        placeholder="Full address"
+        rows={3}
+      />
+    </div>
+
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label htmlFor="phone">Phone</Label>
+        <Input
+          id="phone"
+          value={formData.phone}
+          onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+          placeholder="+1 (555) 123-4567"
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          type="email"
+          value={formData.email}
+          onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+          placeholder="branch@company.com"
+        />
+      </div>
+    </div>
+    
+    <div className="space-y-2">
+      <Label htmlFor="manager">Branch Manager (Optional)</Label>
+      <Select
+        value={formData.manager_id || "__none__"}
+        onValueChange={(value) => setFormData(prev => ({ 
+          ...prev, 
+          manager_id: value === "__none__" ? null : value 
+        }))}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Select a manager" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="__none__">No Manager Assigned</SelectItem>
+          {companyUsers
+            .filter(u => u.status === 'active' && u.role !== 'viewer')
+            .map(user => (
+              <SelectItem key={user.id} value={user.profile_id}>
+                {user.full_name} ({user.email})
+              </SelectItem>
+            ))
+          }
+        </SelectContent>
+      </Select>
+    </div>
+
+    <div className="flex justify-end space-x-2">
+      <Button 
+        type="button" 
+        variant="outline" 
+        onClick={onCancel}
+      >
+        Cancel
+      </Button>
+      <Button type="submit" disabled={saving}>
+        {saving ? 'Saving...' : submitLabel}
+      </Button>
+    </div>
+  </form>
+);
+
 export const BranchManagement: React.FC<BranchManagementProps> = ({
   branches,
   companyUsers,
@@ -37,14 +162,7 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [branchToDelete, setBranchToDelete] = useState<CompanyBranch | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<CompanyBranch | null>(null);
-  const [formData, setFormData] = useState<{
-    branch_name: string;
-    location: string;
-    address: string;
-    phone: string;
-    email: string;
-    manager_id: string | null;
-  }>({
+  const [formData, setFormData] = useState<BranchFormData>({
     branch_name: '',
     location: '',
     address: '',
@@ -155,113 +273,6 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({
     return companyUsers.filter(user => user.branch_id === branchId && user.status === 'active').length;
   };
 
-  const BranchForm = ({ onSubmit, title, submitLabel }: { 
-    onSubmit: (e: React.FormEvent) => void;
-    title: string;
-    submitLabel: string;
-  }) => (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="branch_name">Branch Name</Label>
-        <Input
-          id="branch_name"
-          value={formData.branch_name}
-          onChange={(e) => setFormData(prev => ({ ...prev, branch_name: e.target.value }))}
-          placeholder="e.g., West Coast Office"
-          required
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="location">Location</Label>
-        <Input
-          id="location"
-          value={formData.location}
-          onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-          placeholder="e.g., San Francisco, CA"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="address">Address</Label>
-        <Textarea
-          id="address"
-          value={formData.address}
-          onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-          placeholder="Full address"
-          rows={3}
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="phone">Phone</Label>
-          <Input
-            id="phone"
-            value={formData.phone}
-            onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-            placeholder="+1 (555) 123-4567"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-            placeholder="branch@company.com"
-          />
-        </div>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="manager">Branch Manager (Optional)</Label>
-        <Select
-          value={formData.manager_id || "__none__"}
-          onValueChange={(value) => setFormData(prev => ({ 
-            ...prev, 
-            manager_id: value === "__none__" ? null : value 
-          }))}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select a manager" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__">No Manager Assigned</SelectItem>
-            {companyUsers
-              .filter(u => u.status === 'active' && u.role !== 'viewer')
-              .map(user => (
-                <SelectItem key={user.id} value={user.profile_id}>
-                  {user.full_name} ({user.email})
-                </SelectItem>
-              ))
-            }
-          </SelectContent>
-        </Select>
-      </div>
-
-
-      <div className="flex justify-end space-x-2">
-        <Button 
-          type="button" 
-          variant="outline" 
-          onClick={() => {
-            setCreateModalOpen(false);
-            setEditModalOpen(false);
-            resetForm();
-          }}
-        >
-          Cancel
-        </Button>
-        <Button type="submit" disabled={saving}>
-          {saving ? 'Saving...' : submitLabel}
-        </Button>
-      </div>
-    </form>
-  );
-
   return (
     <Card>
       <CardHeader>
@@ -290,9 +301,16 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({
                 </DialogDescription>
               </DialogHeader>
               <BranchForm 
-                onSubmit={handleCreateSubmit} 
-                title="Create Branch" 
-                submitLabel="Create Branch" 
+                formData={formData}
+                setFormData={setFormData}
+                companyUsers={companyUsers}
+                onSubmit={handleCreateSubmit}
+                onCancel={() => {
+                  setCreateModalOpen(false);
+                  resetForm();
+                }}
+                submitLabel="Create Branch"
+                saving={saving}
               />
             </DialogContent>
           </Dialog>
@@ -434,9 +452,17 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({
               </DialogDescription>
             </DialogHeader>
             <BranchForm 
-              onSubmit={handleEditSubmit} 
-              title="Edit Branch" 
-              submitLabel="Save Changes" 
+              formData={formData}
+              setFormData={setFormData}
+              companyUsers={companyUsers}
+              onSubmit={handleEditSubmit}
+              onCancel={() => {
+                setEditModalOpen(false);
+                setSelectedBranch(null);
+                resetForm();
+              }}
+              submitLabel="Save Changes"
+              saving={saving}
             />
           </DialogContent>
         </Dialog>

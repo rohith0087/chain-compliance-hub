@@ -1166,7 +1166,8 @@ export type Database = {
         Row: {
           action_type: string
           created_at: string
-          document_upload_id: string
+          document_request_id: string | null
+          document_upload_id: string | null
           id: string
           metadata: Json | null
           notes: string | null
@@ -1175,7 +1176,8 @@ export type Database = {
         Insert: {
           action_type: string
           created_at?: string
-          document_upload_id: string
+          document_request_id?: string | null
+          document_upload_id?: string | null
           id?: string
           metadata?: Json | null
           notes?: string | null
@@ -1184,13 +1186,21 @@ export type Database = {
         Update: {
           action_type?: string
           created_at?: string
-          document_upload_id?: string
+          document_request_id?: string | null
+          document_upload_id?: string | null
           id?: string
           metadata?: Json | null
           notes?: string | null
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "document_activity_logs_document_request_id_fkey"
+            columns: ["document_request_id"]
+            isOneToOne: false
+            referencedRelation: "document_requests"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "document_activity_logs_document_upload_id_fkey"
             columns: ["document_upload_id"]

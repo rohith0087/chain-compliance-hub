@@ -328,6 +328,20 @@ const BuyerDocumentsManager = ({
         window.document.body.appendChild(a);
         a.click();
         window.document.body.removeChild(a);
+
+        // Log download activity
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.id && upload.id) {
+          await supabase.from('document_activity_logs').insert({
+            document_upload_id: upload.id,
+            document_request_id: doc.id,
+            user_id: user.id,
+            action_type: 'downloaded',
+            notes: `Downloaded: ${upload.file_name}`,
+            metadata: { file_name: upload.file_name }
+          });
+        }
+
         toast({
           title: "Download Started",
           description: `Downloading ${upload.file_name}`,
@@ -353,6 +367,19 @@ const BuyerDocumentsManager = ({
       a2.click();
       window.document.body.removeChild(a2);
       URL.revokeObjectURL(url);
+
+      // Log download activity (fallback path)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.id && upload.id) {
+        await supabase.from('document_activity_logs').insert({
+          document_upload_id: upload.id,
+          document_request_id: doc.id,
+          user_id: user.id,
+          action_type: 'downloaded',
+          notes: `Downloaded: ${upload.file_name}`,
+          metadata: { file_name: upload.file_name }
+        });
+      }
 
       toast({
         title: "Download Started",

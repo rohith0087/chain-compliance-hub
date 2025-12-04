@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useCompanyPermissions } from '@/hooks/useCompanyPermissions';
@@ -7,22 +7,64 @@ import { SubscriptionPlans } from '@/components/subscription/SubscriptionPlans';
 import { CreditPackages } from '@/components/subscription/CreditPackages';
 import { Badge } from '@/components/ui/badge';
 import UnauthorizedAccess from '@/components/auth/UnauthorizedAccess';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function SubscriptionPage() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { hasRole } = useUserRoles();
+  const [resolvedCompanyId, setResolvedCompanyId] = useState<string | null>(null);
+  const [companyIdLoading, setCompanyIdLoading] = useState(true);
   
-  // Determine user type and company based on roles
+  // Determine user type based on roles
   const userType = hasRole('buyer') ? 'buyer' : 'supplier';
   
-  // Get the buyer or supplier ID from profile
-  // This assumes the profile has buyer_id or supplier_id stored
-  const companyId = profile?.id; // Adjust based on your data structure
+  // Resolve the actual company_id from company_users table
+  useEffect(() => {
+    const resolveCompanyId = async () => {
+      if (!user) {
+        setCompanyIdLoading(false);
+        return;
+      }
+      
+      try {
+        // Check company_users for user's company_id
+        const { data: companyUser } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('profile_id', user.id)
+          .eq('company_type', userType)
+          .eq('status', 'active')
+          .maybeSingle();
+        
+        if (companyUser?.company_id) {
+          setResolvedCompanyId(companyUser.company_id);
+        } else {
+          setResolvedCompanyId(profile?.id || null);
+        }
+      } catch (error) {
+        console.error('Error resolving company ID:', error);
+        setResolvedCompanyId(profile?.id || null);
+      } finally {
+        setCompanyIdLoading(false);
+      }
+    };
+    
+    resolveCompanyId();
+  }, [user, userType, profile]);
   
-  const { canViewSubscription, role, loading } = useCompanyPermissions(companyId, userType);
+  const { canViewSubscription, role, loading } = useCompanyPermissions(resolvedCompanyId || undefined, userType);
+
+  // Show loading while resolving company ID or permissions
+  if (loading || companyIdLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   // Check permission
-  if (!loading && !canViewSubscription()) {
+  if (!canViewSubscription()) {
     return <UnauthorizedAccess requiredRoles={['company_admin']} currentRole={role} />;
   }
 

@@ -16,6 +16,22 @@ import {
   ThumbsDown,
   Link
 } from 'lucide-react';
+import DocumentVersionHistory from './DocumentVersionHistory';
+
+interface DocumentUpload {
+  id: string;
+  file_name: string;
+  file_path: string;
+  file_size?: number;
+  status: string;
+  created_at: string;
+  expiration_date?: string;
+  reviewer_notes?: string;
+  version?: number;
+  uploader?: {
+    full_name: string;
+  };
+}
 
 interface DocumentCardWithSelectionProps {
   document: {
@@ -29,6 +45,8 @@ interface DocumentCardWithSelectionProps {
     expiration_date?: string;
     file_name?: string;
     file_size?: number;
+    supplier_id?: string;
+    document_uploads?: DocumentUpload[];
     uploader?: {
       full_name: string;
     };
@@ -261,9 +279,18 @@ const DocumentCardWithSelection = ({
           {document.file_name && (
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">File: {document.file_name}</span>
-              {document.file_size && (
-                <span className="text-muted-foreground">{formatFileSize(document.file_size)}</span>
-              )}
+              <div className="flex items-center gap-2">
+                {document.file_size && (
+                  <span className="text-muted-foreground">{formatFileSize(document.file_size)}</span>
+                )}
+                {/* Version History Button */}
+                {document.document_uploads && document.document_uploads.length > 1 && (
+                  <DocumentVersionHistory
+                    documentTitle={document.title || document.document_type}
+                    uploads={document.document_uploads}
+                  />
+                )}
+              </div>
             </div>
           )}
 

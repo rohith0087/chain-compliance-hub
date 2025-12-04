@@ -18,6 +18,22 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ITEM_CATEGORIES } from '@/hooks/useSupplierItems';
+import DocumentVersionHistory from './DocumentVersionHistory';
+
+interface DocumentUpload {
+  id: string;
+  file_name: string;
+  file_path: string;
+  file_size?: number;
+  status: string;
+  created_at: string;
+  expiration_date?: string;
+  reviewer_notes?: string;
+  version?: number;
+  uploader?: {
+    full_name: string;
+  };
+}
 
 interface DocumentCardProps {
   document: {
@@ -32,6 +48,8 @@ interface DocumentCardProps {
     file_name?: string;
     file_size?: number;
     linked_item_ids?: string[];
+    supplier_id?: string;
+    document_uploads?: DocumentUpload[];
     branch?: {
       id: string;
       branch_name: string;
@@ -301,9 +319,18 @@ const DocumentCard = ({
           {document.file_name && (
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600">File: {document.file_name}</span>
-              {document.file_size && (
-                <span className="text-gray-500">{formatFileSize(document.file_size)}</span>
-              )}
+              <div className="flex items-center gap-2">
+                {document.file_size && (
+                  <span className="text-gray-500">{formatFileSize(document.file_size)}</span>
+                )}
+                {/* Version History Button */}
+                {document.document_uploads && document.document_uploads.length > 1 && (
+                  <DocumentVersionHistory
+                    documentTitle={document.title || document.document_type}
+                    uploads={document.document_uploads}
+                  />
+                )}
+              </div>
             </div>
           )}
 

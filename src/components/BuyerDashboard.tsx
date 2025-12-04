@@ -51,7 +51,9 @@ interface BuyerDashboardProps {
 
 const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('buyerDashboard_activeTab') || 'dashboard';
+  });
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showQuickOnboarding, setShowQuickOnboarding] = useState(false);
@@ -116,6 +118,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
       console.error('Error refreshing buyer profile:', error);
     }
   };
+
+  // Persist active tab to localStorage
+  useEffect(() => {
+    localStorage.setItem('buyerDashboard_activeTab', activeTab);
+  }, [activeTab]);
 
   // Fetch buyer profile data and dashboard data
   useEffect(() => {

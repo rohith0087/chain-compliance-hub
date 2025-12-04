@@ -61,7 +61,9 @@ interface SupplierDashboardProps {
 
 const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardProps) => {
   const { t } = useTranslation(['supplier', 'common']);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('supplierDashboard_activeTab') || 'overview';
+  });
   const [supplierProfile, setSupplierProfile] = useState<any>(null);
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
   const [connectedBuyers, setConnectedBuyers] = useState<any[]>([]);
@@ -111,6 +113,11 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
       window.history.replaceState({}, '', cleanUrl.toString());
     }, 3000);
   };
+
+  // Persist active tab to localStorage
+  useEffect(() => {
+    localStorage.setItem('supplierDashboard_activeTab', activeTab);
+  }, [activeTab]);
 
   // Calculate stats from real data
   const stats = {

@@ -25,7 +25,15 @@ import SubscriptionPage from "./pages/SubscriptionPage";
 import "./i18n";
 import { BranchProvider } from "@/contexts/BranchContext";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false, // Prevent refetch on tab switch
+      staleTime: 5 * 60 * 1000,    // Data fresh for 5 minutes
+      retry: 1,
+    },
+  },
+});
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();

@@ -3715,19 +3715,6 @@ export type Database = {
           title: string
         }[]
       }
-      search_suppliers_for_discovery: {
-        Args: {
-          p_industry_filter?: string
-          p_limit?: number
-          p_search_query?: string
-        }
-        Returns: {
-          company_logo_url: string
-          company_name: string
-          id: string
-          industry: string
-        }[]
-      }
       super_admin_reset_password: {
         Args: { new_password: string; target_user_id: string }
         Returns: boolean

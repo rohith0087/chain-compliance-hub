@@ -3535,6 +3535,7 @@ export type Database = {
           document_count: number
         }[]
       }
+      get_connected_supplier_ids_for_buyer: { Args: never; Returns: string[] }
       get_onboarding_supplier_ids_for_buyer: { Args: never; Returns: string[] }
       get_platform_admin_invitations: {
         Args: never

@@ -382,6 +382,7 @@ const BuyerDocumentsDashboard = () => {
     if (upload?.id && user?.id) {
       const { error: logError } = await supabase.from('document_activity_logs').insert({
         document_upload_id: upload.id,
+        document_request_id: documentId,
         action_type: 'approved',
         user_id: user.id,
         notes: 'Document approved'
@@ -442,6 +443,7 @@ const BuyerDocumentsDashboard = () => {
       if (upload?.id && user?.id) {
         const { error: logError } = await supabase.from('document_activity_logs').insert({
           document_upload_id: upload.id,
+          document_request_id: documentId,
           action_type: 'rejected',
           user_id: user.id,
           notes: reason
@@ -616,6 +618,18 @@ if (!signedErr && signed?.signedUrl) {
   window.document.body.appendChild(a);
   a.click();
   window.document.body.removeChild(a);
+
+  // Log download activity
+  if (user?.id && latest.id) {
+    await supabase.from('document_activity_logs').insert({
+      document_upload_id: latest.id,
+      document_request_id: doc.id,
+      user_id: user.id,
+      action_type: 'downloaded',
+      notes: `Downloaded: ${latest.file_name}`,
+      metadata: { file_name: latest.file_name }
+    });
+  }
   return;
 }
 
@@ -633,6 +647,18 @@ window.document.body.appendChild(a2);
 a2.click();
 window.document.body.removeChild(a2);
 URL.revokeObjectURL(url);
+
+// Log download activity (fallback path)
+if (user?.id && latest.id) {
+  await supabase.from('document_activity_logs').insert({
+    document_upload_id: latest.id,
+    document_request_id: doc.id,
+    user_id: user.id,
+    action_type: 'downloaded',
+    notes: `Downloaded: ${latest.file_name}`,
+    metadata: { file_name: latest.file_name }
+  });
+}
     } catch (err) {
       console.error('Download error:', err);
       toast({
@@ -659,14 +685,24 @@ URL.revokeObjectURL(url);
     const fetchActivities = async () => {
       if (!buyerId) return;
       
+      // Fetch activities linked directly to requests OR via uploads
       const { data, error } = await supabase
         .from('document_activity_logs')
         .select(`
           *,
           user:profiles!document_activity_logs_user_id_fkey(full_name, email),
+          document_request:document_requests!document_activity_logs_document_request_id_fkey(
+            id,
+            document_type,
+            category,
+            priority,
+            buyer_id,
+            supplier:suppliers!document_requests_supplier_id_fkey(company_name)
+          ),
           document_upload:document_uploads!document_activity_logs_document_upload_id_fkey(
             id,
             file_name,
+            request_id,
             document_request:document_requests!document_uploads_request_id_fkey(
               id,
               document_type,
@@ -677,28 +713,43 @@ URL.revokeObjectURL(url);
             )
           )
         `)
-        .eq('document_upload.document_request.buyer_id', buyerId)
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(100);
       
       if (error) {
         console.error('Error fetching activities:', error);
         return;
       }
       
-      const formattedEvents = (data || []).map(log => ({
-        id: log.id,
-        type: log.action_type as 'created' | 'submitted' | 'approved' | 'rejected' | 'expired' | 'reminder',
-        title: `Document ${log.action_type}`,
-        description: `${log.document_upload?.document_request?.document_type || 'Document'} - ${log.document_upload?.document_request?.supplier?.company_name || 'Unknown Supplier'}`,
-        date: log.created_at,
-        documentTitle: log.document_upload?.document_request?.document_type,
-        supplier: log.document_upload?.document_request?.supplier?.company_name,
-        priority: log.document_upload?.document_request?.priority as 'high' | 'medium' | 'low',
-        category: log.document_upload?.document_request?.category,
-        userName: log.user?.full_name,
-        userEmail: log.user?.email
-      }));
+      // Filter to only show activities for this buyer
+      const filteredData = (data || []).filter(log => {
+        const directRequestBuyerId = log.document_request?.buyer_id;
+        const uploadRequestBuyerId = log.document_upload?.document_request?.buyer_id;
+        return directRequestBuyerId === buyerId || uploadRequestBuyerId === buyerId;
+      });
+      
+      const formattedEvents = filteredData.map(log => {
+        // Get document info from either direct request or via upload
+        const docRequest = log.document_request || log.document_upload?.document_request;
+        const requestId = log.document_request_id || log.document_upload?.request_id;
+        
+        return {
+          id: log.id,
+          type: log.action_type as any,
+          title: `Document ${log.action_type.charAt(0).toUpperCase() + log.action_type.slice(1)}`,
+          description: `${docRequest?.document_type || 'Document'} - ${docRequest?.supplier?.company_name || 'Unknown Supplier'}`,
+          date: log.created_at,
+          documentTitle: docRequest?.document_type,
+          supplier: docRequest?.supplier?.company_name,
+          priority: docRequest?.priority as 'high' | 'medium' | 'low',
+          category: docRequest?.category,
+          userName: log.user?.full_name,
+          userEmail: log.user?.email,
+          documentRequestId: requestId,
+          documentUploadId: log.document_upload_id,
+          notes: log.notes
+        };
+      });
       
       setActivityEvents(formattedEvents);
     };

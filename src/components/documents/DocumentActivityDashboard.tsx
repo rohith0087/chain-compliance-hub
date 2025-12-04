@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,15 +13,18 @@ import {
   FileCheck,
   Calendar,
   TrendingUp,
-  Filter,
   Download,
-  Bell
+  Bell,
+  Link,
+  Eye,
+  FileText
 } from 'lucide-react';
 import { format, isToday, isYesterday, isThisWeek, subDays } from 'date-fns';
+import DocumentActivityChain from './DocumentActivityChain';
 
 interface ActivityEvent {
   id: string;
-  type: 'created' | 'submitted' | 'approved' | 'rejected' | 'expired' | 'reminder';
+  type: 'requested' | 'uploaded' | 'approved' | 'rejected' | 'downloaded' | 'link_created' | 'link_accessed' | 'created' | 'submitted' | 'expired' | 'reminder';
   title: string;
   description: string;
   date: string;
@@ -32,6 +35,9 @@ interface ActivityEvent {
   category?: string;
   userName?: string;
   userEmail?: string;
+  documentRequestId?: string;
+  documentUploadId?: string;
+  notes?: string;
 }
 
 interface MetricData {
@@ -51,6 +57,11 @@ const DocumentActivityDashboard = ({ events, documents = [] }: DocumentActivityD
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [timeRange, setTimeRange] = useState<string>('7_days');
+  const [selectedActivity, setSelectedActivity] = useState<{
+    documentRequestId: string | null;
+    documentTitle?: string;
+    supplierName?: string;
+  } | null>(null);
 
   // Group events by time periods
   const groupedEvents = useMemo(() => {
@@ -117,20 +128,25 @@ const DocumentActivityDashboard = ({ events, documents = [] }: DocumentActivityD
         color: 'text-green-600'
       },
       {
-        label: 'Pending Reviews',
-        value: events.filter(e => e.type === 'submitted').length,
-        icon: <Clock className="h-4 w-4" />,
-        color: 'text-yellow-600'
+        label: 'Uploads',
+        value: events.filter(e => e.type === 'uploaded').length,
+        icon: <Upload className="h-4 w-4" />,
+        color: 'text-purple-600'
       }
     ];
   }, [events]);
 
   const getEventIcon = (type: string) => {
     switch (type) {
-      case 'created': return <Clock className="w-4 h-4" />;
+      case 'requested': return <FileText className="w-4 h-4" />;
+      case 'created': return <FileText className="w-4 h-4" />;
+      case 'uploaded': return <Upload className="w-4 h-4" />;
       case 'submitted': return <Upload className="w-4 h-4" />;
       case 'approved': return <CheckCircle className="w-4 h-4" />;
       case 'rejected': return <XCircle className="w-4 h-4" />;
+      case 'downloaded': return <Download className="w-4 h-4" />;
+      case 'link_created': return <Link className="w-4 h-4" />;
+      case 'link_accessed': return <Eye className="w-4 h-4" />;
       case 'expired': return <AlertTriangle className="w-4 h-4" />;
       case 'reminder': return <Calendar className="w-4 h-4" />;
       default: return <FileCheck className="w-4 h-4" />;
@@ -139,10 +155,15 @@ const DocumentActivityDashboard = ({ events, documents = [] }: DocumentActivityD
 
   const getEventColor = (type: string) => {
     switch (type) {
+      case 'requested': return 'text-blue-600 bg-blue-50 border-blue-200';
       case 'created': return 'text-blue-600 bg-blue-50 border-blue-200';
+      case 'uploaded': return 'text-purple-600 bg-purple-50 border-purple-200';
       case 'submitted': return 'text-purple-600 bg-purple-50 border-purple-200';
       case 'approved': return 'text-green-600 bg-green-50 border-green-200';
       case 'rejected': return 'text-red-600 bg-red-50 border-red-200';
+      case 'downloaded': return 'text-orange-600 bg-orange-50 border-orange-200';
+      case 'link_created': return 'text-cyan-600 bg-cyan-50 border-cyan-200';
+      case 'link_accessed': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
       case 'expired': return 'text-orange-600 bg-orange-50 border-orange-200';
       case 'reminder': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
       default: return 'text-gray-600 bg-gray-50 border-gray-200';
@@ -159,6 +180,16 @@ const DocumentActivityDashboard = ({ events, documents = [] }: DocumentActivityD
     }
   };
 
+  const handleEventClick = (event: ActivityEvent) => {
+    if (event.documentRequestId) {
+      setSelectedActivity({
+        documentRequestId: event.documentRequestId,
+        documentTitle: event.documentTitle,
+        supplierName: event.supplier
+      });
+    }
+  };
+
   const renderEventGroup = (groupKey: string, events: ActivityEvent[]) => {
     if (events.length === 0) return null;
 
@@ -172,8 +203,12 @@ const DocumentActivityDashboard = ({ events, documents = [] }: DocumentActivityD
         </div>
         
         <div className="space-y-3">
-          {events.map((event, index) => (
-            <div key={event.id} className={`flex items-start gap-3 p-4 rounded-lg border ${getEventColor(event.type)}`}>
+          {events.map((event) => (
+            <div 
+              key={event.id} 
+              className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer hover:shadow-md transition-shadow ${getEventColor(event.type)}`}
+              onClick={() => handleEventClick(event)}
+            >
               <div className={`w-8 h-8 rounded-full flex items-center justify-center bg-background shadow-sm`}>
                 {getEventIcon(event.type)}
               </div>
@@ -185,6 +220,11 @@ const DocumentActivityDashboard = ({ events, documents = [] }: DocumentActivityD
                     {event.userName && (
                       <p className="text-xs text-muted-foreground mt-1">
                         by {event.userName}
+                      </p>
+                    )}
+                    {event.notes && (
+                      <p className="text-xs italic text-muted-foreground mt-1">
+                        "{event.notes}"
                       </p>
                     )}
                   </div>
@@ -263,10 +303,12 @@ const DocumentActivityDashboard = ({ events, documents = [] }: DocumentActivityD
                 className="px-3 py-2 border border-input bg-background rounded-md text-sm"
               >
                 <option value="all">All Events</option>
-                <option value="submitted">Submitted</option>
+                <option value="requested">Requested</option>
+                <option value="uploaded">Uploaded</option>
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
-                <option value="created">Created</option>
+                <option value="downloaded">Downloaded</option>
+                <option value="link_created">Link Created</option>
               </select>
               
               <select
@@ -278,11 +320,6 @@ const DocumentActivityDashboard = ({ events, documents = [] }: DocumentActivityD
                 <option value="30_days">Last 30 days</option>
                 <option value="90_days">Last 90 days</option>
               </select>
-              
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
             </div>
           </div>
 
@@ -301,6 +338,15 @@ const DocumentActivityDashboard = ({ events, documents = [] }: DocumentActivityD
           </div>
         </CardContent>
       </Card>
+
+      {/* Activity Chain Detail Sheet */}
+      <DocumentActivityChain
+        isOpen={!!selectedActivity}
+        onClose={() => setSelectedActivity(null)}
+        documentRequestId={selectedActivity?.documentRequestId || null}
+        documentTitle={selectedActivity?.documentTitle}
+        supplierName={selectedActivity?.supplierName}
+      />
     </div>
   );
 };

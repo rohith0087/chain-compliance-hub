@@ -233,6 +233,7 @@ const BuyerDocumentsDashboard = () => {
             status,
             created_at,
             expiration_date,
+            reviewer_notes,
             uploader:uploader_id (
               full_name
             )

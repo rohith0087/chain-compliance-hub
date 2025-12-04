@@ -17,7 +17,8 @@ import {
   Clock,
   FileText,
   AlertTriangle,
-  ChevronRight
+  ChevronRight,
+  Eye
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -49,6 +50,7 @@ const DocumentVersionHistory = ({
 }: DocumentVersionHistoryProps) => {
   const { toast } = useToast();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [viewingId, setViewingId] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
   // Sort uploads by created_at descending (newest first) and assign version numbers
@@ -106,6 +108,35 @@ const DocumentVersionHistory = ({
           bgColor: 'bg-gray-100',
           label: status
         };
+    }
+  };
+
+  const handleViewVersion = async (upload: DocumentUpload & { versionNumber: number }) => {
+    setViewingId(upload.id);
+    try {
+      const resolvedPath = resolveStoragePath(upload.file_path);
+      if (!resolvedPath) {
+        throw new Error('Invalid file path');
+      }
+      
+      const { data: urlData, error: urlError } = await supabase.storage
+        .from(resolvedPath.bucket)
+        .createSignedUrl(resolvedPath.key, 300);
+
+      if (urlError || !urlData?.signedUrl) {
+        throw new Error('Failed to generate view URL');
+      }
+
+      window.open(urlData.signedUrl, '_blank');
+    } catch (error) {
+      console.error('Error viewing version:', error);
+      toast({
+        title: "View Failed",
+        description: "Could not open this version. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setViewingId(null);
     }
   };
 
@@ -263,20 +294,35 @@ const DocumentVersionHistory = ({
                       </div>
                     </div>
 
-                    {/* Download button */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDownloadVersion(upload)}
-                      disabled={downloadingId === upload.id}
-                      className="shrink-0"
-                    >
-                      {downloadingId === upload.id ? (
-                        <Clock className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Download className="w-4 h-4" />
-                      )}
-                    </Button>
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewVersion(upload)}
+                        disabled={viewingId === upload.id}
+                        title="View document"
+                      >
+                        {viewingId === upload.id ? (
+                          <Clock className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownloadVersion(upload)}
+                        disabled={downloadingId === upload.id}
+                        title="Download document"
+                      >
+                        {downloadingId === upload.id ? (
+                          <Clock className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Download className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Expiration date */}

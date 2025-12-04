@@ -3535,6 +3535,7 @@ export type Database = {
           document_count: number
         }[]
       }
+      get_onboarding_supplier_ids_for_buyer: { Args: never; Returns: string[] }
       get_platform_admin_invitations: {
         Args: never
         Returns: {
@@ -3582,6 +3583,7 @@ export type Database = {
         }[]
       }
       get_super_admin_stats: { Args: never; Returns: Json }
+      get_user_buyer_ids: { Args: never; Returns: string[] }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: {
@@ -3591,6 +3593,7 @@ export type Database = {
         }[]
       }
       get_user_roles_array: { Args: { _user_id: string }; Returns: string[] }
+      get_user_supplier_id: { Args: never; Returns: string }
       grant_pg_net_access: { Args: never; Returns: undefined }
       grant_role: {
         Args: {

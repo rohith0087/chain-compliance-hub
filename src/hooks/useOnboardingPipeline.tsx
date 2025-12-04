@@ -15,6 +15,11 @@ export const useOnboardingPipeline = (requests: any[]) => {
   
   // Calculate priority for a request
   const calculatePriority = (request: any): 'urgent' | 'high' | 'normal' => {
+    // Completed statuses don't have priority concerns
+    if (request.status === 'approved' || request.status === 'rejected') {
+      return 'normal';
+    }
+    
     const daysSinceCreated = differenceInDays(new Date(), new Date(request.created_at));
     const daysSinceUpdated = request.responded_at 
       ? differenceInDays(new Date(), new Date(request.responded_at))
@@ -41,6 +46,14 @@ export const useOnboardingPipeline = (requests: any[]) => {
   
   // Get alert status for a request
   const getAlertStatus = (request: any) => {
+    // Completed statuses should show success, not stalled alerts
+    if (request.status === 'approved') {
+      return { level: 'success', icon: '✅', message: 'Complete' };
+    }
+    if (request.status === 'rejected') {
+      return { level: 'ended', icon: '❌', message: 'Declined' };
+    }
+    
     const daysSinceCreated = differenceInDays(new Date(), new Date(request.created_at));
     const daysSinceUpdated = request.responded_at 
       ? differenceInDays(new Date(), new Date(request.responded_at))

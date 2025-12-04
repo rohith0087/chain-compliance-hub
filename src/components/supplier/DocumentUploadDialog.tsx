@@ -58,6 +58,16 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
     e?.preventDefault();
     if (!user) return;
     
+    // Validate metadata-only update has existing upload to update
+    if (updateMetadataOnly && !latestUpload) {
+      toast({
+        title: "Cannot Update Metadata",
+        description: "No existing document found to update. Please upload a new document file.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // For resubmission, either file or metadata update is required
     if (isResubmission && !file && !updateMetadataOnly) {
       toast({
@@ -290,15 +300,17 @@ if (file) {
                   />
                   <span>Upload new document file</span>
                 </label>
-                <label className="flex items-center space-x-2 text-sm">
+                <label className={`flex items-center space-x-2 text-sm ${!latestUpload ? 'opacity-50 cursor-not-allowed' : ''}`}>
                   <input
                     type="radio"
                     name="resubmit-type"
                     checked={updateMetadataOnly}
-                    onChange={() => setUpdateMetadataOnly(true)}
+                    onChange={() => latestUpload && setUpdateMetadataOnly(true)}
+                    disabled={!latestUpload}
                     className="text-blue-600"
                   />
                   <span>Update expiration date and notes only</span>
+                  {!latestUpload && <span className="text-xs text-muted-foreground">(no existing file)</span>}
                 </label>
               </div>
             </div>

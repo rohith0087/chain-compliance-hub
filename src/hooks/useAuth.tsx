@@ -1,5 +1,5 @@
 
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect, createContext, useContext, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const isInitializedRef = useRef(false);
 
   const createMissingProfile = async (user: User) => {
     console.log('Creating missing profile for user:', user.id);
@@ -108,7 +108,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log('Auth state changed:', event, session?.user?.email);
         
         // TOKEN_REFRESHED: Only update session/user silently, don't disrupt UI
-        if (event === 'TOKEN_REFRESHED' && isInitialized) {
+        if (event === 'TOKEN_REFRESHED' && isInitializedRef.current) {
           if (session) {
             setSession(session);
             setUser(session.user);
@@ -118,7 +118,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
         
         // INITIAL_SESSION after already initialized: preserve existing state
-        if (event === 'INITIAL_SESSION' && isInitialized && user) {
+        if (event === 'INITIAL_SESSION' && isInitializedRef.current && session?.user) {
           if (session) {
             setSession(session);
             setUser(session.user);
@@ -132,7 +132,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(null);
           setProfile(null);
           setLoading(false);
-          setIsInitialized(false);
+          isInitializedRef.current = false;
           return;
         }
         
@@ -144,7 +144,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           // Fetch user profile with delay to avoid deadlock
           setTimeout(async () => {
             await fetchUserProfile(session.user.id);
-            setIsInitialized(true);
+            isInitializedRef.current = true;
           }, 100);
         } else {
           setProfile(null);
@@ -163,14 +163,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Fetch profile for existing session
         setTimeout(async () => {
           await fetchUserProfile(session.user.id);
-          setIsInitialized(true);
+          isInitializedRef.current = true;
         }, 100);
       }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, [isInitialized, user]);
+  }, []);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({

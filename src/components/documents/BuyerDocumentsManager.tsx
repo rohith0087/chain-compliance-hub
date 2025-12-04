@@ -537,29 +537,19 @@ const BuyerDocumentsManager = ({
   };
 
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Header with Gradient */}
-      <div className="rounded-xl bg-gradient-to-br from-[hsl(var(--blue-accent))]/10 via-[hsl(var(--accent))]/5 to-[hsl(var(--teal-accent))]/10 border border-[hsl(var(--blue-accent))]/20 p-6 backdrop-blur-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-[hsl(var(--blue-accent))] to-[hsl(var(--accent))] bg-clip-text text-transparent">
-              Document Manager
-            </h2>
-            <p className="text-muted-foreground mt-1">Manage and review all supplier documents</p>
-          </div>
-          <Button 
-            onClick={onRefresh} 
-            size="sm"
-            className="bg-gradient-to-r from-[hsl(var(--blue-accent))] to-[hsl(var(--accent))] hover:opacity-90 text-white border-0 shadow-[0_4px_12px_hsl(var(--blue-accent)/0.3)]"
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
-          </Button>
-        </div>
-      </div>
-
-
       {/* Enhanced Filters */}
       <EnhancedDocumentsFilter
         filters={filters}
@@ -573,6 +563,8 @@ const BuyerDocumentsManager = ({
         onBulkDownload={handleBulkDownload}
         filteredDocumentsCount={filteredDocuments.length}
         totalDocumentsCount={documents.length}
+        onRefresh={handleRefresh}
+        isRefreshing={isRefreshing}
       />
 
       {/* Documents List */}

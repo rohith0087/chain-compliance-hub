@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Filter, X, Calendar, Download, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Search, Filter, X, Calendar, Download, CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface EnhancedDocumentsFilterProps {
   filters: {
@@ -29,6 +29,8 @@ interface EnhancedDocumentsFilterProps {
   onBulkDownload: () => void;
   filteredDocumentsCount: number;
   totalDocumentsCount: number;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 const EnhancedDocumentsFilter = ({ 
@@ -42,7 +44,9 @@ const EnhancedDocumentsFilter = ({
   onClearSelection,
   onBulkDownload,
   filteredDocumentsCount,
-  totalDocumentsCount
+  totalDocumentsCount,
+  onRefresh,
+  isRefreshing = false
 }: EnhancedDocumentsFilterProps) => {
   const [localSearchValue, setLocalSearchValue] = useState(filters.search);
   const debounceTimeoutRef = useRef<NodeJS.Timeout>();
@@ -123,12 +127,25 @@ const EnhancedDocumentsFilter = ({
       {/* Quick Filters */}
       <Card className="bg-gradient-to-br from-[hsl(var(--blue-accent))]/5 to-[hsl(var(--accent))]/5 border-[hsl(var(--blue-accent))]/20">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[hsl(var(--blue-accent))] to-[hsl(var(--accent))] flex items-center justify-center">
-              <Filter className="w-4 h-4 text-white" />
-            </div>
-            Quick Filters
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[hsl(var(--blue-accent))] to-[hsl(var(--accent))] flex items-center justify-center">
+                <Filter className="w-4 h-4 text-white" />
+              </div>
+              Quick Filters
+            </CardTitle>
+            {onRefresh && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                className="h-8 w-8 p-0 hover:bg-[hsl(var(--blue-accent))]/10"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="flex flex-wrap gap-2">

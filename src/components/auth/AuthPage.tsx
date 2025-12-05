@@ -197,8 +197,10 @@ const AuthPage = () => {
         
         <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-              <Shield className="w-8 h-8 text-white" />
+            <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-lg">
+              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-xl">T</span>
+              </div>
             </div>
             <span className="text-2xl font-bold text-white">Tracer2C</span>
           </div>
@@ -239,8 +241,8 @@ const AuthPage = () => {
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="flex lg:hidden items-center justify-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
-              <Shield className="w-6 h-6 text-primary-foreground" />
+            <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
+              <span className="text-white font-bold text-lg">T</span>
             </div>
             <span className="text-xl font-bold text-foreground">Tracer2C</span>
           </div>

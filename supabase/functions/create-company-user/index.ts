@@ -151,7 +151,7 @@ Deno.serve(async (req) => {
 
       <h3>Getting Started:</h3>
       <ol>
-        <li>Visit: <a href="https://preview--chain-compliance-hub.lovable.app/">https://preview--chain-compliance-hub.lovable.app/</a></li>
+        <li>Visit: <a href="https://compliance.tracer2c.com/">https://compliance.tracer2c.com/</a></li>
         <li>Click "Forgot your password?" on the sign-in page</li>
         <li>Enter your email: <strong>${email}</strong></li>
         <li>Check your inbox for the password reset link</li>
@@ -167,7 +167,7 @@ Deno.serve(async (req) => {
 
     try {
       await resend.emails.send({
-        from: 'ComplianceFlow <onboarding@resend.dev>',
+        from: 'Compliance Platform <no-reply@tracer2c.com>',
         to: [email],
         subject: emailSubject,
         html: emailBody,

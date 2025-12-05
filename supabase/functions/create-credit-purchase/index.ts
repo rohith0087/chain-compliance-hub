@@ -94,8 +94,8 @@ serve(async (req) => {
         },
       ],
       mode: "payment",
-      success_url: `${req.headers.get("origin") || "http://localhost:3000"}/credits?success=true&credits=${creditPackage.credits * quantity}`,
-      cancel_url: `${req.headers.get("origin") || "http://localhost:3000"}/credits?canceled=true`,
+      success_url: `${req.headers.get("origin") || "https://compliance.tracer2c.com"}/credits?success=true&credits=${creditPackage.credits * quantity}`,
+      cancel_url: `${req.headers.get("origin") || "https://compliance.tracer2c.com"}/credits?canceled=true`,
       metadata: {
         user_id: user.id,
         credit_amount: (creditPackage.credits * quantity).toString(),

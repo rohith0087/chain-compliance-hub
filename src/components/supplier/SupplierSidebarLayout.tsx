@@ -31,6 +31,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useTranslation } from 'react-i18next';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
+import { supabase } from '@/integrations/supabase/client';
 
 import {
   Sidebar,
@@ -372,11 +373,31 @@ export function SupplierSidebarLayout({
             <div className="flex items-center gap-2">
               <SubscriptionStatusWidget compact />
               <NotificationCenter 
-                onNavigate={(tab, referenceId) => {
+                onNavigate={async (tab, referenceId) => {
                   onTabChange(tab);
                   // Store reference ID in sessionStorage for deep-linking
+                  // Handle backward compatibility: referenceId could be request_id (new) or document_upload_id (old)
                   if (referenceId) {
-                    sessionStorage.setItem('highlight_request_id', referenceId);
+                    // Try to use it as request_id first (new format)
+                    // If it's actually a document_upload_id (old format), resolve to request_id
+                    try {
+                      const { data: uploadData } = await supabase
+                        .from('document_uploads')
+                        .select('request_id')
+                        .eq('id', referenceId)
+                        .maybeSingle();
+                      
+                      if (uploadData?.request_id) {
+                        // Old format: was document_upload_id, use resolved request_id
+                        sessionStorage.setItem('highlight_request_id', uploadData.request_id);
+                      } else {
+                        // New format or direct request_id - use as-is
+                        sessionStorage.setItem('highlight_request_id', referenceId);
+                      }
+                    } catch {
+                      // Fallback: use referenceId as-is
+                      sessionStorage.setItem('highlight_request_id', referenceId);
+                    }
                   }
                 }}
               />

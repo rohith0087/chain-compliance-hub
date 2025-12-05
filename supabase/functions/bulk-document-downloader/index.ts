@@ -26,19 +26,14 @@ function resolveStoragePath(input: string | null | undefined): ResolvedStoragePa
     if (value.startsWith('http://') || value.startsWith('https://')) {
       const url = new URL(value);
       const parts = url.pathname.split('/').filter(Boolean);
-      // Patterns we may see:
-      // /storage/v1/object/public/<bucket>/<key>
-      // /storage/v1/object/sign/<bucket>/<key>
       const idx = parts.findIndex((p) => p === 'object');
       if (idx !== -1 && parts[idx + 1]) {
-        // object/<visibility>/<bucket>/<...key>
         const visibilityOrBucket = parts[idx + 1];
         if (visibilityOrBucket === 'public' || visibilityOrBucket === 'sign' || visibilityOrBucket === 'auth') {
           const bucket = parts[idx + 2];
           const key = parts.slice(idx + 3).join('/');
           if (bucket && key) return { bucket, key };
         } else {
-          // object/<bucket>/<...key>
           const bucket = visibilityOrBucket;
           const key = parts.slice(idx + 2).join('/');
           if (bucket && key) return { bucket, key };
@@ -78,25 +73,101 @@ serve(async (req) => {
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // ============================================
+    // Auth validation - verify user access to documents
+    // ============================================
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('Missing authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error('Invalid authentication:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Authenticated user:', user.id, user.email);
+
+    // Get user's buyer ID (either as owner or team member)
+    let userBuyerId: string | null = null;
+    
+    // Check company_users first (team member path)
+    const { data: companyUser } = await supabase
+      .from('company_users')
+      .select('company_id, company_type')
+      .eq('profile_id', user.id)
+      .eq('status', 'active')
+      .eq('company_type', 'buyer')
+      .single();
+
+    if (companyUser) {
+      userBuyerId = companyUser.company_id;
+    } else {
+      // Check if user is a buyer owner
+      const { data: buyer } = await supabase
+        .from('buyers')
+        .select('id')
+        .eq('profile_id', user.id)
+        .single();
+      userBuyerId = buyer?.id || null;
+    }
+
+    // Also check for supplier access
+    let userSupplierId: string | null = null;
+    const { data: supplierCompanyUser } = await supabase
+      .from('company_users')
+      .select('company_id, company_type')
+      .eq('profile_id', user.id)
+      .eq('status', 'active')
+      .eq('company_type', 'supplier')
+      .single();
+
+    if (supplierCompanyUser) {
+      userSupplierId = supplierCompanyUser.company_id;
+    } else {
+      const { data: supplier } = await supabase
+        .from('suppliers')
+        .select('id')
+        .eq('profile_id', user.id)
+        .single();
+      userSupplierId = supplier?.id || null;
+    }
+
+    if (!userBuyerId && !userSupplierId) {
+      console.error('User has no company access:', user.id);
+      return new Response(
+        JSON.stringify({ error: 'No company access found' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('User company access - Buyer:', userBuyerId, 'Supplier:', userSupplierId);
 
     const { documentIds, filterDescription }: BulkDownloadRequest = await req.json();
     
     if (!documentIds || documentIds.length === 0) {
       return new Response(
         JSON.stringify({ error: 'No document IDs provided' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     console.log(`Processing bulk download for ${documentIds.length} documents`);
 
-    // Fetch document details from database
-    const { data: documents, error: dbError } = await supabase
+    // Fetch document details from database with access validation
+    let query = supabase
       .from('document_uploads')
       .select(`
         id,
@@ -106,6 +177,7 @@ serve(async (req) => {
           title,
           document_type,
           supplier_id,
+          buyer_id,
           suppliers!inner (
             company_name
           )
@@ -114,28 +186,52 @@ serve(async (req) => {
       .in('id', documentIds)
       .not('file_path', 'is', null);
 
+    const { data: documents, error: dbError } = await query;
+
     if (dbError) {
       console.error('Database error:', dbError);
       return new Response(
         JSON.stringify({ error: 'Failed to fetch document details' }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     if (!documents || documents.length === 0) {
       return new Response(
         JSON.stringify({ error: 'No documents found with valid files' }),
-        { 
-          status: 404, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Found ${documents.length} valid documents with files`);
+    // ============================================
+    // Validate user has access to ALL requested documents
+    // ============================================
+    const unauthorizedDocs: string[] = [];
+    for (const doc of documents) {
+      const docBuyerId = doc.document_requests.buyer_id;
+      const docSupplierId = doc.document_requests.supplier_id;
+      
+      const hasAccess = 
+        (userBuyerId && docBuyerId === userBuyerId) ||
+        (userSupplierId && docSupplierId === userSupplierId);
+      
+      if (!hasAccess) {
+        unauthorizedDocs.push(doc.id);
+      }
+    }
+
+    if (unauthorizedDocs.length > 0) {
+      console.error('User does not have access to documents:', unauthorizedDocs);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Unauthorized access to some documents', 
+          unauthorized_count: unauthorizedDocs.length 
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`Found ${documents.length} valid documents with files - all authorized`);
 
     // Create ZIP file using streams
     const { readable, writable } = new TransformStream();
@@ -144,7 +240,6 @@ serve(async (req) => {
     // Start ZIP creation in background
     (async () => {
       try {
-        // Write ZIP file header
         const zipEntries: Uint8Array[] = [];
         const centralDirectory: Uint8Array[] = [];
         let offset = 0;
@@ -153,7 +248,6 @@ serve(async (req) => {
           try {
             console.log(`Processing document: ${doc.file_name} with path: ${doc.file_path}`);
             
-            // Resolve storage path to get correct bucket and key
             const resolvedPath = resolveStoragePath(doc.file_path);
             if (!resolvedPath) {
               console.error(`Could not resolve storage path for ${doc.file_path}`);
@@ -162,15 +256,13 @@ serve(async (req) => {
 
             console.log(`Resolved path - bucket: ${resolvedPath.bucket}, key: ${resolvedPath.key}`);
             
-            // Get signed URL for the file using resolved bucket and key
-            const { data: signedUrlData, error: urlError } = await supabase.storage
+            let signedUrlData: any = null;
+            const { data: urlData, error: urlError } = await supabase.storage
               .from(resolvedPath.bucket)
-              .createSignedUrl(resolvedPath.key, 300); // 5 minutes
+              .createSignedUrl(resolvedPath.key, 300);
 
-            if (urlError || !signedUrlData) {
+            if (urlError || !urlData) {
               console.error(`Failed to get signed URL for ${resolvedPath.bucket}/${resolvedPath.key}:`, urlError);
-              // Try fallback with original path in compliance-documents bucket
-              console.log(`Trying fallback with compliance-documents bucket...`);
               const { data: fallbackUrlData, error: fallbackError } = await supabase.storage
                 .from('compliance-documents')
                 .createSignedUrl(doc.file_path, 300);
@@ -180,9 +272,10 @@ serve(async (req) => {
                 continue;
               }
               signedUrlData = fallbackUrlData;
+            } else {
+              signedUrlData = urlData;
             }
 
-            // Fetch file content
             console.log(`Fetching file content from: ${signedUrlData.signedUrl}`);
             const fileResponse = await fetch(signedUrlData.signedUrl);
             if (!fileResponse.ok) {
@@ -193,7 +286,6 @@ serve(async (req) => {
             const fileContent = new Uint8Array(await fileResponse.arrayBuffer());
             console.log(`Successfully fetched file content, size: ${fileContent.length} bytes`);
             
-            // Create safe filename with supplier prefix
             const supplierName = doc.document_requests.suppliers.company_name
               .replace(/[^a-zA-Z0-9\-_]/g, '_')
               .substring(0, 50);
@@ -201,7 +293,6 @@ serve(async (req) => {
             const originalFileName = doc.file_name || `document_${doc.id}`;
             const safeFileName = `${supplierName}/${originalFileName}`;
 
-            // Create ZIP entry
             const entry = createZipEntry(safeFileName, fileContent, offset);
             zipEntries.push(entry.localFileHeader);
             zipEntries.push(fileContent);
@@ -215,19 +306,16 @@ serve(async (req) => {
           }
         }
 
-        // Write ZIP entries
         for (const entry of zipEntries) {
           await writer.write(entry);
         }
 
-        // Write central directory
         const centralDirStart = offset;
         for (const header of centralDirectory) {
           await writer.write(header);
           offset += header.length;
         }
 
-        // Write end of central directory record
         const endRecord = createEndOfCentralDirectory(
           centralDirectory.length,
           offset - centralDirStart,
@@ -244,7 +332,6 @@ serve(async (req) => {
       }
     })();
 
-    // Generate filename
     const timestamp = new Date().toISOString().split('T')[0];
     const filename = `${filterDescription.replace(/[^a-zA-Z0-9\-_]/g, '_')}_${timestamp}.zip`;
 
@@ -260,10 +347,7 @@ serve(async (req) => {
     console.error('Error in bulk-document-downloader function:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
@@ -275,43 +359,41 @@ function createZipEntry(filename: string, content: Uint8Array, offset: number) {
   const now = new Date();
   const dosDateTime = dateToDosDateTime(now);
 
-  // Local file header
   const localFileHeader = new Uint8Array(30 + filenameBytes.length);
   const localView = new DataView(localFileHeader.buffer);
   
-  localView.setUint32(0, 0x04034b50, true); // signature
-  localView.setUint16(4, 20, true); // version needed
-  localView.setUint16(6, 0, true); // flags
-  localView.setUint16(8, 0, true); // compression method (stored)
-  localView.setUint32(10, dosDateTime, true); // last mod time & date
-  localView.setUint32(14, crc32, true); // crc32
-  localView.setUint32(18, content.length, true); // compressed size
-  localView.setUint32(22, content.length, true); // uncompressed size
-  localView.setUint16(26, filenameBytes.length, true); // filename length
-  localView.setUint16(28, 0, true); // extra field length
+  localView.setUint32(0, 0x04034b50, true);
+  localView.setUint16(4, 20, true);
+  localView.setUint16(6, 0, true);
+  localView.setUint16(8, 0, true);
+  localView.setUint32(10, dosDateTime, true);
+  localView.setUint32(14, crc32, true);
+  localView.setUint32(18, content.length, true);
+  localView.setUint32(22, content.length, true);
+  localView.setUint16(26, filenameBytes.length, true);
+  localView.setUint16(28, 0, true);
   
   localFileHeader.set(filenameBytes, 30);
 
-  // Central directory header
   const centralDirectoryHeader = new Uint8Array(46 + filenameBytes.length);
   const centralView = new DataView(centralDirectoryHeader.buffer);
   
-  centralView.setUint32(0, 0x02014b50, true); // signature
-  centralView.setUint16(4, 20, true); // version made by
-  centralView.setUint16(6, 20, true); // version needed
-  centralView.setUint16(8, 0, true); // flags
-  centralView.setUint16(10, 0, true); // compression method
-  centralView.setUint32(12, dosDateTime, true); // last mod time & date
-  centralView.setUint32(16, crc32, true); // crc32
-  centralView.setUint32(20, content.length, true); // compressed size
-  centralView.setUint32(24, content.length, true); // uncompressed size
-  centralView.setUint16(28, filenameBytes.length, true); // filename length
-  centralView.setUint16(30, 0, true); // extra field length
-  centralView.setUint16(32, 0, true); // comment length
-  centralView.setUint16(34, 0, true); // disk number
-  centralView.setUint16(36, 0, true); // internal attributes
-  centralView.setUint32(38, 0, true); // external attributes
-  centralView.setUint32(42, offset, true); // local header offset
+  centralView.setUint32(0, 0x02014b50, true);
+  centralView.setUint16(4, 20, true);
+  centralView.setUint16(6, 20, true);
+  centralView.setUint16(8, 0, true);
+  centralView.setUint16(10, 0, true);
+  centralView.setUint32(12, dosDateTime, true);
+  centralView.setUint32(16, crc32, true);
+  centralView.setUint32(20, content.length, true);
+  centralView.setUint32(24, content.length, true);
+  centralView.setUint16(28, filenameBytes.length, true);
+  centralView.setUint16(30, 0, true);
+  centralView.setUint16(32, 0, true);
+  centralView.setUint16(34, 0, true);
+  centralView.setUint16(36, 0, true);
+  centralView.setUint32(38, 0, true);
+  centralView.setUint32(42, offset, true);
   
   centralDirectoryHeader.set(filenameBytes, 46);
 
@@ -322,14 +404,14 @@ function createEndOfCentralDirectory(entryCount: number, centralDirSize: number,
   const endRecord = new Uint8Array(22);
   const view = new DataView(endRecord.buffer);
   
-  view.setUint32(0, 0x06054b50, true); // signature
-  view.setUint16(4, 0, true); // disk number
-  view.setUint16(6, 0, true); // central dir start disk
-  view.setUint16(8, entryCount, true); // entries on this disk
-  view.setUint16(10, entryCount, true); // total entries
-  view.setUint32(12, centralDirSize, true); // central dir size
-  view.setUint32(16, centralDirOffset, true); // central dir offset
-  view.setUint16(20, 0, true); // comment length
+  view.setUint32(0, 0x06054b50, true);
+  view.setUint16(4, 0, true);
+  view.setUint16(6, 0, true);
+  view.setUint16(8, entryCount, true);
+  view.setUint16(10, entryCount, true);
+  view.setUint32(12, centralDirSize, true);
+  view.setUint32(16, centralDirOffset, true);
+  view.setUint16(20, 0, true);
   
   return endRecord;
 }

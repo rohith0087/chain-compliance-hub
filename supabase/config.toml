@@ -1,11 +1,5 @@
 project_id = "edwerzutsknhuplidhsj"
 
-[functions.bulk-document-downloader]
-verify_jwt = false
-
-[functions.cleanup-all-auth-users]
-verify_jwt = false
-
 [api]
 enabled = true
 port = 54321
@@ -52,20 +46,63 @@ port = 54328
 vector_port = 54329
 backend = "postgres"
 
-[functions.send-user-invitation]
-verify_jwt = false
+# ============================================
+# CRITICAL SECURITY: Functions requiring JWT
+# ============================================
 
+# DANGER: Admin-only function - requires super_admin role
+[functions.cleanup-all-auth-users]
+verify_jwt = true
+
+# Document download - requires buyer/team member access validation
+[functions.bulk-document-downloader]
+verify_jwt = true
+
+# Agent functions - require company validation
+[functions.agent-coordinator]
+verify_jwt = true
+
+[functions.supplier-agent]
+verify_jwt = true
+
+[functions.buyer-agent]
+verify_jwt = true
+
+# Chat functions - require user/company validation
+[functions.simple-rag-chat]
+verify_jwt = true
+
+[functions.chat-session-manager]
+verify_jwt = true
+
+# Business operations - require proper authorization
 [functions.send-supplier-invitation]
-verify_jwt = false
+verify_jwt = true
 
-# Make the shared document handler public so unauthenticated users can access public links
-[functions.document-link-handler]
-verify_jwt = false
+[functions.populate-onboarding-requirements]
+verify_jwt = true
 
-[functions.workflow-engine]
-verify_jwt = false
+[functions.calculate-supplier-metrics]
+verify_jwt = true
 
-# Stripe integration functions - all require JWT authentication
+[functions.check-onboarding-deadlines]
+verify_jwt = true
+
+[functions.send-assignment-notification]
+verify_jwt = true
+
+# User invitation - requires company admin role
+[functions.send-user-invitation]
+verify_jwt = true
+
+# User management - requires authenticated caller
+[functions.create-company-user]
+verify_jwt = true
+
+[functions.delete-auth-user]
+verify_jwt = true
+
+# Stripe integration - all require JWT authentication
 [functions.create-subscription-checkout]
 verify_jwt = true
 
@@ -81,33 +118,14 @@ verify_jwt = true
 [functions.manage-subscription]
 verify_jwt = true
 
-# Agent functions - make public for easier coordination/testing (ensure they validate input)
-[functions.agent-coordinator]
+# ============================================
+# PUBLIC FUNCTIONS (with their own validation)
+# ============================================
+
+# Public document link handler - validates access_token internally
+[functions.document-link-handler]
 verify_jwt = false
 
-[functions.supplier-agent]
+# Workflow engine - system triggered, validates input internally
+[functions.workflow-engine]
 verify_jwt = false
-
-[functions.buyer-agent]
-verify_jwt = false
-
-[functions.calculate-supplier-metrics]
-verify_jwt = false
-
-[functions.send-assignment-notification]
-verify_jwt = false
-
-[functions.simple-rag-chat]
-verify_jwt = false
-
-[functions.chat-session-manager]
-verify_jwt = false
-
-[functions.check-onboarding-deadlines]
-verify_jwt = false
-
-[functions.populate-onboarding-requirements]
-verify_jwt = false
-
-[functions.delete-auth-user]
-verify_jwt = true

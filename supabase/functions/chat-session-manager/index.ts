@@ -16,17 +16,101 @@ serve(async (req) => {
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // ============================================
+    // Auth validation
+    // ============================================
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('Missing authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error('Invalid authentication:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { action, user_id, company_id, company_type, title, session_id } = await req.json();
 
-    console.log('chat-session-manager:', { action, user_id, company_id, company_type });
+    console.log('chat-session-manager:', { action, user_id, company_id, company_type, authenticated_user: user.id });
+
+    // ============================================
+    // Validate user_id matches authenticated user
+    // ============================================
+    if (user_id && user_id !== user.id) {
+      console.error('User ID mismatch:', { requested: user_id, authenticated: user.id });
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: Cannot access other users sessions' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Use authenticated user's ID
+    const validatedUserId = user.id;
+
+    // ============================================
+    // Validate company access
+    // ============================================
+    if (company_id && company_type) {
+      let hasAccess = false;
+
+      // Check company owner
+      if (company_type === 'buyer') {
+        const { data: buyer } = await supabase
+          .from('buyers')
+          .select('id')
+          .eq('profile_id', user.id)
+          .eq('id', company_id)
+          .single();
+        if (buyer) hasAccess = true;
+      } else if (company_type === 'supplier') {
+        const { data: supplier } = await supabase
+          .from('suppliers')
+          .select('id')
+          .eq('profile_id', user.id)
+          .eq('id', company_id)
+          .single();
+        if (supplier) hasAccess = true;
+      }
+
+      // Check team member
+      if (!hasAccess) {
+        const { data: companyUser } = await supabase
+          .from('company_users')
+          .select('id')
+          .eq('profile_id', user.id)
+          .eq('company_id', company_id)
+          .eq('company_type', company_type)
+          .eq('status', 'active')
+          .single();
+        if (companyUser) hasAccess = true;
+      }
+
+      if (!hasAccess) {
+        console.error('User does not have access to company:', company_id);
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized: No access to this company' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     switch (action) {
       case 'create': {
-        // Create new session
         const { data, error } = await supabase
           .from('chat_sessions')
           .insert({
-            user_id,
+            user_id: validatedUserId,
             company_id,
             company_type,
             session_title: title || 'New Chat',
@@ -47,11 +131,10 @@ serve(async (req) => {
       }
 
       case 'list': {
-        // List sessions for user
         const { data, error } = await supabase
           .from('chat_sessions')
           .select('id, session_title, created_at, updated_at')
-          .eq('user_id', user_id)
+          .eq('user_id', validatedUserId)
           .eq('company_id', company_id)
           .eq('company_type', company_type)
           .order('updated_at', { ascending: false })
@@ -66,7 +149,27 @@ serve(async (req) => {
       }
 
       case 'update_title': {
-        // Update session title (after first message)
+        // Verify session belongs to user
+        const { data: existingSession, error: sessionError } = await supabase
+          .from('chat_sessions')
+          .select('user_id')
+          .eq('id', session_id)
+          .single();
+
+        if (sessionError || !existingSession) {
+          return new Response(
+            JSON.stringify({ error: 'Session not found' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        if (existingSession.user_id !== user.id) {
+          return new Response(
+            JSON.stringify({ error: 'Unauthorized: Cannot update other users sessions' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
         const { error } = await supabase
           .from('chat_sessions')
           .update({ 
@@ -84,7 +187,27 @@ serve(async (req) => {
       }
 
       case 'touch': {
-        // Update last_activity_at
+        // Verify session belongs to user
+        const { data: existingSession, error: sessionError } = await supabase
+          .from('chat_sessions')
+          .select('user_id')
+          .eq('id', session_id)
+          .single();
+
+        if (sessionError || !existingSession) {
+          return new Response(
+            JSON.stringify({ error: 'Session not found' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        if (existingSession.user_id !== user.id) {
+          return new Response(
+            JSON.stringify({ error: 'Unauthorized: Cannot update other users sessions' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
         const { error } = await supabase
           .from('chat_sessions')
           .update({ updated_at: new Date().toISOString() })

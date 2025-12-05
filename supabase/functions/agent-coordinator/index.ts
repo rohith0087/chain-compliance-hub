@@ -12,11 +12,43 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+async function validateCompanyAccess(userId: string, companyId: string, companyType: string): Promise<boolean> {
+  // Check if user is company owner
+  if (companyType === 'buyer') {
+    const { data: buyer } = await supabase
+      .from('buyers')
+      .select('id')
+      .eq('profile_id', userId)
+      .eq('id', companyId)
+      .single();
+    if (buyer) return true;
+  } else if (companyType === 'supplier') {
+    const { data: supplier } = await supabase
+      .from('suppliers')
+      .select('id')
+      .eq('profile_id', userId)
+      .eq('id', companyId)
+      .single();
+    if (supplier) return true;
+  }
+
+  // Check if user is team member
+  const { data: companyUser } = await supabase
+    .from('company_users')
+    .select('id')
+    .eq('profile_id', userId)
+    .eq('company_id', companyId)
+    .eq('company_type', companyType)
+    .eq('status', 'active')
+    .single();
+
+  return !!companyUser;
+}
+
 async function runAgentCycle(companyId?: string, companyType?: 'buyer' | 'supplier') {
   try {
     console.log('Starting agent coordination cycle...', { companyId, companyType });
 
-    // Check if agents are enabled (optionally scoped by company)
     let query = supabase
       .from('agent_configurations')
       .select('*')
@@ -37,7 +69,6 @@ async function runAgentCycle(companyId?: string, companyType?: 'buyer' | 'suppli
 
     const results: Array<{ agent: string; action: string; ok: boolean; error?: string }> = [];
 
-    // Run supplier agent if enabled
     if (enabledAgents.has('supplier')) {
       console.log('Running supplier agent...');
 
@@ -60,7 +91,6 @@ async function runAgentCycle(companyId?: string, companyType?: 'buyer' | 'suppli
       }
     }
 
-    // Run buyer agent if enabled
     if (enabledAgents.has('buyer')) {
       console.log('Running buyer agent...');
 
@@ -76,7 +106,6 @@ async function runAgentCycle(companyId?: string, companyType?: 'buyer' | 'suppli
 
     console.log('Agent coordination cycle completed');
 
-    // Log coordination activity with proper entity_id
     await supabase.from('agent_activities').insert({
       agent_type: 'coordinator',
       action_type: 'coordination_cycle',
@@ -116,8 +145,48 @@ serve(async (req) => {
   }
 
   try {
+    // ============================================
+    // Auth validation
+    // ============================================
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('Missing authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error('Invalid authentication:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Authenticated user:', user.id, user.email);
+
     const requestBody = await req.json();
     const { action, company_id, company_type } = requestBody;
+
+    // ============================================
+    // Validate company access if company_id provided
+    // ============================================
+    if (company_id && company_type) {
+      const hasAccess = await validateCompanyAccess(user.id, company_id, company_type);
+      if (!hasAccess) {
+        console.error('User does not have access to company:', company_id);
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized: No access to this company' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      console.log('Company access validated for:', company_id);
+    }
 
     let result: any = { success: true };
 

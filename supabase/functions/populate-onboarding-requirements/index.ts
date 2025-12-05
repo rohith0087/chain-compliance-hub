@@ -69,6 +69,32 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // ============================================
+    // Auth validation
+    // ============================================
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('Missing authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error('Invalid authentication:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Authenticated user:', user.id, user.email);
+
     const { onboarding_request_id } = await req.json();
 
     console.log('Populating requirements for onboarding request:', onboarding_request_id);
@@ -89,14 +115,57 @@ Deno.serve(async (req) => {
       throw new Error('Onboarding request not found');
     }
 
-    // Get buyer's industry separately
-    const { data: buyer, error: buyerError } = await supabase
+    // ============================================
+    // Validate user has access to the buyer company
+    // ============================================
+    let hasAccess = false;
+
+    // Check if user is buyer owner
+    const { data: buyer } = await supabase
       .from('buyers')
-      .select('industry')
+      .select('id, industry')
+      .eq('profile_id', user.id)
       .eq('id', request.buyer_id)
       .single();
+    
+    if (buyer) {
+      hasAccess = true;
+    } else {
+      // Check if user is team member
+      const { data: companyUser } = await supabase
+        .from('company_users')
+        .select('id')
+        .eq('profile_id', user.id)
+        .eq('company_id', request.buyer_id)
+        .eq('company_type', 'buyer')
+        .eq('status', 'active')
+        .single();
 
-    console.log('Found request for buyer industry:', buyer?.industry);
+      if (companyUser) {
+        hasAccess = true;
+      }
+    }
+
+    if (!hasAccess) {
+      console.error('User does not have access to buyer:', request.buyer_id);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: No access to this onboarding request' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Get buyer's industry if not already fetched
+    let buyerIndustry = buyer?.industry;
+    if (!buyerIndustry) {
+      const { data: buyerData } = await supabase
+        .from('buyers')
+        .select('industry')
+        .eq('id', request.buyer_id)
+        .single();
+      buyerIndustry = buyerData?.industry;
+    }
+
+    console.log('Found request for buyer industry:', buyerIndustry);
 
     // Check if requirements already exist
     const { data: existingDocs } = await supabase

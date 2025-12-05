@@ -129,3 +129,7 @@ verify_jwt = false
 # Workflow engine - system triggered, validates input internally
 [functions.workflow-engine]
 verify_jwt = false
+
+# Document expiry check - can be triggered by cron or manually
+[functions.check-document-expiry]
+verify_jwt = false

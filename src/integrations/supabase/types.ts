@@ -603,6 +603,68 @@ export type Database = {
           },
         ]
       }
+      buyer_notification_settings: {
+        Row: {
+          buyer_id: string
+          created_at: string
+          enabled: boolean
+          expires_soon_email: boolean
+          expires_soon_in_app: boolean
+          expiring_soon_days: number
+          id: string
+          max_notifications_per_document: number
+          overdue_email: boolean
+          overdue_in_app: boolean
+          overdue_threshold_days: number
+          updated_at: string
+          urgent_days: number
+          urgent_email: boolean
+          urgent_in_app: boolean
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string
+          enabled?: boolean
+          expires_soon_email?: boolean
+          expires_soon_in_app?: boolean
+          expiring_soon_days?: number
+          id?: string
+          max_notifications_per_document?: number
+          overdue_email?: boolean
+          overdue_in_app?: boolean
+          overdue_threshold_days?: number
+          updated_at?: string
+          urgent_days?: number
+          urgent_email?: boolean
+          urgent_in_app?: boolean
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string
+          enabled?: boolean
+          expires_soon_email?: boolean
+          expires_soon_in_app?: boolean
+          expiring_soon_days?: number
+          id?: string
+          max_notifications_per_document?: number
+          overdue_email?: boolean
+          overdue_in_app?: boolean
+          overdue_threshold_days?: number
+          updated_at?: string
+          urgent_days?: number
+          urgent_email?: boolean
+          urgent_in_app?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyer_notification_settings_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: true
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       buyer_supplier_connections: {
         Row: {
           branch_id: string | null
@@ -1361,6 +1423,67 @@ export type Database = {
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_expiry_notifications: {
+        Row: {
+          buyer_id: string
+          channel: string
+          days_until_expiry: number | null
+          document_name: string | null
+          document_upload_id: string
+          expiration_date: string | null
+          id: string
+          notification_tier: string
+          sent_at: string
+          supplier_id: string | null
+        }
+        Insert: {
+          buyer_id: string
+          channel: string
+          days_until_expiry?: number | null
+          document_name?: string | null
+          document_upload_id: string
+          expiration_date?: string | null
+          id?: string
+          notification_tier: string
+          sent_at?: string
+          supplier_id?: string | null
+        }
+        Update: {
+          buyer_id?: string
+          channel?: string
+          days_until_expiry?: number | null
+          document_name?: string | null
+          document_upload_id?: string
+          expiration_date?: string | null
+          id?: string
+          notification_tier?: string
+          sent_at?: string
+          supplier_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_expiry_notifications_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_expiry_notifications_document_upload_id_fkey"
+            columns: ["document_upload_id"]
+            isOneToOne: false
+            referencedRelation: "document_uploads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_expiry_notifications_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]

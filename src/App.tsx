@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 import AuthPage from "./components/auth/AuthPage";
 import ResetPassword from "./pages/ResetPassword";
@@ -52,15 +53,56 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-  
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  const [adminRole, setAdminRole] = useState<string | null>(null);
+  const [checkingRole, setCheckingRole] = useState(true);
+
+  useEffect(() => {
+    const checkAdminRole = async () => {
+      if (!user) {
+        setCheckingRole(false);
+        return;
+      }
+
+      try {
+        const { data } = await supabase
+          .from('platform_administrators')
+          .select('platform_roles, is_active')
+          .eq('auth_user_id', user.id)
+          .eq('is_active', true)
+          .single();
+
+        if (data?.is_active && data?.platform_roles?.includes('super_admin')) {
+          setAdminRole('super_admin');
+        } else if (data?.is_active && data?.platform_roles?.includes('platform_admin')) {
+          setAdminRole('platform_admin');
+        }
+      } catch (error) {
+        // Not a platform admin, that's fine
+      }
+      setCheckingRole(false);
+    };
+
+    checkAdminRole();
+  }, [user]);
+
+  if (loading || checkingRole) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
-  
+
   if (user) {
+    if (adminRole === 'super_admin') {
+      return <Navigate to="/super-admin" replace />;
+    }
+    if (adminRole === 'platform_admin') {
+      return <Navigate to="/platform-admin/dashboard" replace />;
+    }
     return <Navigate to="/dashboard" replace />;
   }
-  
+
   return <>{children}</>;
 };
 
@@ -89,24 +131,56 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
 
 const SuperAdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
-  const { hasRole, loading: rolesLoading } = useUserRoles();
-  
-  if (authLoading || rolesLoading) {
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean | null>(null);
+  const [checkingAdmin, setCheckingAdmin] = useState(true);
+
+  useEffect(() => {
+    const checkSuperAdmin = async () => {
+      if (!user) {
+        setIsSuperAdmin(false);
+        setCheckingAdmin(false);
+        return;
+      }
+
+      try {
+        // Check platform_administrators table for super_admin role
+        const { data, error } = await supabase
+          .from('platform_administrators')
+          .select('platform_roles, is_active')
+          .eq('auth_user_id', user.id)
+          .eq('is_active', true)
+          .single();
+
+        if (error || !data) {
+          setIsSuperAdmin(false);
+        } else {
+          setIsSuperAdmin(data.platform_roles?.includes('super_admin') ?? false);
+        }
+      } catch (error) {
+        setIsSuperAdmin(false);
+      }
+      setCheckingAdmin(false);
+    };
+
+    checkSuperAdmin();
+  }, [user]);
+
+  if (authLoading || checkingAdmin) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="w-8 h-8 animate-spin" />
       </div>
     );
   }
-  
+
   if (!user) {
     return <Navigate to="/" replace />;
   }
-  
-  if (!hasRole('super_admin')) {
+
+  if (!isSuperAdmin) {
     return <Navigate to="/dashboard" replace />;
   }
-  
+
   return <>{children}</>;
 };
 

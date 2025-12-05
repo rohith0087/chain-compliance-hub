@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,11 +14,13 @@ import {
   User,
   Calendar,
   AlertCircle,
-  Eye
+  Eye,
+  RefreshCw
 } from 'lucide-react';
 import DocumentUploadDialog from './DocumentUploadDialog';
 import DocumentPreview from './DocumentPreview';
 import CustomTemplateResponse from './CustomTemplateResponse';
+import DocumentRenewalDialog from './DocumentRenewalDialog';
 
 interface DocumentRequestCardProps {
   request: any;
@@ -29,8 +31,47 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
   const [showUpload, setShowUpload] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showTemplateResponse, setShowTemplateResponse] = useState(false);
+  const [showRenewalUpload, setShowRenewalUpload] = useState(false);
+  const [isHighlighted, setIsHighlighted] = useState(false);
 
   const isCustomTemplate = request.template_type === 'custom' && request.custom_template_id;
+
+  // Check if document is expiring or expired (for approved documents)
+  const getExpiryStatus = (): { status: 'expired' | 'expiring_soon'; days: number } | null => {
+    if (request.status !== 'approved' || !request.document_uploads?.length) return null;
+    
+    const latestUpload = request.document_uploads[0];
+    if (!latestUpload?.expiration_date) return null;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expirationDate = new Date(latestUpload.expiration_date);
+    expirationDate.setHours(0, 0, 0, 0);
+    
+    const daysUntilExpiry = Math.ceil((expirationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysUntilExpiry < 0) return { status: 'expired' as const, days: Math.abs(daysUntilExpiry) };
+    if (daysUntilExpiry <= 30) return { status: 'expiring_soon' as const, days: daysUntilExpiry };
+    return null;
+  };
+
+  const expiryStatus = getExpiryStatus();
+
+  // Check for deep-link highlight
+  useEffect(() => {
+    const highlightId = sessionStorage.getItem('highlight_request_id');
+    if (highlightId && highlightId === request.id) {
+      setIsHighlighted(true);
+      sessionStorage.removeItem('highlight_request_id');
+      // Scroll into view
+      setTimeout(() => {
+        const element = document.getElementById(`request-card-${request.id}`);
+        element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+      // Remove highlight after animation
+      setTimeout(() => setIsHighlighted(false), 3000);
+    }
+  }, [request.id]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -73,7 +114,14 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
 
   return (
     <>
-      <Card className="hover:shadow-md transition-shadow">
+      <Card 
+        id={`request-card-${request.id}`}
+        className={`transition-all duration-500 ${
+          isHighlighted 
+            ? 'ring-2 ring-primary ring-offset-2 bg-primary/5' 
+            : ''
+        }`}
+      >
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-3">
@@ -273,6 +321,24 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                   Resubmit
                 </Button>
               )}
+
+              {/* Show renewal button for expiring/expired approved documents */}
+              {expiryStatus && (
+                <Button 
+                  size="sm" 
+                  onClick={() => setShowRenewalUpload(true)}
+                  className={expiryStatus.status === 'expired' 
+                    ? 'bg-red-600 hover:bg-red-700' 
+                    : 'bg-amber-600 hover:bg-amber-700'
+                  }
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  {expiryStatus.status === 'expired' 
+                    ? `Renew (${expiryStatus.days}d overdue)` 
+                    : `Renew (${expiryStatus.days}d left)`
+                  }
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -325,6 +391,19 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
           onUploadSuccess();
         }}
       />
+
+      {expiryStatus && (
+        <DocumentRenewalDialog
+          isOpen={showRenewalUpload}
+          onClose={() => setShowRenewalUpload(false)}
+          request={request}
+          expiryStatus={expiryStatus}
+          onRenewalSuccess={() => {
+            setShowRenewalUpload(false);
+            onUploadSuccess();
+          }}
+        />
+      )}
     </>
   );
 };

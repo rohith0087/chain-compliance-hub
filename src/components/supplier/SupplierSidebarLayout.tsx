@@ -371,7 +371,15 @@ export function SupplierSidebarLayout({
             
             <div className="flex items-center gap-2">
               <SubscriptionStatusWidget compact />
-              <NotificationCenter />
+              <NotificationCenter 
+                onNavigate={(tab, referenceId) => {
+                  onTabChange(tab);
+                  // Store reference ID in sessionStorage for deep-linking
+                  if (referenceId) {
+                    sessionStorage.setItem('highlight_request_id', referenceId);
+                  }
+                }}
+              />
             </div>
           </div>
         </header>

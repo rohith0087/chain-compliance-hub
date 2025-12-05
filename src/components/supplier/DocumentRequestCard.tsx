@@ -21,6 +21,7 @@ import DocumentUploadDialog from './DocumentUploadDialog';
 import DocumentPreview from './DocumentPreview';
 import CustomTemplateResponse from './CustomTemplateResponse';
 import DocumentRenewalDialog from './DocumentRenewalDialog';
+import { getDocumentExpiryStatus, ExpiryResult } from '@/utils/documentExpiry';
 
 interface DocumentRequestCardProps {
   request: any;
@@ -36,22 +37,17 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
 
   const isCustomTemplate = request.template_type === 'custom' && request.custom_template_id;
 
-  // Check if document is expiring or expired (for approved documents)
+  // Check if document is expiring or expired (for approved documents) using shared utility
   const getExpiryStatus = (): { status: 'expired' | 'expiring_soon'; days: number } | null => {
     if (request.status !== 'approved' || !request.document_uploads?.length) return null;
     
     const latestUpload = request.document_uploads[0];
     if (!latestUpload?.expiration_date) return null;
     
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const expirationDate = new Date(latestUpload.expiration_date);
-    expirationDate.setHours(0, 0, 0, 0);
-    
-    const daysUntilExpiry = Math.ceil((expirationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (daysUntilExpiry < 0) return { status: 'expired' as const, days: Math.abs(daysUntilExpiry) };
-    if (daysUntilExpiry <= 30) return { status: 'expiring_soon' as const, days: daysUntilExpiry };
+    const result = getDocumentExpiryStatus(latestUpload.expiration_date);
+    if (result && (result.status === 'expired' || result.status === 'expiring_soon')) {
+      return { status: result.status, days: result.days };
+    }
     return null;
   };
 

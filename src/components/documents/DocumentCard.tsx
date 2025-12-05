@@ -14,11 +14,14 @@ import {
   ThumbsUp,
   ThumbsDown,
   Link,
-  MapPin
+  MapPin,
+  RefreshCw
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ITEM_CATEGORIES } from '@/hooks/useSupplierItems';
 import DocumentVersionHistory from './DocumentVersionHistory';
+import DocumentRenewalDialog from '@/components/supplier/DocumentRenewalDialog';
+import { getDocumentExpiryStatus, isExpired, isExpiringSoon } from '@/utils/documentExpiry';
 
 interface DocumentUpload {
   id: string;
@@ -72,6 +75,7 @@ interface DocumentCardProps {
   onApprove?: () => void;
   onDecline?: () => void;
   onCreateLink?: () => void;
+  onRenewalSuccess?: () => void;
   showActions?: boolean;
   userRole?: 'buyer' | 'supplier';
   approveLoading?: boolean;
@@ -87,12 +91,16 @@ const DocumentCard = ({
   onApprove,
   onDecline,
   onCreateLink,
+  onRenewalSuccess,
   showActions = true,
   userRole = 'supplier',
   approveLoading = false,
   declineLoading = false,
   downloadLoading = false
 }: DocumentCardProps) => {
+  const [showRenewalDialog, setShowRenewalDialog] = useState(false);
+  const [linkedItems, setLinkedItems] = useState<any[]>([]);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved': return 'bg-green-100 text-green-800';
@@ -129,20 +137,25 @@ const DocumentCard = ({
     return `${mb.toFixed(2)} MB`;
   };
 
-  const isExpiringSoon = (expirationDate?: string) => {
-    if (!expirationDate) return false;
-    const expDate = new Date(expirationDate);
-    const today = new Date();
-    const thirtyDaysFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
-    return expDate <= thirtyDaysFromNow && expDate >= today;
+  // Get expiry status for approved documents
+  const getExpiryStatusForRenewal = () => {
+    if (document.status !== 'approved') return null;
+    
+    // Check latest upload's expiration date first
+    const latestUpload = document.document_uploads?.[0];
+    const expirationDate = latestUpload?.expiration_date || document.expiration_date;
+    
+    if (!expirationDate) return null;
+    
+    const result = getDocumentExpiryStatus(expirationDate);
+    if (result && (result.status === 'expired' || result.status === 'expiring_soon')) {
+      return result;
+    }
+    return null;
   };
 
-  const isExpired = (expirationDate?: string) => {
-    if (!expirationDate) return false;
-    return new Date(expirationDate) < new Date();
-  };
-
-  const [linkedItems, setLinkedItems] = useState<any[]>([]);
+  const expiryStatus = getExpiryStatusForRenewal();
+  const canRenew = userRole === 'supplier' && expiryStatus !== null;
 
   useEffect(() => {
     if (document.linked_item_ids && document.linked_item_ids.length > 0) {
@@ -177,244 +190,273 @@ const DocumentCard = ({
     document.file_name && 
     onCreateLink;
 
-  console.log('DocumentCard debug:', {
-    documentId: document.id,
-    status: document.status,
-    userRole,
-    hasFileName: !!document.file_name,
-    canApproveOrDecline
-  });
-
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <FileText className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">{document.title || document.document_type}</CardTitle>
-              <div className="flex items-center space-x-2 mt-1">
-                <Badge variant="outline" className="text-xs">
-                  {document.document_type}
-                </Badge>
-              <Badge variant="outline" className="text-xs">
-                {document.category}
-              </Badge>
-              <Badge className={getStatusColor(document.status)} variant="secondary">
-                {getStatusIcon(document.status)}
-                <span className="ml-1 capitalize">{document.status}</span>
-              </Badge>
-              {document.branch && (
-                <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800">
-                  <MapPin className="w-3 h-3 mr-1" />
-                  {document.branch.branch_name}
-                </Badge>
-              )}
+    <>
+      <Card className="hover:shadow-md transition-shadow">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <FileText className="w-5 h-5 text-blue-600" />
               </div>
-            </div>
-          </div>
-          {showActions && (
-            <div className="flex items-center space-x-2">
-              {onView && (
-                <Button variant="outline" size="sm" onClick={onView}>
-                  <Eye className="w-4 h-4 mr-2" />
-                  View
-                </Button>
-              )}
-              {onDownload && document.file_name && (
-                <Button variant="outline" size="sm" onClick={onDownload} disabled={downloadLoading}>
-                  {downloadLoading ? (
-                    <>
-                      <Clock className="w-4 h-4 mr-2 animate-spin" />
-                      Downloading...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4 mr-2" />
-                      Download
-                    </>
-                  )}
-                </Button>
-              )}
-              {onUpload && document.status === 'pending' && userRole === 'supplier' && (
-                <Button size="sm" onClick={onUpload}>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload
-                </Button>
-              )}
-              {canApproveOrDecline && onApprove && onDecline && (
-                <>
-                  <Button 
-                    size="sm" 
-                    variant="default" 
-                    className="bg-green-600 hover:bg-green-700"
-                    onClick={onApprove}
-                    disabled={approveLoading || declineLoading}
-                  >
-                    {approveLoading ? (
-                      <>
-                        <Clock className="w-4 h-4 mr-2 animate-spin" />
-                        Approving...
-                      </>
-                    ) : (
-                      <>
-                        <ThumbsUp className="w-4 h-4 mr-2" />
-                        Approve
-                      </>
-                    )}
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="border-red-300 text-red-600 hover:bg-red-50"
-                    onClick={onDecline}
-                    disabled={approveLoading || declineLoading}
-                  >
-                    {declineLoading ? (
-                      <>
-                        <Clock className="w-4 h-4 mr-2 animate-spin" />
-                        Declining...
-                      </>
-                    ) : (
-                      <>
-                        <ThumbsDown className="w-4 h-4 mr-2" />
-                        Decline
-                      </>
-                    )}
-                  </Button>
-                </>
-              )}
-              {canCreateLink && (
-                <Button size="sm" variant="outline" onClick={onCreateLink}>
-                  <Link className="w-4 h-4 mr-2" />
-                  Create Link
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-      </CardHeader>
-      
-      <CardContent className="pt-0">
-        <div className="space-y-3">
-          {/* Linked Items */}
-          {linkedItems.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap mb-3">
-              <span className="text-xs text-muted-foreground">Applies to:</span>
-              {linkedItems.map(item => (
-                <Badge
-                  key={item.id}
-                  variant="outline"
-                  className="text-xs cursor-default"
-                >
-                  {getCategoryIcon(item.item_category)} {item.item_name}
-                </Badge>
-              ))}
-            </div>
-          )}
-
-          {/* File Information */}
-          {document.file_name && (
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">File: {document.file_name}</span>
-              <div className="flex items-center gap-2">
-                {document.file_size && (
-                  <span className="text-gray-500">{formatFileSize(document.file_size)}</span>
-                )}
-                {/* Version History Button */}
-                {document.document_uploads && document.document_uploads.length > 1 && (
-                  <DocumentVersionHistory
-                    documentTitle={document.title || document.document_type}
-                    uploads={document.document_uploads}
-                  />
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-gray-500">Created</p>
-              <p className="text-gray-900">{formatDate(document.created_at)}</p>
-            </div>
-            {document.due_date && (
               <div>
-                <p className="text-gray-500">Due Date</p>
-                <p className="text-gray-900">{formatDate(document.due_date)}</p>
+                <CardTitle className="text-lg">{document.title || document.document_type}</CardTitle>
+                <div className="flex items-center space-x-2 mt-1">
+                  <Badge variant="outline" className="text-xs">
+                    {document.document_type}
+                  </Badge>
+                <Badge variant="outline" className="text-xs">
+                  {document.category}
+                </Badge>
+                <Badge className={getStatusColor(document.status)} variant="secondary">
+                  {getStatusIcon(document.status)}
+                  <span className="ml-1 capitalize">{document.status}</span>
+                </Badge>
+                {document.branch && (
+                  <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800">
+                    <MapPin className="w-3 h-3 mr-1" />
+                    {document.branch.branch_name}
+                  </Badge>
+                )}
+                </div>
+              </div>
+            </div>
+            {showActions && (
+              <div className="flex items-center space-x-2">
+                {onView && (
+                  <Button variant="outline" size="sm" onClick={onView}>
+                    <Eye className="w-4 h-4 mr-2" />
+                    View
+                  </Button>
+                )}
+                {onDownload && document.file_name && (
+                  <Button variant="outline" size="sm" onClick={onDownload} disabled={downloadLoading}>
+                    {downloadLoading ? (
+                      <>
+                        <Clock className="w-4 h-4 mr-2 animate-spin" />
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-2" />
+                        Download
+                      </>
+                    )}
+                  </Button>
+                )}
+                {onUpload && document.status === 'pending' && userRole === 'supplier' && (
+                  <Button size="sm" onClick={onUpload}>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload
+                  </Button>
+                )}
+                {canApproveOrDecline && onApprove && onDecline && (
+                  <>
+                    <Button 
+                      size="sm" 
+                      variant="default" 
+                      className="bg-green-600 hover:bg-green-700"
+                      onClick={onApprove}
+                      disabled={approveLoading || declineLoading}
+                    >
+                      {approveLoading ? (
+                        <>
+                          <Clock className="w-4 h-4 mr-2 animate-spin" />
+                          Approving...
+                        </>
+                      ) : (
+                        <>
+                          <ThumbsUp className="w-4 h-4 mr-2" />
+                          Approve
+                        </>
+                      )}
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="border-red-300 text-red-600 hover:bg-red-50"
+                      onClick={onDecline}
+                      disabled={approveLoading || declineLoading}
+                    >
+                      {declineLoading ? (
+                        <>
+                          <Clock className="w-4 h-4 mr-2 animate-spin" />
+                          Declining...
+                        </>
+                      ) : (
+                        <>
+                          <ThumbsDown className="w-4 h-4 mr-2" />
+                          Decline
+                        </>
+                      )}
+                    </Button>
+                  </>
+                )}
+                {canCreateLink && (
+                  <Button size="sm" variant="outline" onClick={onCreateLink}>
+                    <Link className="w-4 h-4 mr-2" />
+                    Create Link
+                  </Button>
+                )}
+                {/* Renewal button for expiring/expired approved documents */}
+                {canRenew && expiryStatus && (
+                  <Button 
+                    size="sm" 
+                    onClick={() => setShowRenewalDialog(true)}
+                    className={expiryStatus.status === 'expired' 
+                      ? 'bg-red-600 hover:bg-red-700' 
+                      : 'bg-amber-600 hover:bg-amber-700'
+                    }
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    {expiryStatus.status === 'expired' 
+                      ? `Renew (${expiryStatus.days}d overdue)` 
+                      : `Renew (${expiryStatus.days}d left)`
+                    }
+                  </Button>
+                )}
               </div>
             )}
           </div>
+        </CardHeader>
+        
+        <CardContent className="pt-0">
+          <div className="space-y-3">
+            {/* Linked Items */}
+            {linkedItems.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap mb-3">
+                <span className="text-xs text-muted-foreground">Applies to:</span>
+                {linkedItems.map(item => (
+                  <Badge
+                    key={item.id}
+                    variant="outline"
+                    className="text-xs cursor-default"
+                  >
+                    {getCategoryIcon(item.item_category)} {item.item_name}
+                  </Badge>
+                ))}
+              </div>
+            )}
 
-          {/* Expiration Date (for suppliers) */}
-          {document.expiration_date && userRole === 'supplier' && (
-            <div className="p-3 rounded-lg border">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Calendar className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm font-medium">Expires:</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm">{formatDate(document.expiration_date)}</span>
-                  {isExpired(document.expiration_date) && (
-                    <Badge variant="destructive" className="text-xs">
-                      Expired
-                    </Badge>
+            {/* File Information */}
+            {document.file_name && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">File: {document.file_name}</span>
+                <div className="flex items-center gap-2">
+                  {document.file_size && (
+                    <span className="text-gray-500">{formatFileSize(document.file_size)}</span>
                   )}
-                  {isExpiringSoon(document.expiration_date) && !isExpired(document.expiration_date) && (
-                    <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800">
-                      Expires Soon
-                    </Badge>
+                  {/* Version History Button */}
+                  {document.document_uploads && document.document_uploads.length > 1 && (
+                    <DocumentVersionHistory
+                      documentTitle={document.title || document.document_type}
+                      uploads={document.document_uploads}
+                    />
                   )}
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Expiration Date (for buyers) */}
-          {document.expiration_date && userRole === 'buyer' && (
-            <div className="p-3 rounded-lg border">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Calendar className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm font-medium">Document Expires:</span>
+            {/* Dates */}
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-gray-500">Created</p>
+                <p className="text-gray-900">{formatDate(document.created_at)}</p>
+              </div>
+              {document.due_date && (
+                <div>
+                  <p className="text-gray-500">Due Date</p>
+                  <p className="text-gray-900">{formatDate(document.due_date)}</p>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm">{formatDate(document.expiration_date)}</span>
-                  {isExpired(document.expiration_date) && (
-                    <Badge variant="destructive" className="text-xs">
-                      Expired
-                    </Badge>
-                  )}
-                  {isExpiringSoon(document.expiration_date) && !isExpired(document.expiration_date) && (
-                    <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800">
-                      Expires Soon
-                    </Badge>
-                  )}
+              )}
+            </div>
+
+            {/* Expiration Date (for suppliers) */}
+            {document.expiration_date && userRole === 'supplier' && (
+              <div className="p-3 rounded-lg border">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm font-medium">Expires:</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm">{formatDate(document.expiration_date)}</span>
+                    {isExpired(document.expiration_date) && (
+                      <Badge variant="destructive" className="text-xs">
+                        Expired
+                      </Badge>
+                    )}
+                    {isExpiringSoon(document.expiration_date) && !isExpired(document.expiration_date) && (
+                      <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800">
+                        Expires Soon
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Company Information */}
-          <div className="pt-3 border-t">
-            <div className="text-sm text-gray-600">
-              {userRole === 'buyer' && document.supplier && (
-                <span>Supplier: {document.supplier.company_name}</span>
-              )}
-              {userRole === 'supplier' && document.buyer && (
-                <span>Requested by: {document.buyer.company_name}</span>
-              )}
-              {document.uploader && (
-                <span className="ml-4">Uploaded by: {document.uploader.full_name}</span>
-              )}
+            {/* Expiration Date (for buyers) */}
+            {document.expiration_date && userRole === 'buyer' && (
+              <div className="p-3 rounded-lg border">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm font-medium">Document Expires:</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm">{formatDate(document.expiration_date)}</span>
+                    {isExpired(document.expiration_date) && (
+                      <Badge variant="destructive" className="text-xs">
+                        Expired
+                      </Badge>
+                    )}
+                    {isExpiringSoon(document.expiration_date) && !isExpired(document.expiration_date) && (
+                      <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800">
+                        Expires Soon
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Company Information */}
+            <div className="pt-3 border-t">
+              <div className="text-sm text-gray-600">
+                {userRole === 'buyer' && document.supplier && (
+                  <span>Supplier: {document.supplier.company_name}</span>
+                )}
+                {userRole === 'supplier' && document.buyer && (
+                  <span>Requested by: {document.buyer.company_name}</span>
+                )}
+                {document.uploader && (
+                  <span className="ml-4">Uploaded by: {document.uploader.full_name}</span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/* Renewal Dialog */}
+      {canRenew && expiryStatus && (expiryStatus.status === 'expired' || expiryStatus.status === 'expiring_soon') && (
+        <DocumentRenewalDialog
+          isOpen={showRenewalDialog}
+          onClose={() => setShowRenewalDialog(false)}
+          request={{
+            id: document.id,
+            title: document.title || document.document_type,
+            document_uploads: document.document_uploads
+          }}
+          expiryStatus={{ status: expiryStatus.status, days: expiryStatus.days }}
+          onRenewalSuccess={() => {
+            setShowRenewalDialog(false);
+            onRenewalSuccess?.();
+          }}
+        />
+      )}
+    </>
   );
 };
 

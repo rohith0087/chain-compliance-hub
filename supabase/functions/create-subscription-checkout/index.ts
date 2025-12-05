@@ -82,7 +82,7 @@ serve(async (req) => {
       // If user has active subscription, redirect to manage it
       const portalSession = await stripe.billingPortal.sessions.create({
         customer: customerId,
-        return_url: `${req.headers.get("origin") || "http://localhost:3000"}/subscription`,
+        return_url: `${req.headers.get("origin") || "https://compliance.tracer2c.com"}/subscription`,
       });
       
       return new Response(JSON.stringify({ 
@@ -104,8 +104,8 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
-      success_url: `${req.headers.get("origin") || "http://localhost:3000"}/subscription?success=true`,
-      cancel_url: `${req.headers.get("origin") || "http://localhost:3000"}/subscription?canceled=true`,
+      success_url: `${req.headers.get("origin") || "https://compliance.tracer2c.com"}/subscription?success=true`,
+      cancel_url: `${req.headers.get("origin") || "https://compliance.tracer2c.com"}/subscription?canceled=true`,
       metadata: {
         user_id: user.id,
         plan_type: planType,

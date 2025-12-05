@@ -106,7 +106,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Access validated for buyer:', buyerData.buyerId);
 
-    const signupUrl = "https://d13fec6e-29ed-4735-a9d4-57941fe886cc.lovableproject.com";
+    const signupUrl = "https://compliance.tracer2c.com";
     
     const htmlContent = `
       <!DOCTYPE html>

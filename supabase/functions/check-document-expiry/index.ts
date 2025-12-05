@@ -124,7 +124,7 @@ function getEmailTemplate(tier: string, doc: ExpiringDocument, daysUntilExpiry: 
               Please upload a renewed document immediately to avoid any disruption to your compliance status.
             </p>
             <div style="text-align: center; margin: 30px 0;">
-              <a href="#" style="background: #f59e0b; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
+              <a href="https://compliance.tracer2c.com/dashboard" style="background: #f59e0b; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
                 Upload Updated Document
               </a>
             </div>
@@ -161,7 +161,7 @@ function getEmailTemplate(tier: string, doc: ExpiringDocument, daysUntilExpiry: 
               This may impact your ability to do business with ${doc.buyer_company}. Please upload an updated document immediately.
             </p>
             <div style="text-align: center; margin: 30px 0;">
-              <a href="#" style="background: #ef4444; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
+              <a href="https://compliance.tracer2c.com/dashboard" style="background: #ef4444; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
                 Upload Updated Document Now
               </a>
             </div>
@@ -190,7 +190,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
         'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'Compliance System <notifications@resend.dev>',
+        from: 'Compliance System <notifications@tracer2c.com>',
         to: [to],
         subject,
         html,

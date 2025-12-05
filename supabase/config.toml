@@ -27,8 +27,8 @@ max_file_size_limit = "50MiB"
 [auth]
 enabled = true
 port = 54326
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["https://localhost:3000"]
+site_url = "https://compliance.tracer2c.com"
+additional_redirect_urls = ["https://compliance.tracer2c.com", "https://compliance.tracer2c.com/reset-password"]
 jwt_expiry = 3600
 enable_signup = true
 enable_email_confirmations = false

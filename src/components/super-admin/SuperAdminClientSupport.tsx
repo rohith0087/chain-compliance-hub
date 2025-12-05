@@ -19,6 +19,23 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
+// Neon color palette for cyber theme
+const NEON_COLORS = {
+  cyan: '#22d3ee',
+  purple: '#a855f7',
+  green: '#4ade80',
+  amber: '#fbbf24',
+  pink: '#f472b6',
+  red: '#ef4444',
+  blue: '#3b82f6'
+};
+
+// Dark card styling
+const cardStyle = {
+  backgroundColor: 'hsl(var(--admin-card))',
+  borderColor: 'hsl(var(--admin-border))'
+};
+
 export const SuperAdminClientSupport = () => {
   const { users, loading: usersLoading } = useSuperAdmin();
   const { 
@@ -76,23 +93,25 @@ export const SuperAdminClientSupport = () => {
     setSelectedTicket(prev => prev ? { ...prev, status } : null);
   };
 
-  const getPriorityColor = (priority: string) => {
+  // Neon style priority badges
+  const getPriorityStyle = (priority: string) => {
     switch (priority) {
-      case 'urgent': return 'bg-red-500 text-white';
-      case 'high': return 'bg-orange-500 text-white';
-      case 'medium': return 'bg-yellow-500 text-black';
-      case 'low': return 'bg-slate-400 text-white';
-      default: return 'bg-slate-300';
+      case 'urgent': return { backgroundColor: `${NEON_COLORS.red}20`, color: NEON_COLORS.red, borderColor: NEON_COLORS.red };
+      case 'high': return { backgroundColor: `${NEON_COLORS.amber}20`, color: NEON_COLORS.amber, borderColor: NEON_COLORS.amber };
+      case 'medium': return { backgroundColor: `${NEON_COLORS.cyan}20`, color: NEON_COLORS.cyan, borderColor: NEON_COLORS.cyan };
+      case 'low': return { backgroundColor: `${NEON_COLORS.green}20`, color: NEON_COLORS.green, borderColor: NEON_COLORS.green };
+      default: return { backgroundColor: `${NEON_COLORS.purple}20`, color: NEON_COLORS.purple, borderColor: NEON_COLORS.purple };
     }
   };
 
-  const getStatusColor = (status: string) => {
+  // Neon style status badges
+  const getStatusStyle = (status: string) => {
     switch (status) {
-      case 'open': return 'bg-red-100 text-red-800 border-red-200';
-      case 'in_progress': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'resolved': return 'bg-green-100 text-green-800 border-green-200';
-      case 'closed': return 'bg-slate-100 text-slate-800 border-slate-200';
-      default: return 'bg-slate-100';
+      case 'open': return { backgroundColor: `${NEON_COLORS.red}20`, color: NEON_COLORS.red, borderColor: NEON_COLORS.red };
+      case 'in_progress': return { backgroundColor: `${NEON_COLORS.cyan}20`, color: NEON_COLORS.cyan, borderColor: NEON_COLORS.cyan };
+      case 'resolved': return { backgroundColor: `${NEON_COLORS.green}20`, color: NEON_COLORS.green, borderColor: NEON_COLORS.green };
+      case 'closed': return { backgroundColor: `${NEON_COLORS.purple}20`, color: NEON_COLORS.purple, borderColor: NEON_COLORS.purple };
+      default: return { backgroundColor: `${NEON_COLORS.purple}20`, color: NEON_COLORS.purple, borderColor: NEON_COLORS.purple };
     }
   };
 
@@ -109,10 +128,10 @@ export const SuperAdminClientSupport = () => {
 
   if (loading) {
     return (
-      <Card>
+      <Card style={cardStyle}>
         <CardContent className="p-6">
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: NEON_COLORS.cyan }}></div>
           </div>
         </CardContent>
       </Card>
@@ -123,103 +142,103 @@ export const SuperAdminClientSupport = () => {
     <div className="space-y-6">
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        <Card>
+        <Card style={cardStyle}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground">Open</p>
-                <p className="text-2xl font-bold text-red-600">{stats.open}</p>
+                <p className="text-xs font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>Open</p>
+                <p className="text-2xl font-bold" style={{ color: NEON_COLORS.red }}>{stats.open}</p>
               </div>
-              <AlertTriangle className="w-6 h-6 text-red-500" />
+              <AlertTriangle className="w-6 h-6" style={{ color: NEON_COLORS.red }} />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card style={cardStyle}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground">In Progress</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.inProgress}</p>
+                <p className="text-xs font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>In Progress</p>
+                <p className="text-2xl font-bold" style={{ color: NEON_COLORS.cyan }}>{stats.inProgress}</p>
               </div>
-              <Activity className="w-6 h-6 text-blue-500" />
+              <Activity className="w-6 h-6" style={{ color: NEON_COLORS.cyan }} />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card style={cardStyle}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground">Resolved</p>
-                <p className="text-2xl font-bold text-green-600">{stats.resolved}</p>
+                <p className="text-xs font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>Resolved</p>
+                <p className="text-2xl font-bold" style={{ color: NEON_COLORS.green }}>{stats.resolved}</p>
               </div>
-              <CheckCircle className="w-6 h-6 text-green-500" />
+              <CheckCircle className="w-6 h-6" style={{ color: NEON_COLORS.green }} />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card style={cardStyle}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground">Closed</p>
-                <p className="text-2xl font-bold text-slate-600">{stats.closed}</p>
+                <p className="text-xs font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>Closed</p>
+                <p className="text-2xl font-bold" style={{ color: NEON_COLORS.purple }}>{stats.closed}</p>
               </div>
-              <XCircle className="w-6 h-6 text-slate-500" />
+              <XCircle className="w-6 h-6" style={{ color: NEON_COLORS.purple }} />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card style={cardStyle}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground">Urgent</p>
-                <p className="text-2xl font-bold text-orange-600">{stats.urgent}</p>
+                <p className="text-xs font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>Urgent</p>
+                <p className="text-2xl font-bold" style={{ color: NEON_COLORS.amber }}>{stats.urgent}</p>
               </div>
-              <Clock className="w-6 h-6 text-orange-500" />
+              <Clock className="w-6 h-6" style={{ color: NEON_COLORS.amber }} />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card style={cardStyle}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-xs font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>Total</p>
+                <p className="text-2xl font-bold" style={{ color: 'hsl(var(--admin-text))' }}>{stats.total}</p>
               </div>
-              <MessageSquare className="w-6 h-6 text-primary" />
+              <MessageSquare className="w-6 h-6" style={{ color: NEON_COLORS.blue }} />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Support Tickets */}
-      <Card>
+      <Card style={cardStyle}>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <HelpCircle className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2" style={{ color: 'hsl(var(--admin-text))' }}>
+                <HelpCircle className="w-5 h-5" style={{ color: NEON_COLORS.cyan }} />
                 Support Tickets
                 {newTicketCount > 0 && (
-                  <Badge className="bg-red-500 text-white animate-pulse">
+                  <Badge className="animate-pulse" style={{ backgroundColor: NEON_COLORS.red, color: '#fff' }}>
                     {newTicketCount} new
                   </Badge>
                 )}
               </CardTitle>
-              <CardDescription>
+              <CardDescription style={{ color: 'hsl(var(--admin-text-muted))' }}>
                 Real-time support requests from users
               </CardDescription>
             </div>
             <div className="flex gap-2">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-36">
+                <SelectTrigger className="w-36 border" style={{ backgroundColor: 'hsl(var(--admin-card))', borderColor: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}>
                   <SelectValue placeholder="Filter status" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent style={{ backgroundColor: 'hsl(var(--admin-card))', borderColor: 'hsl(var(--admin-border))' }}>
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="open">Open</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
@@ -227,7 +246,7 @@ export const SuperAdminClientSupport = () => {
                   <SelectItem value="closed">Closed</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="icon" onClick={refetch}>
+              <Button variant="outline" size="icon" onClick={refetch} style={{ borderColor: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}>
                 <RefreshCw className="w-4 h-4" />
               </Button>
             </div>
@@ -235,28 +254,33 @@ export const SuperAdminClientSupport = () => {
         </CardHeader>
         <CardContent>
           {filteredTickets.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
+            <div className="text-center py-12" style={{ color: 'hsl(var(--admin-text-muted))' }}>
               <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>No support tickets yet</p>
               <p className="text-sm">Tickets will appear here in real-time</p>
             </div>
           ) : (
-            <div className="rounded-md border">
+            <div className="rounded-md border" style={{ borderColor: 'hsl(var(--admin-border))' }}>
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Source</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead>Subject</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                  <TableRow style={{ borderColor: 'hsl(var(--admin-border))' }}>
+                    <TableHead style={{ color: 'hsl(var(--admin-text-muted))' }}>Source</TableHead>
+                    <TableHead style={{ color: 'hsl(var(--admin-text-muted))' }}>User</TableHead>
+                    <TableHead style={{ color: 'hsl(var(--admin-text-muted))' }}>Subject</TableHead>
+                    <TableHead style={{ color: 'hsl(var(--admin-text-muted))' }}>Priority</TableHead>
+                    <TableHead style={{ color: 'hsl(var(--admin-text-muted))' }}>Status</TableHead>
+                    <TableHead style={{ color: 'hsl(var(--admin-text-muted))' }}>Created</TableHead>
+                    <TableHead className="text-right" style={{ color: 'hsl(var(--admin-text-muted))' }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredTickets.map((ticket) => (
-                    <TableRow key={ticket.id} className="cursor-pointer hover:bg-muted/50" onClick={() => viewTicketDetails(ticket)}>
+                    <TableRow 
+                      key={ticket.id} 
+                      className="cursor-pointer transition-colors" 
+                      style={{ borderColor: 'hsl(var(--admin-border))' }}
+                      onClick={() => viewTicketDetails(ticket)}
+                    >
                       <TableCell>
                         <span className="text-lg" title={ticket.source}>
                           {getSourceIcon(ticket.source)}
@@ -264,32 +288,37 @@ export const SuperAdminClientSupport = () => {
                       </TableCell>
                       <TableCell>
                         <div>
-                          <p className="font-medium text-sm">
+                          <p className="font-medium text-sm" style={{ color: 'hsl(var(--admin-text))' }}>
                             {ticket.user_name || ticket.user_email || 'Anonymous'}
                           </p>
                           {ticket.company_name && (
-                            <p className="text-xs text-muted-foreground">{ticket.company_name}</p>
+                            <p className="text-xs" style={{ color: 'hsl(var(--admin-text-muted))' }}>{ticket.company_name}</p>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <p className="font-medium truncate max-w-[200px]">{ticket.subject}</p>
+                        <p className="font-medium truncate max-w-[200px]" style={{ color: 'hsl(var(--admin-text))' }}>{ticket.subject}</p>
                       </TableCell>
                       <TableCell>
-                        <Badge className={getPriorityColor(ticket.priority)}>
+                        <Badge variant="outline" style={getPriorityStyle(ticket.priority)}>
                           {ticket.priority}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={getStatusColor(ticket.status)}>
+                        <Badge variant="outline" style={getStatusStyle(ticket.status)}>
                           {ticket.status.replace('_', ' ')}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
                         {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true })}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); viewTicketDetails(ticket); }}>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={(e) => { e.stopPropagation(); viewTicketDetails(ticket); }}
+                          style={{ color: NEON_COLORS.cyan }}
+                        >
                           <Eye className="w-4 h-4" />
                         </Button>
                       </TableCell>
@@ -303,52 +332,61 @@ export const SuperAdminClientSupport = () => {
       </Card>
 
       {/* User Impersonation */}
-      <Card>
+      <Card style={cardStyle}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserCheck className="w-5 h-5" />
+          <CardTitle className="flex items-center gap-2" style={{ color: 'hsl(var(--admin-text))' }}>
+            <UserCheck className="w-5 h-5" style={{ color: NEON_COLORS.purple }} />
             User Impersonation
           </CardTitle>
-          <CardDescription>
+          <CardDescription style={{ color: 'hsl(var(--admin-text-muted))' }}>
             Debug client issues by viewing the system from their perspective
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
               <Input
                 placeholder="Search users to impersonate..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
+                style={{ backgroundColor: 'hsl(var(--admin-card))', borderColor: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}
               />
             </div>
 
-            <div className="rounded-md border max-h-64 overflow-y-auto">
+            <div className="rounded-md border max-h-64 overflow-y-auto" style={{ borderColor: 'hsl(var(--admin-border))' }}>
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Company</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
+                  <TableRow style={{ borderColor: 'hsl(var(--admin-border))' }}>
+                    <TableHead style={{ color: 'hsl(var(--admin-text-muted))' }}>User</TableHead>
+                    <TableHead style={{ color: 'hsl(var(--admin-text-muted))' }}>Company</TableHead>
+                    <TableHead style={{ color: 'hsl(var(--admin-text-muted))' }}>Type</TableHead>
+                    <TableHead className="text-right" style={{ color: 'hsl(var(--admin-text-muted))' }}>Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredUsers.slice(0, 10).map((user) => (
-                    <TableRow key={user.id}>
+                    <TableRow key={user.id} style={{ borderColor: 'hsl(var(--admin-border))' }}>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{user.full_name || 'No Name'}</p>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                          <p className="font-medium" style={{ color: 'hsl(var(--admin-text))' }}>{user.full_name || 'No Name'}</p>
+                          <p className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>{user.email}</p>
                         </div>
                       </TableCell>
-                      <TableCell>{user.company_name || 'No Company'}</TableCell>
+                      <TableCell style={{ color: 'hsl(var(--admin-text))' }}>{user.company_name || 'No Company'}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          {user.is_buyer && <Badge variant="outline" className="text-xs">Buyer</Badge>}
-                          {user.is_supplier && <Badge variant="outline" className="text-xs">Supplier</Badge>}
+                          {user.is_buyer && (
+                            <Badge variant="outline" className="text-xs" style={{ borderColor: NEON_COLORS.cyan, color: NEON_COLORS.cyan }}>
+                              Buyer
+                            </Badge>
+                          )}
+                          {user.is_supplier && (
+                            <Badge variant="outline" className="text-xs" style={{ borderColor: NEON_COLORS.purple, color: NEON_COLORS.purple }}>
+                              Supplier
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
@@ -356,6 +394,7 @@ export const SuperAdminClientSupport = () => {
                           variant="outline" 
                           size="sm"
                           onClick={() => handleImpersonate(user)}
+                          style={{ borderColor: NEON_COLORS.purple, color: NEON_COLORS.purple }}
                         >
                           <Eye className="w-4 h-4 mr-2" />
                           Impersonate
@@ -372,13 +411,13 @@ export const SuperAdminClientSupport = () => {
 
       {/* Ticket Detail Dialog */}
       <Dialog open={isTicketDetailOpen} onOpenChange={setIsTicketDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
+        <DialogContent className="max-w-2xl max-h-[90vh]" style={{ backgroundColor: 'hsl(var(--admin-card))', borderColor: 'hsl(var(--admin-border))' }}>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2" style={{ color: 'hsl(var(--admin-text))' }}>
               <span className="text-lg">{selectedTicket && getSourceIcon(selectedTicket.source)}</span>
               Ticket Details
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription style={{ color: 'hsl(var(--admin-text-muted))' }}>
               View and manage support ticket
             </DialogDescription>
           </DialogHeader>
@@ -389,70 +428,70 @@ export const SuperAdminClientSupport = () => {
                 {/* Header Info */}
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="font-semibold text-lg">{selectedTicket.subject}</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <h3 className="font-semibold text-lg" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.subject}</h3>
+                    <p className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
                       {formatDistanceToNow(new Date(selectedTicket.created_at), { addSuffix: true })}
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <Badge className={getPriorityColor(selectedTicket.priority)}>
+                    <Badge variant="outline" style={getPriorityStyle(selectedTicket.priority)}>
                       {selectedTicket.priority}
                     </Badge>
-                    <Badge variant="outline" className={getStatusColor(selectedTicket.status)}>
+                    <Badge variant="outline" style={getStatusStyle(selectedTicket.status)}>
                       {selectedTicket.status.replace('_', ' ')}
                     </Badge>
                   </div>
                 </div>
 
                 {/* User Info */}
-                <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-                  <h4 className="font-medium text-sm">User Information</h4>
+                <div className="p-4 rounded-lg space-y-2" style={{ backgroundColor: 'hsl(var(--admin-bg))', border: '1px solid hsl(var(--admin-border))' }}>
+                  <h4 className="font-medium text-sm" style={{ color: NEON_COLORS.cyan }}>User Information</h4>
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <span className="text-muted-foreground">Name:</span>{' '}
-                      <span className="font-medium">{selectedTicket.user_name || 'Anonymous'}</span>
+                      <span style={{ color: 'hsl(var(--admin-text-muted))' }}>Name:</span>{' '}
+                      <span className="font-medium" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.user_name || 'Anonymous'}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Email:</span>{' '}
-                      <span className="font-medium">{selectedTicket.user_email || 'Not provided'}</span>
+                      <span style={{ color: 'hsl(var(--admin-text-muted))' }}>Email:</span>{' '}
+                      <span className="font-medium" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.user_email || 'Not provided'}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Company:</span>{' '}
-                      <span className="font-medium">{selectedTicket.company_name || 'N/A'}</span>
+                      <span style={{ color: 'hsl(var(--admin-text-muted))' }}>Company:</span>{' '}
+                      <span className="font-medium" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.company_name || 'N/A'}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">User Type:</span>{' '}
-                      <span className="font-medium capitalize">{selectedTicket.user_type || 'Guest'}</span>
+                      <span style={{ color: 'hsl(var(--admin-text-muted))' }}>User Type:</span>{' '}
+                      <span className="font-medium capitalize" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.user_type || 'Guest'}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Description */}
                 <div>
-                  <Label className="text-sm font-medium">Description</Label>
-                  <div className="mt-2 p-4 bg-muted/30 rounded-lg whitespace-pre-wrap text-sm">
+                  <Label className="text-sm font-medium" style={{ color: 'hsl(var(--admin-text))' }}>Description</Label>
+                  <div className="mt-2 p-4 rounded-lg whitespace-pre-wrap text-sm" style={{ backgroundColor: 'hsl(var(--admin-bg))', border: '1px solid hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}>
                     {selectedTicket.description}
                   </div>
                 </div>
 
                 {/* Context Info */}
-                <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-                  <h4 className="font-medium text-sm">Context (Auto-captured)</h4>
+                <div className="p-4 rounded-lg space-y-2" style={{ backgroundColor: 'hsl(var(--admin-bg))', border: '1px solid hsl(var(--admin-border))' }}>
+                  <h4 className="font-medium text-sm" style={{ color: NEON_COLORS.cyan }}>Context (Auto-captured)</h4>
                   <div className="grid grid-cols-1 gap-2 text-sm">
                     <div className="flex items-center gap-2">
-                      <Globe className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">Page:</span>
-                      <span className="font-mono text-xs truncate">{selectedTicket.page_url || 'N/A'}</span>
+                      <Globe className="w-4 h-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
+                      <span style={{ color: 'hsl(var(--admin-text-muted))' }}>Page:</span>
+                      <span className="font-mono text-xs truncate" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.page_url || 'N/A'}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">IP:</span>
-                      <span className="font-mono text-xs">{selectedTicket.ip_address || 'N/A'}</span>
+                      <MapPin className="w-4 h-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
+                      <span style={{ color: 'hsl(var(--admin-text-muted))' }}>IP:</span>
+                      <span className="font-mono text-xs" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.ip_address || 'N/A'}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Monitor className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">Browser:</span>
-                      <span className="font-mono text-xs truncate max-w-[300px]">
+                      <Monitor className="w-4 h-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
+                      <span style={{ color: 'hsl(var(--admin-text-muted))' }}>Browser:</span>
+                      <span className="font-mono text-xs truncate max-w-[300px]" style={{ color: 'hsl(var(--admin-text))' }}>
                         {selectedTicket.user_agent?.split(' ').slice(0, 3).join(' ') || 'N/A'}
                       </span>
                     </div>
@@ -461,13 +500,14 @@ export const SuperAdminClientSupport = () => {
 
                 {/* Resolution Notes */}
                 <div className="space-y-2">
-                  <Label htmlFor="resolution">Resolution Notes</Label>
+                  <Label htmlFor="resolution" style={{ color: 'hsl(var(--admin-text))' }}>Resolution Notes</Label>
                   <Textarea
                     id="resolution"
                     value={resolutionNotes}
                     onChange={(e) => setResolutionNotes(e.target.value)}
                     placeholder="Add notes about resolution or response..."
                     rows={3}
+                    style={{ backgroundColor: 'hsl(var(--admin-bg))', borderColor: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}
                   />
                 </div>
 
@@ -478,6 +518,7 @@ export const SuperAdminClientSupport = () => {
                     size="sm"
                     onClick={() => handleStatusChange('in_progress')}
                     disabled={selectedTicket.status === 'in_progress'}
+                    style={{ borderColor: NEON_COLORS.cyan, color: NEON_COLORS.cyan }}
                   >
                     <Activity className="w-4 h-4 mr-1" />
                     Mark In Progress
@@ -485,9 +526,9 @@ export const SuperAdminClientSupport = () => {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="text-green-600 border-green-200 hover:bg-green-50"
                     onClick={() => handleStatusChange('resolved')}
                     disabled={selectedTicket.status === 'resolved'}
+                    style={{ borderColor: NEON_COLORS.green, color: NEON_COLORS.green }}
                   >
                     <CheckCircle className="w-4 h-4 mr-1" />
                     Resolve
@@ -497,6 +538,7 @@ export const SuperAdminClientSupport = () => {
                     size="sm"
                     onClick={() => handleStatusChange('closed')}
                     disabled={selectedTicket.status === 'closed'}
+                    style={{ borderColor: NEON_COLORS.purple, color: NEON_COLORS.purple }}
                   >
                     <XCircle className="w-4 h-4 mr-1" />
                     Close
@@ -510,28 +552,35 @@ export const SuperAdminClientSupport = () => {
 
       {/* Impersonation Confirmation Dialog */}
       <Dialog open={isImpersonateDialogOpen} onOpenChange={setIsImpersonateDialogOpen}>
-        <DialogContent>
+        <DialogContent style={{ backgroundColor: 'hsl(var(--admin-card))', borderColor: 'hsl(var(--admin-border))' }}>
           <DialogHeader>
-            <DialogTitle>Confirm User Impersonation</DialogTitle>
-            <DialogDescription>
+            <DialogTitle style={{ color: 'hsl(var(--admin-text))' }}>Confirm User Impersonation</DialogTitle>
+            <DialogDescription style={{ color: 'hsl(var(--admin-text-muted))' }}>
               You are about to impersonate {selectedUser?.email}. This action will be logged for security purposes.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="p-4 rounded-lg" style={{ backgroundColor: `${NEON_COLORS.amber}15`, border: `1px solid ${NEON_COLORS.amber}40` }}>
               <div className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-yellow-600" />
-                <p className="text-sm text-yellow-800 font-medium">Security Notice</p>
+                <AlertTriangle className="w-5 h-5" style={{ color: NEON_COLORS.amber }} />
+                <p className="text-sm font-medium" style={{ color: NEON_COLORS.amber }}>Security Notice</p>
               </div>
-              <p className="text-sm text-yellow-700 mt-1">
+              <p className="text-sm mt-1" style={{ color: 'hsl(var(--admin-text-muted))' }}>
                 All actions performed during impersonation will be logged and audited.
               </p>
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsImpersonateDialogOpen(false)}>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsImpersonateDialogOpen(false)}
+                style={{ borderColor: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}
+              >
                 Cancel
               </Button>
-              <Button onClick={confirmImpersonate}>
+              <Button 
+                onClick={confirmImpersonate}
+                style={{ backgroundColor: NEON_COLORS.purple, color: '#fff' }}
+              >
                 Start Impersonation
               </Button>
             </div>

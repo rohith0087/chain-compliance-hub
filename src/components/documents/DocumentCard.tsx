@@ -81,6 +81,7 @@ interface DocumentCardProps {
   approveLoading?: boolean;
   declineLoading?: boolean;
   downloadLoading?: boolean;
+  isHighlighted?: boolean;
 }
 
 const DocumentCard = ({ 
@@ -96,7 +97,8 @@ const DocumentCard = ({
   userRole = 'supplier',
   approveLoading = false,
   declineLoading = false,
-  downloadLoading = false
+  downloadLoading = false,
+  isHighlighted = false
 }: DocumentCardProps) => {
   const [showRenewalDialog, setShowRenewalDialog] = useState(false);
   const [linkedItems, setLinkedItems] = useState<any[]>([]);
@@ -192,7 +194,7 @@ const DocumentCard = ({
 
   return (
     <>
-      <Card className="hover:shadow-md transition-shadow">
+      <Card className={`hover:shadow-md transition-shadow ${isHighlighted ? 'ring-2 ring-primary ring-offset-2 bg-primary/5 animate-pulse' : ''}`} id={`doc-card-${document.id}`}>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-3">

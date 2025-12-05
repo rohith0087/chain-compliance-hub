@@ -31,6 +31,7 @@ const BuyerDocumentsDashboard = () => {
   const [declineLoading, setDeclineLoading] = useState<string | null>(null);
   const [buyerId, setBuyerId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [highlightedDocId, setHighlightedDocId] = useState<string | null>(null);
   const [declineDialog, setDeclineDialog] = useState<{
     isOpen: boolean;
     documentId: string;
@@ -56,6 +57,26 @@ const BuyerDocumentsDashboard = () => {
   const { toast } = useToast();
   const loadTimeoutRef = useRef<NodeJS.Timeout>();
   const abortControllerRef = useRef<AbortController>();
+
+  // Check for deep-link highlight from notification
+  useEffect(() => {
+    const highlightId = sessionStorage.getItem('highlight_document_request_id');
+    if (highlightId && documents.length > 0) {
+      setHighlightedDocId(highlightId);
+      sessionStorage.removeItem('highlight_document_request_id');
+      setActiveTab('overview');
+      
+      // Scroll to highlighted document after render
+      setTimeout(() => {
+        const element = document.getElementById(`doc-card-${highlightId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        // Clear highlight after 5 seconds
+        setTimeout(() => setHighlightedDocId(null), 5000);
+      }, 100);
+    }
+  }, [documents]);
 
   const debouncedLoadDocuments = useCallback(() => {
     if (loadTimeoutRef.current) {
@@ -898,6 +919,7 @@ if (user?.id && latest.id) {
                       approveLoading={approveLoading === doc.id}
                       declineLoading={declineLoading === doc.id}
                       showActions={true}
+                      isHighlighted={highlightedDocId === doc.id}
                     />
                   ))}
                 </div>

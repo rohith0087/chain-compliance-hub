@@ -2139,8 +2139,81 @@ serve(async (req) => {
   }
 
   try {
-    const { buyer_id, question, session_id: incoming_session_id, user_context } = await req.json();
+    // ============= AUTH VALIDATION =============
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('❌ Missing authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      console.error('❌ Invalid authentication:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('✓ User authenticated:', user.id);
+
+    // Parse request body
+    const { buyer_id: requested_buyer_id, question, session_id: incoming_session_id, user_context } = await req.json();
+
+    // ============= RESOLVE USER'S ACTUAL BUYER ID =============
+    let actualBuyerId: string | null = null;
+
+    // Check if user is a team member
+    const { data: companyUser } = await supabase
+      .from('company_users')
+      .select('company_id, company_type')
+      .eq('profile_id', user.id)
+      .eq('status', 'active')
+      .single();
+
+    if (companyUser?.company_type === 'buyer') {
+      actualBuyerId = companyUser.company_id;
+    } else {
+      // Check if user is a buyer owner
+      const { data: buyer } = await supabase
+        .from('buyers')
+        .select('id')
+        .eq('profile_id', user.id)
+        .single();
+      actualBuyerId = buyer?.id || null;
+    }
+
+    // ============= VALIDATE COMPANY ACCESS =============
+    if (!actualBuyerId) {
+      console.error('❌ User has no buyer access:', user.id);
+      return new Response(
+        JSON.stringify({ error: 'User is not associated with a buyer company' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Use actual buyer ID (prevents cross-tenant access)
+    const buyer_id = actualBuyerId;
     
+    // Log if requested_buyer_id doesn't match (potential security issue)
+    if (requested_buyer_id && requested_buyer_id !== actualBuyerId) {
+      console.warn('⚠️ SECURITY: Requested buyer_id mismatch!', {
+        requested: requested_buyer_id,
+        actual: actualBuyerId,
+        user_id: user.id
+      });
+    }
+
+    // Validate user_context.user_id matches authenticated user
+    if (user_context?.user_id && user_context.user_id !== user.id) {
+      console.warn('⚠️ SECURITY: user_context.user_id mismatch, using authenticated user');
+    }
+
     const companyType = user_context?.company_type || 'buyer';
     const industry = user_context?.industry || 'General';
 
@@ -2151,8 +2224,8 @@ serve(async (req) => {
       const { data: newSession, error: sessionError } = await supabase
         .from('chat_sessions')
         .insert({
-          user_id: user_context?.user_id,
-          company_id: buyer_id,
+          user_id: user.id, // Use authenticated user ID
+          company_id: buyer_id, // Use validated buyer_id
           company_type: companyType,
           session_title: 'New Chat',
           created_at: new Date().toISOString(),
@@ -2169,12 +2242,12 @@ serve(async (req) => {
       }
     }
     
-    console.log('simple-rag-chat request:', { buyer_id, question, session_id });
+    console.log('simple-rag-chat request:', { buyer_id, question, session_id, authenticated_user: user.id });
     console.log('User context:', { company_type: companyType, industry });
 
-    if (!buyer_id || !question) {
+    if (!question) {
       return new Response(
-        JSON.stringify({ error: 'buyer_id and question are required' }),
+        JSON.stringify({ error: 'question is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

@@ -252,6 +252,7 @@ const BuyerDocumentsDashboard = () => {
             file_size,
             mime_type,
             status,
+            version,
             created_at,
             expiration_date,
             reviewer_notes,
@@ -301,20 +302,27 @@ const BuyerDocumentsDashboard = () => {
         // Determine the effective status with priority logic
         let effectiveStatus = doc.status;
         
-        // Priority: document_requests status takes precedence for approved/rejected
-        if (doc.status === 'approved' || doc.status === 'rejected') {
-          effectiveStatus = doc.status;
-        } else if (doc.document_uploads && doc.document_uploads.length > 0) {
-          // For other statuses, check upload status
-          const latestUpload = doc.document_uploads[0]; 
+        if (doc.document_uploads && doc.document_uploads.length > 0) {
+          // Sort by version DESC to get the LATEST upload (highest version number)
+          const sortedUploads = [...doc.document_uploads].sort((a: any, b: any) => 
+            (b.version || 0) - (a.version || 0)
+          );
+          const latestUpload = sortedUploads[0];
+          
+          // PRIORITY 1: Check if latest upload needs review (renewal submitted)
           if (latestUpload.status === 'submitted' || latestUpload.status === 'pending_review') {
             effectiveStatus = 'submitted';
-          } else if (latestUpload.status === 'approved') {
+          } 
+          // PRIORITY 2: If latest upload is approved, show approved
+          else if (latestUpload.status === 'approved') {
             effectiveStatus = 'approved';
-          } else if (latestUpload.status === 'rejected') {
+          } 
+          // PRIORITY 3: If latest upload is rejected, show rejected
+          else if (latestUpload.status === 'rejected') {
             effectiveStatus = 'rejected';
           }
         }
+        // PRIORITY 4: No uploads - use request status (fallback)
         
         return {
           ...doc,

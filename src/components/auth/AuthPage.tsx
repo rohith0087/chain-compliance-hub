@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Shield, AlertCircle, Building2, ShoppingCart, Mail, Eye, EyeOff, Check, X, Lock, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -483,47 +482,53 @@ const AuthPage = () => {
                     <div className="space-y-3">
                       <Label className="text-foreground">Select your role(s)</Label>
                       <div className="grid grid-cols-2 gap-3">
-                        <div 
-                          onClick={() => !loading && toggleRole('buyer')}
-                          className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        <button 
+                          type="button"
+                          onClick={() => toggleRole('buyer')}
+                          disabled={loading}
+                          className={`p-3 rounded-lg border-2 text-left transition-all ${
                             selectedRoles.includes('buyer') 
                               ? 'border-primary bg-primary/5' 
                               : 'border-border hover:border-primary/50'
-                          } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                         >
                           <div className="flex items-center gap-2">
-                            <Checkbox 
-                              id="buyer-role-signup"
-                              checked={selectedRoles.includes('buyer')}
-                              disabled={loading}
-                              className="pointer-events-none"
-                            />
+                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
+                              selectedRoles.includes('buyer') 
+                                ? 'bg-primary border-primary' 
+                                : 'border-muted-foreground'
+                            }`}>
+                              {selectedRoles.includes('buyer') && <Check className="w-3 h-3 text-primary-foreground" />}
+                            </div>
                             <ShoppingCart className="w-4 h-4 text-primary" />
                           </div>
                           <p className="text-sm font-medium mt-2 text-foreground">Buyer</p>
                           <p className="text-xs text-muted-foreground">Request documents</p>
-                        </div>
+                        </button>
                         
-                        <div 
-                          onClick={() => !loading && toggleRole('supplier')}
-                          className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        <button 
+                          type="button"
+                          onClick={() => toggleRole('supplier')}
+                          disabled={loading}
+                          className={`p-3 rounded-lg border-2 text-left transition-all ${
                             selectedRoles.includes('supplier') 
                               ? 'border-primary bg-primary/5' 
                               : 'border-border hover:border-primary/50'
-                          } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                         >
                           <div className="flex items-center gap-2">
-                            <Checkbox 
-                              id="supplier-role-signup"
-                              checked={selectedRoles.includes('supplier')}
-                              disabled={loading}
-                              className="pointer-events-none"
-                            />
+                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
+                              selectedRoles.includes('supplier') 
+                                ? 'bg-primary border-primary' 
+                                : 'border-muted-foreground'
+                            }`}>
+                              {selectedRoles.includes('supplier') && <Check className="w-3 h-3 text-primary-foreground" />}
+                            </div>
                             <Building2 className="w-4 h-4 text-primary" />
                           </div>
                           <p className="text-sm font-medium mt-2 text-foreground">Supplier</p>
                           <p className="text-xs text-muted-foreground">Provide documents</p>
-                        </div>
+                        </button>
                       </div>
                       {errors.roles && (
                         <p className="text-xs text-destructive flex items-center gap-1">

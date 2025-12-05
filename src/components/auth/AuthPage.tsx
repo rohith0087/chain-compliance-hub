@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Shield, AlertCircle, Building2, ShoppingCart, Mail, Eye, EyeOff, Check, X, Lock, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { HelpButton } from '@/components/support/HelpButton';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 
@@ -557,6 +558,16 @@ const AuthPage = () => {
           </p>
         </div>
       </div>
+
+      {/* Floating Help Button for unauthenticated users */}
+      <HelpButton 
+        source="login_page"
+        user={{
+          email: email || undefined,
+          name: fullName || undefined,
+          userType: 'guest'
+        }}
+      />
     </div>
   );
 };

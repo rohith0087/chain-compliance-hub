@@ -3098,6 +3098,110 @@ export type Database = {
           },
         ]
       }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          company_id: string | null
+          company_name: string | null
+          created_at: string | null
+          description: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          page_route: string | null
+          page_url: string | null
+          priority: string
+          resolution_notes: string | null
+          resolved_at: string | null
+          source: string
+          status: string
+          subject: string
+          updated_at: string | null
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+          user_name: string | null
+          user_type: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          company_id?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          description: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          page_route?: string | null
+          page_url?: string | null
+          priority?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          source: string
+          status?: string
+          subject: string
+          updated_at?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+          user_type?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          company_id?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          page_route?: string | null
+          page_url?: string | null
+          priority?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          source?: string
+          status?: string
+          subject?: string
+          updated_at?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+          user_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_metrics: {
         Row: {
           id: string

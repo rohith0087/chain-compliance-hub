@@ -175,11 +175,9 @@ const DocumentRenewalDialog = ({
         }
       });
 
-      // Update request status back to submitted for review
-      await supabase
-        .from('document_requests')
-        .update({ status: 'submitted', updated_at: new Date().toISOString() })
-        .eq('id', request.id);
+      // Note: We intentionally do NOT update the document_requests status here
+      // to preserve the approved status of previous versions. The new upload
+      // is created with status 'pending_review' which is sufficient for buyer review.
 
       // Send notification to buyer users
       await notifyBuyerOfRenewal(request.id, request.title, newVersion, expirationDate);

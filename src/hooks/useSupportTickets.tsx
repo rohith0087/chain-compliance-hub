@@ -144,8 +144,10 @@ export const useSupportTickets = (options: UseSupportTicketsOptions = {}) => {
   useEffect(() => {
     fetchTickets();
 
+    // Use unique channel name per hook instance to avoid duplicate subscription error
+    const channelName = `support-tickets-${Date.now()}-${Math.random()}`;
     const channel = supabase
-      .channel('support-tickets-realtime')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {

@@ -22,7 +22,9 @@ import {
   Link,
   Eye,
   Key,
+  LogIn,
   LogOut,
+  UserPlus,
   RefreshCw,
   Filter,
   Search,
@@ -82,8 +84,10 @@ const ACTION_ICONS: Record<string, { icon: React.ReactNode; color: string; label
   downloaded: { icon: <Download className="h-4 w-4" />, color: NEON_COLORS.purple, label: 'Downloaded' },
   link_created: { icon: <Link className="h-4 w-4" />, color: NEON_COLORS.amber, label: 'Link Created' },
   link_accessed: { icon: <Eye className="h-4 w-4" />, color: NEON_COLORS.cyan, label: 'Link Accessed' },
-  login: { icon: <Key className="h-4 w-4" />, color: NEON_COLORS.cyan, label: 'Login' },
+  login: { icon: <LogIn className="h-4 w-4" />, color: NEON_COLORS.cyan, label: 'Login' },
   logout: { icon: <LogOut className="h-4 w-4" />, color: NEON_COLORS.pink, label: 'Logout' },
+  signup: { icon: <UserPlus className="h-4 w-4" />, color: NEON_COLORS.green, label: 'Sign Up' },
+  password_reset: { icon: <Key className="h-4 w-4" />, color: NEON_COLORS.amber, label: 'Password Reset' },
 };
 
 const DATE_RANGES = [
@@ -253,6 +257,10 @@ export function PlatformAdminAuditLogs() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Actions</SelectItem>
+                  <SelectItem value="login">Login</SelectItem>
+                  <SelectItem value="logout">Logout</SelectItem>
+                  <SelectItem value="signup">Sign Up</SelectItem>
+                  <SelectItem value="password_reset">Password Reset</SelectItem>
                   <SelectItem value="requested">Requested</SelectItem>
                   <SelectItem value="uploaded">Uploaded</SelectItem>
                   <SelectItem value="approved">Approved</SelectItem>
@@ -282,11 +290,12 @@ export function PlatformAdminAuditLogs() {
       </Card>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {[
           { label: 'Total Events', value: totalLogs, color: NEON_COLORS.cyan, icon: Activity },
           { label: 'Documents', value: filteredLogs.filter(l => ['requested', 'uploaded', 'approved', 'rejected'].includes(l.action)).length, color: NEON_COLORS.green, icon: FileText },
           { label: 'Downloads', value: filteredLogs.filter(l => l.action === 'downloaded').length, color: NEON_COLORS.purple, icon: Download },
+          { label: 'Logins', value: filteredLogs.filter(l => l.action === 'login').length, color: NEON_COLORS.cyan, icon: LogIn },
           { label: 'Links Created', value: filteredLogs.filter(l => l.action === 'link_created').length, color: NEON_COLORS.amber, icon: Link },
         ].map((stat, index) => (
           <Card key={index} style={cardStyle}>

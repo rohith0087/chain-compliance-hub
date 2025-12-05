@@ -203,60 +203,54 @@ serve(async (req) => {
       }
     }
 
-    // 2. Fetch auth logs from Supabase Analytics
-    // Note: This queries the auth_logs table via analytics API
-    try {
-      const shouldFetchAuth = actionTypes.length === 0 || actionTypes.includes('login') || actionTypes.includes('logout');
-      
-      if (shouldFetchAuth) {
-        // Build date filter for analytics query
-        let dateFilter = '';
-        if (dateFrom) {
-          dateFilter += ` AND auth_logs.timestamp >= '${dateFrom}'`;
-        }
-        if (dateTo) {
-          dateFilter += ` AND auth_logs.timestamp <= '${dateTo}'`;
-        }
+    // 2. Fetch auth logs from our custom auth_audit_logs table
+    const shouldFetchAuth = actionTypes.length === 0 || 
+      actionTypes.some((a: string) => ['login', 'logout', 'signup', 'password_reset'].includes(a));
+    
+    if (shouldFetchAuth) {
+      let authQuery = supabaseAuth
+        .from('auth_audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-        const analyticsQuery = `
-          SELECT 
-            id, 
-            auth_logs.timestamp, 
-            event_message, 
-            metadata.level, 
-            metadata.status, 
-            metadata.path, 
-            metadata.msg as msg,
-            metadata.error
-          FROM auth_logs
-          CROSS JOIN unnest(metadata) as metadata
-          WHERE metadata.path IN ('/token', '/logout', '/user')
-          ${dateFilter}
-          ORDER BY timestamp DESC
-          LIMIT ${Math.min(limit, 50)}
-        `;
-
-        // Use the analytics endpoint
-        const analyticsResponse = await fetch(
-          `${supabaseUrl}/rest/v1/rpc/get_auth_analytics`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${supabaseServiceKey}`,
-              'Content-Type': 'application/json',
-              'apikey': supabaseServiceKey
-            },
-            body: JSON.stringify({ query_text: analyticsQuery })
-          }
-        );
-
-        // If analytics API not available, parse from edge logs or skip
-        // For now, we'll just note that auth logs would be fetched here
-        console.log('Auth analytics query would be executed here');
+      if (dateFrom) {
+        authQuery = authQuery.gte('created_at', dateFrom);
       }
-    } catch (authLogError) {
-      console.error('Error fetching auth logs:', authLogError);
-      // Continue without auth logs - they're a nice-to-have
+      if (dateTo) {
+        authQuery = authQuery.lte('created_at', dateTo);
+      }
+      if (filterUserId) {
+        authQuery = authQuery.eq('user_id', filterUserId);
+      }
+      if (actionTypes.length > 0) {
+        const authActions = actionTypes.filter((a: string) => 
+          ['login', 'logout', 'signup', 'password_reset'].includes(a)
+        );
+        if (authActions.length > 0) {
+          authQuery = authQuery.in('action', authActions);
+        }
+      }
+
+      const { data: authLogs, error: authError } = await authQuery.limit(limit);
+
+      if (authError) {
+        console.error('Error fetching auth logs:', authError);
+      } else if (authLogs) {
+        for (const log of authLogs) {
+          auditLogs.push({
+            id: log.id,
+            timestamp: log.created_at,
+            category: 'auth',
+            action: log.action,
+            userId: log.user_id,
+            userEmail: log.user_email,
+            userName: log.user_name,
+            ipAddress: log.ip_address,
+            details: {},
+            metadata: log.metadata as Record<string, any>
+          });
+        }
+      }
     }
 
     // Sort all logs by timestamp descending

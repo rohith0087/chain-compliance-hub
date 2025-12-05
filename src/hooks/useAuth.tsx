@@ -3,6 +3,27 @@ import { useState, useEffect, createContext, useContext, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+// Log auth events to audit table
+const logAuthEvent = async (
+  action: 'login' | 'logout' | 'signup' | 'password_reset',
+  userId: string | null,
+  userEmail: string,
+  userName?: string | null
+) => {
+  try {
+    await supabase.from('auth_audit_logs').insert({
+      user_id: userId,
+      user_email: userEmail,
+      user_name: userName,
+      action,
+      user_agent: navigator.userAgent,
+      metadata: { source: 'web_app', timestamp: new Date().toISOString() }
+    });
+  } catch (error) {
+    console.error('Failed to log auth event:', error);
+  }
+};
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -173,10 +194,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    
+    // Log successful login
+    if (!error && data.user) {
+      logAuthEvent('login', data.user.id, data.user.email || email, data.user.user_metadata?.full_name);
+    }
+    
     return { error };
   };
 
@@ -200,6 +227,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log('Signing out user...');
       
+      // Log logout event before clearing state
+      if (user) {
+        await logAuthEvent('logout', user.id, user.email || '', profile?.full_name);
+      }
+      
       // Clear local state first
       setUser(null);
       setSession(null);
@@ -210,8 +242,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (error) {
         console.error('Error signing out:', error);
-        // Even if there's an error, we've cleared local state
-        // This handles cases where the session might already be expired
       } else {
         console.log('Successfully signed out');
       }
@@ -220,7 +250,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       window.location.href = '/';
     } catch (error) {
       console.error('Error in signOut:', error);
-      // Even if there's an error, clear local state and redirect
       setUser(null);
       setSession(null);
       setProfile(null);

@@ -321,12 +321,29 @@ export const OnboardingPipelineView = () => {
   const handleSendReminder = async (request: any, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent drawer from opening
     
+    if (!buyerId) {
+      toast({ title: 'Error', description: 'Buyer ID not found', variant: 'destructive' });
+      return;
+    }
+
     try {
+      const { data: buyerProfile } = await supabase
+        .from('buyers')
+        .select('company_name, contact_email, industry')
+        .eq('id', buyerId)
+        .single();
+
       await supabase.functions.invoke('send-supplier-invitation', {
         body: {
-          email: request.supplier_email,
-          isReminder: true,
-          requestId: request.id
+          emails: [request.supplier_email],
+          subject: `Reminder: Complete your onboarding with ${buyerProfile?.company_name || 'our company'}`,
+          buyerData: {
+            name: buyerProfile?.company_name || '',
+            company: buyerProfile?.company_name || '',
+            email: buyerProfile?.contact_email || '',
+            industry: buyerProfile?.industry || '',
+            buyerId: buyerId
+          }
         }
       });
 
@@ -344,17 +361,47 @@ export const OnboardingPipelineView = () => {
   };
 
   const handleBulkSendReminders = async () => {
-    const selected = requests.filter(r => selectedRequests.has(r.id));
-    for (const request of selected) {
-      try {
-        await supabase.functions.invoke('send-supplier-invitation', {
-          body: { email: request.supplier_email, isReminder: true, requestId: request.id }
-        });
-      } catch (error) {
-        console.error('Failed to send reminder:', error);
-      }
+    if (!buyerId) {
+      toast({ title: 'Error', description: 'Buyer ID not found', variant: 'destructive' });
+      return;
     }
-    toast({ title: 'Reminders Sent', description: `Sent ${selected.length} reminders` });
+
+    const selected = requests.filter(r => selectedRequests.has(r.id));
+    
+    try {
+      const { data: buyerProfile } = await supabase
+        .from('buyers')
+        .select('company_name, contact_email, industry')
+        .eq('id', buyerId)
+        .single();
+
+      const emails = selected.map(r => r.supplier_email).filter(Boolean);
+      
+      if (emails.length === 0) {
+        toast({ title: 'Error', description: 'No valid emails found', variant: 'destructive' });
+        return;
+      }
+
+      await supabase.functions.invoke('send-supplier-invitation', {
+        body: {
+          emails,
+          subject: `Reminder: Complete your onboarding with ${buyerProfile?.company_name || 'our company'}`,
+          buyerData: {
+            name: buyerProfile?.company_name || '',
+            company: buyerProfile?.company_name || '',
+            email: buyerProfile?.contact_email || '',
+            industry: buyerProfile?.industry || '',
+            buyerId: buyerId
+          }
+        }
+      });
+
+      toast({ title: 'Reminders Sent', description: `Sent reminders to ${emails.length} suppliers` });
+    } catch (error) {
+      console.error('Failed to send reminders:', error);
+      toast({ title: 'Error', description: 'Failed to send reminders', variant: 'destructive' });
+    }
+    
     clearSelection();
   };
 

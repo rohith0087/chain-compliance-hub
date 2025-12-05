@@ -61,9 +61,9 @@ serve(async (req) => {
 
     // Check if user is platform admin or super admin
     const { data: platformAdmin } = await supabaseAuth
-      .from('platform_admins')
+      .from('platform_administrators')
       .select('id')
-      .eq('profile_id', user.id)
+      .eq('auth_user_id', user.id)
       .eq('is_active', true)
       .single();
 

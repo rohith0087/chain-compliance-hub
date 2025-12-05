@@ -146,10 +146,22 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         }
 
         if (teamMember) {
-          // User is a team member - use company_id from company_users
-          console.log('User is team member, using company_id:', teamMember.company_id);
+          // User is a team member - fetch company data using company_id
+          console.log('User is team member, fetching company data with company_id:', teamMember.company_id);
           setCompanyId(teamMember.company_id);
-          setBuyerProfile(null); // No buyer profile for team members
+          
+          // Fetch buyer profile for team members using company_id
+          const { data: buyer, error: buyerError } = await supabase
+            .from('buyers')
+            .select('*')
+            .eq('id', teamMember.company_id)
+            .single();
+
+          if (buyerError && buyerError.code !== 'PGRST116') {
+            console.error('Error fetching buyer profile for team member:', buyerError);
+          }
+          
+          setBuyerProfile(buyer);
         } else {
           // User is a company owner - fetch buyer profile
           const { data: buyer, error: buyerError } = await supabase

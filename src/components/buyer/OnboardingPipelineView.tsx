@@ -6,7 +6,8 @@ import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Clock, CheckCircle, XCircle, Search, RefreshCw, Eye, Send, AlertCircle, BarChart3, Activity, Keyboard, Download, ChevronDown, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Clock, CheckCircle, XCircle, Search, RefreshCw, Eye, Send, AlertCircle, BarChart3, Activity, Keyboard, Download, ChevronDown, ThumbsUp, ThumbsDown, LayoutGrid, Table as TableIcon, ChevronUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -18,23 +19,22 @@ import { BulkActionsBar } from './BulkActionsBar';
 import { AdvancedFilters } from './AdvancedFilters';
 import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 import { ExportModal } from './ExportModal';
+import { OnboardingPipelineTableView } from './OnboardingPipelineTableView';
 import { useOnboardingPipeline } from '@/hooks/useOnboardingPipeline';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { DndContext, DragEndEvent, DragOverlay, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useBranchContext } from '@/contexts/BranchContext';
-import { Building2 } from 'lucide-react';
 
 const PIPELINE_STAGES = [
-  { id: 'requested', name: 'Requested', color: 'bg-purple-100' },
-  { id: 'invited', name: 'Invited', color: 'bg-indigo-100' },
-  { id: 'pending', name: 'Pending Signup', color: 'bg-slate-100' },
-  { id: 'onboarding_initiated', name: 'Started', color: 'bg-blue-100' },
-  { id: 'under_review', name: 'Under Review', color: 'bg-yellow-100' },
-  { id: 'approved', name: 'Approved', color: 'bg-green-100' },
-  { id: 'rejected', name: 'Declined', color: 'bg-red-100' }
+  { id: 'requested', name: 'Requested', color: 'bg-purple-100 dark:bg-purple-900/30' },
+  { id: 'invited', name: 'Invited', color: 'bg-indigo-100 dark:bg-indigo-900/30' },
+  { id: 'pending', name: 'Pending', color: 'bg-slate-100 dark:bg-slate-800/50' },
+  { id: 'onboarding_initiated', name: 'Started', color: 'bg-blue-100 dark:bg-blue-900/30' },
+  { id: 'under_review', name: 'Review', color: 'bg-yellow-100 dark:bg-yellow-900/30' },
+  { id: 'approved', name: 'Approved', color: 'bg-green-100 dark:bg-green-900/30' },
+  { id: 'rejected', name: 'Declined', color: 'bg-red-100 dark:bg-red-900/30' }
 ];
 
 export const OnboardingPipelineView = () => {
@@ -52,7 +52,29 @@ export const OnboardingPipelineView = () => {
   const [showActivityFeed, setShowActivityFeed] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [viewMode, setViewMode] = useState<'kanban' | 'table'>(() => {
+    const saved = localStorage.getItem('onboarding-pipeline-view');
+    return (saved as 'kanban' | 'table') || 'kanban';
+  });
+  const [collapsedColumns, setCollapsedColumns] = useState<Set<string>>(new Set());
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Persist view mode preference
+  useEffect(() => {
+    localStorage.setItem('onboarding-pipeline-view', viewMode);
+  }, [viewMode]);
+
+  const toggleColumnCollapse = (stageId: string) => {
+    setCollapsedColumns(prev => {
+      const next = new Set(prev);
+      if (next.has(stageId)) {
+        next.delete(stageId);
+      } else {
+        next.add(stageId);
+      }
+      return next;
+    });
+  };
   
   // Use the pipeline hook for advanced features
   const {
@@ -453,26 +475,39 @@ export const OnboardingPipelineView = () => {
                   className="pl-9"
                 />
               </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowAnalytics(prev => !prev)} className="gap-2">
-                <BarChart3 className="h-4 w-4" />
-                Analytics
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowActivityFeed(true)} className="gap-2">
-                <Activity className="h-4 w-4" />
-                Activity
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowExport(true)} className="gap-2">
-                <Download className="h-4 w-4" />
-                Export
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowShortcuts(true)} className="gap-2">
-                <Keyboard className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="icon" onClick={loadRequests} disabled={loading}>
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              </Button>
-            </div>
+              
+              {/* View Toggle */}
+              <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as 'kanban' | 'table')}>
+                <ToggleGroupItem value="kanban" aria-label="Kanban view" className="gap-1.5">
+                  <LayoutGrid className="h-4 w-4" />
+                  <span className="hidden sm:inline">Kanban</span>
+                </ToggleGroupItem>
+                <ToggleGroupItem value="table" aria-label="Table view" className="gap-1.5">
+                  <TableIcon className="h-4 w-4" />
+                  <span className="hidden sm:inline">Table</span>
+                </ToggleGroupItem>
+              </ToggleGroup>
+
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setShowAnalytics(prev => !prev)} className="gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  <span className="hidden md:inline">Analytics</span>
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setShowActivityFeed(true)} className="gap-2">
+                  <Activity className="h-4 w-4" />
+                  <span className="hidden md:inline">Activity</span>
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setShowExport(true)} className="gap-2">
+                  <Download className="h-4 w-4" />
+                  <span className="hidden md:inline">Export</span>
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setShowShortcuts(true)} className="gap-2">
+                  <Keyboard className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" onClick={loadRequests} disabled={loading}>
+                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -512,150 +547,206 @@ export const OnboardingPipelineView = () => {
         </Collapsible>
       )}
 
-      {/* Pipeline Stages */}
-      <div className="grid grid-cols-5 gap-4">
-      {PIPELINE_STAGES.map(stage => {
-        const stageRequests = getRequestsForStage(stage.id);
-        
-        return (
-          <div key={stage.id} className="space-y-3">
-            <Card className={stage.color}>
-              <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                <CardTitle className="text-sm font-medium">{stage.name}</CardTitle>
-                <Badge variant="secondary">{stageRequests.length}</Badge>
-              </CardHeader>
-            </Card>
-
-            <div className="space-y-3">
-              {stageRequests.map(request => {
-                const alert = getAlertStatus(request);
-                const overdueAlert = getRequestAlertStatus(request);
-                return (
-                  <Card 
-                    key={request.id} 
-                    className={`hover:shadow-lg transition-all cursor-pointer hover:border-primary/50 ${
-                      isSelected(request.id) ? 'ring-2 ring-primary' : ''
-                    }`}
-                    onClick={() => handleCardClick(request)}
-                  >
-                    <CardContent className="p-4 space-y-3">
-                      {/* Selection Checkbox & Alert Badge */}
-                      <div className="flex items-start justify-between">
-                        <Checkbox
-                          checked={isSelected(request.id)}
-                          onCheckedChange={() => toggleSelection(request.id)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        <Badge variant={alert.level === 'critical' ? 'destructive' : 'outline'} className="text-xs">
-                          {alert.icon} {alert.message}
-                        </Badge>
+      {/* Pipeline View - Kanban or Table */}
+      {viewMode === 'kanban' ? (
+        <div className="overflow-x-auto pb-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 min-w-[900px]">
+            {PIPELINE_STAGES.map(stage => {
+              const stageRequests = getRequestsForStage(stage.id);
+              const isCollapsed = collapsedColumns.has(stage.id);
+              
+              return (
+                <div key={stage.id} className="space-y-2 min-w-[140px]">
+                  {/* Column Header */}
+                  <Card className={`${stage.color} cursor-pointer`} onClick={() => toggleColumnCollapse(stage.id)}>
+                    <CardHeader className="p-2.5 flex flex-row items-center justify-between">
+                      <CardTitle className="text-xs font-medium truncate">{stage.name}</CardTitle>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="secondary" className="text-xs h-5 px-1.5">{stageRequests.length}</Badge>
+                        {isCollapsed ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
                       </div>
-                      
-                      <div>
-                        <p className="font-medium text-sm">
-                          {request.supplier_company_name || request.supplier_email}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          <Clock className="inline h-3 w-3 mr-1" />
-                          {getDaysInStage(request)}
-                        </p>
-                      </div>
+                    </CardHeader>
+                  </Card>
 
-                      {stage.id !== 'approved' && stage.id !== 'rejected' && (
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">Progress</span>
-                            <span className="font-medium">{calculateProgress(request)}%</span>
+                  {/* Column Content - Scrollable */}
+                  {!isCollapsed && (
+                    <ScrollArea className="h-[500px]">
+                      <div className="space-y-2 pr-2">
+                        {stageRequests.map(request => {
+                          const alert = getAlertStatus(request);
+                          const truncatedEmail = request.supplier_email?.length > 18 
+                            ? request.supplier_email.substring(0, 16) + '...' 
+                            : request.supplier_email;
+
+                          const getStatusDot = () => {
+                            if (alert.level === 'critical') return 'bg-destructive';
+                            if (alert.level === 'warning') return 'bg-yellow-500';
+                            if (alert.level === 'success') return 'bg-green-500';
+                            if (alert.level === 'ended') return 'bg-muted-foreground';
+                            return 'bg-green-500';
+                          };
+
+                          return (
+                            <Card 
+                              key={request.id} 
+                              className={`group cursor-pointer hover:border-primary/50 transition-colors ${
+                                isSelected(request.id) ? 'ring-2 ring-primary' : ''
+                              }`}
+                              onClick={() => handleCardClick(request)}
+                            >
+                              <CardContent className="p-2 space-y-1.5">
+                                {/* Row 1: Checkbox + Name + Status Dot */}
+                                <div className="flex items-center gap-1.5">
+                                  <Checkbox
+                                    checked={isSelected(request.id)}
+                                    onCheckedChange={() => toggleSelection(request.id)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="h-3.5 w-3.5 shrink-0"
+                                  />
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="text-xs font-medium truncate flex-1 min-w-0">
+                                          {request.supplier_company_name || truncatedEmail}
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top">
+                                        <p className="font-medium">{request.supplier_company_name || 'No company'}</p>
+                                        <p className="text-xs text-muted-foreground">{request.supplier_email}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className={`h-2 w-2 rounded-full shrink-0 ${getStatusDot()}`} />
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top">{alert.message}</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </div>
+
+                                {/* Row 2: Time */}
+                                <div className="flex items-center text-[10px] text-muted-foreground">
+                                  <Clock className="h-2.5 w-2.5 mr-1" />
+                                  {getDaysInStage(request)}
+                                </div>
+
+                                {/* Row 3: Progress (only for active stages) */}
+                                {stage.id !== 'approved' && stage.id !== 'rejected' && (
+                                  <div className="flex items-center gap-1.5">
+                                    <Progress value={calculateProgress(request)} className="h-1 flex-1" />
+                                    <span className="text-[10px] text-muted-foreground w-6">{calculateProgress(request)}%</span>
+                                  </div>
+                                )}
+
+                                {/* Completed/Declined indicators */}
+                                {stage.id === 'approved' && (
+                                  <div className="flex items-center gap-1 text-[10px] text-green-600">
+                                    <CheckCircle className="h-2.5 w-2.5" />
+                                    <span>Complete</span>
+                                  </div>
+                                )}
+
+                                {stage.id === 'rejected' && (
+                                  <div className="flex items-center gap-1 text-[10px] text-destructive">
+                                    <XCircle className="h-2.5 w-2.5" />
+                                    <span>Declined</span>
+                                  </div>
+                                )}
+
+                                {/* Actions - appear on hover */}
+                                <div className="flex gap-1 pt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-5 w-5 p-0"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleCardClick(request);
+                                          }}
+                                        >
+                                          <Eye className="h-3 w-3" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>View</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+
+                                  {(stage.id === 'pending' || stage.id === 'onboarding_initiated' || stage.id === 'invited') && (
+                                    <>
+                                      {requirementCounts[request.id] === 0 && (
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-5 w-5 p-0"
+                                                onClick={(e) => handlePopulateRequirements(request.id, e)}
+                                              >
+                                                <AlertCircle className="h-3 w-3 text-yellow-500" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Populate Requirements</TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      )}
+
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              className="h-5 w-5 p-0"
+                                              onClick={(e) => handleSendReminder(request, e)}
+                                            >
+                                              <Send className="h-3 w-3" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>Send Reminder</TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    </>
+                                  )}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                        
+                        {stageRequests.length === 0 && (
+                          <div className="text-center py-6 text-xs text-muted-foreground">
+                            No suppliers
                           </div>
-                          <Progress value={calculateProgress(request)} className="h-2" />
-                        </div>
-                      )}
-
-                      {stage.id === 'approved' && (
-                        <Badge variant="outline" className="w-full justify-center">
-                          <CheckCircle className="mr-1 h-3 w-3" />
-                          Complete
-                        </Badge>
-                      )}
-
-                      {stage.id === 'rejected' && (
-                        <Badge variant="destructive" className="w-full justify-center">
-                          <XCircle className="mr-1 h-3 w-3" />
-                          Declined
-                        </Badge>
-                      )}
-
-                      {/* Quick Actions */}
-                      <div className="flex gap-2 pt-2">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="flex-1"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCardClick(request);
-                                }}
-                              >
-                                <Eye className="h-3 w-3" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>View Details</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-
-
-                        {(stage.id === 'pending' || stage.id === 'onboarding_initiated') && (
-                          <>
-                            {/* Populate Requirements Button (only if empty) */}
-                            {requirementCounts[request.id] === 0 && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="flex-1 border-yellow-500"
-                                      onClick={(e) => handlePopulateRequirements(request.id, e)}
-                                    >
-                                      <AlertCircle className="h-3 w-3 text-yellow-500" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Populate Requirements (Empty!)</TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-
-                            {/* Send Reminder Button */}
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="flex-1"
-                                    onClick={(e) => handleSendReminder(request, e)}
-                                  >
-                                    <Send className="h-3 w-3" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Send Reminder</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </>
                         )}
                       </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                    </ScrollArea>
+                  )}
+                </div>
+              );
+            })}
           </div>
-        );
-      })}
-      </div>
+        </div>
+      ) : (
+        <OnboardingPipelineTableView
+          requests={filteredRequests}
+          selectedRequests={selectedRequests}
+          toggleSelection={toggleSelection}
+          selectAll={selectAll}
+          clearSelection={clearSelection}
+          getAlertStatus={getAlertStatus}
+          calculateProgress={calculateProgress}
+          requirementCounts={requirementCounts}
+          onCardClick={handleCardClick}
+          onSendReminder={handleSendReminder}
+          onPopulateRequirements={handlePopulateRequirements}
+        />
+      )}
 
       {/* Bulk Actions Bar */}
       <BulkActionsBar

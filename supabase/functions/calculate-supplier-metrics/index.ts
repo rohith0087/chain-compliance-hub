@@ -17,13 +17,93 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    console.log('Starting supplier metrics calculation...');
+    // ============================================
+    // Auth validation
+    // ============================================
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('Missing authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    // Get all active buyer-supplier connections
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error('Invalid authentication:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Authenticated user:', user.id, user.email);
+
+    // Parse request body for optional company filter
+    let requestedBuyerId: string | null = null;
+    try {
+      const body = await req.json();
+      requestedBuyerId = body?.buyer_id || null;
+    } catch {
+      // No body provided, calculate for all authorized connections
+    }
+
+    // ============================================
+    // Get user's buyer ID
+    // ============================================
+    let userBuyerId: string | null = null;
+
+    // Check company_users first (team member path)
+    const { data: companyUser } = await supabaseClient
+      .from('company_users')
+      .select('company_id')
+      .eq('profile_id', user.id)
+      .eq('status', 'active')
+      .eq('company_type', 'buyer')
+      .single();
+
+    if (companyUser) {
+      userBuyerId = companyUser.company_id;
+    } else {
+      // Check if user is a buyer owner
+      const { data: buyer } = await supabaseClient
+        .from('buyers')
+        .select('id')
+        .eq('profile_id', user.id)
+        .single();
+      userBuyerId = buyer?.id || null;
+    }
+
+    if (!userBuyerId) {
+      console.error('User is not a buyer:', user.id);
+      return new Response(
+        JSON.stringify({ error: 'Only buyers can calculate supplier metrics' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // If a specific buyer_id was requested, validate access
+    if (requestedBuyerId && requestedBuyerId !== userBuyerId) {
+      console.error('User does not have access to requested buyer:', requestedBuyerId);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: No access to this buyer' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const targetBuyerId = requestedBuyerId || userBuyerId;
+
+    console.log('Starting supplier metrics calculation for buyer:', targetBuyerId);
+
+    // Get active buyer-supplier connections for this buyer
     const { data: connections, error: connectionsError } = await supabaseClient
       .from('buyer_supplier_connections')
       .select('buyer_id, supplier_id')
-      .eq('status', 'approved');
+      .eq('status', 'approved')
+      .eq('buyer_id', targetBuyerId);
 
     if (connectionsError) throw connectionsError;
 
@@ -32,6 +112,8 @@ serve(async (req) => {
     const today = new Date();
     const thirtyDaysAgo = new Date(today);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    let processedCount = 0;
 
     for (const connection of connections || []) {
       try {
@@ -68,7 +150,7 @@ serve(async (req) => {
           .map(r => {
             const created = new Date(r.created_at);
             const updated = new Date(r.updated_at);
-            return (updated.getTime() - created.getTime()) / (1000 * 60 * 60); // hours
+            return (updated.getTime() - created.getTime()) / (1000 * 60 * 60);
           }) || [];
 
         const avgResponseTime = responseTimes.length > 0
@@ -79,7 +161,7 @@ serve(async (req) => {
         const onTimeRequests = requests?.filter(r => {
           if (r.status !== 'approved' || !r.updated_at) return false;
           const responseTime = (new Date(r.updated_at).getTime() - new Date(r.created_at).getTime()) / (1000 * 60 * 60);
-          return responseTime <= 72; // 3 days
+          return responseTime <= 72;
         }).length || 0;
 
         const onTimeRate = totalRequests > 0 
@@ -124,7 +206,7 @@ serve(async (req) => {
             compliance_score: complianceScore,
             response_time_avg: avgResponseTime,
             on_time_submission_rate: onTimeRate,
-            document_quality_score: complianceScore, // Simplified for now
+            document_quality_score: complianceScore,
             risk_level: riskLevel,
             risk_score: riskScore,
             risk_factors: riskFactors,
@@ -142,7 +224,8 @@ serve(async (req) => {
         if (metricsError) {
           console.error('Error saving metrics:', metricsError);
         } else {
-          console.log(`Calculated metrics for supplier ${connection.supplier_id} - buyer ${connection.buyer_id}`);
+          processedCount++;
+          console.log(`Calculated metrics for supplier ${connection.supplier_id}`);
         }
 
       } catch (error) {
@@ -153,7 +236,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Calculated metrics for ${connections?.length || 0} connections` 
+        message: `Calculated metrics for ${processedCount} supplier connections`,
+        buyer_id: targetBuyerId
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

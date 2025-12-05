@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -29,11 +30,81 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // ============================================
+    // Auth validation
+    // ============================================
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('Missing authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error('Invalid authentication:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Authenticated user:', user.id, user.email);
+
     const { emails, subject, customMessage, buyerData }: InvitationRequest = await req.json();
 
     if (!emails || emails.length === 0) {
       throw new Error("No email addresses provided");
     }
+
+    // ============================================
+    // Validate user has access to the buyer company
+    // ============================================
+    let hasAccess = false;
+
+    // Check if user is buyer owner
+    const { data: buyer } = await supabase
+      .from('buyers')
+      .select('id')
+      .eq('profile_id', user.id)
+      .eq('id', buyerData.buyerId)
+      .single();
+    
+    if (buyer) {
+      hasAccess = true;
+    } else {
+      // Check if user is team member
+      const { data: companyUser } = await supabase
+        .from('company_users')
+        .select('id, role')
+        .eq('profile_id', user.id)
+        .eq('company_id', buyerData.buyerId)
+        .eq('company_type', 'buyer')
+        .eq('status', 'active')
+        .single();
+
+      if (companyUser) {
+        hasAccess = true;
+      }
+    }
+
+    if (!hasAccess) {
+      console.error('User does not have access to buyer:', buyerData.buyerId);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: No access to this buyer company' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Access validated for buyer:', buyerData.buyerId);
 
     const signupUrl = "https://d13fec6e-29ed-4735-a9d4-57941fe886cc.lovableproject.com";
     

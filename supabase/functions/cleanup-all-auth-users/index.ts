@@ -15,7 +15,59 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // ============================================
+    // CRITICAL: Auth validation - super_admin only
+    // ============================================
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('Missing authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error('Invalid authentication:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if user has super_admin role
+    const { data: userRoles, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id);
+
+    if (rolesError) {
+      console.error('Failed to fetch user roles:', rolesError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to verify permissions' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const roles = userRoles?.map(r => r.role) || [];
+    const isSuperAdmin = roles.includes('super_admin');
+
+    if (!isSuperAdmin) {
+      console.error('Unauthorized: User is not super_admin. User:', user.id, 'Roles:', roles);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: Super admin access required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Super admin authorized:', user.id, user.email);
+
+    // ============================================
     // DANGER ZONE: This deletes ALL auth users
+    // ============================================
     console.log('Starting cleanup of all auth users...');
     
     const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
@@ -31,14 +83,20 @@ Deno.serve(async (req) => {
     let failCount = 0;
     const errors: string[] = [];
     
-    for (const user of users) {
-      const { error } = await supabase.auth.admin.deleteUser(user.id);
+    for (const targetUser of users) {
+      // Don't delete the current super admin
+      if (targetUser.id === user.id) {
+        console.log(`Skipping current user: ${targetUser.id} (${targetUser.email})`);
+        continue;
+      }
+
+      const { error } = await supabase.auth.admin.deleteUser(targetUser.id);
       if (error) {
-        console.error(`Failed to delete user ${user.id} (${user.email}):`, error);
+        console.error(`Failed to delete user ${targetUser.id} (${targetUser.email}):`, error);
         failCount++;
-        errors.push(`${user.email}: ${error.message}`);
+        errors.push(`${targetUser.email}: ${error.message}`);
       } else {
-        console.log(`Deleted auth user: ${user.id} (${user.email})`);
+        console.log(`Deleted auth user: ${targetUser.id} (${targetUser.email})`);
         successCount++;
       }
     }

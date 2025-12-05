@@ -53,6 +53,73 @@ const DocumentRenewalDialog = ({
     maxSize: 10 * 1024 * 1024 // 10MB
   });
 
+  // Notify buyer users about document renewal
+  const notifyBuyerOfRenewal = async (requestId: string, documentTitle: string, version: number, newExpDate: string) => {
+    try {
+      // Get the document request to find buyer_id and supplier info
+      const { data: docRequest } = await supabase
+        .from('document_requests')
+        .select(`
+          buyer_id,
+          supplier_id,
+          suppliers (company_name)
+        `)
+        .eq('id', requestId)
+        .single();
+
+      if (!docRequest?.buyer_id) return;
+
+      const supplierName = docRequest.suppliers?.company_name || 'Supplier';
+
+      // Get buyer users to notify (owner + team members with active status)
+      const buyerUsersToNotify: string[] = [];
+
+      // Get buyer owner
+      const { data: buyerOwner } = await supabase
+        .from('buyers')
+        .select('profile_id')
+        .eq('id', docRequest.buyer_id)
+        .single();
+
+      if (buyerOwner?.profile_id) {
+        buyerUsersToNotify.push(buyerOwner.profile_id);
+      }
+
+      // Get active team members
+      const { data: teamMembers } = await supabase
+        .from('company_users')
+        .select('profile_id')
+        .eq('company_id', docRequest.buyer_id)
+        .eq('company_type', 'buyer')
+        .eq('status', 'active');
+
+      if (teamMembers) {
+        teamMembers.forEach(tm => {
+          if (tm.profile_id && !buyerUsersToNotify.includes(tm.profile_id)) {
+            buyerUsersToNotify.push(tm.profile_id);
+          }
+        });
+      }
+
+      // Create notifications for all buyer users
+      const notifications = buyerUsersToNotify.map(userId => ({
+        user_id: userId,
+        type: 'document_renewed',
+        title: 'Document Renewed',
+        message: `${documentTitle} has been renewed${newExpDate ? ` with new expiration date` : ''} by ${supplierName}.`,
+        reference_id: requestId,
+        read: false
+      }));
+
+      if (notifications.length > 0) {
+        await supabase.from('notifications').insert(notifications);
+      }
+    } catch (error) {
+      console.error('Error sending renewal notifications:', error);
+      // Don't throw - notification failure shouldn't break renewal
+    }
+  };
+
   const handleRenewal = async () => {
     if (!file || !user) {
       toast({
@@ -113,6 +180,9 @@ const DocumentRenewalDialog = ({
         .from('document_requests')
         .update({ status: 'submitted', updated_at: new Date().toISOString() })
         .eq('id', request.id);
+
+      // Send notification to buyer users
+      await notifyBuyerOfRenewal(request.id, request.title, newVersion, expirationDate);
 
       toast({
         title: "Document Renewed",

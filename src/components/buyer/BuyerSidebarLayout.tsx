@@ -525,7 +525,14 @@ export function BuyerSidebarLayout({
             
             <div className="flex items-center gap-3">
               <SubscriptionStatusWidget compact />
-              <NotificationCenter />
+              <NotificationCenter 
+                onNavigate={(tab, referenceId) => {
+                  onTabChange(tab);
+                  if (referenceId) {
+                    sessionStorage.setItem('highlight_document_request_id', referenceId);
+                  }
+                }}
+              />
             </div>
           </div>
         </header>

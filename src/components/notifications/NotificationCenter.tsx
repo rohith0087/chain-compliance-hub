@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Bell, CheckCheck, FileText, Users, Upload, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
+import { Bell, CheckCheck, FileText, Users, Upload, CheckCircle, AlertTriangle, Clock, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -34,6 +34,8 @@ const NotificationCenter = ({ onNavigate }: NotificationCenterProps) => {
         return <FileText className="w-5 h-5 text-purple-500" />;
       case 'document_uploaded':
         return <Upload className="w-5 h-5 text-orange-500" />;
+      case 'document_renewed':
+        return <RefreshCw className="w-5 h-5 text-blue-500" />;
       case 'document_expiry_expires_soon':
         return <Clock className="w-5 h-5 text-blue-500" />;
       case 'document_expiry_urgent':
@@ -69,6 +71,8 @@ const NotificationCenter = ({ onNavigate }: NotificationCenterProps) => {
       case 'document_expiry_urgent':
       case 'document_expiry_overdue':
         return 'requests';
+      case 'document_renewed':
+        return 'documents'; // Navigate to buyer documents dashboard
       case 'connection_request':
       case 'connection_response':
         return 'connections';

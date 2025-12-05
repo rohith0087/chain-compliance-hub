@@ -3,6 +3,17 @@ import { useState, useEffect, createContext, useContext, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+// Get client IP address using public API
+const getClientIP = async (): Promise<string | null> => {
+  try {
+    const response = await fetch('https://api.ipify.org?format=json');
+    const data = await response.json();
+    return data.ip;
+  } catch {
+    return null;
+  }
+};
+
 // Log auth events to audit table
 const logAuthEvent = async (
   action: 'login' | 'logout' | 'signup' | 'password_reset',
@@ -11,12 +22,14 @@ const logAuthEvent = async (
   userName?: string | null
 ) => {
   try {
+    const ipAddress = await getClientIP();
     await supabase.from('auth_audit_logs').insert({
       user_id: userId,
       user_email: userEmail,
       user_name: userName,
       action,
       user_agent: navigator.userAgent,
+      ip_address: ipAddress,
       metadata: { source: 'web_app', timestamp: new Date().toISOString() }
     });
   } catch (error) {

@@ -237,6 +237,36 @@ serve(async (req) => {
         console.error('Error fetching auth logs:', authError);
       } else if (authLogs) {
         for (const log of authLogs) {
+          let companyName = '';
+          
+          // Look up user's company via company_users table
+          if (log.user_id) {
+            const { data: companyUser } = await supabaseAuth
+              .from('company_users')
+              .select('company_id, company_type')
+              .eq('profile_id', log.user_id)
+              .eq('status', 'active')
+              .maybeSingle();
+            
+            if (companyUser) {
+              if (companyUser.company_type === 'buyer') {
+                const { data: buyer } = await supabaseAuth
+                  .from('buyers')
+                  .select('company_name')
+                  .eq('id', companyUser.company_id)
+                  .single();
+                companyName = buyer?.company_name || '';
+              } else if (companyUser.company_type === 'supplier') {
+                const { data: supplier } = await supabaseAuth
+                  .from('suppliers')
+                  .select('company_name')
+                  .eq('id', companyUser.company_id)
+                  .single();
+                companyName = supplier?.company_name || '';
+              }
+            }
+          }
+          
           auditLogs.push({
             id: log.id,
             timestamp: log.created_at,
@@ -246,7 +276,7 @@ serve(async (req) => {
             userEmail: log.user_email,
             userName: log.user_name,
             ipAddress: log.ip_address,
-            details: {},
+            details: { companyName },
             metadata: log.metadata as Record<string, any>
           });
         }

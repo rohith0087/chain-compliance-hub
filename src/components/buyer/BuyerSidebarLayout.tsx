@@ -68,6 +68,7 @@ import { Badge } from '@/components/ui/badge';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import { SubscriptionStatusWidget } from '@/components/subscription/SubscriptionStatusWidget';
 import { BranchSelector } from '@/components/company/BranchSelector';
+import { HelpButton } from '@/components/support/HelpButton';
 
 interface NavigationItem {
   title: string;
@@ -544,6 +545,19 @@ export function BuyerSidebarLayout({
           </div>
         </main>
       </div>
+
+      {/* Floating Help Button */}
+      <HelpButton 
+        source="buyer_portal"
+        user={{
+          id: profile?.id,
+          email: profile?.email,
+          name: profile?.full_name || user.name,
+          companyId: buyerProfile?.id,
+          companyName: buyerProfile?.company_name,
+          userType: 'buyer'
+        }}
+      />
     </div>
   );
 }

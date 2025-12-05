@@ -7,7 +7,8 @@ import {
   Settings, 
   Shield, 
   LogOut,
-  FileText
+  FileText,
+  Ticket
 } from 'lucide-react';
 import {
   Sidebar,
@@ -20,13 +21,14 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
-  SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';
+import { useSupportTickets } from '@/hooks/useSupportTickets';
 
 interface PlatformAdminSidebarProps {
   activeSection: string;
@@ -53,6 +55,12 @@ const navigationItems = [
     section: 'invitations'
   },
   {
+    title: 'Support Tickets',
+    url: '/platform-admin/dashboard?tab=tickets',
+    icon: Ticket,
+    section: 'tickets'
+  },
+  {
     title: 'Analytics',
     url: '/platform-admin/dashboard?tab=analytics',
     icon: BarChart3,
@@ -77,8 +85,10 @@ export function PlatformAdminSidebar({ activeSection, onSectionChange }: Platfor
   const location = useLocation();
   const navigate = useNavigate();
   const { platformAdmin } = usePlatformAdmin();
+  const { stats } = useSupportTickets();
   
   const collapsed = state === 'collapsed';
+  const openTicketCount = (stats.open || 0) + (stats.urgent || 0);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -166,25 +176,53 @@ export function PlatformAdminSidebar({ activeSection, onSectionChange }: Platfor
                         collapsed ? 'justify-center' : 'justify-start'
                       }`}
                     >
-                      <item.icon 
-                        className={`h-5 w-5 ${collapsed ? '' : 'mr-3'} transition-colors`}
-                        style={{
-                          color: isActive(item.section) 
-                            ? 'hsl(var(--admin-accent-blue))' 
-                            : 'hsl(var(--admin-text-muted))'
-                        }}
-                      />
-                      {!collapsed && (
-                        <span 
-                          className="font-medium"
+                      <div className="relative">
+                        <item.icon 
+                          className={`h-5 w-5 ${collapsed ? '' : 'mr-3'} transition-colors`}
                           style={{
                             color: isActive(item.section) 
-                              ? 'hsl(var(--admin-text))' 
+                              ? 'hsl(var(--admin-accent-blue))' 
                               : 'hsl(var(--admin-text-muted))'
                           }}
-                        >
-                          {item.title}
-                        </span>
+                        />
+                        {/* Badge for tickets in collapsed mode */}
+                        {item.section === 'tickets' && collapsed && openTicketCount > 0 && (
+                          <Badge 
+                            className="absolute -top-2 -right-2 h-4 min-w-4 p-0 text-[10px] flex items-center justify-center"
+                            style={{
+                              backgroundColor: 'hsl(var(--admin-accent-blue))',
+                              color: 'white'
+                            }}
+                          >
+                            {openTicketCount > 9 ? '9+' : openTicketCount}
+                          </Badge>
+                        )}
+                      </div>
+                      {!collapsed && (
+                        <div className="flex items-center justify-between flex-1">
+                          <span 
+                            className="font-medium"
+                            style={{
+                              color: isActive(item.section) 
+                                ? 'hsl(var(--admin-text))' 
+                                : 'hsl(var(--admin-text-muted))'
+                            }}
+                          >
+                            {item.title}
+                          </span>
+                          {/* Badge for tickets in expanded mode */}
+                          {item.section === 'tickets' && openTicketCount > 0 && (
+                            <Badge 
+                              className="h-5 min-w-5 p-0 text-xs flex items-center justify-center"
+                              style={{
+                                backgroundColor: 'hsl(var(--admin-accent-blue))',
+                                color: 'white'
+                              }}
+                            >
+                              {openTicketCount > 99 ? '99+' : openTicketCount}
+                            </Badge>
+                          )}
+                        </div>
                       )}
                     </NavLink>
                   </SidebarMenuButton>

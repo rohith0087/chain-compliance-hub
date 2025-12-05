@@ -1,18 +1,26 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Database, MessageSquare, FileText, TrendingUp, Activity, UserPlus, BarChart3, Settings } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Users, Database, MessageSquare, FileText, TrendingUp, Ticket, Clock, AlertTriangle } from 'lucide-react';
 import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';
+import { useSupportTickets } from '@/hooks/useSupportTickets';
 import { PlatformAdminUserManagement } from './PlatformAdminUserManagement';
 import { PlatformAdminAnalytics } from './PlatformAdminAnalytics';
 import { PlatformAdminSystemSettings } from './PlatformAdminSystemSettings';
 import { PlatformAdminInvitations } from './PlatformAdminInvitations';
 import { PlatformAdminAuditLogs } from './PlatformAdminAuditLogs';
+import { SuperAdminClientSupport } from '@/components/super-admin/SuperAdminClientSupport';
+import { formatDistanceToNow } from 'date-fns';
 
 export function PlatformAdminDashboardContent() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { stats, error, fetchStats } = usePlatformAdmin();
+  const { tickets } = useSupportTickets();
   const activeTab = searchParams.get('tab') || 'dashboard';
+
+  // Get recent tickets (latest 5)
+  const recentTickets = tickets.slice(0, 5);
 
   const statsCards = [
     {
@@ -49,12 +57,35 @@ export function PlatformAdminDashboardContent() {
     }
   ];
 
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent': return 'hsl(var(--destructive))';
+      case 'high': return 'hsl(217 91% 60%)';
+      case 'medium': return 'hsl(45 93% 47%)';
+      default: return 'hsl(var(--admin-text-muted))';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'open': return 'hsl(var(--admin-accent-blue))';
+      case 'in_progress': return 'hsl(45 93% 47%)';
+      case 'resolved': return 'hsl(var(--admin-accent-green))';
+      case 'closed': return 'hsl(var(--admin-text-muted))';
+      default: return 'hsl(var(--admin-text-muted))';
+    }
+  };
+
   if (activeTab === 'users') {
     return <PlatformAdminUserManagement />;
   }
 
   if (activeTab === 'invitations') {
     return <PlatformAdminInvitations />;
+  }
+
+  if (activeTab === 'tickets') {
+    return <SuperAdminClientSupport />;
   }
 
   if (activeTab === 'analytics') {
@@ -188,63 +219,88 @@ export function PlatformAdminDashboardContent() {
           </CardContent>
         </Card>
 
+        {/* Recent Tickets Card */}
         <Card style={{ 
           backgroundColor: 'hsl(var(--admin-card))', 
           borderColor: 'hsl(var(--admin-border))' 
         }}>
-          <CardHeader>
-            <CardTitle style={{ color: 'hsl(var(--admin-text))' }}>Quick Actions</CardTitle>
-            <CardDescription style={{ color: 'hsl(var(--admin-text-muted))' }}>
-              Common administrative tasks
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle style={{ color: 'hsl(var(--admin-text))' }}>Recent Tickets</CardTitle>
+              <CardDescription style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                Latest support requests
+              </CardDescription>
+            </div>
+            <button
+              onClick={() => navigate('/platform-admin/dashboard?tab=tickets')}
+              className="text-sm font-medium hover:underline"
+              style={{ color: 'hsl(var(--admin-accent-blue))' }}
+            >
+              View All
+            </button>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-3">
-              <button 
-                className="p-3 rounded-lg border transition-colors hover:bg-opacity-80"
-                style={{
-                  backgroundColor: 'hsl(var(--admin-sidebar-accent))',
-                  borderColor: 'hsl(var(--admin-border))',
-                  color: 'hsl(var(--admin-text))'
-                }}
-              >
-                <Users className="h-4 w-4 mb-1" />
-                <div className="text-xs font-medium">Manage Users</div>
-              </button>
-              <button 
-                className="p-3 rounded-lg border transition-colors hover:bg-opacity-80"
-                style={{
-                  backgroundColor: 'hsl(var(--admin-sidebar-accent))',
-                  borderColor: 'hsl(var(--admin-border))',
-                  color: 'hsl(var(--admin-text))'
-                }}
-              >
-                <UserPlus className="h-4 w-4 mb-1" />
-                <div className="text-xs font-medium">Send Invite</div>
-              </button>
-              <button 
-                className="p-3 rounded-lg border transition-colors hover:bg-opacity-80"
-                style={{
-                  backgroundColor: 'hsl(var(--admin-sidebar-accent))',
-                  borderColor: 'hsl(var(--admin-border))',
-                  color: 'hsl(var(--admin-text))'
-                }}
-              >
-                <BarChart3 className="h-4 w-4 mb-1" />
-                <div className="text-xs font-medium">View Analytics</div>
-              </button>
-              <button 
-                className="p-3 rounded-lg border transition-colors hover:bg-opacity-80"
-                style={{
-                  backgroundColor: 'hsl(var(--admin-sidebar-accent))',
-                  borderColor: 'hsl(var(--admin-border))',
-                  color: 'hsl(var(--admin-text))'
-                }}
-              >
-                <Settings className="h-4 w-4 mb-1" />
-                <div className="text-xs font-medium">Settings</div>
-              </button>
-            </div>
+            {recentTickets.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Ticket className="h-10 w-10 mb-2" style={{ color: 'hsl(var(--admin-text-muted))' }} />
+                <p className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                  No support tickets yet
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentTickets.map((ticket) => (
+                  <button
+                    key={ticket.id}
+                    onClick={() => navigate('/platform-admin/dashboard?tab=tickets')}
+                    className="w-full p-3 rounded-lg border transition-colors hover:bg-opacity-80 text-left"
+                    style={{
+                      backgroundColor: 'hsl(var(--admin-sidebar-accent))',
+                      borderColor: 'hsl(var(--admin-border))'
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p 
+                          className="text-sm font-medium truncate"
+                          style={{ color: 'hsl(var(--admin-text))' }}
+                        >
+                          {ticket.subject}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Clock className="h-3 w-3" style={{ color: 'hsl(var(--admin-text-muted))' }} />
+                          <span className="text-xs" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                            {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true })}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge 
+                          variant="outline"
+                          className="text-[10px] px-1.5 py-0"
+                          style={{ 
+                            borderColor: getPriorityColor(ticket.priority),
+                            color: getPriorityColor(ticket.priority)
+                          }}
+                        >
+                          {ticket.priority === 'urgent' && <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />}
+                          {ticket.priority}
+                        </Badge>
+                        <Badge 
+                          className="text-[10px] px-1.5 py-0"
+                          style={{ 
+                            backgroundColor: getStatusColor(ticket.status),
+                            color: 'white'
+                          }}
+                        >
+                          {ticket.status.replace('_', ' ')}
+                        </Badge>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

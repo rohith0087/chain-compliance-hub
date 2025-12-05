@@ -1,10 +1,22 @@
 import { Search, Bell, Menu } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Badge } from '@/components/ui/badge';
+import { useSupportTickets } from '@/hooks/useSupportTickets';
+import { useNavigate } from 'react-router-dom';
 
 export function PlatformAdminHeader() {
+  const { stats, newTicketCount, clearNewTicketCount } = useSupportTickets();
+  const navigate = useNavigate();
+  
+  // Show open + urgent tickets in badge
+  const badgeCount = (stats.open || 0) + (stats.urgent || 0);
+
+  const handleNotificationClick = () => {
+    clearNewTicketCount();
+    navigate('/platform-admin/dashboard?tab=tickets');
+  };
+
   return (
     <header 
       className="border-b px-6 py-4"
@@ -44,17 +56,22 @@ export function PlatformAdminHeader() {
             variant="ghost"
             size="sm"
             className="relative h-9 w-9 p-0"
+            onClick={handleNotificationClick}
           >
             <Bell className="h-4 w-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
-            <Badge 
-              className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs flex items-center justify-center"
-              style={{
-                backgroundColor: 'hsl(var(--admin-accent-blue))',
-                color: 'white'
-              }}
-            >
-              3
-            </Badge>
+            {badgeCount > 0 && (
+              <Badge 
+                className={`absolute -top-1 -right-1 h-5 min-w-5 p-0 text-xs flex items-center justify-center ${
+                  newTicketCount > 0 ? 'animate-pulse' : ''
+                }`}
+                style={{
+                  backgroundColor: badgeCount > 0 ? 'hsl(var(--admin-accent-blue))' : 'hsl(var(--muted))',
+                  color: 'white'
+                }}
+              >
+                {badgeCount > 99 ? '99+' : badgeCount}
+              </Badge>
+            )}
           </Button>
 
           {/* Mobile menu */}

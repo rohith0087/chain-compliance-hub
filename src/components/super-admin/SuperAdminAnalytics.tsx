@@ -1,17 +1,53 @@
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { Users, Building2, FileText, MessageSquare, TrendingUp, Calendar } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
+import { Building2, FileText, MessageSquare, TrendingUp } from 'lucide-react';
+
+// Neon color palette for cyber theme
+const NEON_COLORS = {
+  cyan: '#22d3ee',
+  purple: '#a855f7',
+  green: '#4ade80',
+  amber: '#fbbf24',
+  pink: '#f472b6',
+  blue: '#3b82f6'
+};
+
+const cardStyle = {
+  backgroundColor: 'hsl(var(--admin-card))',
+  borderColor: 'hsl(var(--admin-border))'
+};
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div 
+        className="p-3 rounded-lg border shadow-lg"
+        style={{
+          backgroundColor: 'hsl(240 3.7% 10%)',
+          borderColor: 'hsl(240 3.7% 20%)',
+        }}
+      >
+        <p className="text-sm font-medium mb-1" style={{ color: '#e2e8f0' }}>{label}</p>
+        {payload.map((entry: any, index: number) => (
+          <p key={index} className="text-xs" style={{ color: entry.color }}>
+            {entry.name}: {entry.value}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 export const SuperAdminAnalytics = () => {
   const { stats, users, loading } = useSuperAdmin();
 
-  // Prepare data for charts
+  // Prepare data for charts with neon colors
   const userTypeData = [
-    { name: 'Buyers', value: stats?.total_buyers || 0, color: '#3b82f6' },
-    { name: 'Suppliers', value: stats?.total_suppliers || 0, color: '#10b981' },
-    { name: 'Other', value: (stats?.total_users || 0) - (stats?.total_buyers || 0) - (stats?.total_suppliers || 0), color: '#f59e0b' }
+    { name: 'Buyers', value: stats?.total_buyers || 0, color: NEON_COLORS.cyan },
+    { name: 'Suppliers', value: stats?.total_suppliers || 0, color: NEON_COLORS.green },
+    { name: 'Other', value: (stats?.total_users || 0) - (stats?.total_buyers || 0) - (stats?.total_suppliers || 0), color: NEON_COLORS.amber }
   ];
 
   const roleDistribution = users.reduce((acc, user) => {
@@ -39,10 +75,13 @@ export const SuperAdminAnalytics = () => {
 
   if (loading) {
     return (
-      <Card>
+      <Card style={cardStyle}>
         <CardContent className="p-6">
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div 
+              className="animate-spin rounded-full h-8 w-8 border-b-2"
+              style={{ borderColor: NEON_COLORS.cyan }}
+            />
           </div>
         </CardContent>
       </Card>
@@ -53,54 +92,86 @@ export const SuperAdminAnalytics = () => {
     <div className="space-y-6">
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        <Card style={cardStyle}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Platform Growth</p>
-                <p className="text-2xl font-bold text-green-600">+{stats?.recent_signups || 0}</p>
-                <p className="text-xs text-muted-foreground">New users (7 days)</p>
+                <p className="text-sm font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                  Platform Growth
+                </p>
+                <p className="text-2xl font-bold" style={{ color: NEON_COLORS.green }}>
+                  +{stats?.recent_signups || 0}
+                </p>
+                <p className="text-xs" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                  New users (7 days)
+                </p>
               </div>
-              <TrendingUp className="w-8 h-8 text-green-500" />
+              <div className="p-3 rounded-lg" style={{ backgroundColor: `${NEON_COLORS.green}20` }}>
+                <TrendingUp className="w-6 h-6" style={{ color: NEON_COLORS.green }} />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card style={cardStyle}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Active Connections</p>
-                <p className="text-2xl font-bold">{stats?.active_connections || 0}</p>
-                <p className="text-xs text-green-600">✓ Healthy network</p>
+                <p className="text-sm font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                  Active Connections
+                </p>
+                <p className="text-2xl font-bold" style={{ color: 'hsl(var(--admin-text))' }}>
+                  {stats?.active_connections || 0}
+                </p>
+                <p className="text-xs" style={{ color: NEON_COLORS.green }}>
+                  ✓ Healthy network
+                </p>
               </div>
-              <Building2 className="w-8 h-8 text-blue-500" />
+              <div className="p-3 rounded-lg" style={{ backgroundColor: `${NEON_COLORS.cyan}20` }}>
+                <Building2 className="w-6 h-6" style={{ color: NEON_COLORS.cyan }} />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card style={cardStyle}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Document Volume</p>
-                <p className="text-2xl font-bold">{stats?.total_documents || 0}</p>
-                <p className="text-xs text-muted-foreground">Total uploaded</p>
+                <p className="text-sm font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                  Document Volume
+                </p>
+                <p className="text-2xl font-bold" style={{ color: 'hsl(var(--admin-text))' }}>
+                  {stats?.total_documents || 0}
+                </p>
+                <p className="text-xs" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                  Total uploaded
+                </p>
               </div>
-              <FileText className="w-8 h-8 text-purple-500" />
+              <div className="p-3 rounded-lg" style={{ backgroundColor: `${NEON_COLORS.purple}20` }}>
+                <FileText className="w-6 h-6" style={{ color: NEON_COLORS.purple }} />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card style={cardStyle}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Chat Activity</p>
-                <p className="text-2xl font-bold">{stats?.total_chat_sessions || 0}</p>
-                <p className="text-xs text-muted-foreground">Total sessions</p>
+                <p className="text-sm font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                  Chat Activity
+                </p>
+                <p className="text-2xl font-bold" style={{ color: 'hsl(var(--admin-text))' }}>
+                  {stats?.total_chat_sessions || 0}
+                </p>
+                <p className="text-xs" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                  Total sessions
+                </p>
               </div>
-              <MessageSquare className="w-8 h-8 text-orange-500" />
+              <div className="p-3 rounded-lg" style={{ backgroundColor: `${NEON_COLORS.amber}20` }}>
+                <MessageSquare className="w-6 h-6" style={{ color: NEON_COLORS.amber }} />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -109,10 +180,12 @@ export const SuperAdminAnalytics = () => {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* User Type Distribution */}
-        <Card>
+        <Card style={cardStyle}>
           <CardHeader>
-            <CardTitle>User Type Distribution</CardTitle>
-            <CardDescription>Breakdown of users by type</CardDescription>
+            <CardTitle style={{ color: 'hsl(var(--admin-text))' }}>User Type Distribution</CardTitle>
+            <CardDescription style={{ color: 'hsl(var(--admin-text-muted))' }}>
+              Breakdown of users by type
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -121,35 +194,47 @@ export const SuperAdminAnalytics = () => {
                   data={userTypeData}
                   cx="50%"
                   cy="50%"
-                  outerRadius={80}
-                  fill="#8884d8"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={5}
                   dataKey="value"
-                  label={({ name, value }) => `${name}: ${value}`}
                 >
                   {userTypeData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip content={<CustomTooltip />} />
               </PieChart>
             </ResponsiveContainer>
+            <div className="mt-4 flex flex-wrap gap-4 justify-center">
+              {userTypeData.map((item) => (
+                <div key={item.name} className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                    {item.name}: {item.value}
+                  </span>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
         {/* Role Distribution */}
-        <Card>
+        <Card style={cardStyle}>
           <CardHeader>
-            <CardTitle>Role Distribution</CardTitle>
-            <CardDescription>User roles across the platform</CardDescription>
+            <CardTitle style={{ color: 'hsl(var(--admin-text))' }}>Role Distribution</CardTitle>
+            <CardDescription style={{ color: 'hsl(var(--admin-text-muted))' }}>
+              User roles across the platform
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={roleData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" fill="#3b82f6" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 12 }} />
+                <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="value" fill={NEON_COLORS.cyan} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -157,21 +242,48 @@ export const SuperAdminAnalytics = () => {
       </div>
 
       {/* Activity Trends */}
-      <Card>
+      <Card style={cardStyle}>
         <CardHeader>
-          <CardTitle>Weekly Activity Trends</CardTitle>
-          <CardDescription>Platform activity over the last 7 days</CardDescription>
+          <CardTitle style={{ color: 'hsl(var(--admin-text))' }}>Weekly Activity Trends</CardTitle>
+          <CardDescription style={{ color: 'hsl(var(--admin-text-muted))' }}>
+            Platform activity over the last 7 days
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={activityData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Line type="monotone" dataKey="documents" stroke="#3b82f6" strokeWidth={2} name="Documents" />
-              <Line type="monotone" dataKey="users" stroke="#10b981" strokeWidth={2} name="New Users" />
-              <Line type="monotone" dataKey="connections" stroke="#f59e0b" strokeWidth={2} name="Connections" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 12 }} />
+              <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend 
+                wrapperStyle={{ color: '#9ca3af' }}
+                formatter={(value) => <span style={{ color: '#9ca3af' }}>{value}</span>}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="documents" 
+                stroke={NEON_COLORS.cyan} 
+                strokeWidth={2} 
+                name="Documents"
+                dot={{ fill: NEON_COLORS.cyan, strokeWidth: 0 }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="users" 
+                stroke={NEON_COLORS.green} 
+                strokeWidth={2} 
+                name="New Users"
+                dot={{ fill: NEON_COLORS.green, strokeWidth: 0 }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="connections" 
+                stroke={NEON_COLORS.amber} 
+                strokeWidth={2} 
+                name="Connections"
+                dot={{ fill: NEON_COLORS.amber, strokeWidth: 0 }}
+              />
             </LineChart>
           </ResponsiveContainer>
         </CardContent>
@@ -179,67 +291,76 @@ export const SuperAdminAnalytics = () => {
 
       {/* System Health */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
+        <Card style={cardStyle}>
           <CardHeader>
-            <CardTitle className="text-sm">System Status</CardTitle>
+            <CardTitle className="text-sm" style={{ color: 'hsl(var(--admin-text))' }}>System Status</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm">Database</span>
-                <Badge variant="default" className="bg-green-500">Healthy</Badge>
+                <span className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>Database</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: NEON_COLORS.green }} />
+                  <span className="text-sm font-medium" style={{ color: NEON_COLORS.green }}>Healthy</span>
+                </div>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm">Storage</span>
-                <Badge variant="default" className="bg-green-500">Healthy</Badge>
+                <span className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>Storage</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: NEON_COLORS.green }} />
+                  <span className="text-sm font-medium" style={{ color: NEON_COLORS.green }}>Healthy</span>
+                </div>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm">API</span>
-                <Badge variant="default" className="bg-green-500">Healthy</Badge>
+                <span className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>API</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: NEON_COLORS.green }} />
+                  <span className="text-sm font-medium" style={{ color: NEON_COLORS.green }}>Healthy</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card style={cardStyle}>
           <CardHeader>
-            <CardTitle className="text-sm">Performance Metrics</CardTitle>
+            <CardTitle className="text-sm" style={{ color: 'hsl(var(--admin-text))' }}>Performance Metrics</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm">Avg Response Time</span>
-                <span className="text-sm font-medium">245ms</span>
+                <span className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>Avg Response Time</span>
+                <span className="text-sm font-medium" style={{ color: NEON_COLORS.cyan }}>245ms</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm">Uptime</span>
-                <span className="text-sm font-medium text-green-600">99.9%</span>
+                <span className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>Uptime</span>
+                <span className="text-sm font-medium" style={{ color: NEON_COLORS.green }}>99.9%</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm">Error Rate</span>
-                <span className="text-sm font-medium">0.02%</span>
+                <span className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>Error Rate</span>
+                <span className="text-sm font-medium" style={{ color: NEON_COLORS.green }}>0.02%</span>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card style={cardStyle}>
           <CardHeader>
-            <CardTitle className="text-sm">Resource Usage</CardTitle>
+            <CardTitle className="text-sm" style={{ color: 'hsl(var(--admin-text))' }}>Resource Usage</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm">CPU Usage</span>
-                <span className="text-sm font-medium">34%</span>
+                <span className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>CPU Usage</span>
+                <span className="text-sm font-medium" style={{ color: NEON_COLORS.cyan }}>34%</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm">Memory</span>
-                <span className="text-sm font-medium">67%</span>
+                <span className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>Memory</span>
+                <span className="text-sm font-medium" style={{ color: NEON_COLORS.amber }}>67%</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm">Storage</span>
-                <span className="text-sm font-medium">45%</span>
+                <span className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>Storage</span>
+                <span className="text-sm font-medium" style={{ color: NEON_COLORS.green }}>45%</span>
               </div>
             </div>
           </CardContent>

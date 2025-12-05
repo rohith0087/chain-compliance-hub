@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Upload, FileText, CheckCircle, XCircle, AlertCircle, Filter } from 'lucide-react';
+import { Upload, FileText, CheckCircle, XCircle, Filter, X, Building2 } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { useBuyerSupplierConnections } from '@/hooks/useBuyerSupplierConnections';
 import { useBulkDocumentUpload, BulkUploadFile } from '@/hooks/useBulkDocumentUpload';
@@ -46,7 +46,7 @@ const DOCUMENT_TYPES = [
   { value: 'kosher_certification', label: 'Kosher Certification', category: 'quality' },
   { value: 'halal_certification', label: 'Halal Certification', category: 'quality' },
   
-  // Egg Processing (Consolidated from all poultry categories)
+  // Egg Processing
   { value: 'egg_quality_documentation', label: 'Egg Quality Documentation', category: 'egg_processing' },
   { value: 'layer_management_records', label: 'Layer Management Records', category: 'egg_processing' },
   { value: 'egg_safety_records', label: 'Egg Safety Records', category: 'egg_processing' },
@@ -119,7 +119,7 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
     const newFiles: BulkUploadFile[] = acceptedFiles.map(file => ({
       file,
       documentType: '',
-      documentName: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
+      documentName: file.name.replace(/\.[^/.]+$/, ''),
       category: 'compliance'
     }));
     setFiles(prev => [...prev, ...newFiles]);
@@ -156,11 +156,9 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
 
   const removeFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
-    // Clean up custom document type for this index
     setCustomDocumentTypes(prev => {
       const updated = { ...prev };
       delete updated[index];
-      // Reindex remaining entries
       const reindexed: {[index: number]: string} = {};
       Object.entries(updated).forEach(([key, value]) => {
         const oldIndex = parseInt(key);
@@ -198,7 +196,6 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
   );
   const canUpload = selectedSupplierId && files.length > 0 && files.every(f => f.documentType);
 
-  // Filter document types based on search and category
   const filteredDocumentTypes = DOCUMENT_TYPES.filter(type => {
     const matchesSearch = type.label.toLowerCase().includes(searchFilter.toLowerCase());
     const matchesCategory = categoryFilter === 'all' || type.category === categoryFilter;
@@ -217,14 +214,20 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
     { value: 'other', label: 'Other' }
   ];
 
+  const clearAll = () => {
+    setFiles([]);
+    setSelectedSupplierId('');
+    setNotes('');
+    setCustomDocumentTypes({});
+    setSearchFilter('');
+    setCategoryFilter('all');
+  };
+
   return (
-    <Card className="w-full max-w-4xl">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Upload className="h-5 w-5" />
-          Pre-populate Supplier Documents
-        </CardTitle>
-        <CardDescription>
+    <Card className="w-full border border-border/50 shadow-sm">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg font-semibold">Pre-populate Supplier Documents</CardTitle>
+        <CardDescription className="text-muted-foreground">
           Upload existing documents on behalf of your connected suppliers to streamline onboarding
         </CardDescription>
       </CardHeader>
@@ -232,9 +235,9 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
       <CardContent className="space-y-6">
         {/* Supplier Selection */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Select Supplier</label>
+          <label className="text-sm font-medium text-foreground">Select Supplier</label>
           <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId}>
-            <SelectTrigger>
+            <SelectTrigger className="h-10">
               <SelectValue placeholder="Choose a connected supplier" />
             </SelectTrigger>
             <SelectContent>
@@ -246,7 +249,7 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
                   <div className="flex items-center gap-2">
                     <span>{connection.supplier?.company_name ?? `Supplier ${connection.supplier_id.slice(0, 8)}`}</span>
                     {connection.supplier?.industry && (
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant="secondary" className="text-xs font-normal">
                         {connection.supplier.industry}
                       </Badge>
                     )}
@@ -257,79 +260,125 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
           </Select>
         </div>
 
-        {/* File Upload Area */}
+        {/* Selected Supplier Info */}
+        {selectedSupplier && (
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/40 border border-border/40">
+            <div className="flex items-center justify-center h-9 w-9 rounded-md bg-primary/10">
+              <Building2 className="h-4 w-4 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">
+                {selectedSupplier.supplier?.company_name ?? `Supplier ${selectedSupplier.supplier_id.slice(0, 8)}`}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {selectedSupplier.supplier?.contact_email ?? 'No email available'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* File Upload Area - Professional Design */}
         <div
           {...getRootProps()}
           className={cn(
-            "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
-            isDragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-primary/50"
+            "relative rounded-xl border bg-muted/20 p-6 text-center cursor-pointer transition-all duration-200",
+            isDragActive 
+              ? "border-primary bg-primary/5 ring-2 ring-primary/20" 
+              : "border-border/60 hover:border-primary/40 hover:bg-muted/30"
           )}
         >
           <input {...getInputProps()} />
-          <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <p className="text-lg font-medium mb-2">
-            {isDragActive ? "Drop files here" : "Drag & drop documents"}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Supports PDF, DOC, DOCX, JPG, PNG files
-          </p>
+          <div className="flex flex-col items-center gap-2">
+            <div className={cn(
+              "flex items-center justify-center h-12 w-12 rounded-lg transition-colors",
+              isDragActive ? "bg-primary/10" : "bg-muted/60"
+            )}>
+              <Upload className={cn(
+                "h-5 w-5 transition-colors",
+                isDragActive ? "text-primary" : "text-muted-foreground/70"
+              )} />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">
+                {isDragActive ? "Drop files here" : "Drag & drop documents"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                or <span className="text-primary hover:underline">browse files</span>
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground/70 mt-1">
+              PDF, DOC, DOCX, JPG, PNG
+            </p>
+          </div>
         </div>
 
-        {/* File List */}
+        {/* File List - Professional Design */}
         {files.length > 0 && (
-          <div className="space-y-4">
-            <h3 className="font-medium">Documents to Upload ({files.length})</h3>
-            <div className="space-y-3">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-foreground">
+                Documents ({files.length})
+              </h3>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={clearAll}
+                className="h-7 text-xs text-muted-foreground hover:text-foreground"
+              >
+                Clear all
+              </Button>
+            </div>
+            
+            <div className="rounded-lg border border-border/50 divide-y divide-border/50 overflow-hidden">
               {files.map((file, index) => (
-                <div key={index} className="flex items-center gap-4 p-3 border rounded-lg">
-                  <FileText className="h-5 w-5 text-muted-foreground" />
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">{file.file.name}</p>
+                <div key={index} className="flex items-center gap-3 p-3 bg-background hover:bg-muted/30 transition-colors">
+                  <div className="flex items-center justify-center h-8 w-8 rounded-md bg-muted/60 flex-shrink-0">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate text-foreground">{file.file.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {(file.file.size / 1024 / 1024).toFixed(2)} MB
                     </p>
                   </div>
-                  <div className="space-y-2">
+                  
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <Select 
                       value={file.documentType === customDocumentTypes[index] ? 'other' : file.documentType} 
                       onValueChange={(value) => updateFileDocumentType(index, value)}
                     >
-                      <SelectTrigger className="w-64">
-                        <SelectValue placeholder="Document type" />
+                      <SelectTrigger className="w-52 h-8 text-xs">
+                        <SelectValue placeholder="Select type" />
                       </SelectTrigger>
-                      <SelectContent className="max-h-96">
-                        <div className="p-2 space-y-2 border-b">
+                      <SelectContent className="max-h-80">
+                        <div className="p-2 space-y-2 border-b border-border/50">
                           <div className="flex items-center gap-2">
-                            <Filter className="h-4 w-4 text-muted-foreground" />
+                            <Filter className="h-3.5 w-3.5 text-muted-foreground" />
                             <Input
-                              placeholder="Search document types..."
+                              placeholder="Search..."
                               value={searchFilter}
                               onChange={(e) => setSearchFilter(e.target.value)}
-                              className="h-8"
+                              className="h-7 text-xs"
                             />
                           </div>
                           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                            <SelectTrigger className="h-8">
+                            <SelectTrigger className="h-7 text-xs">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               {categories.map(cat => (
-                                <SelectItem key={cat.value} value={cat.value}>
+                                <SelectItem key={cat.value} value={cat.value} className="text-xs">
                                   {cat.label}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="max-h-64 overflow-y-auto">
+                        <div className="max-h-56 overflow-y-auto">
                           {filteredDocumentTypes.map(type => (
-                            <SelectItem key={type.value} value={type.value}>
-                              <div className="flex items-center justify-between w-full">
-                                <span>{type.label}</span>
-                                <Badge variant="outline" className="text-xs ml-2">
-                                  {categories.find(c => c.value === type.category)?.label}
-                                </Badge>
-                              </div>
+                            <SelectItem key={type.value} value={type.value} className="text-xs">
+                              {type.label}
                             </SelectItem>
                           ))}
                         </div>
@@ -338,20 +387,22 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
                     
                     {(file.documentType === 'other' || file.documentType === customDocumentTypes[index]) && (
                       <Input
-                        placeholder="Enter custom document type..."
+                        placeholder="Custom type..."
                         value={customDocumentTypes[index] || ''}
                         onChange={(e) => updateCustomDocumentType(index, e.target.value)}
-                        className="w-64"
+                        className="w-36 h-8 text-xs"
                       />
                     )}
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeFile(index)}
+                      className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeFile(index)}
-                  >
-                    <XCircle className="h-4 w-4" />
-                  </Button>
                 </div>
               ))}
             </div>
@@ -360,36 +411,37 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
 
         {/* Notes */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Notes (Optional)</label>
+          <label className="text-sm font-medium text-foreground">Notes</label>
           <Textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Add any notes about these documents..."
-            rows={3}
+            rows={2}
+            className="resize-none text-sm"
           />
         </div>
 
         {/* Progress */}
         {progress && (
-          <div className="space-y-3">
+          <div className="space-y-2 p-3 rounded-lg bg-muted/30 border border-border/40">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Upload Progress</span>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm font-medium text-foreground">Uploading</span>
+              <span className="text-xs text-muted-foreground">
                 {progress.processedFiles} / {progress.totalFiles}
               </span>
             </div>
             <Progress 
               value={(progress.processedFiles / progress.totalFiles) * 100} 
-              className="h-2"
+              className="h-1.5"
             />
-            <div className="flex items-center gap-4 text-sm">
-              <div className="flex items-center gap-1 text-green-600">
-                <CheckCircle className="h-4 w-4" />
+            <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-1 text-emerald-600">
+                <CheckCircle className="h-3.5 w-3.5" />
                 {progress.successfulUploads} successful
               </div>
               {progress.failedUploads > 0 && (
-                <div className="flex items-center gap-1 text-red-600">
-                  <XCircle className="h-4 w-4" />
+                <div className="flex items-center gap-1 text-destructive">
+                  <XCircle className="h-3.5 w-3.5" />
                   {progress.failedUploads} failed
                 </div>
               )}
@@ -398,39 +450,25 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
         )}
 
         {/* Actions */}
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-end gap-2 pt-2">
           <Button
             variant="outline"
-            onClick={() => {
-              setFiles([]);
-              setSelectedSupplierId('');
-              setNotes('');
-              setCustomDocumentTypes({});
-              setSearchFilter('');
-              setCategoryFilter('all');
-            }}
+            size="sm"
+            onClick={clearAll}
             disabled={isUploading}
+            className="h-9"
           >
-            Clear All
+            Clear
           </Button>
           <Button
+            size="sm"
             onClick={handleUpload}
             disabled={!canUpload || isUploading}
-            className="min-w-32"
+            className="h-9 min-w-28"
           >
-            {isUploading ? 'Uploading...' : `Upload ${files.length} Documents`}
+            {isUploading ? 'Uploading...' : files.length > 0 ? `Upload ${files.length} Files` : 'Upload'}
           </Button>
         </div>
-
-        {selectedSupplier && (
-          <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-            <p className="text-sm">
-              <strong>Selected Supplier:</strong> {selectedSupplier.supplier?.company_name ?? `Supplier ${selectedSupplier.supplier_id.slice(0, 8)}`}
-              <br />
-              <strong>Contact:</strong> {selectedSupplier.supplier?.contact_email ?? 'N/A'}
-            </p>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

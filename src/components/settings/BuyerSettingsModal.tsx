@@ -15,6 +15,7 @@ import { AccountSettingsForm } from './AccountSettingsForm';
 import { PasswordChangeForm } from './PasswordChangeForm';
 import { LogoUploadWidget } from './LogoUploadWidget';
 import { DefaultOnboardingSettings } from './DefaultOnboardingSettings';
+import { NotificationSettingsForm } from './NotificationSettingsForm';
 
 interface BuyerSettingsModalProps {
   open: boolean;
@@ -203,9 +204,10 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
         </DialogHeader>
 
         <Tabs defaultValue="company" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="company">Company</TabsTrigger>
-            <TabsTrigger value="defaults">Default Onboarding</TabsTrigger>
+            <TabsTrigger value="defaults">Onboarding</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="password">Password</TabsTrigger>
             <TabsTrigger value="logo">Logo</TabsTrigger>
@@ -292,6 +294,10 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
 
           <TabsContent value="defaults">
             <DefaultOnboardingSettings />
+          </TabsContent>
+
+          <TabsContent value="notifications">
+            <NotificationSettingsForm />
           </TabsContent>
 
           <TabsContent value="account">

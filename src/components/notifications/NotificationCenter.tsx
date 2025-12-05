@@ -34,9 +34,28 @@ const NotificationCenter = ({ onNavigate }: NotificationCenterProps) => {
         return <FileText className="w-5 h-5 text-purple-500" />;
       case 'document_uploaded':
         return <Upload className="w-5 h-5 text-orange-500" />;
+      case 'document_expiry_expires_soon':
+        return <Clock className="w-5 h-5 text-blue-500" />;
+      case 'document_expiry_urgent':
+        return <AlertTriangle className="w-5 h-5 text-amber-500" />;
+      case 'document_expiry_overdue':
+        return <AlertTriangle className="w-5 h-5 text-red-500" />;
       default:
         return <Bell className="w-5 h-5 text-muted-foreground" />;
     }
+  };
+
+  const getExpiryUrgencyBadge = (type: string) => {
+    if (type === 'document_expiry_expires_soon') {
+      return <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Expires Soon</Badge>;
+    }
+    if (type === 'document_expiry_urgent') {
+      return <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">Urgent</Badge>;
+    }
+    if (type === 'document_expiry_overdue') {
+      return <Badge variant="destructive" className="text-xs">Overdue</Badge>;
+    }
+    return null;
   };
 
   const getNotificationTargetTab = (type: string) => {
@@ -46,6 +65,9 @@ const NotificationCenter = ({ onNavigate }: NotificationCenterProps) => {
       case 'document_rejected':
       case 'document_submitted':
       case 'new_document_request':
+      case 'document_expiry_expires_soon':
+      case 'document_expiry_urgent':
+      case 'document_expiry_overdue':
         return 'requests';
       case 'connection_request':
       case 'connection_response':
@@ -142,12 +164,15 @@ const NotificationCenter = ({ onNavigate }: NotificationCenterProps) => {
                   
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between">
-                      <h4 className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                        {notification.title}
-                      </h4>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                          {notification.title}
+                        </h4>
+                        {getExpiryUrgencyBadge(notification.type)}
+                      </div>
                       {!notification.read && (
-                        <div className="w-2 h-2 bg-primary rounded-full ml-2 mt-1.5 animate-pulse" />
+                        <div className="w-2 h-2 bg-primary rounded-full ml-2 mt-1.5 animate-pulse flex-shrink-0" />
                       )}
                     </div>
                     

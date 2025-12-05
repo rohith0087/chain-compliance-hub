@@ -22,6 +22,7 @@ import PlatformAdminBootstrap from "./pages/PlatformAdminBootstrap";
 import SharedDocumentViewer from "./components/shared/SharedDocumentViewer";
 import NotFound from "./pages/NotFound";
 import SubscriptionPage from "./pages/SubscriptionPage";
+import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import "./i18n";
 import { BranchProvider } from "@/contexts/BranchContext";
 
@@ -146,6 +147,11 @@ const AppRoutes = () => {
                 <AdminRoute>
                   <AdminDashboard />
                 </AdminRoute>
+              } />
+              <Route path="/super-admin" element={
+                <SuperAdminRoute>
+                  <SuperAdminDashboard />
+                </SuperAdminRoute>
               } />
               <Route path="/platform-admin/login" element={<PlatformAdminLogin />} />
               <Route path="/platform-admin/dashboard" element={<PlatformAdminDashboard />} />

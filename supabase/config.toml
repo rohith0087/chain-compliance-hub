@@ -133,3 +133,7 @@ verify_jwt = false
 # Document expiry check - can be triggered by cron or manually
 [functions.check-document-expiry]
 verify_jwt = false
+
+# Audit logs - requires admin access
+[functions.get-audit-logs]
+verify_jwt = true

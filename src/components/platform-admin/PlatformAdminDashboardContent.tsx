@@ -7,6 +7,7 @@ import { PlatformAdminUserManagement } from './PlatformAdminUserManagement';
 import { PlatformAdminAnalytics } from './PlatformAdminAnalytics';
 import { PlatformAdminSystemSettings } from './PlatformAdminSystemSettings';
 import { PlatformAdminInvitations } from './PlatformAdminInvitations';
+import { PlatformAdminAuditLogs } from './PlatformAdminAuditLogs';
 
 export function PlatformAdminDashboardContent() {
   const [searchParams] = useSearchParams();
@@ -65,33 +66,7 @@ export function PlatformAdminDashboardContent() {
   }
 
   if (activeTab === 'logs') {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold mb-2 text-black">
-            Audit Logs
-          </h2>
-          <p className="text-gray-600">
-            Track system activities and user actions
-          </p>
-        </div>
-        
-        <Card style={{ 
-          backgroundColor: 'hsl(var(--admin-card))', 
-          borderColor: 'hsl(var(--admin-border))' 
-        }}>
-          <CardContent className="p-8 text-center">
-            <Activity className="h-12 w-12 mx-auto mb-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
-            <h3 className="text-lg font-semibold mb-2" style={{ color: 'hsl(var(--admin-text))' }}>
-              Audit Logs Coming Soon
-            </h3>
-            <p style={{ color: 'hsl(var(--admin-text-muted))' }}>
-              Comprehensive audit logging and activity tracking will be available in the next release.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <PlatformAdminAuditLogs />;
   }
 
   return (

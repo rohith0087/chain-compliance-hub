@@ -5,8 +5,9 @@ import { SuperAdminUserManagement } from '@/components/super-admin/SuperAdminUse
 import { SuperAdminAnalytics } from '@/components/super-admin/SuperAdminAnalytics';
 import { SuperAdminSystemSettings } from '@/components/super-admin/SuperAdminSystemSettings';
 import { SuperAdminClientSupport } from '@/components/super-admin/SuperAdminClientSupport';
+import { PlatformAdminAuditLogs } from '@/components/platform-admin/PlatformAdminAuditLogs';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Users, BarChart, Settings, HeadphonesIcon, Database } from 'lucide-react';
+import { Shield, Users, BarChart, Settings, HeadphonesIcon, Database, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect } from 'react';
@@ -136,7 +137,7 @@ const SuperAdminDashboard = () => {
 
         {/* Main Content */}
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
               User Management
@@ -144,6 +145,10 @@ const SuperAdminDashboard = () => {
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <BarChart className="w-4 h-4" />
               Analytics
+            </TabsTrigger>
+            <TabsTrigger value="logs" className="flex items-center gap-2">
+              <Activity className="w-4 h-4" />
+              Audit Logs
             </TabsTrigger>
             <TabsTrigger value="support" className="flex items-center gap-2">
               <HeadphonesIcon className="w-4 h-4" />
@@ -161,6 +166,10 @@ const SuperAdminDashboard = () => {
 
           <TabsContent value="analytics">
             <SuperAdminAnalytics />
+          </TabsContent>
+
+          <TabsContent value="logs">
+            <PlatformAdminAuditLogs />
           </TabsContent>
 
           <TabsContent value="support">

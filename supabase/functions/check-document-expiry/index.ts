@@ -234,6 +234,8 @@ serve(async (req) => {
         request_id,
         document_requests!inner (
           id,
+          title,
+          document_type,
           buyer_id,
           supplier_id,
           buyers!inner (
@@ -313,9 +315,12 @@ serve(async (req) => {
         continue;
       }
 
+      // Use request title for better notification messages
+      const documentTitle = request.title || doc.document_name || doc.file_name;
+
       const expiringDoc: ExpiringDocument = {
         id: doc.id,
-        document_name: doc.document_name || doc.file_name,
+        document_name: documentTitle,
         expiration_date: doc.expiration_date,
         file_name: doc.file_name,
         request_id: doc.request_id,
@@ -356,7 +361,7 @@ serve(async (req) => {
               title: tierLabels[tier],
               message: `"${expiringDoc.document_name}" ${tier === 'overdue' ? 'has expired' : `expires in ${daysUntilExpiry} days`}. Please upload an updated document.`,
               type: `document_expiry_${tier}`,
-              reference_id: doc.id,
+              reference_id: doc.request_id, // Use request_id for deep-linking to specific document
             });
 
           if (!notifError) {

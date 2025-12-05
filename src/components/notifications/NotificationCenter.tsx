@@ -83,7 +83,8 @@ const NotificationCenter = ({ onNavigate }: NotificationCenterProps) => {
     markAsRead(notification.id);
     
     const targetTab = getNotificationTargetTab(notification.type);
-    onNavigate?.(targetTab, notification.id);
+    // Pass reference_id for deep-linking to specific documents
+    onNavigate?.(targetTab, notification.reference_id || notification.id);
     
     setIsOpen(false);
   };

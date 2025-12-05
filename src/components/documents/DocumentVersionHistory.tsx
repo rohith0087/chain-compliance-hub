@@ -58,8 +58,21 @@ const DocumentVersionHistory = ({
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .map((upload, index, arr) => ({
       ...upload,
-      versionNumber: arr.length - index
+      versionNumber: arr.length - index,
+      uploadYear: new Date(upload.created_at).getFullYear()
     }));
+
+  // Group uploads by year
+  const uploadsByYear = sortedUploads.reduce((acc, upload) => {
+    const year = upload.uploadYear;
+    if (!acc[year]) acc[year] = [];
+    acc[year].push(upload);
+    return acc;
+  }, {} as Record<number, typeof sortedUploads>);
+
+  const sortedYears = Object.keys(uploadsByYear)
+    .map(Number)
+    .sort((a, b) => b - a); // Most recent year first
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -210,130 +223,151 @@ const DocumentVersionHistory = ({
         </SheetHeader>
 
         <ScrollArea className="h-[calc(100vh-140px)] mt-6 pr-4">
-          <div className="space-y-4">
-            {sortedUploads.map((upload, index) => {
-              const statusConfig = getStatusConfig(upload.status);
-              const StatusIcon = statusConfig.icon;
-              const isLatest = index === 0;
+          <div className="space-y-6">
+            {sortedYears.map((year, yearIndex) => (
+              <div key={year}>
+                {/* Year Header */}
+                <div className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 py-2 mb-3">
+                  <div className="flex items-center gap-2">
+                    <Badge 
+                      variant={yearIndex === 0 ? "default" : "secondary"}
+                      className="text-sm px-3 py-1"
+                    >
+                      {year}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {uploadsByYear[year].length} version{uploadsByYear[year].length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </div>
 
-              return (
-                <div 
-                  key={upload.id}
-                  className={`relative p-4 rounded-lg border ${
-                    isLatest ? 'border-primary/50 bg-primary/5' : 'border-border'
-                  }`}
-                >
-                  {/* Version indicator line */}
-                  {index < sortedUploads.length - 1 && (
-                    <div className="absolute left-7 top-16 w-0.5 h-[calc(100%-32px)] bg-border" />
-                  )}
+                <div className="space-y-4">
+                  {uploadsByYear[year].map((upload, index) => {
+                    const statusConfig = getStatusConfig(upload.status);
+                    const StatusIcon = statusConfig.icon;
+                    const isLatest = yearIndex === 0 && index === 0;
 
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      {/* Version number circle */}
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ${
-                        isLatest 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'bg-muted text-muted-foreground'
-                      }`}>
-                        V{upload.versionNumber}
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {isLatest && (
-                            <Badge variant="default" className="text-xs">
-                              Current
-                            </Badge>
-                          )}
-                          <Badge 
-                            variant="secondary" 
-                            className={`text-xs ${statusConfig.bgColor} ${statusConfig.color}`}
-                          >
-                            <StatusIcon className="w-3 h-3 mr-1" />
-                            {statusConfig.label}
-                          </Badge>
-                        </div>
-
-                        <p className="text-sm font-medium truncate max-w-[200px]">
-                          {upload.file_name}
-                        </p>
-
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{formatDate(upload.created_at)}</span>
-                          {upload.file_size && (
-                            <>
-                              <span>•</span>
-                              <span>{formatFileSize(upload.file_size)}</span>
-                            </>
-                          )}
-                        </div>
-
-                        {upload.uploader?.full_name && (
-                          <p className="text-xs text-muted-foreground">
-                            Uploaded by: {upload.uploader.full_name}
-                          </p>
+                    return (
+                      <div 
+                        key={upload.id}
+                        className={`relative p-4 rounded-lg border ${
+                          isLatest ? 'border-primary/50 bg-primary/5' : 'border-border'
+                        }`}
+                      >
+                        {/* Version indicator line */}
+                        {index < uploadsByYear[year].length - 1 && (
+                          <div className="absolute left-7 top-16 w-0.5 h-[calc(100%-32px)] bg-border" />
                         )}
 
-                        {/* Rejection reason */}
-                        {upload.status === 'rejected' && upload.reviewer_notes && (
-                          <div className="mt-2 p-2 rounded bg-red-50 border border-red-200 dark:bg-red-950/30 dark:border-red-900">
-                            <div className="flex items-start gap-2">
-                              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                              <div>
-                                <p className="text-xs font-medium text-red-800 dark:text-red-400">
-                                  Rejection Reason:
-                                </p>
-                                <p className="text-xs text-red-700 dark:text-red-300 mt-0.5">
-                                  {upload.reviewer_notes}
-                                </p>
-                              </div>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3">
+                            {/* Version number circle */}
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ${
+                              isLatest 
+                                ? 'bg-primary text-primary-foreground' 
+                                : 'bg-muted text-muted-foreground'
+                            }`}>
+                              V{upload.versionNumber}
                             </div>
+
+                            <div className="space-y-1.5">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {isLatest && (
+                                  <Badge variant="default" className="text-xs">
+                                    Current
+                                  </Badge>
+                                )}
+                                <Badge 
+                                  variant="secondary" 
+                                  className={`text-xs ${statusConfig.bgColor} ${statusConfig.color}`}
+                                >
+                                  <StatusIcon className="w-3 h-3 mr-1" />
+                                  {statusConfig.label}
+                                </Badge>
+                              </div>
+
+                              <p className="text-sm font-medium truncate max-w-[200px]">
+                                {upload.file_name}
+                              </p>
+
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span>{formatDate(upload.created_at)}</span>
+                                {upload.file_size && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{formatFileSize(upload.file_size)}</span>
+                                  </>
+                                )}
+                              </div>
+
+                              {upload.uploader?.full_name && (
+                                <p className="text-xs text-muted-foreground">
+                                  Uploaded by: {upload.uploader.full_name}
+                                </p>
+                              )}
+
+                              {/* Rejection reason */}
+                              {upload.status === 'rejected' && upload.reviewer_notes && (
+                                <div className="mt-2 p-2 rounded bg-red-50 border border-red-200 dark:bg-red-950/30 dark:border-red-900">
+                                  <div className="flex items-start gap-2">
+                                    <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                                    <div>
+                                      <p className="text-xs font-medium text-red-800 dark:text-red-400">
+                                        Rejection Reason:
+                                      </p>
+                                      <p className="text-xs text-red-700 dark:text-red-300 mt-0.5">
+                                        {upload.reviewer_notes}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Action buttons */}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewVersion(upload)}
+                              disabled={viewingId === upload.id}
+                              title="View document"
+                            >
+                              {viewingId === upload.id ? (
+                                <Clock className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Eye className="w-4 h-4" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDownloadVersion(upload)}
+                              disabled={downloadingId === upload.id}
+                              title="Download document"
+                            >
+                              {downloadingId === upload.id ? (
+                                <Clock className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Download className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Expiration date */}
+                        {upload.expiration_date && (
+                          <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
+                            Expiration: {new Date(upload.expiration_date).toLocaleDateString()}
                           </div>
                         )}
                       </div>
-                    </div>
-
-                    {/* Action buttons */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewVersion(upload)}
-                        disabled={viewingId === upload.id}
-                        title="View document"
-                      >
-                        {viewingId === upload.id ? (
-                          <Clock className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Eye className="w-4 h-4" />
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDownloadVersion(upload)}
-                        disabled={downloadingId === upload.id}
-                        title="Download document"
-                      >
-                        {downloadingId === upload.id ? (
-                          <Clock className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Download className="w-4 h-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Expiration date */}
-                  {upload.expiration_date && (
-                    <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
-                      Expiration: {new Date(upload.expiration_date).toLocaleDateString()}
-                    </div>
-                  )}
+                    );
+                  })}
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </ScrollArea>
       </SheetContent>

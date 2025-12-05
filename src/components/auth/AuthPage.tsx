@@ -495,8 +495,8 @@ const AuthPage = () => {
                             <Checkbox 
                               id="buyer-role-signup"
                               checked={selectedRoles.includes('buyer')}
-                              onCheckedChange={() => toggleRole('buyer')}
                               disabled={loading}
+                              className="pointer-events-none"
                             />
                             <ShoppingCart className="w-4 h-4 text-primary" />
                           </div>
@@ -516,8 +516,8 @@ const AuthPage = () => {
                             <Checkbox 
                               id="supplier-role-signup"
                               checked={selectedRoles.includes('supplier')}
-                              onCheckedChange={() => toggleRole('supplier')}
                               disabled={loading}
+                              className="pointer-events-none"
                             />
                             <Building2 className="w-4 h-4 text-primary" />
                           </div>

@@ -88,11 +88,36 @@ export const TicketSubmissionModal = ({ isOpen, onClose, source, user }: TicketS
         metadata,
       };
 
-      const { error } = await supabase
+      const { data: insertedTicket, error } = await supabase
         .from('support_tickets')
-        .insert(ticketData);
+        .insert(ticketData)
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Send email notification to all platform admins
+      try {
+        await supabase.functions.invoke('send-ticket-notification', {
+          body: {
+            action: 'ticket_created',
+            ticketId: insertedTicket.id,
+            ticketSubject: subject.trim(),
+            ticketDescription: description.trim(),
+            ticketPriority: priority,
+            ticketSource: source,
+            userEmail: user?.email,
+            userName: user?.name,
+            companyId: user?.companyId,
+            companyName: user?.companyName,
+            companyType: user?.userType === 'buyer' ? 'buyer' : user?.userType === 'supplier' ? 'supplier' : undefined,
+          }
+        });
+        console.log('Admin notification sent successfully');
+      } catch (notifError) {
+        console.error('Failed to send admin notification:', notifError);
+        // Don't fail the ticket submission if notification fails
+      }
 
       setSubmitted(true);
       toast({

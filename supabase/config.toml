@@ -137,3 +137,7 @@ verify_jwt = false
 # Audit logs - requires admin access
 [functions.get-audit-logs]
 verify_jwt = true
+
+# Support ticket notifications - public (called after ticket creation by anyone)
+[functions.send-ticket-notification]
+verify_jwt = false

@@ -87,9 +87,36 @@ export const useSupportTickets = (options: UseSupportTicketsOptions = {}) => {
 
       if (error) throw error;
 
+      // Find the ticket to get details for notification
+      const ticket = tickets.find(t => t.id === ticketId);
+
+      // Update local state
       setTickets(prev => prev.map(t => 
         t.id === ticketId ? { ...t, ...updateData } : t
       ));
+
+      // Send resolution notification if ticket is resolved/closed
+      if ((status === 'resolved' || status === 'closed') && ticket) {
+        try {
+          await supabase.functions.invoke('send-ticket-notification', {
+            body: {
+              action: 'ticket_resolved',
+              ticketId,
+              ticketSubject: ticket.subject,
+              resolutionNotes,
+              userEmail: ticket.user_email,
+              userName: ticket.user_name,
+              companyId: ticket.company_id,
+              companyName: ticket.company_name,
+              companyType: ticket.user_type === 'buyer' ? 'buyer' : ticket.user_type === 'supplier' ? 'supplier' : undefined,
+            }
+          });
+          console.log('Resolution notification sent successfully');
+        } catch (notifError) {
+          console.error('Failed to send resolution notification:', notifError);
+          // Don't fail the status update if notification fails
+        }
+      }
 
       toast({
         title: "Status Updated",

@@ -50,10 +50,6 @@ backend = "postgres"
 # CRITICAL SECURITY: Functions requiring JWT
 # ============================================
 
-# DANGER: Admin-only function - requires super_admin role
-[functions.cleanup-all-auth-users]
-verify_jwt = true
-
 # Document download - requires buyer/team member access validation
 [functions.bulk-document-downloader]
 verify_jwt = true
@@ -70,6 +66,9 @@ verify_jwt = true
 
 # Chat functions - require user/company validation
 [functions.simple-rag-chat]
+verify_jwt = true
+
+[functions.rag-chat]
 verify_jwt = true
 
 [functions.chat-session-manager]
@@ -118,6 +117,44 @@ verify_jwt = true
 [functions.manage-subscription]
 verify_jwt = true
 
+# Document processing - require authentication
+[functions.document-analyzer]
+verify_jwt = true
+
+[functions.document-content-extractor]
+verify_jwt = true
+
+[functions.bulk-document-processor]
+verify_jwt = true
+
+[functions.secure-document-url]
+verify_jwt = true
+
+# Knowledge base - require authentication
+[functions.knowledge-populator]
+verify_jwt = true
+
+[functions.knowledge-refresh]
+verify_jwt = true
+
+# Notification functions - require authentication
+[functions.send-expiry-notification]
+verify_jwt = true
+
+[functions.send-rejection-notification]
+verify_jwt = true
+
+[functions.send-document-request-notification]
+verify_jwt = true
+
+# Audit logs - requires admin access
+[functions.get-audit-logs]
+verify_jwt = true
+
+# Execute chat action - requires authentication
+[functions.execute-chat-action]
+verify_jwt = true
+
 # ============================================
 # PUBLIC FUNCTIONS (with their own validation)
 # ============================================
@@ -134,10 +171,10 @@ verify_jwt = false
 [functions.check-document-expiry]
 verify_jwt = false
 
-# Audit logs - requires admin access
-[functions.get-audit-logs]
-verify_jwt = true
-
 # Support ticket notifications - public (called after ticket creation by anyone)
 [functions.send-ticket-notification]
+verify_jwt = false
+
+# Password reset - public for forgot password flow
+[functions.send-password-reset]
 verify_jwt = false

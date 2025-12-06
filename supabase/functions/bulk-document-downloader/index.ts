@@ -78,7 +78,7 @@ serve(async (req) => {
     // Admin client for database operations
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
-    // User client for auth validation
+    // Get user from JWT - already validated by Supabase (verify_jwt = true)
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error('Missing authorization header');
@@ -88,15 +88,24 @@ serve(async (req) => {
       );
     }
 
-    // Create a user-scoped client to validate the JWT
-    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
+    // Decode JWT to get user info (JWT is already validated by Supabase)
+    const token = authHeader.replace('Bearer ', '');
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token format' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
-    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
+    const payload = JSON.parse(atob(parts[1]));
+    const user = {
+      id: payload.sub,
+      email: payload.email
+    };
     
-    if (authError || !user) {
-      console.error('Invalid authentication:', authError);
+    if (!user.id) {
+      console.error('No user ID in token');
       return new Response(
         JSON.stringify({ error: 'Invalid authentication' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -53,39 +53,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-  const [adminRole, setAdminRole] = useState<string | null>(null);
-  const [checkingRole, setCheckingRole] = useState(true);
 
-  useEffect(() => {
-    const checkAdminRole = async () => {
-      if (!user) {
-        setCheckingRole(false);
-        return;
-      }
-
-      try {
-        const { data } = await supabase
-          .from('platform_administrators')
-          .select('platform_roles, is_active')
-          .eq('auth_user_id', user.id)
-          .eq('is_active', true)
-          .single();
-
-        if (data?.is_active && data?.platform_roles?.includes('super_admin')) {
-          setAdminRole('super_admin');
-        } else if (data?.is_active && data?.platform_roles?.includes('platform_admin')) {
-          setAdminRole('platform_admin');
-        }
-      } catch (error) {
-        // Not a platform admin, that's fine
-      }
-      setCheckingRole(false);
-    };
-
-    checkAdminRole();
-  }, [user]);
-
-  if (loading || checkingRole) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -93,13 +62,9 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
+  // Platform admins use /platform-admin/login separately
+  // Regular users simply redirect to dashboard
   if (user) {
-    if (adminRole === 'super_admin') {
-      return <Navigate to="/super-admin" replace />;
-    }
-    if (adminRole === 'platform_admin') {
-      return <Navigate to="/platform-admin/dashboard" replace />;
-    }
     return <Navigate to="/dashboard" replace />;
   }
 

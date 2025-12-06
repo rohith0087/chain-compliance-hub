@@ -21,7 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import DocumentCard from './DocumentCard';
 import DocumentTimeline from './DocumentTimeline';
-import DocumentRoadmap from './DocumentRoadmap';
+
 
 const SupplierDocumentsDashboard = () => {
   const [documents, setDocuments] = useState<any[]>([]);
@@ -282,35 +282,6 @@ const SupplierDocumentsDashboard = () => {
     documentTitle: doc.title
   }));
 
-  // Generate roadmap items with proper status mapping
-  const roadmapItems = documents
-    .filter(doc => doc.status !== 'approved')
-    .map(doc => {
-      let roadmapStatus: 'pending' | 'completed' | 'in_progress' | 'overdue';
-      
-      switch (doc.status) {
-        case 'pending':
-          roadmapStatus = 'pending';
-          break;
-        case 'submitted':
-          roadmapStatus = 'in_progress';
-          break;
-        case 'rejected':
-          roadmapStatus = 'overdue';
-          break;
-        default:
-          roadmapStatus = 'pending';
-      }
-
-      return {
-        id: doc.id,
-        title: doc.title,
-        status: roadmapStatus,
-        dueDate: doc.due_date,
-        description: `${doc.document_type} for ${doc.buyers?.company_name || 'Unknown Buyer'}`,
-        priority: (doc.priority || 'medium') as 'high' | 'medium' | 'low'
-      };
-    });
 
   if (loading) {
     return <div className="flex items-center justify-center h-64">Loading documents...</div>;
@@ -425,7 +396,6 @@ const SupplierDocumentsDashboard = () => {
         <TabsList>
           <TabsTrigger value="documents">All Documents</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
-          <TabsTrigger value="roadmap">Roadmap</TabsTrigger>
           <TabsTrigger value="expiring">Expiring Documents</TabsTrigger>
         </TabsList>
 
@@ -675,13 +645,6 @@ const SupplierDocumentsDashboard = () => {
 
         <TabsContent value="timeline">
           <DocumentTimeline events={timelineEvents} />
-        </TabsContent>
-
-        <TabsContent value="roadmap">
-          <DocumentRoadmap 
-            items={roadmapItems}
-            title="Document Submission Progress"
-          />
         </TabsContent>
 
         <TabsContent value="expiring">

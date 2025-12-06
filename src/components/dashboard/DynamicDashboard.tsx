@@ -114,6 +114,17 @@ const DynamicDashboard = () => {
         const teamRole = data.company_type === 'buyer' ? 'buyer' : 'supplier';
         console.log('Setting team member role to:', teamRole);
         setCurrentRole(teamRole);
+      } else {
+        // For company owners (non-team members), set role based on roles array
+        // Priority: if they have 'supplier' role, default to supplier
+        // This prevents suppliers from seeing buyer dashboard on first login
+        if (roles.includes('supplier' as any)) {
+          console.log('Setting company owner role to: supplier');
+          setCurrentRole('supplier');
+        } else if (roles.includes('buyer' as any)) {
+          console.log('Setting company owner role to: buyer');
+          setCurrentRole('buyer');
+        }
       }
     } catch (error) {
       console.error('Error in checkTeamMembership:', error);

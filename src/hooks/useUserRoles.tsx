@@ -38,13 +38,44 @@ export const useUserRoles = () => {
 
       if (error) {
         console.error('Error fetching user roles:', error);
+      }
+
+      // If user_roles has data, use it (authoritative source)
+      if (data && data.length > 0) {
+        setRoleDetails(data);
+        setRoles(data.map((r: UserRole) => r.role));
+        return;
+      }
+
+      // Fallback: Check profile.roles if user_roles is empty
+      console.warn('user_roles table empty, checking profile.roles fallback');
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('roles')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching profile roles:', profileError);
         setRoles([]);
         setRoleDetails([]);
         return;
       }
 
-      setRoleDetails(data || []);
-      setRoles((data || []).map((r: UserRole) => r.role));
+      if (profileData?.roles && profileData.roles.length > 0) {
+        console.log('Using profile.roles as fallback:', profileData.roles);
+        // Convert to AppRole[] and set
+        const fallbackRoles = profileData.roles as AppRole[];
+        setRoles(fallbackRoles);
+        setRoleDetails(fallbackRoles.map(role => ({
+          role,
+          granted_at: new Date().toISOString(),
+          expires_at: null
+        })));
+      } else {
+        setRoles([]);
+        setRoleDetails([]);
+      }
     } catch (err) {
       console.error('Error in fetchUserRoles:', err);
       setRoles([]);

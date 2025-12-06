@@ -69,6 +69,7 @@ import NotificationCenter from '@/components/notifications/NotificationCenter';
 import { SubscriptionStatusWidget } from '@/components/subscription/SubscriptionStatusWidget';
 import { BranchSelector } from '@/components/company/BranchSelector';
 import { HelpButton } from '@/components/support/HelpButton';
+import { CommandPaletteSearch } from './CommandPaletteSearch';
 
 interface NavigationItem {
   title: string;
@@ -500,18 +501,15 @@ export function BuyerSidebarLayout({
             <div className="flex items-center gap-4">
               <SidebarTrigger className="-ml-1" />
               
-              {/* Global Search Bar */}
+              {/* Global Search Bar - Command Palette */}
               <div className="hidden md:block">
-                <Button 
-                  variant="outline" 
-                  className="w-64 justify-start text-muted-foreground border-border/50 hover:border-primary/30 bg-muted/30"
-                >
-                  <Search className="h-4 w-4 mr-2" />
-                  Search...
-                  <kbd className="ml-auto pointer-events-none hidden xl:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100">
-                    ⌘K
-                  </kbd>
-                </Button>
+                <CommandPaletteSearch
+                  onTabChange={onTabChange}
+                  onShowRequestForm={onShowRequestForm}
+                  onShowSettings={onShowSettings}
+                  onShowQuickOnboarding={onShowQuickOnboarding}
+                  onShowBulkInvite={onShowBulkInvite}
+                />
               </div>
 
               {branches.length > 1 && (

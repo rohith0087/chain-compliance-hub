@@ -9,6 +9,11 @@ const corsHeaders = {
 interface BulkDownloadRequest {
   documentIds: string[];
   filterDescription: string;
+  organizeFolders?: boolean;
+  documentMetadata?: Array<{
+    title: string;
+    uploadIds: string[];
+  }>;
 }
 
 interface ResolvedStoragePath {
@@ -192,7 +197,7 @@ serve(async (req) => {
 
     console.log('User company access - Buyer:', userBuyerId, 'Supplier:', userSupplierId);
 
-    const { documentIds, filterDescription }: BulkDownloadRequest = await req.json();
+    const { documentIds, filterDescription, organizeFolders = true, documentMetadata }: BulkDownloadRequest = await req.json();
     
     if (!documentIds || documentIds.length === 0) {
       return new Response(
@@ -201,7 +206,22 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Processing bulk download for ${documentIds.length} documents`);
+    console.log(`Processing bulk download for ${documentIds.length} documents, organizeFolders: ${organizeFolders}`);
+    
+    // Create a map of upload ID to document metadata for folder organization
+    const uploadIdToMetadata = new Map<string, { title: string; versionIndex: number; totalVersions: number }>();
+    if (documentMetadata) {
+      for (const meta of documentMetadata) {
+        const totalVersions = meta.uploadIds.length;
+        meta.uploadIds.forEach((uploadId, index) => {
+          uploadIdToMetadata.set(uploadId, {
+            title: meta.title,
+            versionIndex: totalVersions - index, // Reverse order: latest version gets highest number
+            totalVersions
+          });
+        });
+      }
+    }
 
     // Fetch document details from database with access validation
     let query = supabaseAdmin
@@ -323,12 +343,38 @@ serve(async (req) => {
             const fileContent = new Uint8Array(await fileResponse.arrayBuffer());
             console.log(`Successfully fetched file content, size: ${fileContent.length} bytes`);
             
-            const supplierName = doc.document_requests.suppliers.company_name
-              .replace(/[^a-zA-Z0-9\-_]/g, '_')
-              .substring(0, 50);
-            
             const originalFileName = doc.file_name || `document_${doc.id}`;
-            const safeFileName = `${supplierName}/${originalFileName}`;
+            let safeFileName: string;
+            
+            if (organizeFolders) {
+              // Get metadata for this upload to determine folder and version prefix
+              const metadata = uploadIdToMetadata.get(doc.id);
+              
+              if (metadata) {
+                // Use document title as folder name
+                const folderName = metadata.title
+                  .replace(/[^a-zA-Z0-9\-_ ]/g, '_')
+                  .substring(0, 50)
+                  .trim();
+                
+                // Add version prefix if multiple versions exist
+                const versionPrefix = metadata.totalVersions > 1 ? `v${metadata.versionIndex}_` : '';
+                safeFileName = `${folderName}/${versionPrefix}${originalFileName}`;
+              } else {
+                // Fallback: use document_requests.title if metadata not available
+                const docTitle = doc.document_requests.title
+                  .replace(/[^a-zA-Z0-9\-_ ]/g, '_')
+                  .substring(0, 50)
+                  .trim();
+                safeFileName = `${docTitle}/${originalFileName}`;
+              }
+            } else {
+              // Flat structure - just the filename with supplier prefix
+              const supplierName = doc.document_requests.suppliers.company_name
+                .replace(/[^a-zA-Z0-9\-_]/g, '_')
+                .substring(0, 50);
+              safeFileName = `${supplierName}_${originalFileName}`;
+            }
 
             const entry = createZipEntry(safeFileName, fileContent, offset);
             zipEntries.push(entry.localFileHeader);

@@ -55,6 +55,7 @@ const BuyerDocumentsManager = ({
   const [isBulkDownloading, setIsBulkDownloading] = useState(false);
   const [showVersionDialog, setShowVersionDialog] = useState(false);
   const [downloadMode, setDownloadMode] = useState<'current' | 'all'>('current');
+  const [organizeFolders, setOrganizeFolders] = useState(true);
   const { toast } = useToast();
 
   // Enhanced filter logic with new filter options
@@ -499,23 +500,38 @@ const BuyerDocumentsManager = ({
 
       const filterDescription = filterParts.join('_') || 'Documents';
 
-      // Get document upload IDs based on download mode
+      // Get document upload IDs and metadata based on download mode
       let uploadIds: string[] = [];
+      const documentMetadata: Array<{ title: string; uploadIds: string[] }> = [];
       
       Array.from(selectedDocuments).forEach(docId => {
         const doc = documents.find(d => d.id === docId);
         if (!doc?.document_uploads?.length) return;
         
+        const docUploadIds: string[] = [];
+        
         if (mode === 'all') {
           // Include all versions
           doc.document_uploads.forEach((upload: any) => {
-            if (upload?.id) uploadIds.push(upload.id);
+            if (upload?.id) {
+              uploadIds.push(upload.id);
+              docUploadIds.push(upload.id);
+            }
           });
         } else {
           // Include only latest version (first in array)
           if (doc.document_uploads[0]?.id) {
             uploadIds.push(doc.document_uploads[0].id);
+            docUploadIds.push(doc.document_uploads[0].id);
           }
+        }
+        
+        // Collect metadata for folder organization
+        if (docUploadIds.length > 0) {
+          documentMetadata.push({
+            title: doc.title || doc.document_type || 'Documents',
+            uploadIds: docUploadIds
+          });
         }
       });
 
@@ -532,7 +548,9 @@ const BuyerDocumentsManager = ({
         },
         body: JSON.stringify({
           documentIds: uploadIds,
-          filterDescription
+          filterDescription,
+          organizeFolders,
+          documentMetadata
         })
       });
 
@@ -597,6 +615,8 @@ const BuyerDocumentsManager = ({
         totalSelected={selectedDocuments.size}
         downloadMode={downloadMode}
         onDownloadModeChange={setDownloadMode}
+        organizeFolders={organizeFolders}
+        onOrganizeFoldersChange={setOrganizeFolders}
         onConfirm={() => executeBulkDownload(downloadMode)}
       />
 

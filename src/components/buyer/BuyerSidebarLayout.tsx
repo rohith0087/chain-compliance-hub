@@ -503,13 +503,27 @@ export function BuyerSidebarLayout({
               
               {/* Global Search Bar - Command Palette */}
               <div className="hidden md:block">
-                <CommandPaletteSearch
-                  onTabChange={onTabChange}
-                  onShowRequestForm={onShowRequestForm}
-                  onShowSettings={onShowSettings}
-                  onShowQuickOnboarding={onShowQuickOnboarding}
-                  onShowBulkInvite={onShowBulkInvite}
-                />
+              <CommandPaletteSearch
+                onTabChange={onTabChange}
+                onShowRequestForm={onShowRequestForm}
+                onShowSettings={onShowSettings}
+                onShowQuickOnboarding={onShowQuickOnboarding}
+                onShowBulkInvite={onShowBulkInvite}
+                buyerId={resolvedCompanyId || buyerProfile?.id}
+                onSelectSupplier={(supplierId, supplierName) => {
+                  // Navigate to suppliers tab - could enhance to open detail modal
+                  onTabChange('suppliers');
+                }}
+                onSelectDocument={(documentId) => {
+                  // Navigate to documents tab with highlight
+                  sessionStorage.setItem('highlight_document_request_id', documentId);
+                  onTabChange('documents');
+                }}
+                onSelectOnboarding={(requestId) => {
+                  // Navigate to onboarding tab
+                  onTabChange('onboarding');
+                }}
+              />
               </div>
 
               {branches.length > 1 && (

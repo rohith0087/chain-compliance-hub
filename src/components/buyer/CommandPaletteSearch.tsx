@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Home,
@@ -19,7 +19,10 @@ import {
   FileText,
   FolderKanban,
   Package,
-  ListChecks
+  ListChecks,
+  Clock,
+  ArrowRight,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,6 +34,8 @@ import {
   CommandList,
   CommandSeparator,
 } from '@/components/ui/command';
+import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CommandPaletteSearchProps {
   onTabChange: (tab: string) => void;
@@ -38,6 +43,38 @@ interface CommandPaletteSearchProps {
   onShowSettings: () => void;
   onShowQuickOnboarding: () => void;
   onShowBulkInvite: () => void;
+  buyerId?: string;
+  onSelectSupplier?: (supplierId: string, supplierName: string) => void;
+  onSelectDocument?: (documentId: string) => void;
+  onSelectOnboarding?: (requestId: string) => void;
+}
+
+interface SupplierResult {
+  id: string;
+  company_name: string;
+  status: string;
+}
+
+interface DocumentResult {
+  id: string;
+  title: string;
+  document_type: string;
+  status: string;
+  supplier_name?: string;
+}
+
+interface OnboardingResult {
+  id: string;
+  supplier_company_name: string | null;
+  supplier_email: string;
+  status: string;
+}
+
+interface RecentItem {
+  type: 'supplier' | 'document' | 'navigation';
+  id: string;
+  title: string;
+  timestamp: number;
 }
 
 const navigationItems = [
@@ -66,15 +103,52 @@ const quickActions = [
   { title: 'Open Settings', action: 'settings', icon: Settings, keywords: ['preferences', 'account'] },
 ];
 
+const RECENT_ITEMS_KEY = 'command_palette_recent';
+const MAX_RECENT_ITEMS = 5;
+
 export function CommandPaletteSearch({
   onTabChange,
   onShowRequestForm,
   onShowSettings,
   onShowQuickOnboarding,
-  onShowBulkInvite
+  onShowBulkInvite,
+  buyerId,
+  onSelectSupplier,
+  onSelectDocument,
+  onSelectOnboarding
 }: CommandPaletteSearchProps) {
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const navigate = useNavigate();
+
+  // Dynamic search results
+  const [suppliers, setSuppliers] = useState<SupplierResult[]>([]);
+  const [documents, setDocuments] = useState<DocumentResult[]>([]);
+  const [onboardingRequests, setOnboardingRequests] = useState<OnboardingResult[]>([]);
+  const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
+
+  // Load recent items from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem(RECENT_ITEMS_KEY);
+    if (stored) {
+      try {
+        setRecentItems(JSON.parse(stored));
+      } catch {
+        setRecentItems([]);
+      }
+    }
+  }, [open]);
+
+  // Save recent item
+  const addRecentItem = useCallback((item: Omit<RecentItem, 'timestamp'>) => {
+    setRecentItems(prev => {
+      const filtered = prev.filter(r => !(r.type === item.type && r.id === item.id));
+      const newItems = [{ ...item, timestamp: Date.now() }, ...filtered].slice(0, MAX_RECENT_ITEMS);
+      localStorage.setItem(RECENT_ITEMS_KEY, JSON.stringify(newItems));
+      return newItems;
+    });
+  }, []);
 
   // Keyboard shortcut ⌘K / Ctrl+K
   useEffect(() => {
@@ -89,7 +163,99 @@ export function CommandPaletteSearch({
     return () => document.removeEventListener('keydown', down);
   }, []);
 
-  const handleNavigation = (value: string) => {
+  // Debounced search
+  useEffect(() => {
+    if (!searchQuery || searchQuery.length < 2 || !buyerId) {
+      setSuppliers([]);
+      setDocuments([]);
+      setOnboardingRequests([]);
+      return;
+    }
+
+    const searchTimer = setTimeout(async () => {
+      setIsSearching(true);
+      const query = searchQuery.toLowerCase();
+
+      try {
+        // Search suppliers
+        const { data: connectionData } = await supabase
+          .from('buyer_supplier_connections')
+          .select(`
+            id,
+            status,
+            supplier:suppliers(id, company_name)
+          `)
+          .eq('buyer_id', buyerId)
+          .limit(5);
+
+        if (connectionData) {
+          const filteredSuppliers = connectionData
+            .filter(c => c.supplier?.company_name?.toLowerCase().includes(query))
+            .map(c => ({
+              id: c.supplier?.id || '',
+              company_name: c.supplier?.company_name || '',
+              status: c.status
+            }));
+          setSuppliers(filteredSuppliers);
+        }
+
+        // Search documents
+        const { data: documentData } = await supabase
+          .from('document_requests')
+          .select(`
+            id,
+            title,
+            document_type,
+            status,
+            supplier:suppliers(company_name)
+          `)
+          .eq('buyer_id', buyerId)
+          .ilike('title', `%${query}%`)
+          .limit(5);
+
+        if (documentData) {
+          setDocuments(documentData.map(d => ({
+            id: d.id,
+            title: d.title,
+            document_type: d.document_type,
+            status: d.status || 'pending',
+            supplier_name: d.supplier?.company_name
+          })));
+        }
+
+        // Search onboarding requests
+        const { data: onboardingData } = await supabase
+          .from('supplier_onboarding_requests')
+          .select('id, supplier_company_name, supplier_email, status')
+          .eq('buyer_id', buyerId)
+          .or(`supplier_company_name.ilike.%${query}%,supplier_email.ilike.%${query}%`)
+          .limit(5);
+
+        if (onboardingData) {
+          setOnboardingRequests(onboardingData);
+        }
+      } catch (error) {
+        console.error('Search error:', error);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(searchTimer);
+  }, [searchQuery, buyerId]);
+
+  // Reset search when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setSearchQuery('');
+      setSuppliers([]);
+      setDocuments([]);
+      setOnboardingRequests([]);
+    }
+  }, [open]);
+
+  const handleNavigation = (value: string, title: string) => {
+    addRecentItem({ type: 'navigation', id: value, title });
     onTabChange(value);
     setOpen(false);
   };
@@ -112,6 +278,64 @@ export function CommandPaletteSearch({
     }
   };
 
+  const handleSupplierSelect = (supplier: SupplierResult) => {
+    addRecentItem({ type: 'supplier', id: supplier.id, title: supplier.company_name });
+    if (onSelectSupplier) {
+      onSelectSupplier(supplier.id, supplier.company_name);
+    } else {
+      onTabChange('suppliers');
+    }
+    setOpen(false);
+  };
+
+  const handleDocumentSelect = (doc: DocumentResult) => {
+    addRecentItem({ type: 'document', id: doc.id, title: doc.title });
+    if (onSelectDocument) {
+      onSelectDocument(doc.id);
+    } else {
+      onTabChange('documents');
+    }
+    setOpen(false);
+  };
+
+  const handleOnboardingSelect = (request: OnboardingResult) => {
+    if (onSelectOnboarding) {
+      onSelectOnboarding(request.id);
+    } else {
+      onTabChange('onboarding');
+    }
+    setOpen(false);
+  };
+
+  const handleRecentSelect = (item: RecentItem) => {
+    if (item.type === 'navigation') {
+      onTabChange(item.id);
+    } else if (item.type === 'supplier' && onSelectSupplier) {
+      onSelectSupplier(item.id, item.title);
+    } else if (item.type === 'document' && onSelectDocument) {
+      onSelectDocument(item.id);
+    }
+    setOpen(false);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'approved':
+      case 'completed':
+        return 'bg-green-500/10 text-green-500 border-green-500/20';
+      case 'pending':
+      case 'invited':
+        return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+      case 'rejected':
+        return 'bg-red-500/10 text-red-500 border-red-500/20';
+      default:
+        return 'bg-muted text-muted-foreground';
+    }
+  };
+
+  const hasSearchResults = suppliers.length > 0 || documents.length > 0 || onboardingRequests.length > 0;
+  const isTyping = searchQuery.length >= 2;
+
   return (
     <>
       <Button
@@ -120,7 +344,7 @@ export function CommandPaletteSearch({
         onClick={() => setOpen(true)}
       >
         <Search className="mr-2 h-4 w-4" />
-        <span className="hidden lg:inline-flex">Search...</span>
+        <span className="hidden lg:inline-flex">Search everything...</span>
         <span className="inline-flex lg:hidden">Search...</span>
         <kbd className="pointer-events-none absolute right-[0.3rem] top-[0.3rem] hidden h-6 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
           <span className="text-xs">⌘</span>K
@@ -128,10 +352,155 @@ export function CommandPaletteSearch({
       </Button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Search navigation, actions..." />
+        <CommandInput 
+          placeholder="Search suppliers, documents, actions..." 
+          value={searchQuery}
+          onValueChange={setSearchQuery}
+        />
         <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
+          {isSearching && (
+            <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Searching...
+            </div>
+          )}
+
+          {!isSearching && isTyping && !hasSearchResults && (
+            <CommandEmpty>
+              No results found for "{searchQuery}"
+            </CommandEmpty>
+          )}
+
+          {/* Dynamic Search Results - Suppliers */}
+          {suppliers.length > 0 && (
+            <>
+              <CommandGroup heading="Suppliers">
+                {suppliers.map((supplier) => (
+                  <CommandItem
+                    key={supplier.id}
+                    value={`supplier-${supplier.company_name}`}
+                    onSelect={() => handleSupplierSelect(supplier)}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <span>{supplier.company_name}</span>
+                    </div>
+                    <Badge variant="outline" className={getStatusColor(supplier.status)}>
+                      {supplier.status}
+                    </Badge>
+                  </CommandItem>
+                ))}
+                <CommandItem
+                  value="view-all-suppliers"
+                  onSelect={() => handleNavigation('suppliers', 'Suppliers')}
+                  className="text-muted-foreground"
+                >
+                  <ArrowRight className="mr-2 h-4 w-4" />
+                  View all suppliers
+                </CommandItem>
+              </CommandGroup>
+              <CommandSeparator />
+            </>
+          )}
+
+          {/* Dynamic Search Results - Documents */}
+          {documents.length > 0 && (
+            <>
+              <CommandGroup heading="Documents">
+                {documents.map((doc) => (
+                  <CommandItem
+                    key={doc.id}
+                    value={`document-${doc.title}`}
+                    onSelect={() => handleDocumentSelect(doc)}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FileCheck className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex flex-col">
+                        <span className="text-sm">{doc.title}</span>
+                        {doc.supplier_name && (
+                          <span className="text-xs text-muted-foreground">{doc.supplier_name}</span>
+                        )}
+                      </div>
+                    </div>
+                    <Badge variant="outline" className={getStatusColor(doc.status)}>
+                      {doc.status}
+                    </Badge>
+                  </CommandItem>
+                ))}
+                <CommandItem
+                  value="view-all-documents"
+                  onSelect={() => handleNavigation('documents', 'Documents')}
+                  className="text-muted-foreground"
+                >
+                  <ArrowRight className="mr-2 h-4 w-4" />
+                  View all documents
+                </CommandItem>
+              </CommandGroup>
+              <CommandSeparator />
+            </>
+          )}
+
+          {/* Dynamic Search Results - Onboarding */}
+          {onboardingRequests.length > 0 && (
+            <>
+              <CommandGroup heading="Onboarding Pipeline">
+                {onboardingRequests.map((request) => (
+                  <CommandItem
+                    key={request.id}
+                    value={`onboarding-${request.supplier_company_name}-${request.supplier_email}`}
+                    onSelect={() => handleOnboardingSelect(request)}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                      <GitBranch className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex flex-col">
+                        <span className="text-sm">{request.supplier_company_name || 'Unnamed Supplier'}</span>
+                        <span className="text-xs text-muted-foreground">{request.supplier_email}</span>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className={getStatusColor(request.status)}>
+                      {request.status}
+                    </Badge>
+                  </CommandItem>
+                ))}
+                <CommandItem
+                  value="view-all-onboarding"
+                  onSelect={() => handleNavigation('onboarding', 'Onboarding Pipeline')}
+                  className="text-muted-foreground"
+                >
+                  <ArrowRight className="mr-2 h-4 w-4" />
+                  View onboarding pipeline
+                </CommandItem>
+              </CommandGroup>
+              <CommandSeparator />
+            </>
+          )}
+
+          {/* Recent Items - Show when not typing */}
+          {!isTyping && recentItems.length > 0 && (
+            <>
+              <CommandGroup heading="Recent">
+                {recentItems.map((item) => (
+                  <CommandItem
+                    key={`${item.type}-${item.id}`}
+                    value={`recent-${item.title}`}
+                    onSelect={() => handleRecentSelect(item)}
+                  >
+                    <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <span>{item.title}</span>
+                    <Badge variant="outline" className="ml-auto text-xs">
+                      {item.type}
+                    </Badge>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+              <CommandSeparator />
+            </>
+          )}
           
+          {/* Quick Actions - Always visible */}
           <CommandGroup heading="Quick Actions">
             {quickActions.map((item) => (
               <CommandItem
@@ -147,12 +516,13 @@ export function CommandPaletteSearch({
 
           <CommandSeparator />
           
+          {/* Navigation - Always visible */}
           <CommandGroup heading="Navigation">
             {navigationItems.map((item) => (
               <CommandItem
                 key={item.value}
                 value={`${item.title} ${item.keywords.join(' ')}`}
-                onSelect={() => handleNavigation(item.value)}
+                onSelect={() => handleNavigation(item.value, item.title)}
               >
                 <item.icon className="mr-2 h-4 w-4" />
                 <span>{item.title}</span>

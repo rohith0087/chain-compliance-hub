@@ -300,7 +300,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
 
           {/* Selected Files List */}
           {files.length > 0 && (
-            <ScrollArea className="flex-1 min-h-0">
+            <ScrollArea className="max-h-[400px]">
               <div className="space-y-4 pr-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Selected Files ({files.length})</span>

@@ -92,20 +92,43 @@ serve(async (req) => {
     const token = authHeader.replace('Bearer ', '');
     const parts = token.split('.');
     if (parts.length !== 3) {
+      console.error('Invalid token format - expected 3 parts, got', parts.length);
       return new Response(
         JSON.stringify({ error: 'Invalid token format' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    const payload = JSON.parse(atob(parts[1]));
+    // URL-safe base64 decode with padding fix
+    const base64UrlDecode = (str: string) => {
+      // Replace URL-safe chars and add padding
+      let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+      const padding = base64.length % 4;
+      if (padding) {
+        base64 += '='.repeat(4 - padding);
+      }
+      return atob(base64);
+    };
+    
+    let payload: any;
+    try {
+      payload = JSON.parse(base64UrlDecode(parts[1]));
+      console.log('JWT payload decoded, sub:', payload.sub);
+    } catch (e) {
+      console.error('Failed to decode JWT payload:', e);
+      return new Response(
+        JSON.stringify({ error: 'Invalid token payload' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     const user = {
       id: payload.sub,
       email: payload.email
     };
     
     if (!user.id) {
-      console.error('No user ID in token');
+      console.error('No user ID (sub) in token payload:', Object.keys(payload));
       return new Response(
         JSON.stringify({ error: 'Invalid authentication' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

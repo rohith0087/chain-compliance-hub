@@ -175,11 +175,6 @@ export function SupplierSidebarLayout({
       title: t('supplier:tabs.company'),
       icon: Building2,
       value: 'company'
-    },
-    {
-      title: 'Subscription & Billing',
-      icon: CreditCard,
-      value: 'subscription'
     }
   ];
 
@@ -271,12 +266,6 @@ export function SupplierSidebarLayout({
                   >
                     <Upload className="h-4 w-4" />
                     <span>Upload Document</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => handleSpecialAction('chat')}>
-                    <MessageSquare className="h-4 w-4" />
-                    <span>Compliance Assistant</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -372,8 +361,7 @@ export function SupplierSidebarLayout({
             </div>
             
             <div className="flex items-center gap-2">
-              <SubscriptionStatusWidget compact />
-              <NotificationCenter 
+              <NotificationCenter
                 onNavigate={async (tab, referenceId) => {
                   onTabChange(tab);
                   // Store reference ID in sessionStorage for deep-linking

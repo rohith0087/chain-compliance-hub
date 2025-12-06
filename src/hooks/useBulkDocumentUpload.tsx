@@ -31,7 +31,8 @@ export const useBulkDocumentUpload = () => {
     supplierId: string,
     buyerId: string,
     files: BulkUploadFile[],
-    notes?: string
+    notes?: string,
+    branchId?: string
   ) => {
     try {
       setIsUploading(true);
@@ -115,6 +116,7 @@ export const useBulkDocumentUpload = () => {
           bulkUploadId: bulkUpload.id,
           supplierId,
           buyerId,
+          branchId,
           files: fileData,
           notes
         }

@@ -602,6 +602,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         {activeTab === 'pre-populate' && buyerProfile && (
           <BuyerDocumentPrePopulator
             buyerId={buyerProfile.id}
+            branchId={currentBranch?.id}
             onComplete={() => {
               // Optionally refresh data or show success message
             }}

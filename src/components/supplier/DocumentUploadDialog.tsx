@@ -1,16 +1,30 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Upload, File, X, Calendar, AlertTriangle } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Upload, File, X, Calendar, AlertTriangle, Cloud, HardDrive, Search, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSupplierItems, ITEM_CATEGORIES } from '@/hooks/useSupplierItems';
+
+interface LibraryDocument {
+  id: string;
+  document_name: string;
+  file_path: string;
+  file_size: number | null;
+  mime_type: string | null;
+  category: string | null;
+  expiration_date: string | null;
+  version: number;
+  created_at: string;
+}
 
 interface DocumentUploadDialogProps {
   isOpen: boolean;
@@ -26,12 +40,66 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
   const [uploading, setUploading] = useState(false);
   const [updateMetadataOnly, setUpdateMetadataOnly] = useState(false);
   const [linkedItemIds, setLinkedItemIds] = useState<string[]>([]);
+  
+  // Library document selection state
+  const [uploadSource, setUploadSource] = useState<'machine' | 'library'>('machine');
+  const [libraryDocuments, setLibraryDocuments] = useState<LibraryDocument[]>([]);
+  const [selectedLibraryDoc, setSelectedLibraryDoc] = useState<LibraryDocument | null>(null);
+  const [librarySearchTerm, setLibrarySearchTerm] = useState('');
+  const [loadingLibrary, setLoadingLibrary] = useState(false);
+  
   const { toast } = useToast();
   const { user } = useAuth();
 
   const isResubmission = request.status === 'rejected';
-  const latestUpload = request.document_uploads?.[0]; // Get the latest upload for rejected documents
+  const latestUpload = request.document_uploads?.[0];
   const { items, loading: itemsLoading } = useSupplierItems(request.supplier_id);
+
+  // Fetch library documents when source changes to 'library'
+  useEffect(() => {
+    if (uploadSource === 'library' && request.supplier_id && isOpen) {
+      fetchLibraryDocuments();
+    }
+  }, [uploadSource, request.supplier_id, isOpen]);
+
+  const fetchLibraryDocuments = async () => {
+    setLoadingLibrary(true);
+    try {
+      const { data, error } = await supabase
+        .from('supplier_document_library')
+        .select('id, document_name, file_path, file_size, mime_type, category, expiration_date, version, created_at')
+        .eq('supplier_id', request.supplier_id)
+        .eq('is_current_version', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setLibraryDocuments(data || []);
+    } catch (error) {
+      console.error('Error fetching library documents:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load document library.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingLibrary(false);
+    }
+  };
+
+  const handleSelectLibraryDoc = (doc: LibraryDocument) => {
+    setSelectedLibraryDoc(doc);
+    // Pre-fill expiration date from library document if available
+    if (doc.expiration_date) {
+      setExpirationDate(doc.expiration_date);
+    }
+    // Clear file selection when choosing from library
+    setFile(null);
+  };
+
+  const filteredLibraryDocs = libraryDocuments.filter(doc =>
+    doc.document_name.toLowerCase().includes(librarySearchTerm.toLowerCase()) ||
+    (doc.category && doc.category.toLowerCase().includes(librarySearchTerm.toLowerCase()))
+  );
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     console.info('[UploadDialog] File input change', {
@@ -41,7 +109,6 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       console.info('[UploadDialog] Selected file', { name: selectedFile.name, size: selectedFile.size, type: selectedFile.type });
-      // Check file size (10MB limit)
       if (selectedFile.size > 10 * 1024 * 1024) {
         toast({
           title: "File Too Large",
@@ -51,6 +118,8 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
         return;
       }
       setFile(selectedFile);
+      // Clear library selection when uploading from machine
+      setSelectedLibraryDoc(null);
     }
   };
 
@@ -78,11 +147,11 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
       return;
     }
     
-    // For new uploads, file is required
-    if (!isResubmission && !file) {
+    // For new uploads, file or library document is required
+    if (!isResubmission && !file && !selectedLibraryDoc) {
       toast({
-        title: "File Required",
-        description: "Please select a document to upload.",
+        title: "Document Required",
+        description: "Please select a document from your machine or library.",
         variant: "destructive",
       });
       return;
@@ -90,51 +159,55 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
 
     setUploading(true);
     try {
-      let uploadData = null;
       let filePath = latestUpload?.file_path;
       let fileName = latestUpload?.file_name;
       let fileSize = latestUpload?.file_size;
       let mimeType = latestUpload?.mime_type;
 
-// If uploading a new file
-if (file) {
-  const fileExt = file.name.split('.').pop();
-  const generatedName = `${request.id}_${Date.now()}.${fileExt}`;
-  fileName = generatedName;
+      // If using library document - no need to upload, use existing file
+      if (uploadSource === 'library' && selectedLibraryDoc) {
+        filePath = selectedLibraryDoc.file_path;
+        fileName = selectedLibraryDoc.document_name;
+        fileSize = selectedLibraryDoc.file_size;
+        mimeType = selectedLibraryDoc.mime_type;
+      }
+      // If uploading a new file from machine
+      else if (file) {
+        const fileExt = file.name.split('.').pop();
+        const generatedName = `${request.id}_${Date.now()}.${fileExt}`;
+        fileName = generatedName;
 
-  // Resolve supplier ID (prefer from request, fallback to lookup by profile_id)
-  let resolvedSupplierId: string | null = request?.supplier_id || null;
-  if (!resolvedSupplierId) {
-    const { data: supplierRow, error: supplierLookupError } = await supabase
-      .from('suppliers')
-      .select('id')
-      .eq('profile_id', user.id)
-      .single();
-    if (supplierLookupError || !supplierRow) {
-      console.error('Supplier lookup failed:', supplierLookupError);
-      throw new Error('Supplier profile not found');
-    }
-    resolvedSupplierId = supplierRow.id;
-  }
+        // Resolve supplier ID (prefer from request, fallback to lookup by profile_id)
+        let resolvedSupplierId: string | null = request?.supplier_id || null;
+        if (!resolvedSupplierId) {
+          const { data: supplierRow, error: supplierLookupError } = await supabase
+            .from('suppliers')
+            .select('id')
+            .eq('profile_id', user.id)
+            .single();
+          if (supplierLookupError || !supplierRow) {
+            console.error('Supplier lookup failed:', supplierLookupError);
+            throw new Error('Supplier profile not found');
+          }
+          resolvedSupplierId = supplierRow.id;
+        }
 
-  // Store key without bucket prefix under supplier namespace to satisfy RLS
-  const fileKey = `${resolvedSupplierId}/${generatedName}`;
-  filePath = fileKey;
-  fileSize = file.size;
-  mimeType = file.type;
+        // Store key without bucket prefix under supplier namespace to satisfy RLS
+        const fileKey = `${resolvedSupplierId}/${generatedName}`;
+        filePath = fileKey;
+        fileSize = file.size;
+        mimeType = file.type;
 
-  // Upload file to Supabase Storage
-  const { data, error: uploadError } = await supabase.storage
-    .from('compliance-documents')
-    .upload(fileKey, file);
+        // Upload file to Supabase Storage
+        const { error: uploadError } = await supabase.storage
+          .from('compliance-documents')
+          .upload(fileKey, file);
 
-  if (uploadError) {
-    console.error('Upload error:', uploadError);
-    throw uploadError; // Do not create DB record if storage upload failed
-  } else {
-    uploadData = data;
-  }
-}
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw uploadError;
+        }
+      }
 
       // Determine version number for new upload
       let version = 1;
@@ -240,6 +313,9 @@ if (file) {
     setNotes('');
     setExpirationDate('');
     setUpdateMetadataOnly(false);
+    setUploadSource('machine');
+    setSelectedLibraryDoc(null);
+    setLibrarySearchTerm('');
   };
 
   const handleClose = () => {
@@ -316,52 +392,130 @@ if (file) {
             </div>
           )}
 
-          {/* File Upload */}
+          {/* Document Source Selection */}
           {(!isResubmission || !updateMetadataOnly) && (
-            <div>
-              <Label htmlFor="file-upload">
-                {isResubmission ? 'Select New Document' : 'Select Document *'}
-              </Label>
-              <div className="mt-1">
-                <Input
-                  id="file-upload"
-                  type="file"
-                  onClick={(e) => e.stopPropagation()}
-                  onChange={handleFileChange}
-                  accept="image/*,application/pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
-                  multiple={false}
-                  className="cursor-pointer"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Supported formats: PDF, DOC, DOCX, JPG, PNG, TXT (Max 10MB)
-                </p>
-              </div>
+            <div className="space-y-3">
+              <Label>{isResubmission ? 'Select New Document *' : 'Select Document *'}</Label>
+              
+              <Tabs value={uploadSource} onValueChange={(v) => setUploadSource(v as 'machine' | 'library')} className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="machine" className="flex items-center gap-2">
+                    <HardDrive className="w-4 h-4" />
+                    From Device
+                  </TabsTrigger>
+                  <TabsTrigger value="library" className="flex items-center gap-2">
+                    <Cloud className="w-4 h-4" />
+                    From Library
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="machine" className="mt-3">
+                  <div>
+                    <Input
+                      id="file-upload"
+                      type="file"
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={handleFileChange}
+                      accept="image/*,application/pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
+                      multiple={false}
+                      className="cursor-pointer"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Supported formats: PDF, DOC, DOCX, JPG, PNG, TXT (Max 10MB)
+                    </p>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="library" className="mt-3">
+                  <div className="space-y-3">
+                    {/* Search */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search library documents..."
+                        value={librarySearchTerm}
+                        onChange={(e) => setLibrarySearchTerm(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+
+                    {/* Library Documents List */}
+                    {loadingLibrary ? (
+                      <div className="text-center py-4 text-muted-foreground text-sm">
+                        Loading library...
+                      </div>
+                    ) : filteredLibraryDocs.length === 0 ? (
+                      <div className="text-center py-4 text-muted-foreground text-sm border rounded-lg bg-muted/20">
+                        {libraryDocuments.length === 0 
+                          ? "No documents in your library yet. Upload documents to your library first."
+                          : "No documents match your search."
+                        }
+                      </div>
+                    ) : (
+                      <ScrollArea className="h-48 border rounded-lg">
+                        <div className="p-2 space-y-1">
+                          {filteredLibraryDocs.map((doc) => (
+                            <div
+                              key={doc.id}
+                              onClick={() => handleSelectLibraryDoc(doc)}
+                              className={`p-3 rounded-lg cursor-pointer transition-colors border ${
+                                selectedLibraryDoc?.id === doc.id
+                                  ? 'bg-primary/10 border-primary'
+                                  : 'hover:bg-muted/50 border-transparent'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-start gap-2 flex-1 min-w-0">
+                                  <File className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-medium truncate">{doc.document_name}</p>
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      {doc.category && <span className="bg-muted px-1.5 py-0.5 rounded">{doc.category}</span>}
+                                      <span>v{doc.version}</span>
+                                      {doc.expiration_date && (
+                                        <span>Exp: {new Date(doc.expiration_date).toLocaleDateString()}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                {selectedLibraryDoc?.id === doc.id && (
+                                  <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
           )}
 
           {/* Current Document Info for Resubmission */}
           {isResubmission && updateMetadataOnly && latestUpload && (
-            <div className="p-3 bg-gray-50 border rounded-lg">
-              <p className="text-sm font-medium text-gray-700 mb-1">Current Document:</p>
+            <div className="p-3 bg-muted/50 border rounded-lg">
+              <p className="text-sm font-medium mb-1">Current Document:</p>
               <div className="flex items-center space-x-2">
-                <File className="w-4 h-4 text-gray-500" />
-                <span className="text-sm text-gray-600">{latestUpload.file_name}</span>
+                <File className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">{latestUpload.file_name}</span>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 You are updating metadata for this document without replacing the file
               </p>
             </div>
           )}
 
-          {/* Selected File Display */}
-          {file && (
-            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+          {/* Selected File Display (from machine) */}
+          {file && uploadSource === 'machine' && (
+            <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg border border-primary/20">
               <div className="flex items-center space-x-2">
-                <File className="w-4 h-4 text-blue-600" />
+                <HardDrive className="w-4 h-4 text-primary" />
                 <div>
                   <p className="text-sm font-medium">{file.name}</p>
-                  <p className="text-xs text-gray-500">
-                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                  <p className="text-xs text-muted-foreground">
+                    {(file.size / 1024 / 1024).toFixed(2)} MB • From device
                   </p>
                 </div>
               </div>
@@ -369,6 +523,29 @@ if (file) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setFile(null)}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* Selected Library Document Display */}
+          {selectedLibraryDoc && uploadSource === 'library' && (
+            <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg border border-primary/20">
+              <div className="flex items-center space-x-2">
+                <Cloud className="w-4 h-4 text-primary" />
+                <div>
+                  <p className="text-sm font-medium">{selectedLibraryDoc.document_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedLibraryDoc.file_size ? `${(selectedLibraryDoc.file_size / 1024 / 1024).toFixed(2)} MB • ` : ''}
+                    From library • v{selectedLibraryDoc.version}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedLibraryDoc(null)}
               >
                 <X className="w-4 h-4" />
               </Button>
@@ -456,7 +633,11 @@ if (file) {
                 e.preventDefault();
                 handleSubmit(e);
               }}
-              disabled={(!file && !isResubmission) || (isResubmission && !file && !updateMetadataOnly) || uploading}
+              disabled={
+                (!file && !selectedLibraryDoc && !isResubmission) || 
+                (isResubmission && !file && !selectedLibraryDoc && !updateMetadataOnly) || 
+                uploading
+              }
             >
               {uploading ? (
                 <>{isResubmission ? 'Resubmitting...' : 'Uploading...'}</>

@@ -322,14 +322,17 @@ export function CommandPaletteSearch({
     switch (status) {
       case 'approved':
       case 'completed':
-        return 'bg-green-500/10 text-green-500 border-green-500/20';
+        return 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/60 dark:text-green-300 dark:border-green-700';
       case 'pending':
       case 'invited':
-        return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+        return 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/60 dark:text-amber-300 dark:border-amber-700';
       case 'rejected':
-        return 'bg-red-500/10 text-red-500 border-red-500/20';
+        return 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/60 dark:text-red-300 dark:border-red-700';
+      case 'in_review':
+      case 'under_review':
+        return 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/60 dark:text-blue-300 dark:border-blue-700';
       default:
-        return 'bg-muted text-muted-foreground';
+        return 'bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800 dark:text-gray-300';
     }
   };
 
@@ -378,7 +381,7 @@ export function CommandPaletteSearch({
                 {suppliers.map((supplier) => (
                   <CommandItem
                     key={supplier.id}
-                    value={`supplier-${supplier.company_name}`}
+                    value={`supplier-${supplier.id}-${supplier.company_name}`}
                     onSelect={() => handleSupplierSelect(supplier)}
                     className="flex items-center justify-between"
                   >
@@ -386,7 +389,7 @@ export function CommandPaletteSearch({
                       <Building2 className="h-4 w-4 text-muted-foreground" />
                       <span>{supplier.company_name}</span>
                     </div>
-                    <Badge variant="outline" className={getStatusColor(supplier.status)}>
+                    <Badge variant="outline" className={`font-medium text-xs ${getStatusColor(supplier.status)}`}>
                       {supplier.status}
                     </Badge>
                   </CommandItem>
@@ -411,7 +414,7 @@ export function CommandPaletteSearch({
                 {documents.map((doc) => (
                   <CommandItem
                     key={doc.id}
-                    value={`document-${doc.title}`}
+                    value={`document-${doc.id}-${doc.title}`}
                     onSelect={() => handleDocumentSelect(doc)}
                     className="flex items-center justify-between"
                   >
@@ -424,7 +427,7 @@ export function CommandPaletteSearch({
                         )}
                       </div>
                     </div>
-                    <Badge variant="outline" className={getStatusColor(doc.status)}>
+                    <Badge variant="outline" className={`font-medium text-xs ${getStatusColor(doc.status)}`}>
                       {doc.status}
                     </Badge>
                   </CommandItem>
@@ -449,7 +452,7 @@ export function CommandPaletteSearch({
                 {onboardingRequests.map((request) => (
                   <CommandItem
                     key={request.id}
-                    value={`onboarding-${request.supplier_company_name}-${request.supplier_email}`}
+                    value={`onboarding-${request.id}-${request.supplier_email}`}
                     onSelect={() => handleOnboardingSelect(request)}
                     className="flex items-center justify-between"
                   >
@@ -460,7 +463,7 @@ export function CommandPaletteSearch({
                         <span className="text-xs text-muted-foreground">{request.supplier_email}</span>
                       </div>
                     </div>
-                    <Badge variant="outline" className={getStatusColor(request.status)}>
+                    <Badge variant="outline" className={`font-medium text-xs ${getStatusColor(request.status)}`}>
                       {request.status}
                     </Badge>
                   </CommandItem>

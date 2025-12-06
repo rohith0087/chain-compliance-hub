@@ -63,9 +63,8 @@ const ResetPassword = () => {
       });
     } else {
       toast({
-        title: "Password Updated",
-        description: "Your password has been successfully updated.",
-        variant: "default",
+        title: "Password Updated Successfully",
+        description: "Please sign in with your new password.",
       });
 
       // Clear password_reset_required flag if user exists
@@ -76,8 +75,8 @@ const ResetPassword = () => {
           .eq('profile_id', user.id);
       }
 
-      // Redirect to dashboard
-      navigate('/dashboard');
+      // Redirect to login page
+      navigate('/');
     }
     setLoading(false);
   };

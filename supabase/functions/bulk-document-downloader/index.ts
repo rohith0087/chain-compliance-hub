@@ -70,14 +70,15 @@ serve(async (req) => {
   try {
     console.log('Bulk document download request received');
     
-    // Initialize Supabase client
+    // Initialize Supabase clients
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // ============================================
-    // Auth validation - verify user access to documents
-    // ============================================
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    
+    // Admin client for database operations
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // User client for auth validation
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error('Missing authorization header');
@@ -87,8 +88,12 @@ serve(async (req) => {
       );
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    // Create a user-scoped client to validate the JWT
+    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    
+    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
     
     if (authError || !user) {
       console.error('Invalid authentication:', authError);
@@ -104,7 +109,7 @@ serve(async (req) => {
     let userBuyerId: string | null = null;
     
     // Check company_users first (team member path)
-    const { data: companyUser } = await supabase
+    const { data: companyUser } = await supabaseAdmin
       .from('company_users')
       .select('company_id, company_type')
       .eq('profile_id', user.id)
@@ -116,7 +121,7 @@ serve(async (req) => {
       userBuyerId = companyUser.company_id;
     } else {
       // Check if user is a buyer owner
-      const { data: buyer } = await supabase
+      const { data: buyer } = await supabaseAdmin
         .from('buyers')
         .select('id')
         .eq('profile_id', user.id)
@@ -126,7 +131,7 @@ serve(async (req) => {
 
     // Also check for supplier access
     let userSupplierId: string | null = null;
-    const { data: supplierCompanyUser } = await supabase
+    const { data: supplierCompanyUser } = await supabaseAdmin
       .from('company_users')
       .select('company_id, company_type')
       .eq('profile_id', user.id)
@@ -137,7 +142,7 @@ serve(async (req) => {
     if (supplierCompanyUser) {
       userSupplierId = supplierCompanyUser.company_id;
     } else {
-      const { data: supplier } = await supabase
+      const { data: supplier } = await supabaseAdmin
         .from('suppliers')
         .select('id')
         .eq('profile_id', user.id)
@@ -167,7 +172,7 @@ serve(async (req) => {
     console.log(`Processing bulk download for ${documentIds.length} documents`);
 
     // Fetch document details from database with access validation
-    let query = supabase
+    let query = supabaseAdmin
       .from('document_uploads')
       .select(`
         id,
@@ -257,13 +262,13 @@ serve(async (req) => {
             console.log(`Resolved path - bucket: ${resolvedPath.bucket}, key: ${resolvedPath.key}`);
             
             let signedUrlData: any = null;
-            const { data: urlData, error: urlError } = await supabase.storage
+            const { data: urlData, error: urlError } = await supabaseAdmin.storage
               .from(resolvedPath.bucket)
               .createSignedUrl(resolvedPath.key, 300);
 
             if (urlError || !urlData) {
               console.error(`Failed to get signed URL for ${resolvedPath.bucket}/${resolvedPath.key}:`, urlError);
-              const { data: fallbackUrlData, error: fallbackError } = await supabase.storage
+              const { data: fallbackUrlData, error: fallbackError } = await supabaseAdmin.storage
                 .from('compliance-documents')
                 .createSignedUrl(doc.file_path, 300);
               

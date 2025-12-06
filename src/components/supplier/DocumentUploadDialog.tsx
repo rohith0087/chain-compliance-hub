@@ -325,8 +325,8 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>
             {isResubmission ? 'Resubmit Document' : 'Upload Document'}
           </DialogTitle>
@@ -335,320 +335,322 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4">
-          {/* Request Info */}
-          <div className={`p-3 rounded-lg ${isResubmission ? 'bg-orange-50 border border-orange-200' : 'bg-gray-50'}`}>
-            <h4 className="font-medium text-sm mb-1">{request.title}</h4>
-            <p className="text-xs text-gray-600">Type: {request.document_type}</p>
-            <p className="text-xs text-gray-600">Category: {request.category}</p>
-            {isResubmission && (
-              <p className="text-xs text-orange-700 mt-2 font-medium">
-                Document was rejected - please review feedback and resubmit
-              </p>
-            )}
-          </div>
+        <ScrollArea className="flex-1 min-h-0 pr-4">
+          <div className="space-y-4 pr-2">
+            {/* Request Info */}
+            <div className={`p-3 rounded-lg ${isResubmission ? 'bg-orange-50 border border-orange-200' : 'bg-muted/50'}`}>
+              <h4 className="font-medium text-sm mb-1">{request.title}</h4>
+              <p className="text-xs text-muted-foreground">Type: {request.document_type}</p>
+              <p className="text-xs text-muted-foreground">Category: {request.category}</p>
+              {isResubmission && (
+                <p className="text-xs text-orange-700 mt-2 font-medium">
+                  Document was rejected - please review feedback and resubmit
+                </p>
+              )}
+            </div>
 
-          {/* Rejection Feedback */}
-          {isResubmission && latestUpload?.reviewer_notes && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-red-800 mb-1">Rejection Feedback:</p>
-                  <p className="text-sm text-red-700">{latestUpload.reviewer_notes}</p>
+            {/* Rejection Feedback */}
+            {isResubmission && latestUpload?.reviewer_notes && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-red-800 mb-1">Rejection Feedback:</p>
+                    <p className="text-sm text-red-700">{latestUpload.reviewer_notes}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Resubmission Options */}
-          {isResubmission && (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm font-medium text-blue-800 mb-2">Resubmission Options:</p>
-              <div className="space-y-2">
-                <label className="flex items-center space-x-2 text-sm">
-                  <input
-                    type="radio"
-                    name="resubmit-type"
-                    checked={!updateMetadataOnly}
-                    onChange={() => setUpdateMetadataOnly(false)}
-                    className="text-blue-600"
-                  />
-                  <span>Upload new document file</span>
-                </label>
-                <label className={`flex items-center space-x-2 text-sm ${!latestUpload ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                  <input
-                    type="radio"
-                    name="resubmit-type"
-                    checked={updateMetadataOnly}
-                    onChange={() => latestUpload && setUpdateMetadataOnly(true)}
-                    disabled={!latestUpload}
-                    className="text-blue-600"
-                  />
-                  <span>Update expiration date and notes only</span>
-                  {!latestUpload && <span className="text-xs text-muted-foreground">(no existing file)</span>}
-                </label>
-              </div>
-            </div>
-          )}
-
-          {/* Document Source Selection */}
-          {(!isResubmission || !updateMetadataOnly) && (
-            <div className="space-y-3">
-              <Label>{isResubmission ? 'Select New Document *' : 'Select Document *'}</Label>
-              
-              <Tabs value={uploadSource} onValueChange={(v) => setUploadSource(v as 'machine' | 'library')} className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="machine" className="flex items-center gap-2">
-                    <HardDrive className="w-4 h-4" />
-                    From Device
-                  </TabsTrigger>
-                  <TabsTrigger value="library" className="flex items-center gap-2">
-                    <Cloud className="w-4 h-4" />
-                    From Library
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="machine" className="mt-3">
-                  <div>
-                    <Input
-                      id="file-upload"
-                      type="file"
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={handleFileChange}
-                      accept="image/*,application/pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
-                      multiple={false}
-                      className="cursor-pointer"
+            {/* Resubmission Options */}
+            {isResubmission && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm font-medium text-blue-800 mb-2">Resubmission Options:</p>
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 text-sm">
+                    <input
+                      type="radio"
+                      name="resubmit-type"
+                      checked={!updateMetadataOnly}
+                      onChange={() => setUpdateMetadataOnly(false)}
+                      className="text-blue-600"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Supported formats: PDF, DOC, DOCX, JPG, PNG, TXT (Max 10MB)
-                    </p>
-                  </div>
-                </TabsContent>
+                    <span>Upload new document file</span>
+                  </label>
+                  <label className={`flex items-center space-x-2 text-sm ${!latestUpload ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    <input
+                      type="radio"
+                      name="resubmit-type"
+                      checked={updateMetadataOnly}
+                      onChange={() => latestUpload && setUpdateMetadataOnly(true)}
+                      disabled={!latestUpload}
+                      className="text-blue-600"
+                    />
+                    <span>Update expiration date and notes only</span>
+                    {!latestUpload && <span className="text-xs text-muted-foreground">(no existing file)</span>}
+                  </label>
+                </div>
+              </div>
+            )}
 
-                <TabsContent value="library" className="mt-3">
-                  <div className="space-y-3">
-                    {/* Search */}
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            {/* Document Source Selection */}
+            {(!isResubmission || !updateMetadataOnly) && (
+              <div className="space-y-3">
+                <Label>{isResubmission ? 'Select New Document *' : 'Select Document *'}</Label>
+                
+                <Tabs value={uploadSource} onValueChange={(v) => setUploadSource(v as 'machine' | 'library')} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="machine" className="flex items-center gap-2">
+                      <HardDrive className="w-4 h-4" />
+                      From Device
+                    </TabsTrigger>
+                    <TabsTrigger value="library" className="flex items-center gap-2">
+                      <Cloud className="w-4 h-4" />
+                      From Library
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="machine" className="mt-3">
+                    <div>
                       <Input
-                        placeholder="Search library documents..."
-                        value={librarySearchTerm}
-                        onChange={(e) => setLibrarySearchTerm(e.target.value)}
-                        className="pl-9"
+                        id="file-upload"
+                        type="file"
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={handleFileChange}
+                        accept="image/*,application/pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
+                        multiple={false}
+                        className="cursor-pointer"
                       />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Supported formats: PDF, DOC, DOCX, JPG, PNG, TXT (Max 10MB)
+                      </p>
                     </div>
+                  </TabsContent>
 
-                    {/* Library Documents List */}
-                    {loadingLibrary ? (
-                      <div className="text-center py-4 text-muted-foreground text-sm">
-                        Loading library...
+                  <TabsContent value="library" className="mt-3">
+                    <div className="space-y-3">
+                      {/* Search */}
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search library documents..."
+                          value={librarySearchTerm}
+                          onChange={(e) => setLibrarySearchTerm(e.target.value)}
+                          className="pl-9"
+                        />
                       </div>
-                    ) : filteredLibraryDocs.length === 0 ? (
-                      <div className="text-center py-4 text-muted-foreground text-sm border rounded-lg bg-muted/20">
-                        {libraryDocuments.length === 0 
-                          ? "No documents in your library yet. Upload documents to your library first."
-                          : "No documents match your search."
-                        }
-                      </div>
-                    ) : (
-                      <ScrollArea className="h-48 border rounded-lg">
-                        <div className="p-2 space-y-1">
-                          {filteredLibraryDocs.map((doc) => (
-                            <div
-                              key={doc.id}
-                              onClick={() => handleSelectLibraryDoc(doc)}
-                              className={`p-3 rounded-lg cursor-pointer transition-colors border ${
-                                selectedLibraryDoc?.id === doc.id
-                                  ? 'bg-primary/10 border-primary'
-                                  : 'hover:bg-muted/50 border-transparent'
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex items-start gap-2 flex-1 min-w-0">
-                                  <File className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                  <div className="min-w-0">
-                                    <p className="text-sm font-medium truncate">{doc.document_name}</p>
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                      {doc.category && <span className="bg-muted px-1.5 py-0.5 rounded">{doc.category}</span>}
-                                      <span>v{doc.version}</span>
-                                      {doc.expiration_date && (
-                                        <span>Exp: {new Date(doc.expiration_date).toLocaleDateString()}</span>
-                                      )}
+
+                      {/* Library Documents List */}
+                      {loadingLibrary ? (
+                        <div className="text-center py-4 text-muted-foreground text-sm">
+                          Loading library...
+                        </div>
+                      ) : filteredLibraryDocs.length === 0 ? (
+                        <div className="text-center py-4 text-muted-foreground text-sm border rounded-lg bg-muted/20">
+                          {libraryDocuments.length === 0 
+                            ? "No documents in your library yet. Upload documents to your library first."
+                            : "No documents match your search."
+                          }
+                        </div>
+                      ) : (
+                        <ScrollArea className="h-48 border rounded-lg">
+                          <div className="p-2 space-y-1">
+                            {filteredLibraryDocs.map((doc) => (
+                              <div
+                                key={doc.id}
+                                onClick={() => handleSelectLibraryDoc(doc)}
+                                className={`p-3 rounded-lg cursor-pointer transition-colors border ${
+                                  selectedLibraryDoc?.id === doc.id
+                                    ? 'bg-primary/10 border-primary'
+                                    : 'hover:bg-muted/50 border-transparent'
+                                }`}
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex items-start gap-2 flex-1 min-w-0">
+                                    <File className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-medium truncate">{doc.document_name}</p>
+                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        {doc.category && <span className="bg-muted px-1.5 py-0.5 rounded">{doc.category}</span>}
+                                        <span>v{doc.version}</span>
+                                        {doc.expiration_date && (
+                                          <span>Exp: {new Date(doc.expiration_date).toLocaleDateString()}</span>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
+                                  {selectedLibraryDoc?.id === doc.id && (
+                                    <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                                  )}
                                 </div>
-                                {selectedLibraryDoc?.id === doc.id && (
-                                  <Check className="w-4 h-4 text-primary flex-shrink-0" />
-                                )}
                               </div>
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </div>
-          )}
-
-          {/* Current Document Info for Resubmission */}
-          {isResubmission && updateMetadataOnly && latestUpload && (
-            <div className="p-3 bg-muted/50 border rounded-lg">
-              <p className="text-sm font-medium mb-1">Current Document:</p>
-              <div className="flex items-center space-x-2">
-                <File className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">{latestUpload.file_name}</span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                You are updating metadata for this document without replacing the file
-              </p>
-            </div>
-          )}
-
-          {/* Selected File Display (from machine) */}
-          {file && uploadSource === 'machine' && (
-            <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg border border-primary/20">
-              <div className="flex items-center space-x-2">
-                <HardDrive className="w-4 h-4 text-primary" />
-                <div>
-                  <p className="text-sm font-medium">{file.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {(file.size / 1024 / 1024).toFixed(2)} MB • From device
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setFile(null)}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
-
-          {/* Selected Library Document Display */}
-          {selectedLibraryDoc && uploadSource === 'library' && (
-            <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg border border-primary/20">
-              <div className="flex items-center space-x-2">
-                <Cloud className="w-4 h-4 text-primary" />
-                <div>
-                  <p className="text-sm font-medium">{selectedLibraryDoc.document_name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedLibraryDoc.file_size ? `${(selectedLibraryDoc.file_size / 1024 / 1024).toFixed(2)} MB • ` : ''}
-                    From library • v{selectedLibraryDoc.version}
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedLibraryDoc(null)}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
-
-          {/* Expiration Date */}
-          <div>
-            <Label htmlFor="expiration-date" className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Document Expiration Date (Optional)
-            </Label>
-            <Input
-              id="expiration-date"
-              type="date"
-              value={expirationDate}
-              onChange={(e) => setExpirationDate(e.target.value)}
-              className="mt-1"
-              min={new Date().toISOString().split('T')[0]}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Set when this document expires (e.g., certificate expiry, license renewal date)
-            </p>
-          </div>
-
-          {/* Link Items */}
-          {items.length > 0 && (
-            <div>
-              <Label>Link to Items (Optional)</Label>
-              <div className="mt-2 space-y-2 max-h-40 overflow-y-auto border rounded-lg p-3">
-                {ITEM_CATEGORIES.map(category => {
-                  const categoryItems = items.filter(i => i.item_category === category.value);
-                  if (categoryItems.length === 0) return null;
-                  return (
-                    <div key={category.value}>
-                      <p className="text-xs font-medium text-muted-foreground mb-1">
-                        {category.icon} {category.label}
-                      </p>
-                      {categoryItems.map(item => (
-                        <label key={item.id} className="flex items-center gap-2 text-sm pl-4 cursor-pointer hover:bg-muted/50 rounded py-1">
-                          <Checkbox
-                            checked={linkedItemIds.includes(item.id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setLinkedItemIds([...linkedItemIds, item.id]);
-                              } else {
-                                setLinkedItemIds(linkedItemIds.filter(id => id !== item.id));
-                              }
-                            }}
-                          />
-                          {item.item_name}
-                        </label>
-                      ))}
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      )}
                     </div>
-                  );
-                })}
+                  </TabsContent>
+                </Tabs>
               </div>
+            )}
+
+            {/* Current Document Info for Resubmission */}
+            {isResubmission && updateMetadataOnly && latestUpload && (
+              <div className="p-3 bg-muted/50 border rounded-lg">
+                <p className="text-sm font-medium mb-1">Current Document:</p>
+                <div className="flex items-center space-x-2">
+                  <File className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">{latestUpload.file_name}</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  You are updating metadata for this document without replacing the file
+                </p>
+              </div>
+            )}
+
+            {/* Selected File Display (from machine) */}
+            {file && uploadSource === 'machine' && (
+              <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg border border-primary/20">
+                <div className="flex items-center space-x-2">
+                  <HardDrive className="w-4 h-4 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium">{file.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(file.size / 1024 / 1024).toFixed(2)} MB • From device
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setFile(null)}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+
+            {/* Selected Library Document Display */}
+            {selectedLibraryDoc && uploadSource === 'library' && (
+              <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg border border-primary/20">
+                <div className="flex items-center space-x-2">
+                  <Cloud className="w-4 h-4 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium">{selectedLibraryDoc.document_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedLibraryDoc.file_size ? `${(selectedLibraryDoc.file_size / 1024 / 1024).toFixed(2)} MB • ` : ''}
+                      From library • v{selectedLibraryDoc.version}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedLibraryDoc(null)}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+
+            {/* Expiration Date */}
+            <div>
+              <Label htmlFor="expiration-date" className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Document Expiration Date (Optional)
+              </Label>
+              <Input
+                id="expiration-date"
+                type="date"
+                value={expirationDate}
+                onChange={(e) => setExpirationDate(e.target.value)}
+                className="mt-1"
+                min={new Date().toISOString().split('T')[0]}
+              />
               <p className="text-xs text-muted-foreground mt-1">
-                Link this document to specific items (e.g., COA for Yellowfin Tuna)
+                Set when this document expires (e.g., certificate expiry, license renewal date)
               </p>
             </div>
-          )}
 
-          {/* Notes */}
-          <div>
-            <Label htmlFor="notes">Additional Notes (Optional)</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add any additional information about this document..."
-              rows={3}
-              className="mt-1"
-            />
-          </div>
+            {/* Link Items */}
+            {items.length > 0 && (
+              <div>
+                <Label>Link to Items (Optional)</Label>
+                <div className="mt-2 space-y-2 max-h-40 overflow-y-auto border rounded-lg p-3">
+                  {ITEM_CATEGORIES.map(category => {
+                    const categoryItems = items.filter(i => i.item_category === category.value);
+                    if (categoryItems.length === 0) return null;
+                    return (
+                      <div key={category.value}>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">
+                          {category.icon} {category.label}
+                        </p>
+                        {categoryItems.map(item => (
+                          <label key={item.id} className="flex items-center gap-2 text-sm pl-4 cursor-pointer hover:bg-muted/50 rounded py-1">
+                            <Checkbox
+                              checked={linkedItemIds.includes(item.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setLinkedItemIds([...linkedItemIds, item.id]);
+                                } else {
+                                  setLinkedItemIds(linkedItemIds.filter(id => id !== item.id));
+                                }
+                              }}
+                            />
+                            {item.item_name}
+                          </label>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Link this document to specific items (e.g., COA for Yellowfin Tuna)
+                </p>
+              </div>
+            )}
 
-          {/* Actions */}
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button variant="outline" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button 
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                handleSubmit(e);
-              }}
-              disabled={
-                (!file && !selectedLibraryDoc && !isResubmission) || 
-                (isResubmission && !file && !selectedLibraryDoc && !updateMetadataOnly) || 
-                uploading
-              }
-            >
-              {uploading ? (
-                <>{isResubmission ? 'Resubmitting...' : 'Uploading...'}</>
-              ) : (
-                <>
-                  <Upload className="w-4 h-4 mr-2" />
-                  {isResubmission ? 'Resubmit Document' : 'Upload Document'}
-                </>
-              )}
-            </Button>
+            {/* Notes */}
+            <div>
+              <Label htmlFor="notes">Additional Notes (Optional)</Label>
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Add any additional information about this document..."
+                rows={3}
+                className="mt-1"
+              />
+            </div>
           </div>
+        </ScrollArea>
+
+        {/* Actions - Fixed at bottom */}
+        <div className="flex justify-end space-x-2 pt-4 border-t mt-2 flex-shrink-0">
+          <Button variant="outline" onClick={handleClose}>
+            Cancel
+          </Button>
+          <Button 
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              handleSubmit(e);
+            }}
+            disabled={
+              (!file && !selectedLibraryDoc && !isResubmission) || 
+              (isResubmission && !file && !selectedLibraryDoc && !updateMetadataOnly) || 
+              uploading
+            }
+          >
+            {uploading ? (
+              <>{isResubmission ? 'Resubmitting...' : 'Uploading...'}</>
+            ) : (
+              <>
+                <Upload className="w-4 h-4 mr-2" />
+                {isResubmission ? 'Resubmit Document' : 'Upload Document'}
+              </>
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

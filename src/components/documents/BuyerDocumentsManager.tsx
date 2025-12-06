@@ -16,6 +16,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { DocumentLinkModal } from './DocumentLinkModal';
 import { resolveStoragePath } from '@/utils/storagePath';
+import { BulkDownloadOptionsDialog } from './BulkDownloadOptionsDialog';
+import { BulkDownloadOverlay } from './BulkDownloadOverlay';
 
 interface BuyerDocumentsManagerProps {
   documents: any[];
@@ -51,6 +53,8 @@ const BuyerDocumentsManager = ({
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(new Set());
   const [isBulkDownloading, setIsBulkDownloading] = useState(false);
+  const [showVersionDialog, setShowVersionDialog] = useState(false);
+  const [downloadMode, setDownloadMode] = useState<'current' | 'all'>('current');
   const { toast } = useToast();
 
   // Enhanced filter logic with new filter options
@@ -428,7 +432,15 @@ const BuyerDocumentsManager = ({
     setSelectedDocuments(newSelection);
   };
 
-  // Bulk download function
+  // Check if any selected documents have multiple versions
+  const getMultiVersionCount = () => {
+    return Array.from(selectedDocuments).filter(docId => {
+      const doc = documents.find(d => d.id === docId);
+      return doc?.document_uploads?.length > 1;
+    }).length;
+  };
+
+  // Bulk download function - checks for multi-version documents first
   const handleBulkDownload = async () => {
     if (selectedDocuments.size === 0) {
       toast({
@@ -439,7 +451,20 @@ const BuyerDocumentsManager = ({
       return;
     }
 
+    const multiVersionCount = getMultiVersionCount();
+    if (multiVersionCount > 0) {
+      setShowVersionDialog(true);
+      return;
+    }
+
+    // No multi-version docs, proceed with download
+    await executeBulkDownload('current');
+  };
+
+  // Execute the actual bulk download
+  const executeBulkDownload = async (mode: 'current' | 'all') => {
     try {
+      setShowVersionDialog(false);
       setIsBulkDownloading(true);
       
       // Get user's session token for authentication
@@ -474,11 +499,25 @@ const BuyerDocumentsManager = ({
 
       const filterDescription = filterParts.join('_') || 'Documents';
 
-      // Get document upload IDs for selected documents
-      const uploadIds = Array.from(selectedDocuments).map(docId => {
+      // Get document upload IDs based on download mode
+      let uploadIds: string[] = [];
+      
+      Array.from(selectedDocuments).forEach(docId => {
         const doc = documents.find(d => d.id === docId);
-        return doc?.document_uploads?.[0]?.id;
-      }).filter(Boolean);
+        if (!doc?.document_uploads?.length) return;
+        
+        if (mode === 'all') {
+          // Include all versions
+          doc.document_uploads.forEach((upload: any) => {
+            if (upload?.id) uploadIds.push(upload.id);
+          });
+        } else {
+          // Include only latest version (first in array)
+          if (doc.document_uploads[0]?.id) {
+            uploadIds.push(doc.document_uploads[0].id);
+          }
+        }
+      });
 
       if (uploadIds.length === 0) {
         throw new Error('No valid document uploads found for selected documents');
@@ -515,7 +554,7 @@ const BuyerDocumentsManager = ({
 
       toast({
         title: "Download Started",
-        description: `ZIP download started with ${selectedDocuments.size} documents`,
+        description: `ZIP download started with ${uploadIds.length} file${uploadIds.length !== 1 ? 's' : ''}`,
       });
       setSelectedDocuments(new Set());
 
@@ -545,6 +584,22 @@ const BuyerDocumentsManager = ({
 
   return (
     <div className="space-y-6">
+      {/* Loading Overlay */}
+      {isBulkDownloading && (
+        <BulkDownloadOverlay documentCount={selectedDocuments.size} />
+      )}
+
+      {/* Version Selection Dialog */}
+      <BulkDownloadOptionsDialog
+        open={showVersionDialog}
+        onOpenChange={setShowVersionDialog}
+        multiVersionCount={getMultiVersionCount()}
+        totalSelected={selectedDocuments.size}
+        downloadMode={downloadMode}
+        onDownloadModeChange={setDownloadMode}
+        onConfirm={() => executeBulkDownload(downloadMode)}
+      />
+
       {/* Enhanced Filters */}
       <EnhancedDocumentsFilter
         filters={filters}

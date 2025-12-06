@@ -8,6 +8,8 @@ export interface BulkUploadFile {
   documentName: string;
   category?: string;
   description?: string;
+  expirationDate?: string;
+  existingRequestId?: string;
 }
 
 export interface BulkUploadProgress {
@@ -99,7 +101,9 @@ export const useBulkDocumentUpload = () => {
           documentName: f.documentName,
           category: f.category,
           description: f.description,
-          filePath: uploadData.path
+          filePath: uploadData.path,
+          expirationDate: f.expirationDate,
+          existingRequestId: f.existingRequestId
         };
       });
 

@@ -281,8 +281,8 @@ const DynamicDashboard = () => {
     );
   }
 
-  // Check if user has multiple roles
-  const hasMultipleRoles = profile.roles?.length > 1;
+  // Check if user has multiple roles (use authoritative user_roles table)
+  const hasMultipleRoles = roles.length > 1;
 
   // HARD BLOCK: Team members (invited users) NEVER see profile setup forms
   // This prevents race conditions where profile forms show during state transitions
@@ -293,14 +293,15 @@ const DynamicDashboard = () => {
   
   // Check if current role needs profile setup
   // Only company owners who don't have a complete profile should see setup
+  // Use hasRole() from useUserRoles (authoritative table) instead of profile.roles (legacy)
   const needsSupplierSetup = !isTeamMember &&
                             currentRole === 'supplier' && 
-                            profile.roles?.includes('supplier') && 
+                            hasRole('supplier') && 
                             !isSupplierProfileComplete(supplierProfile);
                             
   const needsBuyerSetup = !isTeamMember &&
                          currentRole === 'buyer' && 
-                         profile.roles?.includes('buyer') && 
+                         hasRole('buyer') && 
                          !isBuyerProfileComplete(buyerProfile);
 
   console.log('Dashboard state:', {

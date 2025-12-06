@@ -173,7 +173,7 @@ export const SupplierDocumentLibrary: React.FC<SupplierDocumentLibraryProps> = (
         <div>
           <h2 className="text-2xl font-bold">Document Library</h2>
           <p className="text-muted-foreground">
-            Manage and organize your company documents with AI-powered content extraction
+            Manage and organize your company documents
           </p>
         </div>
         <Button onClick={() => setShowUploadModal(true)} className="flex items-center gap-2">
@@ -227,7 +227,7 @@ export const SupplierDocumentLibrary: React.FC<SupplierDocumentLibraryProps> = (
               <h3 className="text-lg font-medium">No documents found</h3>
               <p className="text-muted-foreground">
                 {documents.length === 0 
-                  ? "Upload your first document to get started with AI-powered content extraction"
+                  ? "Upload your first document to get started"
                   : "Try adjusting your search or filter criteria"
                 }
               </p>

@@ -112,25 +112,10 @@ export class AIInsightsService {
     }
   }
 
+  // OpenAI API key is now only accessed server-side via edge functions
+  // Static insights are always used for client-side analysis
   private static async getOpenAIKey(): Promise<string | null> {
-    try {
-      // Try to get from Supabase environment variables
-      const { data, error } = await import('@/integrations/supabase/client').then(module => 
-        module.supabase.functions.invoke('get-openai-key')
-      );
-      
-      if (!error && data?.apiKey) {
-        return data.apiKey;
-      }
-    } catch (error) {
-      console.log('Could not retrieve OpenAI API key from Supabase');
-    }
-    
-    // Check if available in local environment (fallback)
-    if (typeof window !== 'undefined' && localStorage.getItem('openai_api_key')) {
-      return localStorage.getItem('openai_api_key');
-    }
-    
+    // API key retrieval removed for security - use static insights instead
     return null;
   }
 

@@ -110,11 +110,13 @@ interface ExistingRequest {
 
 interface BuyerDocumentPrePopulatorProps {
   buyerId: string;
+  branchId?: string;
   onComplete?: () => void;
 }
 
 export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps> = ({
   buyerId,
+  branchId,
   onComplete
 }) => {
   const { user } = useAuth();
@@ -243,7 +245,7 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
     }
 
     try {
-      await uploadDocumentsForSupplier(selectedSupplierId, buyerId, filesWithTypes, notes);
+      await uploadDocumentsForSupplier(selectedSupplierId, buyerId, filesWithTypes, notes, branchId);
       setFiles([]);
       setNotes('');
       setLinkToExisting({});
@@ -286,9 +288,17 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
     setLinkToExisting({});
   };
 
-  // Get matching existing requests for a document type
+  // Get matching existing requests for a document type - match by BOTH value and label
   const getMatchingRequests = (documentType: string): ExistingRequest[] => {
-    return existingRequests.filter(req => req.document_type === documentType);
+    // Get the label for this document type value
+    const docTypeConfig = DOCUMENT_TYPES.find(dt => dt.value === documentType);
+    const label = docTypeConfig?.label || '';
+    
+    return existingRequests.filter(req => 
+      req.document_type === documentType ||  // Match by value (new pre-populates)
+      req.document_type === label ||          // Match by label (formal requests)
+      req.document_type.toLowerCase().replace(/[^a-z0-9]/g, '') === documentType.toLowerCase().replace(/_/g, '') // Fuzzy match
+    );
   };
 
   return (

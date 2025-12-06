@@ -6,10 +6,42 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Map document type values to labels for consistency with formal requests
+const DOCUMENT_TYPE_LABELS: { [key: string]: string } = {
+  'business_license': 'Business License',
+  'tax_certificate': 'Tax Certificate',
+  'insurance_certificate': 'Insurance Certificate',
+  'bank_statement': 'Bank Statement',
+  'financial_statement': 'Financial Statement',
+  'articles_of_incorporation': 'Articles of Incorporation',
+  'dba_certificate': 'DBA Certificate',
+  'worker_compensation_insurance': 'Workers Compensation Insurance',
+  'supplier_agreement': 'Supplier Agreement',
+  'fda_registration': 'FDA Registration',
+  'fsis_documentation': 'FSIS Documentation',
+  'haccp_plan': 'HACCP Plan',
+  'ssop_documentation': 'SSOP Documentation',
+  'gmp_documentation': 'GMP Documentation',
+  'food_safety_modernization_act': 'Food Safety Modernization Act (FSMA)',
+  'allergen_control_plan': 'Allergen Control Plan',
+  'sqf_certificate': 'SQF Certificate',
+  'brc_certificate': 'BRC Certificate',
+  'iso_9001': 'ISO 9001 Certificate',
+  'iso_14001': 'ISO 14001 Certificate',
+  'iso_22000': 'ISO 22000 Certificate',
+  'gfsi_certificate': 'GFSI Certificate',
+  'organic_certification': 'Organic Certification',
+  'non_gmo_certification': 'Non-GMO Certification',
+  'kosher_certification': 'Kosher Certification',
+  'halal_certification': 'Halal Certification',
+  'other': 'Other Document'
+};
+
 interface BulkUploadRequest {
   bulkUploadId: string;
   supplierId: string;
   buyerId: string;
+  branchId?: string;
   files: {
     fileName: string;
     fileSize: number;
@@ -36,7 +68,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { bulkUploadId, supplierId, buyerId, files, notes }: BulkUploadRequest = await req.json();
+    const { bulkUploadId, supplierId, buyerId, branchId, files, notes }: BulkUploadRequest = await req.json();
 
     console.log(`Processing bulk upload ${bulkUploadId} for supplier ${supplierId}`);
 
@@ -69,14 +101,18 @@ serve(async (req) => {
 
         // Create new document request if not linking to existing
         if (isNewRequest) {
+          // Convert document type value to label for consistency with formal requests
+          const documentTypeLabel = DOCUMENT_TYPE_LABELS[fileInfo.documentType] || fileInfo.documentType;
+          
           const { data: docRequest, error: requestError } = await supabase
             .from('document_requests')
             .insert({
               buyer_id: buyerId,
               supplier_id: supplierId,
+              branch_id: branchId || null,
               title: fileInfo.documentName,
               description: fileInfo.description || `Pre-populated by buyer`,
-              document_type: fileInfo.documentType,
+              document_type: documentTypeLabel, // Use label, not value, for consistency
               category: fileInfo.category || 'compliance',
               status: 'submitted', // Set as submitted since document is pre-populated
               priority: 'medium',

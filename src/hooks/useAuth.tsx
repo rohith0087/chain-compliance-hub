@@ -225,7 +225,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: 'https://compliance.tracer2c.com/',
         data: { 
           full_name: fullName,
           company_name: companyName,
@@ -272,7 +272,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const resetPassword = async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: 'https://compliance.tracer2c.com/reset-password',
     });
     return { error };
   };

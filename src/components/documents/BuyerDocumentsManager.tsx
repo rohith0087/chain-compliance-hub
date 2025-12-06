@@ -442,6 +442,12 @@ const BuyerDocumentsManager = ({
     try {
       setIsBulkDownloading(true);
       
+      // Get user's session token for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No active session - please log in again');
+      }
+      
       // Create filter description for filename
       const filterParts = [];
       
@@ -478,23 +484,11 @@ const BuyerDocumentsManager = ({
         throw new Error('No valid document uploads found for selected documents');
       }
 
-      // Call bulk download edge function
-      const { data, error } = await supabase.functions.invoke('bulk-document-downloader', {
-        body: {
-          documentIds: uploadIds,
-          filterDescription
-        }
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      // Since the edge function returns a blob response, we need to handle it differently
+      // Call bulk download edge function with user's session token
       const response = await fetch('https://edwerzutsknhuplidhsj.supabase.co/functions/v1/bulk-document-downloader', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkd2VyenV0c2tuaHVwbGlkaHNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwOTU3MzYsImV4cCI6MjA2NTY3MTczNn0.zlfoc_V7IyFzmseOgfuew9Mjks_U6hrlO8XwNc_GXbI`,
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -504,7 +498,8 @@ const BuyerDocumentsManager = ({
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`Download failed: ${errorText}`);
       }
 
       // Download the ZIP file
@@ -522,13 +517,13 @@ const BuyerDocumentsManager = ({
         title: "Download Started",
         description: `ZIP download started with ${selectedDocuments.size} documents`,
       });
-      setSelectedDocuments(new Set()); // Clear selection after download
+      setSelectedDocuments(new Set());
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Bulk download error:', error);
       toast({
         title: "Download Failed",
-        description: "Failed to download documents",
+        description: error.message || "Failed to download documents",
         variant: "destructive",
       });
     } finally {

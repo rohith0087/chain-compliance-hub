@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -6,12 +6,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Upload, FileText, CheckCircle, XCircle, Filter, X, Building2 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Upload, FileText, CheckCircle, XCircle, Filter, X, Building2, CalendarIcon, Link2 } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { useBuyerSupplierConnections } from '@/hooks/useBuyerSupplierConnections';
 import { useBulkDocumentUpload, BulkUploadFile } from '@/hooks/useBulkDocumentUpload';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 const DOCUMENT_TYPES = [
   // Basic Business Documents
@@ -95,6 +100,14 @@ const DOCUMENT_TYPES = [
   { value: 'other', label: 'Other Document', category: 'other' }
 ];
 
+interface ExistingRequest {
+  id: string;
+  title: string;
+  document_type: string;
+  status: string;
+  created_at: string;
+}
+
 interface BuyerDocumentPrePopulatorProps {
   buyerId: string;
   onComplete?: () => void;
@@ -114,13 +127,40 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
   const [customDocumentTypes, setCustomDocumentTypes] = useState<{[index: number]: string}>({});
   const [searchFilter, setSearchFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [existingRequests, setExistingRequests] = useState<ExistingRequest[]>([]);
+  const [linkToExisting, setLinkToExisting] = useState<{[index: number]: string | null}>({});
+
+  // Fetch existing requests when supplier is selected
+  useEffect(() => {
+    const fetchExistingRequests = async () => {
+      if (!selectedSupplierId || !buyerId) {
+        setExistingRequests([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('document_requests')
+        .select('id, title, document_type, status, created_at')
+        .eq('supplier_id', selectedSupplierId)
+        .eq('buyer_id', buyerId)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        setExistingRequests(data);
+      }
+    };
+
+    fetchExistingRequests();
+  }, [selectedSupplierId, buyerId]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const newFiles: BulkUploadFile[] = acceptedFiles.map(file => ({
       file,
       documentType: '',
       documentName: file.name.replace(/\.[^/.]+$/, ''),
-      category: 'compliance'
+      category: 'compliance',
+      expirationDate: undefined,
+      existingRequestId: undefined
     }));
     setFiles(prev => [...prev, ...newFiles]);
   }, []);
@@ -145,12 +185,28 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
           : documentType 
       } : file
     ));
+    
+    // Reset link-to-existing when doc type changes
+    setLinkToExisting(prev => ({ ...prev, [index]: null }));
   };
 
   const updateCustomDocumentType = (index: number, customType: string) => {
     setCustomDocumentTypes(prev => ({ ...prev, [index]: customType }));
     setFiles(prev => prev.map((file, i) => 
       i === index ? { ...file, documentType: customType } : file
+    ));
+  };
+
+  const updateFileExpirationDate = (index: number, date: Date | undefined) => {
+    setFiles(prev => prev.map((file, i) => 
+      i === index ? { ...file, expirationDate: date?.toISOString() } : file
+    ));
+  };
+
+  const updateLinkToExisting = (index: number, requestId: string | null) => {
+    setLinkToExisting(prev => ({ ...prev, [index]: requestId }));
+    setFiles(prev => prev.map((file, i) => 
+      i === index ? { ...file, existingRequestId: requestId || undefined } : file
     ));
   };
 
@@ -170,6 +226,11 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
       });
       return reindexed;
     });
+    setLinkToExisting(prev => {
+      const updated = { ...prev };
+      delete updated[index];
+      return updated;
+    });
   };
 
   const handleUpload = async () => {
@@ -185,6 +246,7 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
       await uploadDocumentsForSupplier(selectedSupplierId, buyerId, filesWithTypes, notes);
       setFiles([]);
       setNotes('');
+      setLinkToExisting({});
       onComplete?.();
     } catch (error) {
       console.error('Upload failed:', error);
@@ -221,6 +283,12 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
     setCustomDocumentTypes({});
     setSearchFilter('');
     setCategoryFilter('all');
+    setLinkToExisting({});
+  };
+
+  // Get matching existing requests for a document type
+  const getMatchingRequests = (documentType: string): ExistingRequest[] => {
+    return existingRequests.filter(req => req.document_type === documentType);
   };
 
   return (
@@ -228,7 +296,7 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
       <CardHeader className="pb-4">
         <CardTitle className="text-lg font-semibold">Pre-populate Supplier Documents</CardTitle>
         <CardDescription className="text-muted-foreground">
-          Upload existing documents on behalf of your connected suppliers to streamline onboarding
+          Upload existing documents on behalf of your connected suppliers. Documents will appear as formally requested and fulfilled.
         </CardDescription>
       </CardHeader>
       
@@ -274,6 +342,11 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
                 {selectedSupplier.supplier?.contact_email ?? 'No email available'}
               </p>
             </div>
+            {existingRequests.length > 0 && (
+              <Badge variant="outline" className="text-xs">
+                {existingRequests.length} existing requests
+              </Badge>
+            )}
           </div>
         )}
 
@@ -312,7 +385,7 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
           </div>
         </div>
 
-        {/* File List - Professional Design */}
+        {/* File List - Enhanced with Expiry Date and Link Option */}
         {files.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -330,82 +403,167 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
             </div>
             
             <div className="rounded-lg border border-border/50 divide-y divide-border/50 overflow-hidden">
-              {files.map((file, index) => (
-                <div key={index} className="flex items-center gap-3 p-3 bg-background hover:bg-muted/30 transition-colors">
-                  <div className="flex items-center justify-center h-8 w-8 rounded-md bg-muted/60 flex-shrink-0">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate text-foreground">{file.file.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {(file.file.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Select 
-                      value={file.documentType === customDocumentTypes[index] ? 'other' : file.documentType} 
-                      onValueChange={(value) => updateFileDocumentType(index, value)}
-                    >
-                      <SelectTrigger className="w-52 h-8 text-xs">
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-80">
-                        <div className="p-2 space-y-2 border-b border-border/50">
-                          <div className="flex items-center gap-2">
-                            <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-                            <Input
-                              placeholder="Search..."
-                              value={searchFilter}
-                              onChange={(e) => setSearchFilter(e.target.value)}
-                              className="h-7 text-xs"
-                            />
+              {files.map((file, index) => {
+                const matchingRequests = file.documentType ? getMatchingRequests(file.documentType) : [];
+                
+                return (
+                  <div key={index} className="p-3 bg-background hover:bg-muted/30 transition-colors space-y-3">
+                    {/* File Info Row */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center h-8 w-8 rounded-md bg-muted/60 flex-shrink-0">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate text-foreground">{file.file.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(file.file.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                      
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFile(index)}
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {/* Document Type & Options Row */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* Document Type Select */}
+                      <Select 
+                        value={file.documentType === customDocumentTypes[index] ? 'other' : file.documentType} 
+                        onValueChange={(value) => updateFileDocumentType(index, value)}
+                      >
+                        <SelectTrigger className="w-48 h-8 text-xs">
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-80">
+                          <div className="p-2 space-y-2 border-b border-border/50">
+                            <div className="flex items-center gap-2">
+                              <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+                              <Input
+                                placeholder="Search..."
+                                value={searchFilter}
+                                onChange={(e) => setSearchFilter(e.target.value)}
+                                className="h-7 text-xs"
+                              />
+                            </div>
+                            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                              <SelectTrigger className="h-7 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {categories.map(cat => (
+                                  <SelectItem key={cat.value} value={cat.value} className="text-xs">
+                                    {cat.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
-                          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                            <SelectTrigger className="h-7 text-xs">
-                              <SelectValue />
+                          <div className="max-h-56 overflow-y-auto">
+                            {filteredDocumentTypes.map(type => (
+                              <SelectItem key={type.value} value={type.value} className="text-xs">
+                                {type.label}
+                              </SelectItem>
+                            ))}
+                          </div>
+                        </SelectContent>
+                      </Select>
+                      
+                      {/* Custom Type Input */}
+                      {(file.documentType === 'other' || file.documentType === customDocumentTypes[index]) && (
+                        <Input
+                          placeholder="Custom type..."
+                          value={customDocumentTypes[index] || ''}
+                          onChange={(e) => updateCustomDocumentType(index, e.target.value)}
+                          className="w-32 h-8 text-xs"
+                        />
+                      )}
+                      
+                      {/* Expiration Date Picker */}
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className={cn(
+                              "h-8 text-xs gap-1.5",
+                              !file.expirationDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="h-3.5 w-3.5" />
+                            {file.expirationDate 
+                              ? format(new Date(file.expirationDate), 'MMM dd, yyyy')
+                              : 'Expiry Date'
+                            }
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={file.expirationDate ? new Date(file.expirationDate) : undefined}
+                            onSelect={(date) => updateFileExpirationDate(index, date)}
+                            initialFocus
+                            className="p-3 pointer-events-auto"
+                            disabled={(date) => date < new Date()}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    {/* Link to Existing Request Option */}
+                    {file.documentType && matchingRequests.length > 0 && (
+                      <div className="flex items-start gap-2 p-2 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+                        <Link2 className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 space-y-2">
+                          <p className="text-xs text-blue-700 dark:text-blue-300">
+                            Found {matchingRequests.length} existing request(s) for this document type
+                          </p>
+                          <Select 
+                            value={linkToExisting[index] || 'new'} 
+                            onValueChange={(value) => updateLinkToExisting(index, value === 'new' ? null : value)}
+                          >
+                            <SelectTrigger className="h-7 text-xs bg-white dark:bg-background">
+                              <SelectValue placeholder="Create new request" />
                             </SelectTrigger>
                             <SelectContent>
-                              {categories.map(cat => (
-                                <SelectItem key={cat.value} value={cat.value} className="text-xs">
-                                  {cat.label}
+                              <SelectItem value="new" className="text-xs">
+                                Create new request
+                              </SelectItem>
+                              {matchingRequests.map(req => (
+                                <SelectItem key={req.id} value={req.id} className="text-xs">
+                                  Link to "{req.title}" ({req.status}) - {format(new Date(req.created_at), 'MMM yyyy')}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
+                          {linkToExisting[index] && (
+                            <p className="text-xs text-blue-600 dark:text-blue-400">
+                              ✓ Will add as new version to existing request
+                            </p>
+                          )}
                         </div>
-                        <div className="max-h-56 overflow-y-auto">
-                          {filteredDocumentTypes.map(type => (
-                            <SelectItem key={type.value} value={type.value} className="text-xs">
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </div>
-                      </SelectContent>
-                    </Select>
-                    
-                    {(file.documentType === 'other' || file.documentType === customDocumentTypes[index]) && (
-                      <Input
-                        placeholder="Custom type..."
-                        value={customDocumentTypes[index] || ''}
-                        onChange={(e) => updateCustomDocumentType(index, e.target.value)}
-                        className="w-36 h-8 text-xs"
-                      />
+                      </div>
                     )}
-                    
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeFile(index)}
-                      className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
+
+            {/* Expiry Date Reminder */}
+            {files.some(f => !f.expirationDate && f.documentType) && (
+              <div className="flex items-center gap-2 p-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                <CalendarIcon className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  Tip: Add expiration dates to receive automatic renewal notifications
+                </p>
+              </div>
+            )}
           </div>
         )}
 

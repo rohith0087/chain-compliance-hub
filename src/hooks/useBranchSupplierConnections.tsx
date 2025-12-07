@@ -50,7 +50,6 @@ export const useBranchSupplierConnections = (branchId?: string) => {
           filter: `branch_id=eq.${branchId}`
         },
         () => {
-          console.log('Branch supplier connection changed, refetching...');
           fetchBranchSuppliers();
         }
       )

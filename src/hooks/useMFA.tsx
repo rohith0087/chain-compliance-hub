@@ -139,9 +139,7 @@ export const useMFA = () => {
       for (const factor of allTotpFactors) {
         try {
           await supabase.auth.mfa.unenroll({ factorId: factor.id });
-          console.log(`Unenrolled factor: ${factor.id} (${factor.status})`);
         } catch (err) {
-          console.warn(`Failed to unenroll factor ${factor.id}:`, err);
           // Continue with other factors even if one fails
         }
       }
@@ -155,8 +153,7 @@ export const useMFA = () => {
   const enrollMFA = async () => {
     try {
       // First, cleanup ALL existing factors (verified and unverified)
-      const cleanupResult = await cleanupExistingFactors();
-      console.log('Factor cleanup result:', cleanupResult);
+      await cleanupExistingFactors();
       
       // Add small delay to ensure cleanup is processed by Supabase
       await new Promise(resolve => setTimeout(resolve, 500));

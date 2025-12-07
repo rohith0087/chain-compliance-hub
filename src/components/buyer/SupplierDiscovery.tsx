@@ -69,7 +69,6 @@ const SupplierDiscovery = () => {
 
       if (teamMember) {
         // Team member - fetch company using company_id
-        console.log('Team member detected, fetching company data with company_id:', teamMember.company_id);
         buyerId = teamMember.company_id;
         const { data: buyer } = await supabase
           .from('buyers')
@@ -79,7 +78,6 @@ const SupplierDiscovery = () => {
         buyerData = buyer;
       } else {
         // Company owner - use getBuyerProfile
-        console.log('Company owner detected, using getBuyerProfile');
         buyerData = await getBuyerProfile();
         buyerId = buyerData?.id;
       }

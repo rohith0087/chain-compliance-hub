@@ -34,7 +34,6 @@ export const MFASettingsSection = () => {
     
     // Clean up ALL existing factors (verified and unverified)
     const cleanupResult = await cleanupExistingFactors();
-    console.log('MFA disable cleanup result:', cleanupResult);
 
     if (!cleanupResult.success) {
       toast({

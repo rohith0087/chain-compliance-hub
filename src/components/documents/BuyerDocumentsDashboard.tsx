@@ -385,8 +385,6 @@ const BuyerDocumentsDashboard = () => {
   const handleApproveDocument = async (documentId: string) => {
     setApproveLoading(documentId);
     try {
-      console.log('Approving document:', documentId);
-      
       // Find the document for display purposes
       const document = documents.find(doc => doc.id === documentId);
       if (!document) {
@@ -446,8 +444,6 @@ const BuyerDocumentsDashboard = () => {
   const handleDeclineDocument = async (documentId: string, reason: string) => {
     setDeclineLoading(documentId);
     try {
-      console.log('Declining document:', documentId);
-      
       // Find the document for display purposes
       const document = documents.find(doc => doc.id === documentId);
       if (!document) {

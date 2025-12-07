@@ -168,11 +168,8 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
   const loadSupplierData = async () => {
     setLoading(true);
     try {
-      console.log('Loading supplier data for user:', authUser?.id);
-      
       // Load supplier profile
       const profile = await getSupplierProfile();
-      console.log('Loaded supplier profile:', profile);
       setSupplierProfile(profile);
 
       if (profile) {
@@ -195,7 +192,6 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
         if (requestsError) {
           console.error('Error loading document requests:', requestsError);
         } else {
-          console.log('Loaded document requests:', requests);
           setDocumentRequests(requests || []);
         }
 
@@ -216,8 +212,6 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
           console.error('Error loading buyer connections:', connectionsError);
           setConnectedBuyers([]);
         } else {
-          console.log('Loaded connections:', connections);
-          
           // Fetch buyer details separately for each connection
               if (connections && connections.length > 0) {
                 const buyerDetailsPromises = connections.map(async (connection) => {

@@ -91,13 +91,11 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
         // Try to find the saved branch
         if (savedBranchId) {
           branchToSet = branchesData.find(b => b.id === savedBranchId) as CompanyBranch || null;
-          console.log('Restoring saved branch:', branchToSet?.branch_name);
         }
 
         // Fall back to Main Office or first branch if no saved selection
         if (!branchToSet) {
           branchToSet = branchesData.find(b => b.branch_name === 'Main Office') as CompanyBranch || branchesData[0] as CompanyBranch;
-          console.log('Using default branch:', branchToSet?.branch_name);
         }
 
         setCurrentBranch(branchToSet);
@@ -352,8 +350,6 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
 
       // Step 2: If hard delete required, call edge function to delete auth user
       if (result.action === 'hard_delete_required' && result.profile_id) {
-        console.log('Deleting auth user:', result.profile_id);
-        
         const { error: authDeleteError } = await supabase.functions.invoke('delete-auth-user', {
           body: { profile_id: result.profile_id }
         });
@@ -361,8 +357,6 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
         if (authDeleteError) {
           console.error('Error deleting auth user:', authDeleteError);
           toast.warning('User removed from company, but auth account deletion failed. They may still be able to log in.');
-        } else {
-          console.log('Auth user deleted successfully');
         }
       }
 
@@ -390,8 +384,6 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
 
       if (error) {
         console.error('Error syncing branch manager:', error);
-      } else {
-        console.log(`Branch manager synced: ${profileId} for branch ${branchId}`);
       }
     }
   };
@@ -451,8 +443,6 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
       }
 
       toast.success('User created successfully! They will receive an email with instructions.');
-      
-      console.log(`User created successfully: ${email} with ${role} role in branch ${branchId}`);
       
       // Sync branch manager if needed
       if (response.data?.user?.id) {

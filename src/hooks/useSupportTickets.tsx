@@ -111,7 +111,6 @@ export const useSupportTickets = (options: UseSupportTicketsOptions = {}) => {
               companyType: ticket.user_type === 'buyer' ? 'buyer' : ticket.user_type === 'supplier' ? 'supplier' : undefined,
             }
           });
-          console.log('Resolution notification sent successfully');
         } catch (notifError) {
           console.error('Failed to send resolution notification:', notifError);
           // Don't fail the status update if notification fails

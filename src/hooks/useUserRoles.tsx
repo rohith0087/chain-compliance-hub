@@ -48,7 +48,6 @@ export const useUserRoles = () => {
       }
 
       // Fallback: Check profile.roles if user_roles is empty
-      console.warn('user_roles table empty, checking profile.roles fallback');
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('roles')
@@ -63,7 +62,6 @@ export const useUserRoles = () => {
       }
 
       if (profileData?.roles && profileData.roles.length > 0) {
-        console.log('Using profile.roles as fallback:', profileData.roles);
         // Convert to AppRole[] and set
         const fallbackRoles = profileData.roles as AppRole[];
         setRoles(fallbackRoles);

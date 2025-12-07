@@ -1,0 +1,70 @@
+import { motion } from 'framer-motion';
+import { AnimatedNumber } from './AnimatedNumber';
+import { cn } from '@/lib/utils';
+
+interface ComplianceRingProps {
+  score: number;
+  size?: number;
+  strokeWidth?: number;
+}
+
+export function ComplianceRing({ score, size = 140, strokeWidth = 10 }: ComplianceRingProps) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const center = size / 2;
+
+  const getColor = (score: number) => {
+    if (score >= 80) return 'stroke-green-500';
+    if (score >= 60) return 'stroke-amber-500';
+    return 'stroke-red-500';
+  };
+
+  const getGlowColor = (score: number) => {
+    if (score >= 80) return 'drop-shadow-[0_0_8px_rgba(34,197,94,0.5)]';
+    if (score >= 60) return 'drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]';
+    return 'drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]';
+  };
+
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg 
+        className={cn('-rotate-90', getGlowColor(score))} 
+        width={size} 
+        height={size}
+      >
+        {/* Background circle */}
+        <circle
+          cx={center}
+          cy={center}
+          r={radius}
+          className="stroke-muted"
+          strokeWidth={strokeWidth}
+          fill="none"
+        />
+        {/* Animated progress circle */}
+        <motion.circle
+          cx={center}
+          cy={center}
+          r={radius}
+          className={cn(getColor(score))}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: circumference - (circumference * score / 100) }}
+          transition={{ duration: 1.5, ease: 'easeOut', delay: 0.3 }}
+        />
+      </svg>
+      {/* Center text */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <AnimatedNumber 
+          value={score} 
+          suffix="%" 
+          className="text-3xl font-bold text-foreground"
+        />
+        <span className="text-xs text-muted-foreground">Compliance</span>
+      </div>
+    </div>
+  );
+}

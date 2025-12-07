@@ -211,11 +211,12 @@ export function BuyerSidebarLayout({
         { title: 'Facility Matrix', value: 'facility-matrix', icon: Building2 }
       ]
     },
-    {
-      title: 'Assignments',
-      icon: ClipboardCheck,
-      value: 'assignments'
-    },
+    // Assignments tab - phased out for next build
+    // {
+    //   title: 'Assignments',
+    //   icon: ClipboardCheck,
+    //   value: 'assignments'
+    // },
     {
       title: 'Onboarding Pipeline',
       icon: GitBranch,

@@ -130,26 +130,36 @@ export const useMFA = () => {
     checkMFAStatus();
   }, [checkMFAStatus]);
 
-  const cleanupUnverifiedFactors = async () => {
+  const cleanupExistingFactors = async () => {
     try {
       const { data: factorsData } = await supabase.auth.mfa.listFactors();
-      const unverifiedFactors = factorsData?.totp?.filter((f: any) => f.status === 'unverified') || [];
+      const allTotpFactors = factorsData?.totp || [];
       
-      // Unenroll all unverified factors to allow fresh enrollment
-      for (const factor of unverifiedFactors) {
-        await supabase.auth.mfa.unenroll({ factorId: factor.id });
+      // Unenroll ALL TOTP factors (both verified and unverified)
+      for (const factor of allTotpFactors) {
+        try {
+          await supabase.auth.mfa.unenroll({ factorId: factor.id });
+          console.log(`Unenrolled factor: ${factor.id} (${factor.status})`);
+        } catch (err) {
+          console.warn(`Failed to unenroll factor ${factor.id}:`, err);
+          // Continue with other factors even if one fails
+        }
       }
-      return { success: true, cleaned: unverifiedFactors.length };
+      return { success: true, cleaned: allTotpFactors.length };
     } catch (error) {
-      console.error('Error cleaning up unverified factors:', error);
+      console.error('Error cleaning up factors:', error);
       return { success: false, cleaned: 0 };
     }
   };
 
   const enrollMFA = async () => {
     try {
-      // First, cleanup any abandoned/unverified enrollment attempts
-      await cleanupUnverifiedFactors();
+      // First, cleanup ALL existing factors (verified and unverified)
+      const cleanupResult = await cleanupExistingFactors();
+      console.log('Factor cleanup result:', cleanupResult);
+      
+      // Add small delay to ensure cleanup is processed by Supabase
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Now enroll fresh
       const { data, error } = await supabase.auth.mfa.enroll({
@@ -277,5 +287,6 @@ export const useMFA = () => {
     verifyMFA,
     challengeAndVerify,
     unenrollMFA,
+    cleanupExistingFactors,
   };
 };

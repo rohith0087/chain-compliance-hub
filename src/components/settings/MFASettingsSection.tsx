@@ -14,7 +14,7 @@ import { RecoveryCodesDisplay } from '@/components/auth/RecoveryCodesDisplay';
 import { supabase } from '@/integrations/supabase/client';
 
 export const MFASettingsSection = () => {
-  const { mfaEnrolled, factors, unenrollMFA, loading: mfaLoading, remainingRecoveryCodes, checkMFAStatus } = useMFA();
+  const { mfaEnrolled, factors, unenrollMFA, loading: mfaLoading, remainingRecoveryCodes, checkMFAStatus, cleanupExistingFactors } = useMFA();
   const { toast } = useToast();
   
   const [showEnrollment, setShowEnrollment] = useState(false);
@@ -32,21 +32,19 @@ export const MFASettingsSection = () => {
 
     setDisabling(true);
     
-    // Unenroll all factors
-    for (const factor of factors) {
-      const { error } = await unenrollMFA(factor.id);
-      if (error) {
-        toast({
-          title: "Error",
-          description: "Failed to disable MFA. Please try again.",
-          variant: "destructive",
-        });
-        setDisabling(false);
-        return;
-      }
-    }
+    // Clean up ALL existing factors (verified and unverified)
+    const cleanupResult = await cleanupExistingFactors();
+    console.log('MFA disable cleanup result:', cleanupResult);
 
-    // Delete recovery codes (will be done by edge function on re-enrollment)
+    if (!cleanupResult.success) {
+      toast({
+        title: "Error",
+        description: "Failed to disable MFA. Please try again.",
+        variant: "destructive",
+      });
+      setDisabling(false);
+      return;
+    }
     
     toast({
       title: "MFA Disabled",

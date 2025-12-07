@@ -2437,8 +2437,11 @@ export type Database = {
           company_name: string | null
           created_at: string | null
           email: string
+          first_login_at: string | null
           full_name: string
           id: string
+          mfa_enabled: boolean | null
+          mfa_grace_period_expires_at: string | null
           roles: Database["public"]["Enums"]["user_role"][]
           updated_at: string | null
         }
@@ -2446,8 +2449,11 @@ export type Database = {
           company_name?: string | null
           created_at?: string | null
           email: string
+          first_login_at?: string | null
           full_name: string
           id: string
+          mfa_enabled?: boolean | null
+          mfa_grace_period_expires_at?: string | null
           roles?: Database["public"]["Enums"]["user_role"][]
           updated_at?: string | null
         }
@@ -2455,8 +2461,11 @@ export type Database = {
           company_name?: string | null
           created_at?: string | null
           email?: string
+          first_login_at?: string | null
           full_name?: string
           id?: string
+          mfa_enabled?: boolean | null
+          mfa_grace_period_expires_at?: string | null
           roles?: Database["public"]["Enums"]["user_role"][]
           updated_at?: string | null
         }

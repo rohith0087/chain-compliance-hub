@@ -10,6 +10,7 @@ import { useUserRoles } from "@/hooks/useUserRoles";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { MFAGuard } from "@/components/auth/MFAGuard";
 
 import AuthPage from "./components/auth/AuthPage";
 import ResetPassword from "./pages/ResetPassword";
@@ -48,7 +49,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/" replace />;
   }
   
-  return <>{children}</>;
+  // Wrap with MFA guard to enforce mandatory 2FA
+  return <MFAGuard>{children}</MFAGuard>;
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {

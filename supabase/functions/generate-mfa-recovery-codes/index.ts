@@ -17,10 +17,12 @@ function generateCode(length: number = 8): string {
   return code;
 }
 
-// Hash a code using SHA-256
+// Hash a code using SHA-256 (MUST MATCH verification logic)
 async function hashCode(code: string): Promise<string> {
   const encoder = new TextEncoder();
-  const data = encoder.encode(code);
+  // Normalize: uppercase and remove non-alphanumeric (same as verify function)
+  const normalizedCode = code.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const data = encoder.encode(normalizedCode);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');

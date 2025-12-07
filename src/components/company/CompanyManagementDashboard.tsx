@@ -150,7 +150,8 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
             <TabsTrigger value="branches">Branches</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
-            <TabsTrigger value="agent-timeline">Agent Timeline</TabsTrigger>
+            {/* Agent Timeline tab - phased out for next build */}
+            {/* <TabsTrigger value="agent-timeline">Agent Timeline</TabsTrigger> */}
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -246,12 +247,13 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
           />
         </TabsContent>
 
-        <TabsContent value="agent-timeline" className="space-y-6">
+        {/* Agent Timeline tab content - phased out for next build */}
+        {/* <TabsContent value="agent-timeline" className="space-y-6">
           <AgentTimeline 
             companyId={companyId}
             companyType={companyType}
           />
-        </TabsContent>
+        </TabsContent> */}
       </Tabs>
     </div>
   );

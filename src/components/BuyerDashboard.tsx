@@ -197,85 +197,106 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         const effectiveBuyerId = teamMember?.company_id || buyerProfile?.id;
 
         if (effectiveBuyerId) {
-          // Fetch dashboard stats in parallel
-          const [
-            connectionsResult,
-            activeRequestsResult,
-            pendingReviewResult,
-            approvedDocsResult,
-            expiringResult,
-            onboardingResult,
-            deadlinesResult,
-            pendingRequestsResult
-          ] = await Promise.all([
-            // Connected suppliers count
-            supabase
+          // Branch filter helper
+          const branchFilter = !allBranchesView && currentBranch?.id ? currentBranch.id : null;
+
+          // Connected suppliers - different query based on branch selection
+          let connectedSuppliersCount = 0;
+          if (branchFilter) {
+            const { count } = await supabase
+              .from('branch_supplier_connections')
+              .select('id', { count: 'exact', head: true })
+              .eq('branch_id', branchFilter)
+              .eq('status', 'active');
+            connectedSuppliersCount = count || 0;
+          } else {
+            const { count } = await supabase
               .from('buyer_supplier_connections')
               .select('id', { count: 'exact', head: true })
               .eq('buyer_id', effectiveBuyerId)
-              .eq('status', 'approved'),
-            // Active requests (pending status)
-            supabase
-              .from('document_requests')
-              .select('id', { count: 'exact', head: true })
-              .eq('buyer_id', effectiveBuyerId)
-              .eq('status', 'pending'),
-            // Pending review (submitted status)
-            supabase
-              .from('document_requests')
-              .select('id', { count: 'exact', head: true })
-              .eq('buyer_id', effectiveBuyerId)
-              .eq('status', 'submitted'),
-            // Approved documents
-            supabase
-              .from('document_requests')
-              .select('id', { count: 'exact', head: true })
-              .eq('buyer_id', effectiveBuyerId)
-              .eq('status', 'approved'),
-            // Expiring soon (within 30 days)
-            supabase
-              .from('document_uploads')
-              .select('id, document_requests!inner(buyer_id)', { count: 'exact', head: true })
-              .eq('document_requests.buyer_id', effectiveBuyerId)
-              .eq('status', 'approved')
-              .not('expiration_date', 'is', null)
-              .gte('expiration_date', new Date().toISOString().split('T')[0])
-              .lte('expiration_date', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]),
-            // Onboarding count
-            supabase
-              .from('supplier_onboarding_requests')
-              .select('id', { count: 'exact', head: true })
-              .eq('buyer_id', effectiveBuyerId)
-              .in('status', ['pending', 'invited', 'onboarding_initiated']),
-            // Upcoming deadlines
-            supabase
-              .from('document_requests')
-              .select(`id, title, due_date, status, priority, suppliers (company_name)`)
-              .eq('buyer_id', effectiveBuyerId)
-              .not('due_date', 'is', null)
-              .gte('due_date', new Date().toISOString().split('T')[0])
-              .lte('due_date', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
-              .order('due_date', { ascending: true })
-              .limit(5),
-            // Pending action items
-            supabase
-              .from('document_requests')
-              .select(`id, title, created_at, due_date, status, priority, suppliers (company_name)`)
-              .eq('buyer_id', effectiveBuyerId)
-              .in('status', ['pending', 'submitted'])
-              .order('created_at', { ascending: false })
-              .limit(5)
-          ]);
+              .eq('status', 'approved');
+            connectedSuppliersCount = count || 0;
+          }
+
+          // Active requests (pending status) with branch filter
+          let activeRequestsQuery = supabase
+            .from('document_requests')
+            .select('id', { count: 'exact', head: true })
+            .eq('buyer_id', effectiveBuyerId)
+            .eq('status', 'pending');
+          if (branchFilter) activeRequestsQuery = activeRequestsQuery.eq('branch_id', branchFilter);
+          const { count: activeRequestsCount } = await activeRequestsQuery;
+
+          // Pending review (submitted status) with branch filter
+          let pendingReviewQuery = supabase
+            .from('document_requests')
+            .select('id', { count: 'exact', head: true })
+            .eq('buyer_id', effectiveBuyerId)
+            .eq('status', 'submitted');
+          if (branchFilter) pendingReviewQuery = pendingReviewQuery.eq('branch_id', branchFilter);
+          const { count: pendingReviewCount } = await pendingReviewQuery;
+
+          // Approved documents with branch filter
+          let approvedDocsQuery = supabase
+            .from('document_requests')
+            .select('id', { count: 'exact', head: true })
+            .eq('buyer_id', effectiveBuyerId)
+            .eq('status', 'approved');
+          if (branchFilter) approvedDocsQuery = approvedDocsQuery.eq('branch_id', branchFilter);
+          const { count: approvedDocsCount } = await approvedDocsQuery;
+
+          // Expiring soon (within 30 days) with branch filter
+          let expiringQuery = supabase
+            .from('document_uploads')
+            .select('id, document_requests!inner(buyer_id, branch_id)', { count: 'exact', head: true })
+            .eq('document_requests.buyer_id', effectiveBuyerId)
+            .eq('status', 'approved')
+            .not('expiration_date', 'is', null)
+            .gte('expiration_date', new Date().toISOString().split('T')[0])
+            .lte('expiration_date', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+          if (branchFilter) expiringQuery = expiringQuery.eq('document_requests.branch_id', branchFilter);
+          const { count: expiringCount } = await expiringQuery;
+
+          // Onboarding count (no branch filter - company-level)
+          const { count: onboardingCount } = await supabase
+            .from('supplier_onboarding_requests')
+            .select('id', { count: 'exact', head: true })
+            .eq('buyer_id', effectiveBuyerId)
+            .in('status', ['pending', 'invited', 'onboarding_initiated']);
+
+          // Upcoming deadlines with branch filter
+          let deadlinesQuery = supabase
+            .from('document_requests')
+            .select(`id, title, due_date, status, priority, suppliers (company_name)`)
+            .eq('buyer_id', effectiveBuyerId)
+            .not('due_date', 'is', null)
+            .gte('due_date', new Date().toISOString().split('T')[0])
+            .lte('due_date', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+            .order('due_date', { ascending: true })
+            .limit(5);
+          if (branchFilter) deadlinesQuery = deadlinesQuery.eq('branch_id', branchFilter);
+          const { data: deadlinesData, error: deadlinesError } = await deadlinesQuery;
+
+          // Pending action items with branch filter
+          let actionItemsQuery = supabase
+            .from('document_requests')
+            .select(`id, title, created_at, due_date, status, priority, suppliers (company_name)`)
+            .eq('buyer_id', effectiveBuyerId)
+            .in('status', ['pending', 'submitted'])
+            .order('created_at', { ascending: false })
+            .limit(5);
+          if (branchFilter) actionItemsQuery = actionItemsQuery.eq('branch_id', branchFilter);
+          const { data: actionItemsData, error: actionItemsError } = await actionItemsQuery;
 
           // Update dashboard stats
-          const totalDocs = (approvedDocsResult.count || 0) + (pendingReviewResult.count || 0) + (activeRequestsResult.count || 0);
+          const totalDocs = (approvedDocsCount || 0) + (pendingReviewCount || 0) + (activeRequestsCount || 0);
           setDashboardStats({
-            connectedSuppliers: connectionsResult.count || 0,
-            activeRequests: activeRequestsResult.count || 0,
-            pendingReview: pendingReviewResult.count || 0,
-            approvedDocs: approvedDocsResult.count || 0,
-            expiringSoon: expiringResult.count || 0,
-            onboardingCount: onboardingResult.count || 0,
+            connectedSuppliers: connectedSuppliersCount,
+            activeRequests: activeRequestsCount || 0,
+            pendingReview: pendingReviewCount || 0,
+            approvedDocs: approvedDocsCount || 0,
+            expiringSoon: expiringCount || 0,
+            onboardingCount: onboardingCount || 0,
             rejectedDocs: 0,
             totalDocs: totalDocs,
           });
@@ -293,13 +314,13 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
           setActivityTrend(last7Days);
 
           // Set deadlines
-          if (!deadlinesResult.error) {
-            setUpcomingDeadlines(deadlinesResult.data || []);
+          if (!deadlinesError) {
+            setUpcomingDeadlines(deadlinesData || []);
           }
 
           // Set action items
-          if (!pendingRequestsResult.error) {
-            const actionItemsData = (pendingRequestsResult.data || []).map(req => {
+          if (!actionItemsError) {
+            const actionItems = (actionItemsData || []).map(req => {
               const isOverdue = req.due_date && new Date(req.due_date) < new Date();
               return {
                 ...req,
@@ -307,7 +328,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                 actionText: isOverdue ? 'Overdue - Follow up required' : 'Awaiting supplier response'
               };
             });
-            setActionItems(actionItemsData);
+            setActionItems(actionItems);
           }
         }
       } catch (error) {
@@ -318,7 +339,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
     };
 
     fetchDashboardData();
-  }, [authUser, currentBranch, allBranchesView]);
+  }, [authUser, currentBranch?.id, allBranchesView]);
 
   const handleFindSuppliersClick = () => {
     console.log('Find Suppliers button clicked, switching to suppliers tab');
@@ -386,21 +407,6 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                   <MetricChip label="Expiring" value={dashboardStats.expiringSoon} color="red" pulse={dashboardStats.expiringSoon > 0} />
                 </div>
 
-                {/* Quick Actions - Compact */}
-                <div className="flex flex-wrap gap-3">
-                  <Button variant="outline" className="gap-2 bg-card border-border hover:bg-muted hover:border-primary/50 hover:text-foreground transition-all" onClick={handleFindSuppliersClick}>
-                    <Users className="w-4 h-4" /> Find Suppliers
-                  </Button>
-                  <Button variant="outline" className="gap-2 bg-card border-border hover:bg-muted hover:border-primary/50 hover:text-foreground transition-all" onClick={() => setActiveTab('requests')}>
-                    <ListChecks className="w-4 h-4" /> My Requests
-                  </Button>
-                  <Button variant="outline" className="gap-2 bg-card border-border hover:bg-muted hover:border-primary/50 hover:text-foreground transition-all" onClick={() => navigate('/chat')}>
-                    <Compass className="w-4 h-4" /> Compliance Compass
-                  </Button>
-                  <Button variant="default" className="gap-2" onClick={() => setShowRequestForm(true)}>
-                    <Plus className="w-4 h-4" /> New Request
-                  </Button>
-                </div>
               </motion.div>
 
               {/* Right: Compliance Ring */}

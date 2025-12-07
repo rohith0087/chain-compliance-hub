@@ -63,7 +63,7 @@ export function ComplianceRing({ score, size = 140, strokeWidth = 10 }: Complian
           suffix="%" 
           className="text-3xl font-bold text-foreground"
         />
-        <span className="text-xs text-muted-foreground">Compliance</span>
+        <span className="text-xs text-muted-foreground">Completed</span>
       </div>
     </div>
   );

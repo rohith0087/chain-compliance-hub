@@ -178,3 +178,10 @@ verify_jwt = false
 # Password reset - public for forgot password flow
 [functions.send-password-reset]
 verify_jwt = false
+
+# MFA recovery codes - requires JWT
+[functions.generate-mfa-recovery-codes]
+verify_jwt = true
+
+[functions.verify-mfa-recovery-code]
+verify_jwt = true

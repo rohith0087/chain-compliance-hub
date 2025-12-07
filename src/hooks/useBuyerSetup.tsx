@@ -24,8 +24,6 @@ export const useBuyerSetup = () => {
       if (buyerError) {
         console.error('Error creating buyer record:', buyerError);
         throw buyerError;
-      } else {
-        console.log('Buyer record created for user');
       }
     } catch (error) {
       console.error('Error in createBuyerRecord:', error);

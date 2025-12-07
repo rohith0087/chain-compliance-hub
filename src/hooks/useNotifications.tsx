@@ -26,8 +26,6 @@ export const useNotifications = () => {
     }
 
     try {
-      console.log('Fetching notifications for user:', user.id);
-      
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
@@ -39,7 +37,6 @@ export const useNotifications = () => {
         console.error('Error fetching notifications:', error);
         setNotifications([]);
       } else {
-        console.log('Notifications fetched:', data);
         setNotifications(data || []);
       }
     } catch (error) {
@@ -64,12 +61,9 @@ export const useNotifications = () => {
                      window.location.protocol === 'http:';
 
     if (isSandbox) {
-      console.log('Skipping real-time notifications setup in sandbox environment');
       return;
     }
 
-    console.log('Setting up real-time notifications for user:', user.id);
-    
     try {
       const channel = supabase
         .channel('notifications')
@@ -82,7 +76,6 @@ export const useNotifications = () => {
             filter: `user_id=eq.${user.id}`
           },
           (payload) => {
-            console.log('New notification received:', payload);
             setNotifications(prev => [payload.new as Notification, ...prev]);
           }
         )
@@ -95,7 +88,6 @@ export const useNotifications = () => {
             filter: `user_id=eq.${user.id}`
           },
           (payload) => {
-            console.log('Notification updated:', payload);
             setNotifications(prev => 
               prev.map(notif => 
                 notif.id === payload.new.id ? payload.new as Notification : notif
@@ -106,23 +98,19 @@ export const useNotifications = () => {
         .subscribe();
 
       return () => {
-        console.log('Cleaning up notifications subscription');
         try {
           supabase.removeChannel(channel);
         } catch (error) {
-          console.log('Error cleaning up subscription:', error);
+          // Silently handle cleanup errors
         }
       };
     } catch (error) {
-      console.log('Failed to setup real-time notifications:', error);
       // Continue without real-time updates in case of WebSocket errors
     }
   }, [user]);
 
   const markAsRead = async (notificationId: string) => {
     try {
-      console.log('Marking notification as read:', notificationId);
-      
       const { error } = await supabase
         .from('notifications')
         .update({ read: true })
@@ -146,8 +134,6 @@ export const useNotifications = () => {
     if (!user) return;
 
     try {
-      console.log('Marking all notifications as read for user:', user.id);
-      
       const { error } = await supabase
         .from('notifications')
         .update({ read: true })

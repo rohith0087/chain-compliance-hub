@@ -376,25 +376,25 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                 </div>
 
                 {/* Inline Metric Chips */}
-                <div className="flex flex-wrap items-center gap-3 p-4 rounded-xl bg-muted/30 backdrop-blur border border-border/50">
+                <div className="flex flex-wrap items-center gap-4 p-5 rounded-2xl bg-gradient-to-br from-card to-muted/20 border border-border/40 shadow-sm">
                   <MetricChip label="Suppliers" value={dashboardStats.connectedSuppliers} color="blue" />
-                  <div className="w-px h-8 bg-border/50" />
+                  <div className="w-px h-14 bg-border/40" />
                   <MetricChip label="Active" value={dashboardStats.activeRequests} color="amber" />
-                  <div className="w-px h-8 bg-border/50" />
+                  <div className="w-px h-14 bg-border/40" />
                   <MetricChip label="Pending" value={dashboardStats.pendingReview} color="teal" pulse={dashboardStats.pendingReview > 0} />
-                  <div className="w-px h-8 bg-border/50" />
+                  <div className="w-px h-14 bg-border/40" />
                   <MetricChip label="Expiring" value={dashboardStats.expiringSoon} color="red" pulse={dashboardStats.expiringSoon > 0} />
                 </div>
 
                 {/* Quick Actions - Compact */}
                 <div className="flex flex-wrap gap-3">
-                  <Button variant="outline" className="gap-2 hover:bg-primary/10" onClick={handleFindSuppliersClick}>
+                  <Button variant="outline" className="gap-2 bg-card border-border hover:bg-muted hover:border-primary/50 hover:text-foreground transition-all" onClick={handleFindSuppliersClick}>
                     <Users className="w-4 h-4" /> Find Suppliers
                   </Button>
-                  <Button variant="outline" className="gap-2 hover:bg-accent/10" onClick={() => setActiveTab('requests')}>
+                  <Button variant="outline" className="gap-2 bg-card border-border hover:bg-muted hover:border-primary/50 hover:text-foreground transition-all" onClick={() => setActiveTab('requests')}>
                     <ListChecks className="w-4 h-4" /> My Requests
                   </Button>
-                  <Button variant="outline" className="gap-2 hover:bg-secondary/10" onClick={() => navigate('/chat')}>
+                  <Button variant="outline" className="gap-2 bg-card border-border hover:bg-muted hover:border-primary/50 hover:text-foreground transition-all" onClick={() => navigate('/chat')}>
                     <Compass className="w-4 h-4" /> Compliance Compass
                   </Button>
                   <Button variant="default" className="gap-2" onClick={() => setShowRequestForm(true)}>
@@ -671,12 +671,6 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                 </CardContent>
               </Card>
             </motion.div>
-
-            {/* My Assignments Widget */}
-            {authUser && (
-              <MyAssignments />
-            )}
-
           </div>
         )}
 

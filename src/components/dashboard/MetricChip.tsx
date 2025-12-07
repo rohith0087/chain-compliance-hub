@@ -33,23 +33,25 @@ export function MetricChip({ label, value, trend, color = 'blue', pulse }: Metri
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       className={cn(
-        'flex items-center gap-2 px-3 py-2 rounded-lg',
+        'flex items-center gap-3 px-5 py-4 rounded-xl min-w-[110px]',
+        'bg-gradient-to-br from-card to-muted/30 border border-border/50',
+        'hover:border-primary/40 hover:shadow-md transition-all duration-200',
         colorMap[color]
       )}
     >
       <div className="relative">
-        <div className={cn('w-2 h-2 rounded-full', dotColorMap[color])} />
+        <div className={cn('w-3 h-3 rounded-full', dotColorMap[color])} />
         {pulse && (
-          <div className={cn('absolute inset-0 w-2 h-2 rounded-full animate-ping', dotColorMap[color], 'opacity-75')} />
+          <div className={cn('absolute inset-0 w-3 h-3 rounded-full animate-ping', dotColorMap[color], 'opacity-75')} />
         )}
       </div>
       <div className="flex flex-col">
-        <span className="text-xs text-muted-foreground">{label}</span>
-        <div className="flex items-center gap-1">
-          <span className="text-lg font-bold">{value}</span>
+        <span className="text-sm text-muted-foreground font-medium">{label}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-2xl font-bold">{value}</span>
           {trend !== undefined && trend !== 0 && (
             <span className={cn(
-              'text-xs font-medium',
+              'text-sm font-medium',
               trend > 0 ? 'text-green-500' : 'text-red-500'
             )}>
               {trend > 0 ? '+' : ''}{trend}

@@ -9,6 +9,8 @@ interface MFAState {
   daysRemaining: number;
   loading: boolean;
   factors: any[];
+  remainingRecoveryCodes: number | null;
+  gracePeriodEndsAt: Date | null;
 }
 
 export const useMFA = () => {
@@ -20,6 +22,8 @@ export const useMFA = () => {
     daysRemaining: 7,
     loading: true,
     factors: [],
+    remainingRecoveryCodes: null,
+    gracePeriodEndsAt: null,
   });
 
   const checkMFAStatus = useCallback(async () => {
@@ -95,6 +99,16 @@ export const useMFA = () => {
         }
       }
 
+      // 4. Check remaining recovery codes
+      let remainingRecoveryCodes: number | null = null;
+      const { count } = await supabase
+        .from('mfa_recovery_codes')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .is('used_at', null);
+      
+      remainingRecoveryCodes = count;
+
       setState({
         mfaEnrolled: hasEnrolledMFA,
         mfaVerified: isMFAVerified,
@@ -102,6 +116,8 @@ export const useMFA = () => {
         daysRemaining,
         loading: false,
         factors: verifiedFactors,
+        remainingRecoveryCodes,
+        gracePeriodEndsAt: profile?.mfa_grace_period_expires_at ? new Date(profile.mfa_grace_period_expires_at) : null,
       });
 
     } catch (error) {

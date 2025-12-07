@@ -6,19 +6,24 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Shield, ShieldCheck, ShieldOff, Trash2, Loader2, AlertCircle } from 'lucide-react';
+import { Shield, ShieldCheck, ShieldOff, Trash2, Loader2, AlertCircle, RefreshCw, KeyRound } from 'lucide-react';
 import { useMFA } from '@/hooks/useMFA';
 import { useToast } from '@/hooks/use-toast';
 import { MFAEnrollment } from '@/components/auth/MFAEnrollment';
+import { RecoveryCodesDisplay } from '@/components/auth/RecoveryCodesDisplay';
+import { supabase } from '@/integrations/supabase/client';
 
 export const MFASettingsSection = () => {
-  const { mfaEnrolled, factors, unenrollMFA, loading: mfaLoading } = useMFA();
+  const { mfaEnrolled, factors, unenrollMFA, loading: mfaLoading, remainingRecoveryCodes, checkMFAStatus } = useMFA();
   const { toast } = useToast();
   
   const [showEnrollment, setShowEnrollment] = useState(false);
+  const [forceReenrollment, setForceReenrollment] = useState(false);
   const [showDisableDialog, setShowDisableDialog] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [disabling, setDisabling] = useState(false);
+  const [regeneratingCodes, setRegeneratingCodes] = useState(false);
+  const [newRecoveryCodes, setNewRecoveryCodes] = useState<string[]>([]);
 
   const handleDisableMFA = async () => {
     if (confirmText !== 'DISABLE') {
@@ -41,24 +46,90 @@ export const MFASettingsSection = () => {
       }
     }
 
+    // Delete recovery codes (will be done by edge function on re-enrollment)
+    
     toast({
       title: "MFA Disabled",
-      description: "Two-factor authentication has been disabled.",
+      description: "You must now set up MFA again to continue.",
     });
 
     setShowDisableDialog(false);
     setConfirmText('');
     setDisabling(false);
+    
+    // Force immediate re-enrollment
+    setForceReenrollment(true);
+    setShowEnrollment(true);
   };
 
+  const handleRegenerateRecoveryCodes = async () => {
+    setRegeneratingCodes(true);
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Error",
+          description: "Session expired. Please sign in again.",
+          variant: "destructive",
+        });
+        setRegeneratingCodes(false);
+        return;
+      }
+
+      const response = await supabase.functions.invoke('generate-mfa-recovery-codes', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
+      });
+
+      if (response.data?.codes) {
+        setNewRecoveryCodes(response.data.codes);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to generate new recovery codes.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error regenerating codes:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate new recovery codes.",
+        variant: "destructive",
+      });
+    }
+    
+    setRegeneratingCodes(false);
+  };
+
+  // Show new recovery codes after regeneration
+  if (newRecoveryCodes.length > 0) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background">
+        <RecoveryCodesDisplay 
+          codes={newRecoveryCodes} 
+          onConfirm={() => {
+            setNewRecoveryCodes([]);
+            checkMFAStatus();
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Enrollment mode (either initial or forced re-enrollment)
   if (showEnrollment) {
     return (
       <div className="fixed inset-0 z-50 bg-background">
         <MFAEnrollment 
+          mandatory={forceReenrollment}
           onComplete={() => {
             setShowEnrollment(false);
+            setForceReenrollment(false);
           }}
-          onSkip={() => setShowEnrollment(false)}
+          onSkip={forceReenrollment ? undefined : () => setShowEnrollment(false)}
         />
       </div>
     );
@@ -121,15 +192,14 @@ export const MFASettingsSection = () => {
                       Disable Two-Factor Authentication
                     </DialogTitle>
                     <DialogDescription>
-                      This will remove the extra security from your account. 
-                      You'll need to set it up again later as MFA is mandatory.
+                      This will remove your current MFA setup. You will be required to set up MFA again immediately.
                     </DialogDescription>
                   </DialogHeader>
                   
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      Warning: Disabling MFA reduces your account security significantly.
+                      Warning: After disabling, you must immediately set up MFA again to continue using your account.
                     </AlertDescription>
                   </Alert>
 
@@ -158,12 +228,44 @@ export const MFASettingsSection = () => {
                           Disabling...
                         </>
                       ) : (
-                        'Disable MFA'
+                        'Disable & Re-setup MFA'
                       )}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+            </div>
+
+            {/* Recovery Codes Section */}
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-3">
+                <KeyRound className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Recovery Codes</p>
+                  <p className="text-xs text-muted-foreground">
+                    {remainingRecoveryCodes !== null 
+                      ? `${remainingRecoveryCodes} codes remaining`
+                      : 'Backup access codes'
+                    }
+                  </p>
+                </div>
+              </div>
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRegenerateRecoveryCodes}
+                disabled={regeneratingCodes}
+              >
+                {regeneratingCodes ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-1" />
+                    Regenerate
+                  </>
+                )}
+              </Button>
             </div>
           </>
         ) : (

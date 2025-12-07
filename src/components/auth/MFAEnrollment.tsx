@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Shield, Smartphone, Copy, Check, AlertCircle, Loader2 } from 'lucide-react';
+import { Shield, Smartphone, QrCode, CheckCircle, Loader2, AlertCircle, Copy, Check } from 'lucide-react';
 import { useMFA } from '@/hooks/useMFA';
 import { useToast } from '@/hooks/use-toast';
+import { RecoveryCodesDisplay } from './RecoveryCodesDisplay';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MFAEnrollmentProps {
   mandatory?: boolean;
@@ -15,37 +17,38 @@ interface MFAEnrollmentProps {
 }
 
 export const MFAEnrollment = ({ mandatory = false, onComplete, onSkip }: MFAEnrollmentProps) => {
-  const [step, setStep] = useState<'intro' | 'qr' | 'verify'>('intro');
+  const [step, setStep] = useState<'intro' | 'qr' | 'verify' | 'recovery'>('intro');
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
   const [factorId, setFactorId] = useState<string | null>(null);
   const [verificationCode, setVerificationCode] = useState('');
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
 
-  const { enrollMFA, verifyMFA, daysRemaining } = useMFA();
+  const { enrollMFA, verifyMFA, checkMFAStatus, daysRemaining } = useMFA();
   const { toast } = useToast();
 
   const handleStartEnrollment = async () => {
     setLoading(true);
     setError(null);
-
-    const { data, error } = await enrollMFA();
-
-    if (error) {
-      setError(error.message || 'Failed to start MFA enrollment');
+    
+    const result = await enrollMFA();
+    
+    if (result.error) {
+      setError(result.error.message || 'Failed to start MFA enrollment');
       setLoading(false);
       return;
     }
 
-    if (data) {
-      setQrCode(data.totp.qr_code);
-      setSecret(data.totp.secret);
-      setFactorId(data.id);
+    if (result.data) {
+      setQrCode(result.data.totp.qr_code);
+      setSecret(result.data.totp.secret);
+      setFactorId(result.data.id);
       setStep('qr');
     }
-
+    
     setLoading(false);
   };
 
@@ -53,6 +56,10 @@ export const MFAEnrollment = ({ mandatory = false, onComplete, onSkip }: MFAEnro
     if (secret) {
       await navigator.clipboard.writeText(secret);
       setCopied(true);
+      toast({
+        title: "Copied",
+        description: "Secret key copied to clipboard",
+      });
       setTimeout(() => setCopied(false), 2000);
     }
   };
@@ -68,34 +75,75 @@ export const MFAEnrollment = ({ mandatory = false, onComplete, onSkip }: MFAEnro
     setLoading(true);
     setError(null);
 
-    const { error } = await verifyMFA(factorId, verificationCode);
+    const result = await verifyMFA(factorId, verificationCode);
 
-    if (error) {
-      setError(error.message || 'Invalid verification code');
+    if (result.error) {
+      setError(result.error.message || 'Invalid verification code');
+      setVerificationCode('');
       setLoading(false);
       return;
     }
 
+    // Generate recovery codes after successful MFA verification
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const response = await supabase.functions.invoke('generate-mfa-recovery-codes', {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
+        });
+        
+        if (response.data?.codes) {
+          setRecoveryCodes(response.data.codes);
+          setStep('recovery');
+          setLoading(false);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('Failed to generate recovery codes:', err);
+    }
+
+    // If recovery code generation fails, still complete the flow
     toast({
       title: "MFA Enabled",
       description: "Two-factor authentication has been set up successfully.",
     });
 
+    await checkMFAStatus();
     onComplete?.();
     setLoading(false);
   };
+
+  const handleRecoveryConfirm = async () => {
+    toast({
+      title: "MFA Enabled",
+      description: "Two-factor authentication has been set up successfully with recovery codes.",
+    });
+
+    await checkMFAStatus();
+    onComplete?.();
+  };
+
+  // Show recovery codes step
+  if (step === 'recovery' && recoveryCodes.length > 0) {
+    return <RecoveryCodesDisplay codes={recoveryCodes} onConfirm={handleRecoveryConfirm} />;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-muted/30">
       <Card className="w-full max-w-md border-0 shadow-xl">
         <CardHeader className="text-center pb-2">
           <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
-            <Shield className="w-8 h-8 text-primary" />
+            {step === 'intro' && <Shield className="w-8 h-8 text-primary" />}
+            {step === 'qr' && <QrCode className="w-8 h-8 text-primary" />}
+            {step === 'verify' && <Smartphone className="w-8 h-8 text-primary" />}
           </div>
           <CardTitle className="text-2xl">
             {step === 'intro' && 'Set Up Two-Factor Authentication'}
             {step === 'qr' && 'Scan QR Code'}
-            {step === 'verify' && 'Verify Setup'}
+            {step === 'verify' && 'Verify Your Setup'}
           </CardTitle>
           <CardDescription>
             {step === 'intro' && 'Add an extra layer of security to your account'}
@@ -119,37 +167,52 @@ export const MFAEnrollment = ({ mandatory = false, onComplete, onSkip }: MFAEnro
                   <AlertCircle className="h-4 w-4 text-amber-500" />
                   <AlertDescription className="text-amber-700 dark:text-amber-400">
                     MFA is required to continue using this application.
-                    {daysRemaining > 0 && ` You have ${daysRemaining} day${daysRemaining > 1 ? 's' : ''} remaining.`}
                   </AlertDescription>
                 </Alert>
               )}
 
               <div className="space-y-4">
                 <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                  <Smartphone className="w-5 h-5 text-primary mt-0.5" />
+                  <div className="mt-0.5 p-1.5 rounded-full bg-primary/10">
+                    <CheckCircle className="w-4 h-4 text-primary" />
+                  </div>
                   <div>
-                    <p className="font-medium text-sm">Download an Authenticator App</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Google Authenticator, Microsoft Authenticator, Authy, or any TOTP-compatible app
+                    <p className="font-medium text-sm">Download an authenticator app</p>
+                    <p className="text-xs text-muted-foreground">
+                      Google Authenticator, Authy, or 1Password
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                  <Shield className="w-5 h-5 text-primary mt-0.5" />
+                  <div className="mt-0.5 p-1.5 rounded-full bg-primary/10">
+                    <CheckCircle className="w-4 h-4 text-primary" />
+                  </div>
                   <div>
-                    <p className="font-medium text-sm">Protect Your Account</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      MFA adds an extra layer of security by requiring a code from your phone
+                    <p className="font-medium text-sm">Scan QR code</p>
+                    <p className="text-xs text-muted-foreground">
+                      Link your authenticator app to your account
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                  <div className="mt-0.5 p-1.5 rounded-full bg-primary/10">
+                    <CheckCircle className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Save recovery codes</p>
+                    <p className="text-xs text-muted-foreground">
+                      Backup codes in case you lose your device
                     </p>
                   </div>
                 </div>
               </div>
 
-              <Button 
-                onClick={handleStartEnrollment} 
-                className="w-full" 
+              <Button
+                onClick={handleStartEnrollment}
                 disabled={loading}
+                className="w-full h-12 text-base font-semibold"
               >
                 {loading ? (
                   <>
@@ -157,14 +220,17 @@ export const MFAEnrollment = ({ mandatory = false, onComplete, onSkip }: MFAEnro
                     Setting up...
                   </>
                 ) : (
-                  'Get Started'
+                  <>
+                    <Shield className="w-4 h-4 mr-2" />
+                    Get Started
+                  </>
                 )}
               </Button>
 
               {!mandatory && onSkip && (
-                <Button 
-                  variant="ghost" 
-                  onClick={onSkip} 
+                <Button
+                  variant="ghost"
+                  onClick={onSkip}
                   className="w-full text-muted-foreground"
                 >
                   Skip for now ({daysRemaining} days remaining)
@@ -173,60 +239,41 @@ export const MFAEnrollment = ({ mandatory = false, onComplete, onSkip }: MFAEnro
             </>
           )}
 
-          {step === 'qr' && (
+          {step === 'qr' && qrCode && (
             <>
-              <div className="flex justify-center">
-                {qrCode && (
-                  <div className="p-4 bg-white rounded-lg">
-                    <img 
-                      src={qrCode} 
-                      alt="QR Code for MFA setup" 
-                      className="w-48 h-48"
-                    />
+              <div className="flex justify-center p-4 bg-white rounded-lg">
+                <img src={qrCode} alt="QR Code" className="w-48 h-48" />
+              </div>
+
+              {secret && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">
+                    Can't scan? Enter this code manually:
+                  </Label>
+                  <div className="flex gap-2">
+                    <code className="flex-1 p-2 text-xs bg-muted rounded font-mono break-all">
+                      {secret}
+                    </code>
+                    <Button variant="outline" size="sm" onClick={handleCopySecret}>
+                      {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    </Button>
                   </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  Can't scan? Enter this code manually:
-                </Label>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 px-3 py-2 bg-muted rounded text-xs font-mono break-all">
-                    {secret}
-                  </code>
-                  <Button 
-                    variant="outline" 
-                    size="icon"
-                    onClick={handleCopySecret}
-                  >
-                    {copied ? (
-                      <Check className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <Copy className="w-4 h-4" />
-                    )}
-                  </Button>
                 </div>
-              </div>
+              )}
 
-              <Button onClick={() => setStep('verify')} className="w-full">
-                I've Scanned the Code
-              </Button>
-
-              <Button 
-                variant="ghost" 
-                onClick={() => setStep('intro')} 
-                className="w-full text-muted-foreground"
+              <Button
+                onClick={() => setStep('verify')}
+                className="w-full h-12 text-base font-semibold"
               >
-                Back
+                I've Scanned the Code
               </Button>
             </>
           )}
 
           {step === 'verify' && (
-            <form onSubmit={handleVerify} className="space-y-4">
+            <form onSubmit={handleVerify} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="code">Verification Code</Label>
+                <Label htmlFor="code" className="sr-only">Verification Code</Label>
                 <Input
                   id="code"
                   type="text"
@@ -236,19 +283,16 @@ export const MFAEnrollment = ({ mandatory = false, onComplete, onSkip }: MFAEnro
                   value={verificationCode}
                   onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
                   placeholder="000000"
-                  className="text-center text-2xl tracking-widest h-14 font-mono"
-                  autoComplete="one-time-code"
+                  className="text-center text-3xl tracking-[0.5em] h-16 font-mono"
                   autoFocus
+                  disabled={loading}
                 />
-                <p className="text-xs text-muted-foreground text-center">
-                  Enter the 6-digit code from your authenticator app
-                </p>
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full" 
+              <Button
+                type="submit"
                 disabled={loading || verificationCode.length !== 6}
+                className="w-full h-12 text-base font-semibold"
               >
                 {loading ? (
                   <>
@@ -260,13 +304,13 @@ export const MFAEnrollment = ({ mandatory = false, onComplete, onSkip }: MFAEnro
                 )}
               </Button>
 
-              <Button 
+              <Button
                 type="button"
-                variant="ghost" 
-                onClick={() => setStep('qr')} 
+                variant="ghost"
+                onClick={() => setStep('qr')}
                 className="w-full text-muted-foreground"
               >
-                Back
+                Back to QR Code
               </Button>
             </form>
           )}

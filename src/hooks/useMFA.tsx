@@ -114,8 +114,28 @@ export const useMFA = () => {
     checkMFAStatus();
   }, [checkMFAStatus]);
 
+  const cleanupUnverifiedFactors = async () => {
+    try {
+      const { data: factorsData } = await supabase.auth.mfa.listFactors();
+      const unverifiedFactors = factorsData?.totp?.filter((f: any) => f.status === 'unverified') || [];
+      
+      // Unenroll all unverified factors to allow fresh enrollment
+      for (const factor of unverifiedFactors) {
+        await supabase.auth.mfa.unenroll({ factorId: factor.id });
+      }
+      return { success: true, cleaned: unverifiedFactors.length };
+    } catch (error) {
+      console.error('Error cleaning up unverified factors:', error);
+      return { success: false, cleaned: 0 };
+    }
+  };
+
   const enrollMFA = async () => {
     try {
+      // First, cleanup any abandoned/unverified enrollment attempts
+      await cleanupUnverifiedFactors();
+      
+      // Now enroll fresh
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: 'totp',
         friendlyName: 'Authenticator App'

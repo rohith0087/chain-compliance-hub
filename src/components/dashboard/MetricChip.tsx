@@ -1,0 +1,62 @@
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
+
+interface MetricChipProps {
+  label: string;
+  value: number;
+  trend?: number;
+  color?: 'blue' | 'amber' | 'teal' | 'red' | 'green' | 'purple';
+  pulse?: boolean;
+}
+
+const colorMap = {
+  blue: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+  amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  teal: 'bg-teal-500/10 text-teal-600 dark:text-teal-400',
+  red: 'bg-red-500/10 text-red-600 dark:text-red-400',
+  green: 'bg-green-500/10 text-green-600 dark:text-green-400',
+  purple: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
+};
+
+const dotColorMap = {
+  blue: 'bg-blue-500',
+  amber: 'bg-amber-500',
+  teal: 'bg-teal-500',
+  red: 'bg-red-500',
+  green: 'bg-green-500',
+  purple: 'bg-purple-500',
+};
+
+export function MetricChip({ label, value, trend, color = 'blue', pulse }: MetricChipProps) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className={cn(
+        'flex items-center gap-2 px-3 py-2 rounded-lg',
+        colorMap[color]
+      )}
+    >
+      <div className="relative">
+        <div className={cn('w-2 h-2 rounded-full', dotColorMap[color])} />
+        {pulse && (
+          <div className={cn('absolute inset-0 w-2 h-2 rounded-full animate-ping', dotColorMap[color], 'opacity-75')} />
+        )}
+      </div>
+      <div className="flex flex-col">
+        <span className="text-xs text-muted-foreground">{label}</span>
+        <div className="flex items-center gap-1">
+          <span className="text-lg font-bold">{value}</span>
+          {trend !== undefined && trend !== 0 && (
+            <span className={cn(
+              'text-xs font-medium',
+              trend > 0 ? 'text-green-500' : 'text-red-500'
+            )}>
+              {trend > 0 ? '+' : ''}{trend}
+            </span>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}

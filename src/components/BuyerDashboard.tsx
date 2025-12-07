@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,12 +30,15 @@ import { SupplierRiskManagement } from '@/components/buyer/SupplierRiskManagemen
 import { DocumentAssignmentManager } from '@/components/buyer/DocumentAssignmentManager';
 import { OnboardingPipelineView } from '@/components/buyer/OnboardingPipelineView';
 import { MyAssignments } from '@/components/shared/MyAssignments';
-import { StatCard } from '@/components/ui/stat-card';
-import { StatCardSkeleton, TimelineItemSkeleton } from '@/components/ui/skeleton-card';
-import { UrgencyBadge, PriorityBadge } from '@/components/ui/priority-badge';
+import { TimelineItemSkeleton } from '@/components/ui/skeleton-card';
+import { UrgencyBadge } from '@/components/ui/priority-badge';
 import { DocumentSetManager } from '@/components/buyer/DocumentSetManager';
 import { BuyerSupplierFacilityMatrix } from '@/components/buyer/BuyerSupplierFacilityMatrix';
 import { SupplierMap } from '@/components/buyer/SupplierMap';
+import { ComplianceRing } from '@/components/dashboard/ComplianceRing';
+import { MetricChip } from '@/components/dashboard/MetricChip';
+import { motion } from 'framer-motion';
+import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 
 import { supabase } from '@/integrations/supabase/client';
 
@@ -70,7 +73,10 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
     approvedDocs: 0,
     expiringSoon: 0,
     onboardingCount: 0,
+    rejectedDocs: 0,
+    totalDocs: 0,
   });
+  const [activityTrend, setActivityTrend] = useState<{ day: string; requests: number; completed: number }[]>([]);
   const { user: authUser, profile } = useAuth();
   const { t } = useTranslation(['dashboard', 'common']);
   const { currentBranch, allBranchesView } = useBranchContext();
@@ -262,6 +268,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
           ]);
 
           // Update dashboard stats
+          const totalDocs = (approvedDocsResult.count || 0) + (pendingReviewResult.count || 0) + (activeRequestsResult.count || 0);
           setDashboardStats({
             connectedSuppliers: connectionsResult.count || 0,
             activeRequests: activeRequestsResult.count || 0,
@@ -269,7 +276,21 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
             approvedDocs: approvedDocsResult.count || 0,
             expiringSoon: expiringResult.count || 0,
             onboardingCount: onboardingResult.count || 0,
+            rejectedDocs: 0,
+            totalDocs: totalDocs,
           });
+
+          // Generate mock activity trend for last 7 days (can be enhanced with real data later)
+          const last7Days = Array.from({ length: 7 }, (_, i) => {
+            const date = new Date();
+            date.setDate(date.getDate() - (6 - i));
+            return {
+              day: date.toLocaleDateString('en-US', { weekday: 'short' }),
+              requests: Math.floor(Math.random() * 5) + 1,
+              completed: Math.floor(Math.random() * 4),
+            };
+          });
+          setActivityTrend(last7Days);
 
           // Set deadlines
           if (!deadlinesResult.error) {
@@ -336,197 +357,275 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         {/* Dashboard Content */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6 animate-fade-in">
-            {/* Compact Welcome Header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">
-                  {t('dashboard:buyer.welcome', { name: user.name })}
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  {t('dashboard:buyer.description')}
-                </p>
-              </div>
-            </div>
-
-            {/* Metrics Row - 6 Color-coded Stat Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              <StatCard 
-                title="Suppliers" 
-                value={dashboardStats.connectedSuppliers} 
-                icon={Users}
-                compact
-                className="bg-blue-50/50 dark:bg-blue-950/20"
-                iconClassName="bg-gradient-to-br from-blue-500 to-blue-600"
-              />
-              <StatCard 
-                title="Active Requests" 
-                value={dashboardStats.activeRequests} 
-                icon={FileText}
-                compact
-                className="bg-amber-50/50 dark:bg-amber-950/20"
-                iconClassName="bg-gradient-to-br from-amber-500 to-amber-600"
-              />
-              <StatCard 
-                title="Pending Review" 
-                value={dashboardStats.pendingReview} 
-                icon={Clock}
-                compact
-                className="bg-teal-50/50 dark:bg-teal-950/20"
-                iconClassName="bg-gradient-to-br from-teal-500 to-teal-600"
-              />
-              <StatCard 
-                title="Approved" 
-                value={dashboardStats.approvedDocs} 
-                icon={CheckCircle}
-                compact
-                className="bg-green-50/50 dark:bg-green-950/20"
-                iconClassName="bg-gradient-to-br from-green-500 to-green-600"
-              />
-              <StatCard 
-                title="Expiring Soon" 
-                value={dashboardStats.expiringSoon} 
-                icon={AlertTriangle}
-                compact
-                className="bg-red-50/50 dark:bg-red-950/20"
-                iconClassName="bg-gradient-to-br from-red-500 to-red-600"
-              />
-              <StatCard 
-                title="Onboarding" 
-                value={dashboardStats.onboardingCount} 
-                icon={TrendingUp}
-                compact
-                className="bg-purple-50/50 dark:bg-purple-950/20"
-                iconClassName="bg-gradient-to-br from-purple-500 to-purple-600"
-              />
-            </div>
-
-
-            {/* Quick Actions */}
+            {/* Hero Section: Welcome + Compliance Ring */}
             <div className="grid md:grid-cols-3 gap-6">
-              <Card className="group cursor-pointer hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border-0 bg-gradient-card relative overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-primary-hover" />
-                <CardContent className="p-6 text-center" onClick={handleFindSuppliersClick}>
-                  <div className="relative mb-4 inline-block">
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/10 blur-xl group-hover:blur-2xl transition-all" />
-                    <div className="relative h-16 w-16 mx-auto rounded-2xl bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center shadow-lg">
-                      <Users className="w-8 h-8 text-white" />
-                    </div>
-                  </div>
-                  <h3 className="font-semibold text-lg mb-2">{t('dashboard:buyer.findSuppliers')}</h3>
-                  <p className="text-sm text-muted-foreground">{t('dashboard:buyer.connectSuppliers')}</p>
-                </CardContent>
-              </Card>
-              <Card className="group cursor-pointer hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border-0 bg-gradient-card relative overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent to-accent/70" />
-                <CardContent className="p-6 text-center" onClick={() => setActiveTab('requests')}>
-                  <div className="relative mb-4 inline-block">
-                    <div className="absolute inset-0 bg-gradient-to-br from-accent/20 to-accent/10 blur-xl group-hover:blur-2xl transition-all" />
-                    <div className="relative h-16 w-16 mx-auto rounded-2xl bg-gradient-to-br from-accent to-accent/70 flex items-center justify-center shadow-lg">
-                      <ListChecks className="w-8 h-8 text-white" />
-                    </div>
-                  </div>
-                  <h3 className="font-semibold text-lg mb-2">{t('dashboard:buyer.myRequests')}</h3>
-                  <p className="text-sm text-muted-foreground">{t('dashboard:buyer.trackRequests')}</p>
-                </CardContent>
-              </Card>
-              <Card className="group cursor-pointer hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border-0 bg-gradient-card relative overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-secondary to-secondary/70" />
-                <CardContent className="p-6 text-center" onClick={() => navigate('/chat')}>
-                  <div className="relative mb-4 inline-block">
-                    <div className="absolute inset-0 bg-gradient-to-br from-secondary/20 to-secondary/10 blur-xl group-hover:blur-2xl transition-all" />
-                    <div className="relative h-16 w-16 mx-auto rounded-2xl bg-gradient-to-br from-secondary to-secondary/70 flex items-center justify-center shadow-lg">
-                      <Compass className="w-8 h-8 text-white" />
-                    </div>
-                  </div>
-                  <h3 className="font-semibold text-lg mb-2">Compliance Compass</h3>
-                  <p className="text-sm text-muted-foreground">AI-powered compliance guidance</p>
-                </CardContent>
-              </Card>
+              {/* Left: Welcome + Inline Metrics */}
+              <motion.div 
+                className="md:col-span-2 space-y-4"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <div>
+                  <h1 className="text-2xl font-bold text-foreground">
+                    {t('dashboard:buyer.welcome', { name: user.name })}
+                  </h1>
+                  <p className="text-sm text-muted-foreground">
+                    Here's your compliance overview at a glance
+                  </p>
+                </div>
+
+                {/* Inline Metric Chips */}
+                <div className="flex flex-wrap items-center gap-3 p-4 rounded-xl bg-muted/30 backdrop-blur border border-border/50">
+                  <MetricChip label="Suppliers" value={dashboardStats.connectedSuppliers} color="blue" />
+                  <div className="w-px h-8 bg-border/50" />
+                  <MetricChip label="Active" value={dashboardStats.activeRequests} color="amber" />
+                  <div className="w-px h-8 bg-border/50" />
+                  <MetricChip label="Pending" value={dashboardStats.pendingReview} color="teal" pulse={dashboardStats.pendingReview > 0} />
+                  <div className="w-px h-8 bg-border/50" />
+                  <MetricChip label="Expiring" value={dashboardStats.expiringSoon} color="red" pulse={dashboardStats.expiringSoon > 0} />
+                </div>
+
+                {/* Quick Actions - Compact */}
+                <div className="flex flex-wrap gap-3">
+                  <Button variant="outline" className="gap-2 hover:bg-primary/10" onClick={handleFindSuppliersClick}>
+                    <Users className="w-4 h-4" /> Find Suppliers
+                  </Button>
+                  <Button variant="outline" className="gap-2 hover:bg-accent/10" onClick={() => setActiveTab('requests')}>
+                    <ListChecks className="w-4 h-4" /> My Requests
+                  </Button>
+                  <Button variant="outline" className="gap-2 hover:bg-secondary/10" onClick={() => navigate('/chat')}>
+                    <Compass className="w-4 h-4" /> Compliance Compass
+                  </Button>
+                  <Button variant="default" className="gap-2" onClick={() => setShowRequestForm(true)}>
+                    <Plus className="w-4 h-4" /> New Request
+                  </Button>
+                </div>
+              </motion.div>
+
+              {/* Right: Compliance Ring */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                <Card className="border-0 bg-gradient-card h-full flex flex-col items-center justify-center p-6">
+                  <ComplianceRing 
+                    score={dashboardStats.totalDocs > 0 
+                      ? Math.round((dashboardStats.approvedDocs / dashboardStats.totalDocs) * 100) 
+                      : 0
+                    } 
+                  />
+                  <p className="text-xs text-muted-foreground mt-2 text-center">
+                    {dashboardStats.approvedDocs} of {dashboardStats.totalDocs} documents approved
+                  </p>
+                </Card>
+              </motion.div>
             </div>
 
-
-            {/* Activity & Timeline Section */}
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Upcoming Deadlines */}
-              <Card className="border-0 bg-gradient-card">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-accent" />
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-xl">
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
-                      <Calendar className="w-5 h-5 text-primary" />
-                    </div>
-                    Upcoming Deadlines
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {dashboardLoading ? (
-                    <div className="space-y-3">
-                      <TimelineItemSkeleton />
-                      <TimelineItemSkeleton />
-                      <TimelineItemSkeleton />
-                    </div>
-                  ) : upcomingDeadlines.length > 0 ? (
-                    <div className="space-y-3">
-                      {upcomingDeadlines.map((deadline) => {
-                        const daysUntilDue = Math.ceil((new Date(deadline.due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                        
-                        return (
-                          <div key={deadline.id} className="group flex items-start gap-3 p-4 bg-surface rounded-xl border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all duration-300">
-                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center flex-shrink-0">
-                              <Calendar className="w-5 h-5 text-primary" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1">
-                                  <p className="font-medium text-sm mb-1">{deadline.title}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {deadline.suppliers?.company_name}
-                                  </p>
-                                </div>
-                                <UrgencyBadge daysUntilDue={daysUntilDue} />
-                              </div>
-                              <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  {daysUntilDue === 0 ? 'Due Today' : 
-                                   daysUntilDue === 1 ? 'Due Tomorrow' : 
-                                   `${daysUntilDue} days`}
-                                </span>
-                                <span>{new Date(deadline.due_date).toLocaleDateString()}</span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="w-full mt-2 hover:bg-primary/10"
-                        onClick={() => setActiveTab('requests')}
-                      >
-                        View All Requests
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <div className="h-16 w-16 rounded-full bg-muted/30 flex items-center justify-center mx-auto mb-3">
-                        <Calendar className="w-8 h-8 text-muted-foreground" />
+            {/* Charts Row */}
+            <div className="grid md:grid-cols-3 gap-6">
+              {/* Donut Chart - Document Status */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+              >
+                <Card className="border-0 bg-gradient-card">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <FileCheck className="w-4 h-4 text-primary" />
+                      Document Status
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <PieChart>
+                        <Pie
+                          data={[
+                            { name: 'Approved', value: dashboardStats.approvedDocs, color: '#22c55e' },
+                            { name: 'Pending', value: dashboardStats.pendingReview, color: '#14b8a6' },
+                            { name: 'Active', value: dashboardStats.activeRequests, color: '#f59e0b' },
+                          ].filter(d => d.value > 0)}
+                          dataKey="value"
+                          innerRadius={50}
+                          outerRadius={70}
+                          paddingAngle={2}
+                          animationBegin={0}
+                          animationDuration={1000}
+                        >
+                          {[
+                            { name: 'Approved', value: dashboardStats.approvedDocs, color: '#22c55e' },
+                            { name: 'Pending', value: dashboardStats.pendingReview, color: '#14b8a6' },
+                            { name: 'Active', value: dashboardStats.activeRequests, color: '#f59e0b' },
+                          ].filter(d => d.value > 0).map((entry, i) => (
+                            <Cell key={i} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--background))', 
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px'
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="flex justify-center gap-4 mt-2">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
+                        <span className="text-xs text-muted-foreground">Approved</span>
                       </div>
-                      <p className="text-sm font-medium mb-1">No upcoming deadlines</p>
-                      <p className="text-xs text-muted-foreground">You're all caught up!</p>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-teal-500" />
+                        <span className="text-xs text-muted-foreground">Pending</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                        <span className="text-xs text-muted-foreground">Active</span>
+                      </div>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </motion.div>
 
-              {/* Action Items */}
-              <Card className="border-0 bg-gradient-card">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-warning to-danger" />
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-xl">
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-warning/10 to-warning/5 flex items-center justify-center">
-                      <AlertTriangle className="w-5 h-5 text-warning" />
+              {/* Area Chart - Activity Trend */}
+              <motion.div 
+                className="md:col-span-2"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+              >
+                <Card className="border-0 bg-gradient-card">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-primary" />
+                      7-Day Activity Trend
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <AreaChart data={activityTrend}>
+                        <defs>
+                          <linearGradient id="colorRequests" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                        <XAxis dataKey="day" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                        <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--background))', 
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                            fontSize: '12px'
+                          }}
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="requests" 
+                          stroke="#3b82f6" 
+                          fill="url(#colorRequests)"
+                          strokeWidth={2}
+                          animationDuration={1500}
+                          name="Requests"
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="completed" 
+                          stroke="#22c55e" 
+                          fill="url(#colorCompleted)"
+                          strokeWidth={2}
+                          animationDuration={1500}
+                          name="Completed"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                    <div className="flex justify-center gap-4 mt-2">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                        <span className="text-xs text-muted-foreground">Requests</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
+                        <span className="text-xs text-muted-foreground">Completed</span>
+                      </div>
                     </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+
+            {/* Deadline Timeline - Horizontal Bar */}
+            {upcomingDeadlines.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.5 }}
+              >
+                <Card className="border-0 bg-gradient-card">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-primary" />
+                      Upcoming Deadlines
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={Math.max(120, upcomingDeadlines.length * 35)}>
+                      <BarChart 
+                        data={upcomingDeadlines.map(d => ({
+                          title: d.title?.substring(0, 20) + (d.title?.length > 20 ? '...' : ''),
+                          daysLeft: Math.max(0, Math.ceil((new Date(d.due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))),
+                          supplier: d.suppliers?.company_name
+                        }))}
+                        layout="vertical"
+                        margin={{ left: 10, right: 30 }}
+                      >
+                        <XAxis type="number" domain={[0, 30]} tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                        <YAxis dataKey="title" type="category" width={150} tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--background))', 
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                            fontSize: '12px'
+                          }}
+                          formatter={(value: number) => [`${value} days left`, 'Due in']}
+                        />
+                        <Bar dataKey="daysLeft" radius={[0, 4, 4, 0]} animationDuration={1000}>
+                          {upcomingDeadlines.map((entry, i) => {
+                            const daysLeft = Math.ceil((new Date(entry.due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                            return (
+                              <Cell 
+                                key={i} 
+                                fill={daysLeft < 7 ? '#ef4444' : daysLeft < 14 ? '#f59e0b' : '#22c55e'} 
+                              />
+                            );
+                          })}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* Action Items */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.6 }}
+            >
+              <Card className="border-0 bg-gradient-card">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-500" />
                     Action Items
                   </CardTitle>
                 </CardHeader>
@@ -535,62 +634,43 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                     <div className="space-y-3">
                       <TimelineItemSkeleton />
                       <TimelineItemSkeleton />
-                      <TimelineItemSkeleton />
                     </div>
                   ) : actionItems.length > 0 ? (
-                    <div className="space-y-3">
-                      {actionItems.map((item) => (
-                        <div key={item.id} className="group flex items-start gap-3 p-4 bg-surface rounded-xl border border-border/50 hover:border-warning/30 hover:bg-warning/5 transition-all duration-300">
-                          <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            item.actionType === 'overdue' 
-                              ? 'bg-gradient-to-br from-danger/20 to-danger/10 animate-pulse' 
-                              : 'bg-gradient-to-br from-warning/20 to-warning/10'
-                          }`}>
-                            {item.actionType === 'overdue' ? (
-                              <AlertTriangle className="w-5 h-5 text-danger" />
-                            ) : (
-                              <Clock className="w-5 h-5 text-warning" />
-                            )}
-                          </div>
+                    <div className="space-y-2">
+                      {actionItems.slice(0, 3).map((item) => (
+                        <div key={item.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+                          <div className={`w-2 h-2 rounded-full ${
+                            item.actionType === 'overdue' ? 'bg-red-500 animate-pulse' : 'bg-amber-500'
+                          }`} />
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <div className="flex-1">
-                                <p className="font-medium text-sm mb-1">{item.title}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {item.suppliers?.company_name}
-                                </p>
-                              </div>
-                              {item.priority && (
-                                <PriorityBadge priority={item.priority} />
-                              )}
-                            </div>
-                            <p className={`text-xs ${item.actionType === 'overdue' ? 'text-danger' : 'text-warning'}`}>
-                              {item.actionText}
-                            </p>
+                            <p className="text-sm font-medium truncate">{item.title}</p>
+                            <p className="text-xs text-muted-foreground">{item.suppliers?.company_name}</p>
                           </div>
+                          <span className={`text-xs ${item.actionType === 'overdue' ? 'text-red-500' : 'text-amber-500'}`}>
+                            {item.actionType === 'overdue' ? 'Overdue' : 'Pending'}
+                          </span>
                         </div>
                       ))}
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="w-full mt-2 hover:bg-warning/10"
-                        onClick={() => setActiveTab('requests')}
-                      >
-                        View All Requests
-                      </Button>
+                      {actionItems.length > 3 && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full mt-2"
+                          onClick={() => setActiveTab('requests')}
+                        >
+                          View {actionItems.length - 3} more
+                        </Button>
+                      )}
                     </div>
                   ) : (
-                    <div className="text-center py-8">
-                      <div className="h-16 w-16 rounded-full bg-muted/30 flex items-center justify-center mx-auto mb-3">
-                        <CheckCircle className="w-8 h-8 text-success" />
-                      </div>
-                      <p className="text-sm font-medium mb-1">No action items</p>
-                      <p className="text-xs text-muted-foreground">All tasks completed!</p>
+                    <div className="text-center py-6">
+                      <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">All caught up!</p>
                     </div>
                   )}
                 </CardContent>
               </Card>
-            </div>
+            </motion.div>
 
             {/* My Assignments Widget */}
             {authUser && (

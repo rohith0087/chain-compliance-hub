@@ -65,19 +65,15 @@ export const MFAGuard = ({ children }: MFAGuardProps) => {
     );
   }
 
-  // All good - show app with optional grace period banner
+  // All good - show app with optional grace period banner as toast
   return (
     <>
       {!mfaEnrolled && (
-        <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-4">
-          <div className="max-w-7xl mx-auto">
-            <MFAGracePeriodBanner onSetupClick={() => setShowEnrollment(true)} />
-          </div>
+        <div className="fixed bottom-4 right-4 z-50 max-w-sm">
+          <MFAGracePeriodBanner onSetupClick={() => setShowEnrollment(true)} />
         </div>
       )}
-      <div className={!mfaEnrolled ? 'pt-20' : ''}>
-        {children}
-      </div>
+      {children}
     </>
   );
 };

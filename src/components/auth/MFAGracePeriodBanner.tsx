@@ -32,7 +32,7 @@ export const MFAGracePeriodBanner = ({ onSetupClick }: MFAGracePeriodBannerProps
   }[urgencyLevel];
 
   return (
-    <Alert className={`${bgColor} border mb-4 relative`}>
+    <Alert className={`${bgColor} border shadow-lg rounded-lg bg-card`}>
       <div className="flex items-center gap-3">
         <div className={`p-2 rounded-full ${urgencyLevel === 'urgent' ? 'bg-destructive/20' : urgencyLevel === 'warning' ? 'bg-amber-500/20' : 'bg-primary/20'}`}>
           {urgencyLevel === 'urgent' ? (

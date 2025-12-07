@@ -63,6 +63,14 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
   const [upcomingDeadlines, setUpcomingDeadlines] = useState<any[]>([]);
   const [actionItems, setActionItems] = useState<any[]>([]);
   const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState({
+    connectedSuppliers: 0,
+    activeRequests: 0,
+    pendingReview: 0,
+    approvedDocs: 0,
+    expiringSoon: 0,
+    onboardingCount: 0,
+  });
   const { user: authUser, profile } = useAuth();
   const { t } = useTranslation(['dashboard', 'common']);
   const { currentBranch, allBranchesView } = useBranchContext();
@@ -183,73 +191,94 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         const effectiveBuyerId = teamMember?.company_id || buyerProfile?.id;
 
         if (effectiveBuyerId) {
-          // Fetch upcoming deadlines - requests with due dates in next 30 days
-          const thirtyDaysFromNow = new Date();
-          thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+          // Fetch dashboard stats in parallel
+          const [
+            connectionsResult,
+            activeRequestsResult,
+            pendingReviewResult,
+            approvedDocsResult,
+            expiringResult,
+            onboardingResult,
+            deadlinesResult,
+            pendingRequestsResult
+          ] = await Promise.all([
+            // Connected suppliers count
+            supabase
+              .from('buyer_supplier_connections')
+              .select('id', { count: 'exact', head: true })
+              .eq('buyer_id', effectiveBuyerId)
+              .eq('status', 'approved'),
+            // Active requests (pending status)
+            supabase
+              .from('document_requests')
+              .select('id', { count: 'exact', head: true })
+              .eq('buyer_id', effectiveBuyerId)
+              .eq('status', 'pending'),
+            // Pending review (submitted status)
+            supabase
+              .from('document_requests')
+              .select('id', { count: 'exact', head: true })
+              .eq('buyer_id', effectiveBuyerId)
+              .eq('status', 'submitted'),
+            // Approved documents
+            supabase
+              .from('document_requests')
+              .select('id', { count: 'exact', head: true })
+              .eq('buyer_id', effectiveBuyerId)
+              .eq('status', 'approved'),
+            // Expiring soon (within 30 days)
+            supabase
+              .from('document_uploads')
+              .select('id, document_requests!inner(buyer_id)', { count: 'exact', head: true })
+              .eq('document_requests.buyer_id', effectiveBuyerId)
+              .eq('status', 'approved')
+              .not('expiration_date', 'is', null)
+              .gte('expiration_date', new Date().toISOString().split('T')[0])
+              .lte('expiration_date', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]),
+            // Onboarding count
+            supabase
+              .from('supplier_onboarding_requests')
+              .select('id', { count: 'exact', head: true })
+              .eq('buyer_id', effectiveBuyerId)
+              .in('status', ['pending', 'invited', 'onboarding_initiated']),
+            // Upcoming deadlines
+            supabase
+              .from('document_requests')
+              .select(`id, title, due_date, status, priority, suppliers (company_name)`)
+              .eq('buyer_id', effectiveBuyerId)
+              .not('due_date', 'is', null)
+              .gte('due_date', new Date().toISOString().split('T')[0])
+              .lte('due_date', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+              .order('due_date', { ascending: true })
+              .limit(5),
+            // Pending action items
+            supabase
+              .from('document_requests')
+              .select(`id, title, created_at, due_date, status, priority, suppliers (company_name)`)
+              .eq('buyer_id', effectiveBuyerId)
+              .in('status', ['pending', 'submitted'])
+              .order('created_at', { ascending: false })
+              .limit(5)
+          ]);
 
-          let deadlinesQuery = supabase
-            .from('document_requests')
-            .select(`
-              id,
-              title,
-              due_date,
-              status,
-              priority,
-              suppliers (
-                company_name
-              )
-            `)
-            .eq('buyer_id', effectiveBuyerId)
-            .not('due_date', 'is', null)
-            .gte('due_date', new Date().toISOString().split('T')[0])
-            .lte('due_date', thirtyDaysFromNow.toISOString().split('T')[0]);
+          // Update dashboard stats
+          setDashboardStats({
+            connectedSuppliers: connectionsResult.count || 0,
+            activeRequests: activeRequestsResult.count || 0,
+            pendingReview: pendingReviewResult.count || 0,
+            approvedDocs: approvedDocsResult.count || 0,
+            expiringSoon: expiringResult.count || 0,
+            onboardingCount: onboardingResult.count || 0,
+          });
 
-          // Filter by branch if not viewing all branches
-          if (currentBranch?.id && !allBranchesView) {
-            deadlinesQuery = deadlinesQuery.eq('branch_id', currentBranch.id);
+          // Set deadlines
+          if (!deadlinesResult.error) {
+            setUpcomingDeadlines(deadlinesResult.data || []);
           }
 
-          deadlinesQuery = deadlinesQuery.order('due_date', { ascending: true }).limit(5);
-
-          const { data: deadlines, error: deadlineError } = await deadlinesQuery;
-
-          if (deadlineError) {
-            console.error('Error fetching deadlines:', deadlineError);
-          } else {
-            setUpcomingDeadlines(deadlines || []);
-          }
-
-          // Fetch action items - pending requests, overdue items, etc.
-          let pendingQuery = supabase
-            .from('document_requests')
-            .select(`
-              id,
-              title,
-              created_at,
-              due_date,
-              status,
-              priority,
-              suppliers (
-                company_name
-              )
-            `)
-            .eq('buyer_id', effectiveBuyerId)
-            .in('status', ['pending', 'submitted']);
-
-          // Filter by branch if not viewing all branches
-          if (currentBranch?.id && !allBranchesView) {
-            pendingQuery = pendingQuery.eq('branch_id', currentBranch.id);
-          }
-
-          pendingQuery = pendingQuery.order('created_at', { ascending: false }).limit(5);
-
-          const { data: pendingRequests, error: pendingError } = await pendingQuery;
-
-          if (pendingError) {
-            console.error('Error fetching pending requests:', pendingError);
-          } else {
-            // Add action type to distinguish different types of action items
-            const actionItemsData = (pendingRequests || []).map(req => {
+          // Set action items
+          if (!pendingRequestsResult.error) {
+            const actionItemsData = (pendingRequestsResult.data || []).map(req => {
               const isOverdue = req.due_date && new Date(req.due_date) < new Date();
               return {
                 ...req,
@@ -306,19 +335,69 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
       >
         {/* Dashboard Content */}
         {activeTab === 'dashboard' && (
-          <div className="space-y-8 animate-fade-in">
-            {/* Hero Section - Welcome */}
-            <div className="relative overflow-hidden rounded-2xl bg-background/60 backdrop-blur-xl border border-primary/20 border-t-4 border-t-primary/40 p-8 shadow-lg">
-              <div className="relative z-10">
-                <h1 className="text-3xl font-bold mb-2 text-foreground">
+          <div className="space-y-6 animate-fade-in">
+            {/* Compact Welcome Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">
                   {t('dashboard:buyer.welcome', { name: user.name })}
                 </h1>
-                <p className="text-muted-foreground text-lg">
+                <p className="text-sm text-muted-foreground">
                   {t('dashboard:buyer.description')}
                 </p>
               </div>
-              <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -mr-48 -mt-48" />
-              <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl -ml-32 -mb-32" />
+            </div>
+
+            {/* Metrics Row - 6 Color-coded Stat Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <StatCard 
+                title="Suppliers" 
+                value={dashboardStats.connectedSuppliers} 
+                icon={Users}
+                compact
+                className="bg-blue-50/50 dark:bg-blue-950/20"
+                iconClassName="bg-gradient-to-br from-blue-500 to-blue-600"
+              />
+              <StatCard 
+                title="Active Requests" 
+                value={dashboardStats.activeRequests} 
+                icon={FileText}
+                compact
+                className="bg-amber-50/50 dark:bg-amber-950/20"
+                iconClassName="bg-gradient-to-br from-amber-500 to-amber-600"
+              />
+              <StatCard 
+                title="Pending Review" 
+                value={dashboardStats.pendingReview} 
+                icon={Clock}
+                compact
+                className="bg-teal-50/50 dark:bg-teal-950/20"
+                iconClassName="bg-gradient-to-br from-teal-500 to-teal-600"
+              />
+              <StatCard 
+                title="Approved" 
+                value={dashboardStats.approvedDocs} 
+                icon={CheckCircle}
+                compact
+                className="bg-green-50/50 dark:bg-green-950/20"
+                iconClassName="bg-gradient-to-br from-green-500 to-green-600"
+              />
+              <StatCard 
+                title="Expiring Soon" 
+                value={dashboardStats.expiringSoon} 
+                icon={AlertTriangle}
+                compact
+                className="bg-red-50/50 dark:bg-red-950/20"
+                iconClassName="bg-gradient-to-br from-red-500 to-red-600"
+              />
+              <StatCard 
+                title="Onboarding" 
+                value={dashboardStats.onboardingCount} 
+                icon={TrendingUp}
+                compact
+                className="bg-purple-50/50 dark:bg-purple-950/20"
+                iconClassName="bg-gradient-to-br from-purple-500 to-purple-600"
+              />
             </div>
 
 

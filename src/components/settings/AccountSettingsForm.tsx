@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { MFASettingsSection } from './MFASettingsSection';
 
 export const AccountSettingsForm = () => {
   const [fullName, setFullName] = useState('');
@@ -80,41 +81,46 @@ export const AccountSettingsForm = () => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Account Information</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="fullName">Full Name</Label>
-            <Input
-              id="fullName"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-            />
-          </div>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Account Information</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Full Name</Label>
+              <Input
+                id="fullName"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <p className="text-sm text-muted-foreground">
-              Changing your email will require verification
-            </p>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <p className="text-sm text-muted-foreground">
+                Changing your email will require verification
+              </p>
+            </div>
 
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Updating..." : "Update Account"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading ? "Updating..." : "Update Account"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* MFA Settings Section */}
+      <MFASettingsSection />
+    </div>
   );
 };

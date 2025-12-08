@@ -166,7 +166,7 @@ export function BuyerSidebarLayout({
   
   // Get permissions for the current user - use resolved company ID
   const effectiveCompanyId = companyId || resolvedCompanyId;
-  const { canAccessRoute, role } = useCompanyPermissions(effectiveCompanyId, 'buyer');
+  const { canAccessRoute, isCompanyOwner, role } = useCompanyPermissions(effectiveCompanyId, 'buyer');
 
   // Sync branch context with local branch state
   useEffect(() => {
@@ -240,12 +240,9 @@ export function BuyerSidebarLayout({
     }
   ].filter(item => {
     // Filter out items based on permissions
-    // Company Management and Subscription require company_admin role
-    if (item.value === 'company' && !canAccessRoute('company')) {
-      return false;
-    }
-    if (item.value === 'subscription' && !canAccessRoute('subscription')) {
-      return false;
+    // Company Management and Subscription require company owner (not just admin)
+    if (item.value === 'company' || item.value === 'subscription') {
+      return isCompanyOwner();
     }
     // Check other navigation permissions
     if (!canAccessRoute(item.value)) {

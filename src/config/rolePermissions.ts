@@ -23,8 +23,8 @@ export const navigationPermissions: NavigationPermissions = {
   'assignments': ['company_admin', 'approver'],
   'onboarding': ['company_admin', 'branch_manager'],
   'agents': ['company_admin'],
-  'company': ['company_admin'], // RESTRICTED: Only company_admin
-  'subscription': ['company_admin'], // RESTRICTED: Only company_admin
+  'company': [], // OWNER-ONLY: Checked via isCompanyOwner, not role-based
+  'subscription': [], // OWNER-ONLY: Checked via isCompanyOwner, not role-based
   'chat': ['company_admin', 'branch_manager', 'document_manager', 'approver', 'viewer'],
 };
 

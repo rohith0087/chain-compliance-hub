@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
+import { useCompanyPermissions } from '@/hooks/useCompanyPermissions';
 import { useTranslation } from 'react-i18next';
 import RequestsList from '@/components/requests/RequestsList';
 import SupplierDiscovery from '@/components/buyer/SupplierDiscovery';
@@ -80,6 +81,17 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
   const { user: authUser, profile } = useAuth();
   const { t } = useTranslation(['dashboard', 'common']);
   const { currentBranch, allBranchesView } = useBranchContext();
+  
+  // Get permissions to check if user is company owner
+  const { isOwner, loading: permissionsLoading } = useCompanyPermissions(companyId, 'buyer');
+  
+  // Reset activeTab if non-owner tries to access owner-only tabs
+  useEffect(() => {
+    const ownerOnlyTabs = ['company', 'subscription'];
+    if (!permissionsLoading && ownerOnlyTabs.includes(activeTab) && !isOwner) {
+      setActiveTab('dashboard');
+    }
+  }, [activeTab, permissionsLoading, isOwner]);
 
   // Refresh buyer profile function  
   const refreshBuyerProfile = async () => {

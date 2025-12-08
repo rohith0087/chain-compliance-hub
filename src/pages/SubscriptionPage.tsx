@@ -52,7 +52,7 @@ export default function SubscriptionPage() {
     resolveCompanyId();
   }, [user, userType, profile]);
   
-  const { canViewSubscription, role, loading } = useCompanyPermissions(resolvedCompanyId || undefined, userType);
+  const { canViewSubscription, role, isOwner, loading } = useCompanyPermissions(resolvedCompanyId || undefined, userType);
 
   // Show loading while resolving company ID or permissions
   if (loading || companyIdLoading) {
@@ -63,9 +63,9 @@ export default function SubscriptionPage() {
     );
   }
 
-  // Check permission
+  // Check permission - only company owner can access
   if (!canViewSubscription()) {
-    return <UnauthorizedAccess requiredRoles={['company_admin']} currentRole={role} />;
+    return <UnauthorizedAccess requiredRoles={['company_owner']} currentRole={isOwner ? 'company_owner' : role} />;
   }
 
   return (

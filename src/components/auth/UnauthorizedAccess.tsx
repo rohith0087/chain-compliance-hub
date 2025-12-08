@@ -6,8 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { getRoleDisplayName, UserRole } from '@/config/rolePermissions';
 
+// Allow 'company_owner' as a special role for display purposes
+type DisplayRole = UserRole | 'company_owner';
+
 interface UnauthorizedAccessProps {
-  requiredRoles: UserRole[];
+  requiredRoles: DisplayRole[];
   currentRole: string | null;
 }
 

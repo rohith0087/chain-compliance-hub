@@ -256,7 +256,7 @@ const RequestConfigurationStep = ({
                       <SelectValue placeholder="All branches (default)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All branches</SelectItem>
+                      <SelectItem value="all">All branches</SelectItem>
                       {branches.map(branch => (
                         <SelectItem key={branch.id} value={branch.id}>
                           {branch.branch_name}

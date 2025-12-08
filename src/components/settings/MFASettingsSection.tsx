@@ -104,8 +104,8 @@ export const MFASettingsSection = () => {
   // Show new recovery codes after regeneration
   if (newRecoveryCodes.length > 0) {
     return (
-      <div className="fixed inset-0 z-50 bg-background">
-        <RecoveryCodesDisplay 
+      <div className="fixed inset-0 z-50 bg-background overflow-y-auto">
+        <RecoveryCodesDisplay
           codes={newRecoveryCodes} 
           onConfirm={() => {
             setNewRecoveryCodes([]);
@@ -119,8 +119,8 @@ export const MFASettingsSection = () => {
   // Enrollment mode (either initial or forced re-enrollment)
   if (showEnrollment) {
     return (
-      <div className="fixed inset-0 z-50 bg-background">
-        <MFAEnrollment 
+      <div className="fixed inset-0 z-50 bg-background overflow-y-auto">
+        <MFAEnrollment
           mandatory={forceReenrollment}
           onComplete={() => {
             setShowEnrollment(false);

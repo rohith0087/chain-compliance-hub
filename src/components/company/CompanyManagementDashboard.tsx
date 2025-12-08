@@ -38,12 +38,12 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
     refetch
   } = useCompanyBranches(companyId, companyType);
 
-  const { canViewCompanyManagement, role } = useCompanyPermissions(companyId, companyType);
+  const { canViewCompanyManagement, role, isOwner } = useCompanyPermissions(companyId, companyType);
   const [activeTab, setActiveTab] = useState('overview');
 
-  // Check permission - only company_admin can access
+  // Check permission - only company owner can access
   if (!loading && !canViewCompanyManagement()) {
-    return <UnauthorizedAccess requiredRoles={['company_admin']} currentRole={role} />;
+    return <UnauthorizedAccess requiredRoles={['company_owner']} currentRole={isOwner ? 'company_owner' : role} />;
   }
 
   const stats = {

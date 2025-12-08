@@ -59,6 +59,7 @@ export const CompactBuyerHeader = ({
               size="sm"
               onClick={onBranchesClick}
               className="gap-2"
+              data-guide-id="suppliers-branches-tab"
             >
               <Users className="h-4 w-4" />
               Branch Suppliers

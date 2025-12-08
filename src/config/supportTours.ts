@@ -4,8 +4,8 @@ export interface SupportTour {
   id: string;
   name: string;
   description: string;
-  requiredRoute?: string; // Route where tour should start
-  keywords: string[]; // Keywords to match user questions
+  requiredRoute?: string;
+  keywords: string[];
   steps: Step[];
 }
 
@@ -19,14 +19,9 @@ export const supportTours: SupportTour[] = [
     steps: [
       {
         target: '[data-guide-id="nav-requests"]',
-        content: 'Click on "Requests & Documents" in the sidebar to access document management features.',
+        content: 'Click on "Requests & Documents" to access document management, then select "Document Sets" from the submenu to create and manage your saved document collections.',
         placement: 'right',
         disableBeacon: true,
-      },
-      {
-        target: '[data-guide-id="nav-requests"]',
-        content: 'Once expanded, click on "Document Sets" to view and manage your saved document collections.',
-        placement: 'right',
       },
     ],
   },
@@ -38,15 +33,10 @@ export const supportTours: SupportTour[] = [
     keywords: ['document request', 'request document', 'create request', 'new request', 'ask supplier', 'request from supplier'],
     steps: [
       {
-        target: '[data-guide-id="nav-requests"]',
-        content: 'Click on "Requests & Documents" to access the document request features.',
+        target: '[data-guide-id="quick-new-request"]',
+        content: 'Click the "New Request" button to create a new document request from your suppliers.',
         placement: 'right',
         disableBeacon: true,
-      },
-      {
-        target: '[data-guide-id="nav-requests"]',
-        content: 'Then click on "Requests" in the submenu, and use the "New Request" button in Quick Actions to create a document request.',
-        placement: 'right',
       },
     ],
   },
@@ -55,18 +45,13 @@ export const supportTours: SupportTour[] = [
     name: 'Invite Supplier',
     description: 'Learn how to invite new suppliers to the platform',
     requiredRoute: '/dashboard',
-    keywords: ['invite supplier', 'add supplier', 'new supplier', 'onboard supplier', 'supplier invitation'],
+    keywords: ['invite supplier', 'add supplier', 'new supplier', 'onboard supplier', 'supplier invitation', 'bulk invite'],
     steps: [
       {
-        target: '[data-guide-id="nav-onboarding"]',
-        content: 'Click on "Onboarding Pipeline" to manage supplier invitations and track their progress.',
+        target: '[data-guide-id="quick-bulk-invite"]',
+        content: 'Click "Bulk Invite" to invite multiple suppliers at once. You can also use "Quick Onboarding" from the Onboarding Pipeline for single invites.',
         placement: 'right',
         disableBeacon: true,
-      },
-      {
-        target: '[data-guide-id="nav-onboarding"]',
-        content: 'Use the "Quick Onboarding" or "Bulk Invite" buttons in Quick Actions to invite new suppliers.',
-        placement: 'right',
       },
     ],
   },
@@ -94,14 +79,9 @@ export const supportTours: SupportTour[] = [
     steps: [
       {
         target: '[data-guide-id="nav-requests"]',
-        content: 'Click on "Requests & Documents" to access the Templates section.',
+        content: 'Click on "Requests & Documents" to access the Templates section, then select "Templates" from the submenu to upload and manage document templates.',
         placement: 'right',
         disableBeacon: true,
-      },
-      {
-        target: '[data-guide-id="nav-requests"]',
-        content: 'Click on "Templates" in the submenu to upload and manage document templates that suppliers can use.',
-        placement: 'right',
       },
     ],
   },
@@ -117,6 +97,61 @@ export const supportTours: SupportTour[] = [
         content: 'Click on "Suppliers" to access supplier discovery, map view, and connection requests.',
         placement: 'right',
         disableBeacon: true,
+      },
+    ],
+  },
+  {
+    id: 'assign-supplier-branch',
+    name: 'Assign Supplier to Branch',
+    description: 'Learn how to assign suppliers to specific branches',
+    requiredRoute: '/dashboard',
+    keywords: ['assign supplier', 'branch supplier', 'supplier branch', 'add supplier to branch', 'branch assignment'],
+    steps: [
+      {
+        target: '[data-guide-id="nav-suppliers"]',
+        content: 'First, click on "Suppliers" to access supplier management.',
+        placement: 'right',
+        disableBeacon: true,
+      },
+      {
+        target: '[data-guide-id="suppliers-branches-tab"]',
+        content: 'Click on "Branch Suppliers" to manage suppliers per branch. Select a branch and add suppliers to assign them.',
+        placement: 'bottom',
+      },
+    ],
+  },
+  {
+    id: 'add-new-user',
+    name: 'Add New User',
+    description: 'Learn how to add new users to your company',
+    requiredRoute: '/dashboard',
+    keywords: ['add user', 'new user', 'invite user', 'team member', 'create user', 'user management'],
+    steps: [
+      {
+        target: '[data-guide-id="nav-company"]',
+        content: 'Click on "Company Management" to access user settings (requires admin access). Then go to the Users section and click "Add User" to invite a new team member.',
+        placement: 'right',
+        disableBeacon: true,
+      },
+    ],
+  },
+  {
+    id: 'manage-mfa',
+    name: 'Manage MFA/DUO',
+    description: 'Learn how to manage your two-factor authentication settings',
+    requiredRoute: '/dashboard',
+    keywords: ['mfa', 'duo', '2fa', 'two factor', 'authenticator', 'security', 'authentication'],
+    steps: [
+      {
+        target: '[data-guide-id="profile-dropdown"]',
+        content: 'Click on your profile button in the sidebar footer to access account options.',
+        placement: 'top',
+        disableBeacon: true,
+      },
+      {
+        target: '[data-guide-id="settings-menu-item"]',
+        content: 'Click "Settings" to open your account settings, then navigate to the Account tab to manage your MFA/DUO authentication.',
+        placement: 'right',
       },
     ],
   },

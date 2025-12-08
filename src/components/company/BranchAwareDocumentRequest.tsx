@@ -123,6 +123,7 @@ export const BranchAwareDocumentRequest: React.FC<BranchAwareDocumentRequestProp
       }
 
       // Create the document request
+      // Note: branch_id is buyer's branch, supplier_branch_id is supplier's branch
       const { error: requestError } = await supabase
         .from('document_requests')
         .insert({
@@ -134,7 +135,7 @@ export const BranchAwareDocumentRequest: React.FC<BranchAwareDocumentRequestProp
           due_date: formData.due_date || null,
           buyer_id: buyerProfile.id,
           supplier_id: supplierInfo.id,
-          branch_id: selectedBranch,
+          supplier_branch_id: selectedBranch, // Target supplier branch
           requester_id: user?.id,
           status: 'pending'
         });

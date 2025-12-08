@@ -1,31 +1,38 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, X, Check, ChevronsUpDown } from 'lucide-react';
+import { CalendarIcon, X, ChevronsUpDown, Building2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ComplianceDocument } from './ComplianceDocuments';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
-import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+
+interface SupplierBranch {
+  id: string;
+  branch_name: string;
+  location?: string;
+}
 
 interface RequestConfigurationStepProps {
   selectedDocuments: ComplianceDocument[];
   formData: {
     suppliers: string[];
+    supplierBranches: Record<string, string>; // supplierId -> branchId
     priority: string;
     dueDate: string;
     notes: string;
   };
   onFormDataChange: (field: string, value: string) => void;
   onSuppliersChange: (suppliers: string[]) => void;
+  onSupplierBranchChange: (supplierId: string, branchId: string) => void;
   onBack: () => void;
   onCreateRequests: () => void;
   onCancel: () => void;
@@ -38,6 +45,7 @@ const RequestConfigurationStep = ({
   formData,
   onFormDataChange,
   onSuppliersChange,
+  onSupplierBranchChange,
   onBack,
   onCreateRequests,
   onCancel,
@@ -47,6 +55,42 @@ const RequestConfigurationStep = ({
   const [dueDate, setDueDate] = React.useState<Date>();
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [supplierBranches, setSupplierBranches] = React.useState<Record<string, SupplierBranch[]>>({});
+  const [loadingBranches, setLoadingBranches] = React.useState<Record<string, boolean>>({});
+
+  // Fetch branches for selected suppliers
+  useEffect(() => {
+    const fetchBranchesForSuppliers = async () => {
+      for (const supplierId of formData.suppliers) {
+        // Skip if already fetched
+        if (supplierBranches[supplierId]) continue;
+        
+        setLoadingBranches(prev => ({ ...prev, [supplierId]: true }));
+        
+        try {
+          const { data, error } = await supabase
+            .from('company_branches')
+            .select('id, branch_name, location')
+            .eq('company_id', supplierId)
+            .eq('company_type', 'supplier')
+            .eq('status', 'active')
+            .order('branch_name');
+          
+          if (!error && data) {
+            setSupplierBranches(prev => ({ ...prev, [supplierId]: data }));
+          }
+        } catch (err) {
+          console.error('Error fetching supplier branches:', err);
+        } finally {
+          setLoadingBranches(prev => ({ ...prev, [supplierId]: false }));
+        }
+      }
+    };
+
+    if (formData.suppliers.length > 0) {
+      fetchBranchesForSuppliers();
+    }
+  }, [formData.suppliers]);
 
   const handleDateChange = (date: Date | undefined) => {
     setDueDate(date);
@@ -177,6 +221,57 @@ const RequestConfigurationStep = ({
             </Select>
           </div>
         </div>
+
+        {/* Supplier Branch Selection - Show for each selected supplier with multiple branches */}
+        {formData.suppliers.length > 0 && (
+          <div className="space-y-3">
+            {formData.suppliers.map(supplierId => {
+              const supplier = connectedSuppliers.find(s => s.id === supplierId);
+              const branches = supplierBranches[supplierId] || [];
+              const isLoading = loadingBranches[supplierId];
+              
+              // Only show branch selector if supplier has multiple branches
+              if (isLoading) {
+                return (
+                  <div key={supplierId} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                    Loading branches for {supplier?.company_name}...
+                  </div>
+                );
+              }
+              
+              if (branches.length <= 1) return null;
+              
+              return (
+                <div key={supplierId} className="p-3 border rounded-md bg-muted/30">
+                  <Label className="flex items-center gap-2 mb-2 text-sm">
+                    <Building2 className="h-4 w-4" />
+                    Target branch for {supplier?.company_name}
+                  </Label>
+                  <Select 
+                    value={formData.supplierBranches[supplierId] || ''} 
+                    onValueChange={(value) => onSupplierBranchChange(supplierId, value)}
+                  >
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder="All branches (default)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All branches</SelectItem>
+                      {branches.map(branch => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.branch_name}
+                          {branch.location && (
+                            <span className="text-muted-foreground"> - {branch.location}</span>
+                          )}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <div>
           <Label>Due Date</Label>

@@ -40,7 +40,7 @@ export const useBranchSupplierConnections = (branchId?: string) => {
     if (!branchId) return;
 
     const channel = supabase
-      .channel('branch-supplier-changes')
+      .channel(`branch-supplier-changes-${branchId}`)
       .on(
         'postgres_changes',
         {

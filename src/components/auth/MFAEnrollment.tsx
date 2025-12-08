@@ -132,7 +132,7 @@ export const MFAEnrollment = ({ mandatory = false, onComplete, onSkip }: MFAEnro
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-muted/30">
+    <div className="min-h-screen flex items-center justify-center p-4 py-8 bg-gradient-to-br from-background via-background to-muted/30">
       <Card className="w-full max-w-md border-0 shadow-xl">
         <CardHeader className="text-center pb-2">
           <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">

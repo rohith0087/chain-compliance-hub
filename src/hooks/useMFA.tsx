@@ -152,6 +152,12 @@ export const useMFA = () => {
         // Wait for Supabase to process the deletions
         await new Promise(resolve => setTimeout(resolve, delayMs));
         
+        // Refresh session to sync auth state with Supabase server
+        await supabase.auth.refreshSession();
+        
+        // Wait a bit more after session refresh
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
         // Verify cleanup was successful
         const { data: verifyData } = await supabase.auth.mfa.listFactors();
         if ((verifyData?.totp?.length || 0) === 0) {
@@ -171,22 +177,26 @@ export const useMFA = () => {
     return { success: false, cleaned: 0 };
   };
 
-  const enrollMFA = async (forceCleanup = false): Promise<{ data: any; error: any; isFactorExistsError?: boolean }> => {
+  const enrollMFA = async (skipCleanup = false): Promise<{ data: any; error: any; isFactorExistsError?: boolean }> => {
     const maxAttempts = 2;
     
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        // Cleanup with longer delay on retry or if forced
-        const cleanupDelay = attempt > 1 || forceCleanup ? 1500 : 1000;
-        await cleanupExistingFactors(3, cleanupDelay);
+        // Skip cleanup if caller already did it (e.g., handleRetrySetup)
+        if (!skipCleanup) {
+          const cleanupDelay = attempt > 1 ? 1500 : 1000;
+          await cleanupExistingFactors(3, cleanupDelay);
+          
+          // Additional delay before enrollment
+          await new Promise(resolve => setTimeout(resolve, cleanupDelay));
+        }
         
-        // Additional delay before enrollment
-        await new Promise(resolve => setTimeout(resolve, cleanupDelay));
+        // Use unique friendly name with timestamp to avoid name collision
+        const uniqueFriendlyName = `Authenticator App ${Date.now()}`;
         
-        // Now enroll fresh
         const { data, error } = await supabase.auth.mfa.enroll({
           factorType: 'totp',
-          friendlyName: 'Authenticator App'
+          friendlyName: uniqueFriendlyName
         });
 
         if (error) {
@@ -195,7 +205,9 @@ export const useMFA = () => {
                                        error.message?.toLowerCase().includes('already exists');
           
           if (isFactorExistsError && attempt < maxAttempts) {
-            // Wait longer and retry
+            // Force cleanup and retry
+            await cleanupExistingFactors(3, 1500);
+            await supabase.auth.refreshSession();
             await new Promise(resolve => setTimeout(resolve, 2000));
             continue;
           }

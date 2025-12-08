@@ -124,67 +124,6 @@ const EnhancedDocumentsFilter = ({
 
   return (
     <div className="space-y-4">
-      {/* Quick Filters */}
-      <Card className="bg-gradient-to-br from-[hsl(var(--blue-accent))]/5 to-[hsl(var(--accent))]/5 border-[hsl(var(--blue-accent))]/20">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[hsl(var(--blue-accent))] to-[hsl(var(--accent))] flex items-center justify-center">
-                <Filter className="w-4 h-4 text-white" />
-              </div>
-              Quick Filters
-            </CardTitle>
-            {onRefresh && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onRefresh}
-                disabled={isRefreshing}
-                className="h-8 w-8 p-0 hover:bg-[hsl(var(--blue-accent))]/10"
-              >
-                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="flex flex-wrap gap-2">
-            <Button 
-              size="sm"
-              onClick={() => applyQuickFilter('valid_2024_2025')}
-              className="bg-gradient-to-r from-[hsl(var(--green-accent))] to-[hsl(var(--emerald-accent))] hover:opacity-90 text-white border-0 shadow-[0_4px_12px_hsl(var(--green-accent)/0.3)]"
-            >
-              <CheckCircle className="w-3 h-3 mr-2" />
-              2024-2025 Valid
-            </Button>
-            <Button 
-              size="sm"
-              onClick={() => applyQuickFilter('expiring_soon')}
-              className="bg-gradient-to-r from-[hsl(var(--orange-accent))] to-amber-500 hover:opacity-90 text-white border-0 shadow-[0_4px_12px_hsl(var(--orange-accent)/0.3)]"
-            >
-              <AlertTriangle className="w-3 h-3 mr-2" />
-              Expiring Soon
-            </Button>
-            <Button 
-              size="sm"
-              onClick={() => applyQuickFilter('last_30_days')}
-              className="bg-gradient-to-r from-[hsl(var(--blue-accent))] to-[hsl(var(--accent))] hover:opacity-90 text-white border-0 shadow-[0_4px_12px_hsl(var(--blue-accent)/0.3)]"
-            >
-              <Calendar className="w-3 h-3 mr-2" />
-              Last 30 Days
-            </Button>
-            <Button 
-              size="sm"
-              onClick={() => applyQuickFilter('current_year')}
-              className="bg-gradient-to-r from-[hsl(var(--teal-accent))] to-cyan-600 hover:opacity-90 text-white border-0 shadow-[0_4px_12px_hsl(var(--teal-accent)/0.3)]"
-            >
-              <Calendar className="w-3 h-3 mr-2" />
-              Current Year
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Advanced Filters */}
       <Card>
         <CardHeader className="pb-4">

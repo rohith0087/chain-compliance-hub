@@ -7,9 +7,7 @@ import {
   TrendingUp, 
   AlertTriangle, 
   CheckCircle,
-  Clock,
-  Users,
-  BarChart3
+  Clock
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import DocumentsFilter from './DocumentsFilter';
 import DocumentCard from './DocumentCard';
 import DocumentActivityDashboard from './DocumentActivityDashboard';
-import DocumentRoadmap from './DocumentRoadmap';
+
 import BuyerDocumentsManager from './BuyerDocumentsManager';
 import DocumentDeclineDialog from './DocumentDeclineDialog';
 import { resolveStoragePath } from '@/utils/storagePath';
@@ -784,35 +782,6 @@ if (user?.id && latest.id) {
     fetchActivities();
   }, [buyerId, documents]);
 
-  // Generate roadmap items with proper status mapping
-  const roadmapItems = documents
-    .filter(doc => doc.effectiveStatus !== 'approved')
-    .map(doc => {
-      let roadmapStatus: 'pending' | 'completed' | 'in_progress' | 'overdue';
-      
-      switch (doc.effectiveStatus) {
-        case 'pending':
-          roadmapStatus = 'pending';
-          break;
-        case 'submitted':
-          roadmapStatus = 'in_progress';
-          break;
-        case 'rejected':
-          roadmapStatus = 'overdue';
-          break;
-        default:
-          roadmapStatus = 'pending';
-      }
-
-      return {
-        id: doc.id,
-        title: doc.document_type,
-        status: roadmapStatus,
-        dueDate: doc.due_date,
-        description: `${doc.document_type} from ${doc.suppliers?.company_name || 'Unknown Supplier'}`,
-        priority: (doc.priority || 'medium') as 'high' | 'medium' | 'low'
-      };
-    });
 
   if (loading) {
     return <div className="flex items-center justify-center h-64">Loading documents...</div>;
@@ -828,72 +797,67 @@ if (user?.id && latest.id) {
         </Badge>
       </div>
 
-      {/* Stats Overview - Only show on Overview tab */}
-      {activeTab === "overview" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Documents</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Awaiting Review</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{stats.submitted}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Approved</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Rejected</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="documents">Document Manager</TabsTrigger>
           <TabsTrigger value="timeline">Activity</TabsTrigger>
-          <TabsTrigger value="roadmap">Roadmap</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
+          {/* Stats Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Documents</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.total}</div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pending</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Awaiting Review</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">{stats.submitted}</div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Approved</CardTitle>
+                <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Rejected</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
+              </CardContent>
+            </Card>
+          </div>
           <Card>
             <CardHeader>
               <CardTitle>Recent Document Requests ({documents.length})</CardTitle>
@@ -958,41 +922,6 @@ if (user?.id && latest.id) {
 
         <TabsContent value="timeline">
           <DocumentActivityDashboard events={activityEvents} documents={documents} />
-        </TabsContent>
-
-        <TabsContent value="roadmap">
-          <DocumentRoadmap 
-            items={roadmapItems}
-            title="Document Collection Progress"
-          />
-        </TabsContent>
-
-        <TabsContent value="analytics">
-          <div className="grid lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Compliance Analytics</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <BarChart3 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">Analytics coming soon</p>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Supplier Performance</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">Supplier metrics coming soon</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </TabsContent>
       </Tabs>
 

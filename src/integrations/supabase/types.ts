@@ -1648,6 +1648,7 @@ export type Database = {
           priority: Database["public"]["Enums"]["request_priority"] | null
           requester_id: string | null
           status: Database["public"]["Enums"]["request_status"] | null
+          supplier_branch_id: string | null
           supplier_id: string | null
           target_contact_roles:
             | Database["public"]["Enums"]["contact_role"][]
@@ -1671,6 +1672,7 @@ export type Database = {
           priority?: Database["public"]["Enums"]["request_priority"] | null
           requester_id?: string | null
           status?: Database["public"]["Enums"]["request_status"] | null
+          supplier_branch_id?: string | null
           supplier_id?: string | null
           target_contact_roles?:
             | Database["public"]["Enums"]["contact_role"][]
@@ -1694,6 +1696,7 @@ export type Database = {
           priority?: Database["public"]["Enums"]["request_priority"] | null
           requester_id?: string | null
           status?: Database["public"]["Enums"]["request_status"] | null
+          supplier_branch_id?: string | null
           supplier_id?: string | null
           target_contact_roles?:
             | Database["public"]["Enums"]["contact_role"][]
@@ -1737,6 +1740,13 @@ export type Database = {
             columns: ["requester_id"]
             isOneToOne: false
             referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_requests_supplier_branch_id_fkey"
+            columns: ["supplier_branch_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
             referencedColumns: ["id"]
           },
           {

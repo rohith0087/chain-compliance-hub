@@ -31,6 +31,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
   const [selectedDocuments, setSelectedDocuments] = useState<ComplianceDocument[]>([]);
   const [formData, setFormData] = useState({
     suppliers: [] as string[],
+    supplierBranches: {} as Record<string, string>, // supplierId -> branchId
     priority: 'medium' as 'high' | 'medium' | 'low' | 'urgent',
     dueDate: '',
     notes: '',
@@ -166,12 +167,29 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
   };
 
   const handleSuppliersChange = (suppliers: string[]) => {
-    setFormData(prev => ({ ...prev, suppliers }));
+    setFormData(prev => {
+      // Clean up branch selections for removed suppliers
+      const newSupplierBranches = { ...prev.supplierBranches };
+      Object.keys(newSupplierBranches).forEach(supplierId => {
+        if (!suppliers.includes(supplierId)) {
+          delete newSupplierBranches[supplierId];
+        }
+      });
+      return { ...prev, suppliers, supplierBranches: newSupplierBranches };
+    });
+  };
+
+  const handleSupplierBranchChange = (supplierId: string, branchId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      supplierBranches: {
+        ...prev.supplierBranches,
+        [supplierId]: branchId
+      }
+    }));
   };
 
   const handleCreateRequests = async () => {
-    console.log('Creating request with currentBranch:', currentBranch);
-    
     if (!user || !buyerProfile || selectedDocuments.length === 0 || formData.suppliers.length === 0) {
       toast({
         title: "Error",
@@ -189,6 +207,8 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
       // Create a separate request for each selected document AND each selected supplier
       for (const doc of selectedDocuments) {
         for (const supplierId of formData.suppliers) {
+          const supplierBranchId = formData.supplierBranches[supplierId] || null;
+          
           const insertData: any = {
             title: doc.title,
             description: doc.description,
@@ -199,7 +219,8 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
             supplier_id: supplierId,
             buyer_id: buyerProfile.id,
             requester_id: user.id,
-            branch_id: currentBranch?.id || null,
+            branch_id: currentBranch?.id || null, // Buyer's branch
+            supplier_branch_id: supplierBranchId, // Target supplier branch
             notes: formData.notes || null,
             template_sections: doc.template || null,
           };
@@ -264,6 +285,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
     setSelectedDocuments([]);
     setFormData({
       suppliers: [],
+      supplierBranches: {},
       priority: 'medium' as 'high' | 'medium' | 'low' | 'urgent',
       dueDate: '',
       notes: '',
@@ -373,6 +395,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
             formData={formData}
             onFormDataChange={handleFormDataChange}
             onSuppliersChange={handleSuppliersChange}
+            onSupplierBranchChange={handleSupplierBranchChange}
             onBack={() => setStep(1)}
             onCreateRequests={handleCreateRequests}
             onCancel={onClose}

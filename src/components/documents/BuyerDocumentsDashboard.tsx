@@ -130,7 +130,7 @@ const BuyerDocumentsDashboard = () => {
             id,
             company_name
           ),
-          branch:branch_id (
+          branch:company_branches!branch_id (
             id,
             branch_name,
             location
@@ -237,7 +237,7 @@ const BuyerDocumentsDashboard = () => {
             industry,
             profile_id
           ),
-          branch:branch_id (
+          branch:company_branches!branch_id (
             id,
             branch_name,
             location,

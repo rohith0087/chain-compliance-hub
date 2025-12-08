@@ -158,7 +158,8 @@ export function BuyerSidebarLayout({
     branches,
     currentBranch,
     switchBranch,
-    loading: branchesLoading
+    loading: branchesLoading,
+    hasAllBranchAccess
   } = useCompanyBranches(resolvedCompanyId, 'buyer');
 
   const { setCurrentBranch } = useBranchContext();
@@ -527,12 +528,13 @@ export function BuyerSidebarLayout({
               />
               </div>
 
-              {branches.length > 1 && (
+              {(branches.length > 1 || hasAllBranchAccess) && (
                 <BranchSelector
                   branches={branches}
                   currentBranch={currentBranch}
                   onBranchChange={switchBranch}
                   loading={branchesLoading}
+                  showAllBranchesOption={hasAllBranchAccess}
                 />
               )}
             </div>

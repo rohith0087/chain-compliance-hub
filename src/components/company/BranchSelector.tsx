@@ -17,13 +17,15 @@ interface BranchSelectorProps {
   currentBranch: CompanyBranch | null;
   onBranchChange: (branch: CompanyBranch) => void;
   loading?: boolean;
+  showAllBranchesOption?: boolean;
 }
 
 export const BranchSelector: React.FC<BranchSelectorProps> = ({ 
   branches, 
   currentBranch, 
   onBranchChange, 
-  loading = false 
+  loading = false,
+  showAllBranchesOption = false
 }) => {
   const { allBranchesView, setAllBranchesView } = useBranchContext();
 
@@ -36,7 +38,8 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
     );
   }
 
-  if (branches.length <= 1) {
+  // If only one branch and no all-branches option, show static display
+  if (branches.length <= 1 && !showAllBranchesOption) {
     return (
       <div className="flex items-center space-x-2 text-sm text-muted-foreground">
         <Building2 className="h-4 w-4" />
@@ -75,20 +78,23 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64">
-        <DropdownMenuItem
-          onClick={handleAllBranchesToggle}
-          className="flex items-center justify-between p-3"
-        >
-          <div className="flex items-center space-x-3">
-            <Globe className="h-4 w-4" />
-            <span className="font-medium">All Branches</span>
-          </div>
-          {allBranchesView && (
-            <Check className="h-4 w-4 text-primary" />
-          )}
-        </DropdownMenuItem>
-        
-        <DropdownMenuSeparator />
+        {showAllBranchesOption && (
+          <>
+            <DropdownMenuItem
+              onClick={handleAllBranchesToggle}
+              className="flex items-center justify-between p-3"
+            >
+              <div className="flex items-center space-x-3">
+                <Globe className="h-4 w-4" />
+                <span className="font-medium">All Branches</span>
+              </div>
+              {allBranchesView && (
+                <Check className="h-4 w-4 text-primary" />
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
         
         {branches.map((branch) => (
           <DropdownMenuItem

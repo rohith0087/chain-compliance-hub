@@ -55,10 +55,11 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
   const [currentBranch, setCurrentBranch] = useState<CompanyBranch | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasAllBranchAccess, setHasAllBranchAccess] = useState(false);
   const { user } = useAuth();
 
   const fetchBranches = async () => {
-    if (!companyId || !companyType) {
+    if (!companyId || !companyType || !user) {
       setLoading(false);
       return;
     }
@@ -67,16 +68,36 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
       setLoading(true);
       setError(null);
 
-      const { data: branchesData, error: branchesError } = await supabase
+      // First check user's branch access from company_users
+      const { data: userBranchData } = await supabase
+        .from('company_users')
+        .select('branch_id, role')
+        .eq('profile_id', user.id)
+        .eq('company_id', companyId)
+        .eq('company_type', companyType)
+        .in('status', ['active', 'pending'])
+        .maybeSingle();
+
+      // User has all branch access if branch_id is null (company admin)
+      const canAccessAllBranches = userBranchData?.branch_id === null;
+      setHasAllBranchAccess(canAccessAllBranches);
+
+      // Fetch branches - filter by user's branch_id if they don't have all access
+      let query = supabase
         .from('company_branches')
         .select('*')
         .eq('company_id', companyId)
         .eq('company_type', companyType)
-        .eq('status', 'active')
-        .order('branch_name', { ascending: true });
+        .eq('status', 'active');
+
+      // If user has specific branch assignment, only fetch that branch
+      if (!canAccessAllBranches && userBranchData?.branch_id) {
+        query = query.eq('id', userBranchData.branch_id);
+      }
+
+      const { data: branchesData, error: branchesError } = await query.order('branch_name', { ascending: true });
 
       if (branchesError) {
-        console.error('Error fetching branches:', branchesError);
         setError('Failed to load branches');
         return;
       }
@@ -88,7 +109,7 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
         const savedBranchId = localStorage.getItem('selectedBranchId');
         let branchToSet: CompanyBranch | null = null;
 
-        // Try to find the saved branch
+        // Try to find the saved branch (only if it's in the accessible branches)
         if (savedBranchId) {
           branchToSet = branchesData.find(b => b.id === savedBranchId) as CompanyBranch || null;
         }
@@ -102,7 +123,6 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
       }
 
     } catch (err) {
-      console.error('Error in fetchBranches:', err);
       setError('Failed to load branches');
     } finally {
       setLoading(false);
@@ -540,6 +560,7 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
     currentBranch,
     loading,
     error,
+    hasAllBranchAccess,
     createBranch,
     updateBranch,
     deleteBranch,

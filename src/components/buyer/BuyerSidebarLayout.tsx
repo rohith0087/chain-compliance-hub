@@ -465,7 +465,10 @@ export function BuyerSidebarLayout({
                         {user.name}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        Buyer
+                        {hasAllBranchAccess 
+                          ? 'Buyer' 
+                          : `Buyer - ${currentBranch?.branch_name || 'No Branch'}`
+                        }
                       </span>
                     </div>
                   )}

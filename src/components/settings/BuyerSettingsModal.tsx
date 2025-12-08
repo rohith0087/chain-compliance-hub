@@ -196,6 +196,10 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
     setBuyerData(prev => ({ ...prev, industry: value }));
   };
 
+  // Determine default tab and grid columns based on admin status
+  const defaultTab = canEdit ? 'company' : 'account';
+  const gridCols = canEdit ? 'grid-cols-6' : 'grid-cols-2';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -203,102 +207,114 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="company" className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="company">Company</TabsTrigger>
-            <TabsTrigger value="defaults">Onboarding</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
+        <Tabs defaultValue={defaultTab} className="w-full">
+          <TabsList className={`grid w-full ${gridCols}`}>
+            {canEdit && (
+              <>
+                <TabsTrigger value="company">Company</TabsTrigger>
+                <TabsTrigger value="defaults">Onboarding</TabsTrigger>
+                <TabsTrigger value="notifications">Notifications</TabsTrigger>
+              </>
+            )}
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="password">Password</TabsTrigger>
-            <TabsTrigger value="logo">Logo</TabsTrigger>
+            {canEdit && (
+              <TabsTrigger value="logo">Logo</TabsTrigger>
+            )}
           </TabsList>
 
-          <TabsContent value="company" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Company Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleCompanySubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="companyName">Company Name</Label>
-                      <Input
-                        id="companyName"
-                        value={buyerData.company_name}
-                        onChange={(e) => setBuyerData(prev => ({ ...prev, company_name: e.target.value }))}
-                        required
-                      />
-                    </div>
+          {canEdit && (
+            <>
+              <TabsContent value="company" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Company Information</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleCompanySubmit} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="companyName">Company Name</Label>
+                          <Input
+                            id="companyName"
+                            value={buyerData.company_name}
+                            onChange={(e) => setBuyerData(prev => ({ ...prev, company_name: e.target.value }))}
+                            required
+                          />
+                        </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="industry">Industry</Label>
-                      <SafeSelect
-                        value={buyerData.industry}
-                        onValueChange={handleIndustryChange}
-                        placeholder="Select an industry"
-                      >
-                        {VALID_INDUSTRIES.map((industry) => (
-                          <SafeSelectItem key={industry} value={industry}>
-                            {industry}
-                          </SafeSelectItem>
-                        ))}
-                      </SafeSelect>
-                    </div>
-                  </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="industry">Industry</Label>
+                          <SafeSelect
+                            value={buyerData.industry}
+                            onValueChange={handleIndustryChange}
+                            placeholder="Select an industry"
+                          >
+                            {VALID_INDUSTRIES.map((industry) => (
+                              <SafeSelectItem key={industry} value={industry}>
+                                {industry}
+                              </SafeSelectItem>
+                            ))}
+                          </SafeSelect>
+                        </div>
+                      </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="contactEmail">Contact Email</Label>
-                      <Input
-                        id="contactEmail"
-                        type="email"
-                        value={buyerData.contact_email}
-                        onChange={(e) => setBuyerData(prev => ({ ...prev, contact_email: e.target.value }))}
-                        required
-                      />
-                    </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="contactEmail">Contact Email</Label>
+                          <Input
+                            id="contactEmail"
+                            type="email"
+                            value={buyerData.contact_email}
+                            onChange={(e) => setBuyerData(prev => ({ ...prev, contact_email: e.target.value }))}
+                            required
+                          />
+                        </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input
-                        id="phone"
-                        value={buyerData.phone}
-                        onChange={(e) => setBuyerData(prev => ({ ...prev, phone: e.target.value }))}
-                      />
-                    </div>
-                  </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="phone">Phone</Label>
+                          <Input
+                            id="phone"
+                            value={buyerData.phone}
+                            onChange={(e) => setBuyerData(prev => ({ ...prev, phone: e.target.value }))}
+                          />
+                        </div>
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Address</Label>
-                    <Textarea
-                      id="address"
-                      value={buyerData.address}
-                      onChange={(e) => setBuyerData(prev => ({ ...prev, address: e.target.value }))}
-                      rows={3}
-                    />
-                  </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="address">Address</Label>
+                        <Textarea
+                          id="address"
+                          value={buyerData.address}
+                          onChange={(e) => setBuyerData(prev => ({ ...prev, address: e.target.value }))}
+                          rows={3}
+                        />
+                      </div>
 
-                  <Button type="submit" disabled={loading || !canEdit} className="w-full">
-                    {!canEdit ? "View Only (Contact Admin to Edit)" : loading ? "Updating..." : "Update Company Information"}
-                  </Button>
-                  {!canEdit && (
-                    <p className="text-sm text-muted-foreground text-center">
-                      You are viewing company settings. Only company admins can make changes.
-                    </p>
-                  )}
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                      <Button type="submit" disabled={loading} className="w-full">
+                        {loading ? "Updating..." : "Update Company Information"}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-          <TabsContent value="defaults">
-            <DefaultOnboardingSettings />
-          </TabsContent>
+              <TabsContent value="defaults">
+                <DefaultOnboardingSettings />
+              </TabsContent>
 
-          <TabsContent value="notifications">
-            <NotificationSettingsForm />
-          </TabsContent>
+              <TabsContent value="notifications">
+                <NotificationSettingsForm />
+              </TabsContent>
+
+              <TabsContent value="logo">
+                <LogoUploadWidget
+                  currentLogoUrl={buyerData.company_logo_url}
+                  onLogoUpdate={handleLogoUpdate}
+                />
+              </TabsContent>
+            </>
+          )}
 
           <TabsContent value="account">
             <AccountSettingsForm />
@@ -306,13 +322,6 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
 
           <TabsContent value="password">
             <PasswordChangeForm />
-          </TabsContent>
-
-          <TabsContent value="logo">
-            <LogoUploadWidget
-              currentLogoUrl={buyerData.company_logo_url}
-              onLogoUpdate={handleLogoUpdate}
-            />
           </TabsContent>
         </Tabs>
       </DialogContent>

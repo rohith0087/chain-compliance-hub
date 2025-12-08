@@ -335,7 +335,7 @@ export function BuyerSidebarLayout({
             <SidebarGroupLabel>Quick Actions</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                <SidebarMenuItem>
+                <SidebarMenuItem data-guide-id="quick-new-request">
                   <SidebarMenuButton 
                     onClick={() => handleSpecialAction('new-request')}
                     className="relative group bg-gradient-to-r from-primary to-primary-hover text-white hover:shadow-lg transition-all duration-300"
@@ -361,7 +361,7 @@ export function BuyerSidebarLayout({
                     <span>Compliance Compass</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                <SidebarMenuItem>
+                <SidebarMenuItem data-guide-id="quick-bulk-invite">
                   <SidebarMenuButton 
                     onClick={() => handleSpecialAction('bulk-invite')}
                     className="hover:bg-accent/10 hover:text-accent transition-colors"
@@ -452,7 +452,7 @@ export function BuyerSidebarLayout({
           <div className="flex items-center gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-auto p-2 w-full justify-start">
+                <Button variant="ghost" className="h-auto p-2 w-full justify-start" data-guide-id="profile-dropdown">
                   <Avatar className="h-6 w-6">
                     <AvatarImage src={profile?.avatar_url} />
                     <AvatarFallback>
@@ -475,7 +475,7 @@ export function BuyerSidebarLayout({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={onShowSettings}>
+                <DropdownMenuItem onClick={onShowSettings} data-guide-id="settings-menu-item">
                   <Settings className="mr-2 h-4 w-4" />
                   Settings
                 </DropdownMenuItem>

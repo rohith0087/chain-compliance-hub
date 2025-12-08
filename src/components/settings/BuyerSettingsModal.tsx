@@ -38,7 +38,7 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
   });
   const [loading, setLoading] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
-  const [isTeamMember, setIsTeamMember] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -63,12 +63,23 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
         .single();
 
       let buyerId: string;
+      let userIsOwner = false;
       
       if (teamMember) {
         // Team member - use company_id from company_users
         buyerId = teamMember.company_id;
-        setIsTeamMember(true);
-        setCanEdit(teamMember.role === 'company_admin');
+        
+        // Check if this team member is actually the owner
+        const { data: ownerCheck } = await supabase
+          .from('buyers')
+          .select('id')
+          .eq('profile_id', user.id)
+          .eq('id', teamMember.company_id)
+          .maybeSingle();
+        
+        userIsOwner = !!ownerCheck;
+        setIsOwner(userIsOwner);
+        setCanEdit(userIsOwner || teamMember.role === 'company_admin');
       } else {
         // Company owner - get their buyer profile
         const { data: buyer } = await supabase
@@ -79,7 +90,8 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
         
         if (!buyer) throw new Error('No buyer profile found');
         buyerId = buyer.id;
-        setIsTeamMember(false);
+        userIsOwner = true;
+        setIsOwner(true);
         setCanEdit(true); // Company owners can always edit
       }
 
@@ -196,9 +208,12 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
     setBuyerData(prev => ({ ...prev, industry: value }));
   };
 
-  // Determine default tab and grid columns based on admin status
-  const defaultTab = canEdit ? 'company' : 'account';
-  const gridCols = canEdit ? 'grid-cols-6' : 'grid-cols-2';
+  // Determine default tab and grid columns based on ownership status
+  // Owner tabs: Company, Onboarding, Notifications, Logo (4 tabs)
+  // Admin tabs: none of the owner tabs
+  // All users: Account, Password (2 tabs)
+  const defaultTab = isOwner ? 'company' : 'account';
+  const gridCols = isOwner ? 'grid-cols-6' : 'grid-cols-2';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -209,7 +224,7 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
 
         <Tabs defaultValue={defaultTab} className="w-full">
           <TabsList className={`grid w-full ${gridCols}`}>
-            {canEdit && (
+            {isOwner && (
               <>
                 <TabsTrigger value="company">Company</TabsTrigger>
                 <TabsTrigger value="defaults">Onboarding</TabsTrigger>
@@ -218,12 +233,12 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
             )}
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="password">Password</TabsTrigger>
-            {canEdit && (
+            {isOwner && (
               <TabsTrigger value="logo">Logo</TabsTrigger>
             )}
           </TabsList>
 
-          {canEdit && (
+          {isOwner && (
             <>
               <TabsContent value="company" className="space-y-4">
                 <Card>
@@ -310,7 +325,7 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
               <TabsContent value="logo">
                 <LogoUploadWidget
                   currentLogoUrl={buyerData.company_logo_url}
-                  onLogoUpdate={handleLogoUpdate}
+                  onLogoUpdate={canEdit ? handleLogoUpdate : () => {}}
                 />
               </TabsContent>
             </>

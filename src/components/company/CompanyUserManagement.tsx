@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, UserPlus, Mail, Shield, Building, Trash2, Eye, RotateCcw, Clock, Link, Check } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -54,6 +54,16 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
     branchId: '',
     role: 'viewer'
   });
+
+  // Auto-select "All Branches" when company_admin role is selected
+  useEffect(() => {
+    if (inviteForm.role === 'company_admin') {
+      setInviteForm(prev => ({ ...prev, branchId: 'all_branches' }));
+    } else if (inviteForm.branchId === 'all_branches') {
+      // Reset to first available branch if switching away from company_admin
+      setInviteForm(prev => ({ ...prev, branchId: branches[0]?.id || '' }));
+    }
+  }, [inviteForm.role, branches]);
   const [inviting, setInviting] = useState(false);
   const [resending, setResending] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -61,14 +71,19 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
   const handleInviteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!inviteForm.fullName || !inviteForm.email || !inviteForm.branchId || !inviteForm.role) {
+    // For company_admin with all_branches, branchId can be empty (will be NULL in DB)
+    const isAllBranches = inviteForm.branchId === 'all_branches';
+    
+    if (!inviteForm.fullName || !inviteForm.email || (!inviteForm.branchId && !isAllBranches) || !inviteForm.role) {
       toast.error('Please fill in all fields');
       return;
     }
 
     setInviting(true);
     try {
-      const result = await onInviteUser(inviteForm.fullName, inviteForm.email, inviteForm.branchId, inviteForm.role);
+      // Pass empty string for all_branches - the hook will handle sending null/undefined to the API
+      const branchIdToSubmit = isAllBranches ? '' : inviteForm.branchId;
+      const result = await onInviteUser(inviteForm.fullName, inviteForm.email, branchIdToSubmit, inviteForm.role);
       if (!result.error) {
         setInviteModalOpen(false);
         setInviteForm({ fullName: '', email: '', branchId: '', role: 'viewer' });
@@ -232,6 +247,16 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
                       <SelectValue placeholder="Select a branch" />
                     </SelectTrigger>
                     <SelectContent>
+                      {/* Show "All Branches" option only for company_admin role */}
+                      {inviteForm.role === 'company_admin' && (
+                        <SelectItem value="all_branches">
+                          <div className="flex items-center space-x-2">
+                            <Building className="h-4 w-4 text-primary" />
+                            <span className="font-medium">All Branches</span>
+                            <span className="text-xs text-muted-foreground">(Full Access)</span>
+                          </div>
+                        </SelectItem>
+                      )}
                       {branches.map((branch) => (
                         <SelectItem key={branch.id} value={branch.id}>
                           <div className="flex items-center space-x-2">

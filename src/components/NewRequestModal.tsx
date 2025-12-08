@@ -207,7 +207,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
       // Create a separate request for each selected document AND each selected supplier
       for (const doc of selectedDocuments) {
         for (const supplierId of formData.suppliers) {
-          const supplierBranchId = formData.supplierBranches[supplierId] || null;
+          const supplierBranchId = formData.supplierBranches[supplierId] === 'all' ? null : (formData.supplierBranches[supplierId] || null);
           
           const insertData: any = {
             title: doc.title,

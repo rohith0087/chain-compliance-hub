@@ -108,56 +108,57 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
         showSkipButton
         scrollToFirstStep
         spotlightClicks
-        disableOverlayClose
+        disableOverlayClose={false}
         callback={handleJoyrideCallback}
+        spotlightPadding={8}
         styles={{
           options: {
-            primaryColor: 'hsl(var(--primary))',
-            backgroundColor: 'hsl(var(--card))',
-            textColor: 'hsl(var(--card-foreground))',
-            overlayColor: 'rgba(0, 0, 0, 0.6)',
-            spotlightShadow: '0 0 20px rgba(0, 0, 0, 0.5)',
+            primaryColor: '#16a34a',
+            backgroundColor: '#ffffff',
+            textColor: '#1f2937',
+            arrowColor: '#ffffff',
+            overlayColor: 'rgba(0, 0, 0, 0.5)',
             zIndex: 10000,
           },
+          overlay: {
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            mixBlendMode: 'normal' as const,
+          },
+          spotlight: {
+            backgroundColor: 'transparent',
+            borderRadius: '8px',
+          },
           tooltip: {
-            borderRadius: 'var(--radius)',
-            padding: '16px',
+            borderRadius: '12px',
+            padding: '20px',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.2)',
           },
           tooltipContainer: {
-            textAlign: 'left',
-          },
-          tooltipTitle: {
-            fontSize: '16px',
-            fontWeight: 600,
-            marginBottom: '8px',
+            textAlign: 'left' as const,
           },
           tooltipContent: {
-            fontSize: '14px',
-            lineHeight: 1.5,
+            fontSize: '15px',
+            lineHeight: 1.6,
+            padding: '8px 0',
           },
           buttonNext: {
-            backgroundColor: 'hsl(var(--primary))',
-            color: 'hsl(var(--primary-foreground))',
-            borderRadius: 'var(--radius)',
-            padding: '8px 16px',
+            backgroundColor: '#16a34a',
+            color: '#ffffff',
+            borderRadius: '6px',
+            padding: '10px 20px',
             fontSize: '14px',
             fontWeight: 500,
           },
           buttonBack: {
-            color: 'hsl(var(--muted-foreground))',
-            marginRight: '8px',
+            color: '#6b7280',
+            marginRight: '12px',
           },
           buttonSkip: {
-            color: 'hsl(var(--muted-foreground))',
+            color: '#6b7280',
           },
           buttonClose: {
-            color: 'hsl(var(--muted-foreground))',
-          },
-          spotlight: {
-            borderRadius: 'var(--radius)',
-          },
-          overlay: {
-            mixBlendMode: 'normal',
+            color: '#6b7280',
+            padding: '8px',
           },
         }}
         locale={{
@@ -171,7 +172,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
           disableAnimation: false,
           styles: {
             floater: {
-              filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))',
+              filter: 'drop-shadow(0 8px 20px rgba(0, 0, 0, 0.15))',
             },
           },
         }}

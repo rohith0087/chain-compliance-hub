@@ -130,49 +130,91 @@ export const useMFA = () => {
     checkMFAStatus();
   }, [checkMFAStatus]);
 
-  const cleanupExistingFactors = async () => {
-    try {
-      const { data: factorsData } = await supabase.auth.mfa.listFactors();
-      const allTotpFactors = factorsData?.totp || [];
-      
-      // Unenroll ALL TOTP factors (both verified and unverified)
-      for (const factor of allTotpFactors) {
-        try {
-          await supabase.auth.mfa.unenroll({ factorId: factor.id });
-        } catch (err) {
-          // Continue with other factors even if one fails
+  const cleanupExistingFactors = async (retries = 3, delayMs = 800): Promise<{ success: boolean; cleaned: number }> => {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const { data: factorsData } = await supabase.auth.mfa.listFactors();
+        const allTotpFactors = factorsData?.totp || [];
+        
+        if (allTotpFactors.length === 0) {
+          return { success: true, cleaned: 0 };
+        }
+        
+        // Unenroll ALL TOTP factors (both verified and unverified)
+        for (const factor of allTotpFactors) {
+          try {
+            await supabase.auth.mfa.unenroll({ factorId: factor.id });
+          } catch (err) {
+            // Continue with other factors even if one fails
+          }
+        }
+        
+        // Wait for Supabase to process the deletions
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        
+        // Verify cleanup was successful
+        const { data: verifyData } = await supabase.auth.mfa.listFactors();
+        if ((verifyData?.totp?.length || 0) === 0) {
+          return { success: true, cleaned: allTotpFactors.length };
+        }
+        
+        // If factors still exist and we have retries left, continue
+        if (attempt < retries) {
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+      } catch (error) {
+        if (attempt === retries) {
+          return { success: false, cleaned: 0 };
         }
       }
-      return { success: true, cleaned: allTotpFactors.length };
-    } catch (error) {
-      console.error('Error cleaning up factors:', error);
-      return { success: false, cleaned: 0 };
     }
+    return { success: false, cleaned: 0 };
   };
 
-  const enrollMFA = async () => {
-    try {
-      // First, cleanup ALL existing factors (verified and unverified)
-      await cleanupExistingFactors();
-      
-      // Add small delay to ensure cleanup is processed by Supabase
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Now enroll fresh
-      const { data, error } = await supabase.auth.mfa.enroll({
-        factorType: 'totp',
-        friendlyName: 'Authenticator App'
-      });
+  const enrollMFA = async (forceCleanup = false): Promise<{ data: any; error: any; isFactorExistsError?: boolean }> => {
+    const maxAttempts = 2;
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        // Cleanup with longer delay on retry or if forced
+        const cleanupDelay = attempt > 1 || forceCleanup ? 1500 : 1000;
+        await cleanupExistingFactors(3, cleanupDelay);
+        
+        // Additional delay before enrollment
+        await new Promise(resolve => setTimeout(resolve, cleanupDelay));
+        
+        // Now enroll fresh
+        const { data, error } = await supabase.auth.mfa.enroll({
+          factorType: 'totp',
+          friendlyName: 'Authenticator App'
+        });
 
-      if (error) {
-        throw error;
+        if (error) {
+          // Check if it's the "factor already exists" error
+          const isFactorExistsError = error.message?.toLowerCase().includes('factor') && 
+                                       error.message?.toLowerCase().includes('already exists');
+          
+          if (isFactorExistsError && attempt < maxAttempts) {
+            // Wait longer and retry
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            continue;
+          }
+          
+          return { data: null, error, isFactorExistsError };
+        }
+
+        return { data, error: null };
+      } catch (error: any) {
+        const isFactorExistsError = error.message?.toLowerCase().includes('factor') && 
+                                     error.message?.toLowerCase().includes('already exists');
+        
+        if (attempt === maxAttempts) {
+          return { data: null, error, isFactorExistsError };
+        }
       }
-
-      return { data, error: null };
-    } catch (error: any) {
-      console.error('Error enrolling MFA:', error);
-      return { data: null, error };
     }
+    
+    return { data: null, error: new Error('Failed to enroll MFA after multiple attempts') };
   };
 
   const verifyMFA = async (factorId: string, code: string) => {

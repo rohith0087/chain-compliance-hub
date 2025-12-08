@@ -380,7 +380,7 @@ export function BuyerSidebarLayout({
             <SidebarGroupContent>
               <SidebarMenu>
                 {navigationItems.map((item) => (
-                <SidebarMenuItem key={item.value} className="relative">
+                <SidebarMenuItem key={item.value} className="relative" data-guide-id={`nav-${item.value}`}>
                     {/* Active indicator gradient bar */}
                     {isActiveRoute(item.value) && (
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary to-secondary rounded-r-full" />

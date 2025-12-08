@@ -26,18 +26,28 @@ export const MFAEnrollment = ({ mandatory = false, onComplete, onSkip }: MFAEnro
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
+  const [isFactorExistsError, setIsFactorExistsError] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
-  const { enrollMFA, verifyMFA, checkMFAStatus, daysRemaining } = useMFA();
+  const { enrollMFA, verifyMFA, checkMFAStatus, daysRemaining, cleanupExistingFactors } = useMFA();
   const { toast } = useToast();
 
-  const handleStartEnrollment = async () => {
+  const handleStartEnrollment = async (forceCleanup = false) => {
     setLoading(true);
     setError(null);
+    setIsFactorExistsError(false);
     
-    const result = await enrollMFA();
+    const result = await enrollMFA(forceCleanup);
     
     if (result.error) {
-      setError(result.error.message || 'Failed to start MFA enrollment');
+      const factorExists = result.isFactorExistsError || 
+                          (result.error.message?.toLowerCase().includes('factor') && 
+                           result.error.message?.toLowerCase().includes('already exists'));
+      
+      setIsFactorExistsError(factorExists);
+      setError(factorExists 
+        ? 'A previous setup attempt was incomplete. Click "Retry Setup" to clean up and try again.'
+        : (result.error.message || 'Failed to start MFA enrollment'));
       setLoading(false);
       return;
     }
@@ -50,6 +60,18 @@ export const MFAEnrollment = ({ mandatory = false, onComplete, onSkip }: MFAEnro
     }
     
     setLoading(false);
+  };
+
+  const handleRetrySetup = async () => {
+    setRetrying(true);
+    setError(null);
+    
+    // Aggressive cleanup with longer delays
+    await cleanupExistingFactors(3, 1500);
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    setRetrying(false);
+    await handleStartEnrollment(true);
   };
 
   const handleCopySecret = async () => {
@@ -160,6 +182,27 @@ export const MFAEnrollment = ({ mandatory = false, onComplete, onSkip }: MFAEnro
             </Alert>
           )}
 
+          {isFactorExistsError && step === 'intro' && (
+            <Button
+              onClick={handleRetrySetup}
+              disabled={retrying || loading}
+              variant="outline"
+              className="w-full border-amber-500/50 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
+            >
+              {retrying ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Cleaning up previous attempt...
+                </>
+              ) : (
+                <>
+                  <Shield className="w-4 h-4 mr-2" />
+                  Retry Setup
+                </>
+              )}
+            </Button>
+          )}
+
           {step === 'intro' && (
             <>
               {mandatory && (
@@ -210,7 +253,7 @@ export const MFAEnrollment = ({ mandatory = false, onComplete, onSkip }: MFAEnro
               </div>
 
               <Button
-                onClick={handleStartEnrollment}
+                onClick={() => handleStartEnrollment(false)}
                 disabled={loading}
                 className="w-full h-12 text-base font-semibold"
               >

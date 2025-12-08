@@ -11,6 +11,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { MFAGuard } from "@/components/auth/MFAGuard";
+import { TourProvider } from "@/components/support/TourProvider";
 
 import AuthPage from "./components/auth/AuthPage";
 import ResetPassword from "./pages/ResetPassword";
@@ -157,6 +158,7 @@ const AppRoutes = () => {
       <LanguageProvider>
         <AuthProvider>
           <BranchProvider>
+            <TourProvider>
             <Routes>
               <Route path="/" element={
                 <PublicRoute>
@@ -200,6 +202,7 @@ const AppRoutes = () => {
               <Route path="/shared-document/:token" element={<SharedDocumentViewer />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </TourProvider>
           </BranchProvider>
         </AuthProvider>
       </LanguageProvider>

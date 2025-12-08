@@ -65,13 +65,52 @@ export const MFAEnrollment = ({ mandatory = false, onComplete, onSkip }: MFAEnro
   const handleRetrySetup = async () => {
     setRetrying(true);
     setError(null);
+    setIsFactorExistsError(false);
     
-    // Aggressive cleanup with longer delays
-    await cleanupExistingFactors(3, 1500);
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setRetrying(false);
-    await handleStartEnrollment(true);
+    try {
+      // Aggressive cleanup with longer delays
+      await cleanupExistingFactors(3, 1500);
+      
+      // Refresh session to sync auth state
+      await supabase.auth.refreshSession();
+      
+      // Wait for Supabase to fully process
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      setRetrying(false);
+      
+      // Call enrollMFA with skipCleanup=true since we already cleaned up
+      setLoading(true);
+      const result = await enrollMFA(true);
+      
+      if (result.error) {
+        const factorExists = result.isFactorExistsError || 
+                            (result.error.message?.toLowerCase().includes('factor') && 
+                             result.error.message?.toLowerCase().includes('already exists'));
+        
+        if (factorExists) {
+          setIsFactorExistsError(true);
+          setError('Setup still blocked. Please try logging out and back in, then try again.');
+        } else {
+          setError(result.error.message || 'Failed to start MFA enrollment');
+        }
+        setLoading(false);
+        return;
+      }
+
+      if (result.data) {
+        setQrCode(result.data.totp.qr_code);
+        setSecret(result.data.totp.secret);
+        setFactorId(result.data.id);
+        setStep('qr');
+      }
+      
+      setLoading(false);
+    } catch (err: any) {
+      setRetrying(false);
+      setLoading(false);
+      setError('An unexpected error occurred. Please try logging out and back in.');
+    }
   };
 
   const handleCopySecret = async () => {

@@ -28,6 +28,15 @@ interface BuyerDocumentsManagerProps {
   declineLoading?: string | null;
 }
 
+// Helper to get the latest upload (most recent by created_at)
+const getLatestUpload = (uploads: any[] | undefined) => {
+  if (!uploads || uploads.length === 0) return null;
+  if (uploads.length === 1) return uploads[0];
+  return uploads.slice().sort((a, b) => 
+    new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime()
+  )[0];
+};
+
 const BuyerDocumentsManager = ({ 
   documents, 
   onApprove, 
@@ -137,7 +146,7 @@ const BuyerDocumentsManager = ({
     // Expiration status filter
     let matchesExpirationStatus = true;
     if (filters.expirationStatus) {
-      const upload = doc.document_uploads?.[0];
+      const upload = getLatestUpload(doc.document_uploads);
       if (upload?.expiration_date) {
         const expirationDate = new Date(upload.expiration_date);
         const now = new Date();
@@ -651,12 +660,15 @@ const BuyerDocumentsManager = ({
                   document={{
                     ...doc,
                     supplier: doc.suppliers,
-                    ...(doc.document_uploads?.[0] && {
-                      file_name: doc.document_uploads[0].file_name,
-                      file_size: doc.document_uploads[0].file_size,
-                      expiration_date: doc.document_uploads[0].expiration_date,
-                      uploader: doc.document_uploads[0].uploader
-                    })
+                    ...(() => {
+                      const latestUpload = getLatestUpload(doc.document_uploads);
+                      return latestUpload ? {
+                        file_name: latestUpload.file_name,
+                        file_size: latestUpload.file_size,
+                        expiration_date: latestUpload.expiration_date,
+                        uploader: latestUpload.uploader
+                      } : {};
+                    })()
                   }}
                   userRole="buyer"
                   showActions={true}
@@ -696,7 +708,7 @@ const BuyerDocumentsManager = ({
             setLinkModalOpen(false);
             setSelectedDocument(null);
           }}
-          documentUpload={selectedDocument.document_uploads?.[0]}
+          documentUpload={getLatestUpload(selectedDocument.document_uploads)}
         />
       )}
     </div>

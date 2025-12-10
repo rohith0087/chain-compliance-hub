@@ -11,10 +11,14 @@ import { HelpButton } from '@/components/support/HelpButton';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 
-// Validation schemas
+// Validation schemas with security hardening
 const signInSchema = z.object({
-  email: z.string().trim().email("Please enter a valid email address"),
-  password: z.string().min(1, "Password is required")
+  email: z.string().trim()
+    .email("Please enter a valid email address")
+    .max(255, "Email must be less than 255 characters"),
+  password: z.string()
+    .min(1, "Password is required")
+    .max(128, "Password must be less than 128 characters")
 });
 
 const signUpSchema = z.object({
@@ -279,6 +283,7 @@ const AuthPage = () => {
                         placeholder="Enter your email"
                         className={`h-11 ${errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                         disabled={loading}
+                        maxLength={255}
                       />
                       {errors.email && (
                         <p className="text-xs text-destructive flex items-center gap-1">
@@ -298,6 +303,7 @@ const AuthPage = () => {
                           placeholder="Enter your password"
                           className={`h-11 pr-10 ${errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                           disabled={loading}
+                          maxLength={128}
                         />
                         <button
                           type="button"
@@ -338,13 +344,14 @@ const AuthPage = () => {
                           <form onSubmit={handleForgotPassword} className="space-y-4">
                             <div>
                               <Label htmlFor="resetEmail">Email</Label>
-                              <Input
+                            <Input
                                 id="resetEmail"
                                 type="email"
                                 value={resetEmail}
                                 onChange={(e) => setResetEmail(e.target.value)}
                                 placeholder="Enter your email"
                                 className="h-11"
+                                maxLength={255}
                                 required
                               />
                             </div>
@@ -380,6 +387,7 @@ const AuthPage = () => {
                         placeholder="Enter your full name"
                         className={`h-11 ${errors.fullName ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                         disabled={loading}
+                        maxLength={100}
                       />
                       {errors.fullName && (
                         <p className="text-xs text-destructive flex items-center gap-1">
@@ -398,6 +406,7 @@ const AuthPage = () => {
                         placeholder="Enter your company name"
                         className="h-11"
                         disabled={loading}
+                        maxLength={100}
                       />
                     </div>
                     

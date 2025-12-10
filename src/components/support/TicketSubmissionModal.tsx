@@ -6,10 +6,22 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Send, Loader2, CheckCircle } from 'lucide-react';
+import { Send, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import type { HelpButtonUser } from './HelpButton';
+import { z } from 'zod';
+
+// Validation schema for ticket submission
+const ticketSchema = z.object({
+  subject: z.string().trim()
+    .min(3, "Subject must be at least 3 characters")
+    .max(200, "Subject must be less than 200 characters"),
+  description: z.string().trim()
+    .min(10, "Description must be at least 10 characters")
+    .max(2000, "Description must be less than 2000 characters"),
+  priority: z.enum(['low', 'medium', 'high', 'urgent'])
+});
 
 // Get client IP address using public API
 const getClientIP = async (): Promise<string | null> => {
@@ -35,6 +47,7 @@ export const TicketSubmissionModal = ({ isOpen, onClose, source, user }: TicketS
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const getSourceLabel = () => {
     switch (source) {
@@ -47,13 +60,21 @@ export const TicketSubmissionModal = ({ isOpen, onClose, source, user }: TicketS
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
     
-    if (!subject.trim() || !description.trim()) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in both subject and description.",
-        variant: "destructive",
+    // Validate with Zod schema
+    const validation = ticketSchema.safeParse({ 
+      subject: subject.trim(), 
+      description: description.trim(), 
+      priority 
+    });
+    
+    if (!validation.success) {
+      const fieldErrors: Record<string, string> = {};
+      validation.error.errors.forEach(err => {
+        if (err.path[0]) fieldErrors[err.path[0] as string] = err.message;
       });
+      setErrors(fieldErrors);
       return;
     }
 
@@ -188,11 +209,17 @@ export const TicketSubmissionModal = ({ isOpen, onClose, source, user }: TicketS
               <Input
                 id="subject"
                 value={subject}
-                onChange={(e) => setSubject(e.target.value)}
+                onChange={(e) => { setSubject(e.target.value); setErrors(prev => ({ ...prev, subject: '' })); }}
                 placeholder="Brief description of your issue"
                 disabled={loading}
                 maxLength={200}
+                className={errors.subject ? 'border-destructive focus-visible:ring-destructive' : ''}
               />
+              {errors.subject && (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" /> {errors.subject}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -215,12 +242,18 @@ export const TicketSubmissionModal = ({ isOpen, onClose, source, user }: TicketS
               <Textarea
                 id="description"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => { setDescription(e.target.value); setErrors(prev => ({ ...prev, description: '' })); }}
                 placeholder="Please describe your issue in detail. Include any error messages or steps to reproduce the problem."
                 rows={5}
                 disabled={loading}
                 maxLength={2000}
+                className={errors.description ? 'border-destructive focus-visible:ring-destructive' : ''}
               />
+              {errors.description && (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" /> {errors.description}
+                </p>
+              )}
               <p className="text-xs text-muted-foreground text-right">
                 {description.length}/2000
               </p>

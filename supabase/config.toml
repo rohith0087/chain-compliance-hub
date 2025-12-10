@@ -185,3 +185,7 @@ verify_jwt = true
 
 [functions.verify-mfa-recovery-code]
 verify_jwt = true
+
+# Password reset with recovery code - requires JWT (user has AAL1 session)
+[functions.reset-password-with-recovery]
+verify_jwt = true

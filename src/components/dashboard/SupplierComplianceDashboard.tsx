@@ -90,9 +90,9 @@ const SupplierComplianceDashboard = () => {
         `)
         .eq('supplier_id', supplierId);
 
-      // Apply branch filter if specific branch selected
+      // Apply branch filter if specific branch selected (include NULL for non-branch-specific docs)
       if (!allBranchesView && currentBranch?.id) {
-        requestsQuery = requestsQuery.eq('supplier_branch_id', currentBranch.id);
+        requestsQuery = requestsQuery.or(`supplier_branch_id.eq.${currentBranch.id},supplier_branch_id.is.null`);
       }
 
       const { data: requests, error: requestsError } = await requestsQuery
@@ -136,9 +136,9 @@ const SupplierComplianceDashboard = () => {
         .eq('supplier_id', supplierId)
         .eq('status', 'approved');
 
-      // Apply branch filter if specific branch selected
+      // Apply branch filter if specific branch selected (include NULL for non-branch-specific connections)
       if (!allBranchesView && currentBranch?.id) {
-        connectionsQuery = connectionsQuery.eq('branch_id', currentBranch.id);
+        connectionsQuery = connectionsQuery.or(`branch_id.eq.${currentBranch.id},branch_id.is.null`);
       }
 
       const { data: connections, error: connectionsError } = await connectionsQuery;

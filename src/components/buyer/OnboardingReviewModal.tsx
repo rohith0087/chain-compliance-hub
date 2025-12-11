@@ -65,7 +65,7 @@ export const OnboardingReviewModal: React.FC<OnboardingReviewModalProps> = ({
       // Fetch branch selections if applicable
       if (request.can_choose_branches) {
         const { data: branches } = await supabase
-          .from('onboarding_branch_selections')
+          .from('temporary_branch_selections')
           .select(`
             *,
             company_branches (

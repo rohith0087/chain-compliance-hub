@@ -34,7 +34,7 @@ const SupplierComplianceDashboard = () => {
     if (user) {
       loadDashboardData();
     }
-  }, [user, currentBranch, allBranchesView]);
+  }, [user, currentBranch?.id, allBranchesView]);
 
   const loadDashboardData = async () => {
     setLoading(true);

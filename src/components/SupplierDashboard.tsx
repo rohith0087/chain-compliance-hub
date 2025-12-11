@@ -154,7 +154,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
     if (authUser) {
       loadSupplierData();
     }
-  }, [authUser, currentBranch, allBranchesView]);
+  }, [authUser, currentBranch?.id, allBranchesView]);
 
   // Filter onboarding requests for current supplier
   useEffect(() => {

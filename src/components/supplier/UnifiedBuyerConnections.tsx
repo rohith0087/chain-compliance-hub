@@ -37,7 +37,8 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
     
     fetchData();
     
-    const channelName = `buyer-connections-${user.id}-${currentBranch?.id || 'all'}-${Date.now()}`;
+    const branchId = currentBranch?.id || 'all';
+    const channelName = `buyer-connections-${user.id}-${branchId}`;
     const channel = supabase
       .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'buyer_supplier_connections' }, () => fetchData())
@@ -46,7 +47,7 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
     return () => { 
       supabase.removeChannel(channel); 
     };
-  }, [user, currentBranch, allBranchesView]);
+  }, [user, currentBranch?.id, allBranchesView]);
 
   const fetchData = async () => {
     try {

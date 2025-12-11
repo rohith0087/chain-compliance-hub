@@ -158,7 +158,16 @@ export function SupplierSidebarLayout({
   } = useCompanyBranches(resolvedSupplierId, 'supplier');
 
   // Company permissions with resolved ID
-  const { canViewCompanyManagement, isOwner } = useCompanyPermissions(resolvedSupplierId, 'supplier');
+  const { canViewCompanyManagement, isOwner, role } = useCompanyPermissions(resolvedSupplierId, 'supplier');
+
+  // Format role name for display (e.g., 'branch_manager' → 'Branch Manager')
+  const formatRole = (roleName: string | null): string => {
+    if (!roleName) return '';
+    return roleName
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
 
   const navigationItems: NavigationItem[] = [
     {
@@ -357,7 +366,10 @@ export function SupplierSidebarLayout({
                         {user.name}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        Supplier
+                        {hasAllBranchAccess || isOwner
+                          ? 'Supplier' 
+                          : `Supplier - ${formatRole(role) || 'Team Member'}`
+                        }
                       </span>
                     </div>
                   )}

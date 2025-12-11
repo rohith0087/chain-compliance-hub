@@ -12,6 +12,7 @@ import { OnboardingProcess } from './OnboardingProcess';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useBranchContext } from '@/contexts/BranchContext';
 import { formatDistanceToNow } from 'date-fns';
 
 interface UnifiedBuyerConnectionsProps {
@@ -29,13 +30,14 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
   const [showOnboardingProcess, setShowOnboardingProcess] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { currentBranch, allBranchesView } = useBranchContext();
 
   useEffect(() => {
     if (!user) return;
     
     fetchData();
     
-    const channelName = `buyer-connections-${user.id}`;
+    const channelName = `buyer-connections-${user.id}-${currentBranch?.id || 'all'}-${Date.now()}`;
     const channel = supabase
       .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'buyer_supplier_connections' }, () => fetchData())
@@ -44,7 +46,7 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
     return () => { 
       supabase.removeChannel(channel); 
     };
-  }, [user]);
+  }, [user, currentBranch, allBranchesView]);
 
   const fetchData = async () => {
     try {
@@ -95,10 +97,17 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
 
       setSupplierProfile(supplier);
 
-      const { data: requestsData, error: requestsError } = await supabase
+      let connectionsQuery = supabase
         .from('buyer_supplier_connections')
         .select(`*, buyers:buyer_id (*), supplier_onboarding_requests:onboarding_request_id (*)`)
-        .eq('supplier_id', supplierId)
+        .eq('supplier_id', supplierId);
+
+      // Apply branch filter if specific branch selected
+      if (!allBranchesView && currentBranch?.id) {
+        connectionsQuery = connectionsQuery.eq('branch_id', currentBranch.id);
+      }
+
+      const { data: requestsData, error: requestsError } = await connectionsQuery
         .order('requested_at', { ascending: false });
       
       if (requestsError) { setError('Failed to load connection requests.'); return; }

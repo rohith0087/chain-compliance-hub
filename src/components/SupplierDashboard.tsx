@@ -310,63 +310,86 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
               }
         }
 
-        // Load expiring documents (approved documents with expiration within 30 days or already expired)
+        // Load expiring documents - check LATEST upload per request, not all uploads
         const thirtyDaysFromNow = new Date();
         thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
         
+        // Helper to get latest upload sorted by created_at descending
+        const getLatestUpload = (uploads: any[]) => {
+          if (!uploads?.length) return null;
+          return [...uploads].sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          )[0];
+        };
+        
+        // Query document_requests with all their uploads to check latest version
         let expiringQuery = supabase
-          .from('document_uploads')
+          .from('document_requests')
           .select(`
             id,
-            file_name,
-            expiration_date,
-            status,
-            request_id,
-            document_requests!inner (
+            title,
+            document_type,
+            supplier_id,
+            supplier_branch_id,
+            buyer_id,
+            buyers (company_name),
+            document_uploads (
               id,
-              title,
-              document_type,
-              supplier_id,
-              supplier_branch_id,
-              buyer_id,
-              buyers (
-                company_name
-              )
+              file_name,
+              expiration_date,
+              status,
+              created_at
             )
           `)
-          .eq('status', 'approved')
-          .eq('document_requests.supplier_id', profile.id)
-          .not('expiration_date', 'is', null)
-          .lte('expiration_date', thirtyDaysFromNow.toISOString());
+          .eq('supplier_id', profile.id)
+          .eq('status', 'approved');
 
-        const { data: expiringDocs, error: expiringError } = await expiringQuery
-          .order('expiration_date', { ascending: true });
+        const { data: allRequests, error: expiringError } = await expiringQuery;
 
-        if (!expiringError && expiringDocs) {
-          // Apply branch filter client-side (PostgREST doesn't support .or() on related tables)
-          let filteredExpiringDocs = expiringDocs;
+        if (!expiringError && allRequests) {
+          // Apply branch filter first
+          let filteredRequests = allRequests;
           if (!allBranchesView && currentBranch?.id) {
-            filteredExpiringDocs = expiringDocs.filter((doc: any) => 
-              doc.document_requests?.supplier_branch_id === currentBranch.id || 
-              doc.document_requests?.supplier_branch_id === null
+            filteredRequests = allRequests.filter((req: any) => 
+              req.supplier_branch_id === currentBranch.id || 
+              req.supplier_branch_id === null
             );
           }
 
-          const processedDocs = filteredExpiringDocs.map((doc: any) => {
-            const expDate = new Date(doc.expiration_date);
-            const today = new Date();
-            const daysUntilExpiry = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-            return {
-              id: doc.id,
-              request_id: doc.request_id,
-              title: doc.document_requests?.title || doc.file_name,
-              buyer_name: doc.document_requests?.buyers?.company_name || 'Unknown Buyer',
-              expiration_date: doc.expiration_date,
-              days_until_expiry: daysUntilExpiry,
-              is_expired: daysUntilExpiry < 0,
-              document_uploads: [doc] // For DocumentRenewalDialog
-            };
-          });
+          // Filter to requests where LATEST APPROVED upload is expiring within 30 days
+          const processedDocs = filteredRequests
+            .map((request: any) => {
+              const latestUpload = getLatestUpload(request.document_uploads);
+              
+              // Skip if no uploads, or latest isn't approved, or no expiration date
+              if (!latestUpload || latestUpload.status !== 'approved' || !latestUpload.expiration_date) {
+                return null;
+              }
+              
+              const expDate = new Date(latestUpload.expiration_date);
+              const today = new Date();
+              
+              // Skip if latest upload isn't expiring within 30 days
+              if (expDate > thirtyDaysFromNow) {
+                return null;
+              }
+              
+              const daysUntilExpiry = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+              
+              return {
+                id: latestUpload.id,
+                request_id: request.id,
+                title: request.title || latestUpload.file_name,
+                buyer_name: request.buyers?.company_name || 'Unknown Buyer',
+                expiration_date: latestUpload.expiration_date,
+                days_until_expiry: daysUntilExpiry,
+                is_expired: daysUntilExpiry < 0,
+                document_uploads: request.document_uploads // For DocumentRenewalDialog
+              };
+            })
+            .filter(Boolean) // Remove nulls
+            .sort((a: any, b: any) => new Date(a.expiration_date).getTime() - new Date(b.expiration_date).getTime());
+          
           setExpiringDocuments(processedDocs);
         }
       }

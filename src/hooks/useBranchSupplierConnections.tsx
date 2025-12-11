@@ -39,8 +39,9 @@ export const useBranchSupplierConnections = (branchId?: string) => {
   useEffect(() => {
     if (!branchId) return;
 
+    const channelName = `branch-supplier-changes-${branchId}-${Date.now()}-${Math.random()}`;
     const channel = supabase
-      .channel(`branch-supplier-changes-${branchId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {

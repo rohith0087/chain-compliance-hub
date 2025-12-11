@@ -103,9 +103,9 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
         .select(`*, buyers:buyer_id (*), supplier_onboarding_requests:onboarding_request_id (*)`)
         .eq('supplier_id', supplierId);
 
-      // Apply branch filter if specific branch selected
+      // Apply branch filter if specific branch selected (include NULL for company-wide connections)
       if (!allBranchesView && currentBranch?.id) {
-        connectionsQuery = connectionsQuery.eq('branch_id', currentBranch.id);
+        connectionsQuery = connectionsQuery.or(`branch_id.eq.${currentBranch.id},branch_id.is.null`);
       }
 
       const { data: requestsData, error: requestsError } = await connectionsQuery

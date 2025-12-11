@@ -6,6 +6,8 @@ import { ArrowLeft, Plus, Eye, CheckCircle, Clock, XCircle } from 'lucide-react'
 import { useOnboardingRequests } from '@/hooks/useOnboardingRequests';
 import { OnboardingRequestForm } from './OnboardingRequestForm';
 import { OnboardingReviewModal } from './OnboardingReviewModal';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface SupplierOnboardingProps {
   buyerId: string;
@@ -17,6 +19,7 @@ export const SupplierOnboarding: React.FC<SupplierOnboardingProps> = ({ buyerId,
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const { requests, loading, updateRequestStatus } = useOnboardingRequests();
+  const { toast } = useToast();
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -63,9 +66,39 @@ export const SupplierOnboarding: React.FC<SupplierOnboardingProps> = ({ buyerId,
 
   const handleApproveRequest = async (requestId: string) => {
     try {
-      await updateRequestStatus(requestId, 'approved');
+      // Use finalize_onboarding_approval RPC to properly copy branch selections
+      const { data, error } = await supabase.rpc('finalize_onboarding_approval', {
+        p_onboarding_request_id: requestId,
+        p_notes: null
+      });
+
+      if (error) {
+        console.error('Error approving onboarding:', error);
+        toast({
+          title: "Error",
+          description: "Failed to approve onboarding request",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const result = data as { success: boolean; error?: string };
+      if (!result?.success) {
+        console.error('Onboarding approval failed:', result?.error);
+        toast({
+          title: "Error",
+          description: result?.error || "Failed to approve onboarding",
+          variant: "destructive"
+        });
+        return;
+      }
+
       setShowReviewModal(false);
       setSelectedRequest(null);
+      toast({
+        title: "Success",
+        description: "Onboarding approved and branch assignments created"
+      });
     } catch (error) {
       console.error('Error approving request:', error);
     }

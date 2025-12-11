@@ -66,7 +66,7 @@ export const useNotifications = () => {
 
     try {
       const channel = supabase
-        .channel('notifications')
+        .channel(`notifications-${user.id}`)
         .on(
           'postgres_changes',
           {

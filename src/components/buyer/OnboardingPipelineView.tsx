@@ -118,8 +118,9 @@ export const OnboardingPipelineView = () => {
     // Set up real-time subscription
     if (!user) return;
 
+    const channelName = `onboarding-pipeline-changes-${user.id}`;
     const channel = supabase
-      .channel('onboarding-pipeline-changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useCompanySetup } from '@/hooks/useCompanySetup';
+import { useUserContexts } from '@/hooks/useUserContexts';
 import { supabase } from '@/integrations/supabase/client';
 import BuyerDashboard from '@/components/BuyerDashboard';
 import SupplierDashboard from '@/components/SupplierDashboard';
@@ -12,23 +13,35 @@ import BuyerProfileSetup from '@/components/buyer/BuyerProfileSetup';
 import RoleSwitcher from '@/components/RoleSwitcher';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Lock } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+
+const DUAL_ROLE_INFO_KEY = 'dual_role_info_shown';
 
 const DynamicDashboard = () => {
   const { user, profile, signOut, loading: authLoading } = useAuth();
   const { hasRole, roles } = useUserRoles();
   const { getSupplierProfile, getBuyerProfile } = useCompanySetup();
+  const { 
+    contexts, 
+    currentContext, 
+    switchContext, 
+    loading: contextsLoading, 
+    isDualRole, 
+    needsPasswordReset,
+    buyerContexts,
+    supplierContexts 
+  } = useUserContexts();
   const navigate = useNavigate();
   const [currentRole, setCurrentRole] = useState<'buyer' | 'supplier'>('buyer');
   const [supplierProfile, setSupplierProfile] = useState<any>(null);
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
   const [profilesLoading, setProfilesLoading] = useState(true);
-  const [isTeamMember, setIsTeamMember] = useState<boolean>(false);
-  const [membershipLoading, setMembershipLoading] = useState(true);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
-  const [passwordResetRequired, setPasswordResetRequired] = useState(false);
+
+  // Determine if user is a team member (has company_users records)
+  const isTeamMember = contexts.length > 0;
 
   // Timeout detection for infinite loading
   useEffect(() => {
@@ -38,101 +51,64 @@ const DynamicDashboard = () => {
         setLoadingTimeout(true);
         setSessionError('Session initialization is taking longer than expected. Your profile data may be missing.');
       }
-    }, 10000); // 10 second timeout
+    }, 10000);
 
     return () => clearTimeout(timer);
   }, [authLoading, profilesLoading, sessionError]);
 
-  // Effect 1: Check team membership when user and roles are available
+  // Handle password reset requirement
   useEffect(() => {
-    if (user && roles.length > 0) {
-      console.log('User profile loaded with roles:', roles);
-      setLoadingTimeout(false);
-      setSessionError(null);
-      checkTeamMembership(); // Just check membership, don't chain
+    if (needsPasswordReset) {
+      toast.info('Please set your password before continuing');
+      navigate('/reset-password');
     }
-  }, [user, roles]);
+  }, [needsPasswordReset, navigate]);
 
-  // Effect 2: Load profiles AFTER membership check completes
+  // Set current role based on context (for team members) or roles (for owners)
   useEffect(() => {
-    // Wait for membership check to complete
-    if (membershipLoading) {
+    if (contextsLoading) return;
+
+    if (currentContext) {
+      // Team member: use context
+      setCurrentRole(currentContext.companyType);
+      console.log('Set role from context:', currentContext.companyType);
+    } else if (roles.length > 0) {
+      // Company owner: use roles array
+      if (roles.includes('supplier' as any)) {
+        setCurrentRole('supplier');
+      } else if (roles.includes('buyer' as any)) {
+        setCurrentRole('buyer');
+      }
+      console.log('Set role from roles array:', currentRole);
+    }
+  }, [currentContext, contextsLoading, roles]);
+
+  // Show dual-role info toast once
+  useEffect(() => {
+    if (isDualRole && !localStorage.getItem(DUAL_ROLE_INFO_KEY)) {
+      toast.info(
+        'You have access to both buyer and supplier dashboards. Use the switcher in the header to toggle.',
+        { duration: 8000 }
+      );
+      localStorage.setItem(DUAL_ROLE_INFO_KEY, 'true');
+    }
+  }, [isDualRole]);
+
+  // Load profiles for company owners
+  useEffect(() => {
+    if (contextsLoading || !user || roles.length === 0) {
       return;
     }
-    
-    // Skip if no user or no roles
-    if (!user || roles.length === 0) {
+
+    // Skip profile loading for team members
+    if (isTeamMember) {
+      console.log('User is a team member, skipping profile loading');
+      setProfilesLoading(false);
       return;
     }
-    
-    console.log('Membership check complete, isTeamMember:', isTeamMember);
+
     loadProfiles();
-  }, [membershipLoading, user, roles, isTeamMember]);
-
-  const checkTeamMembership = async () => {
-    if (!user) {
-      setMembershipLoading(false);
-      return;
-    }
-    
-    try {
-      setMembershipLoading(true);
-      
-      // Check if user has any company_users records (active OR pending)
-      const { data, error } = await supabase
-        .from('company_users')
-        .select('id, company_type, status, password_reset_required')
-        .eq('profile_id', user.id)
-        .in('status', ['active', 'pending'])
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) {
-        if (error.code !== 'PGRST116') {
-          console.error('Error checking team membership:', error);
-        }
-        setIsTeamMember(false);
-        setPasswordResetRequired(false);
-        return;
-      }
-
-      const isMember = !!data;
-      console.log('Team membership check:', isMember, 'password_reset_required:', data?.password_reset_required);
-      setIsTeamMember(isMember);
-      
-      // Check if password reset is required
-      if (data?.password_reset_required) {
-        setPasswordResetRequired(true);
-        toast.info('Please set your password before continuing');
-        navigate('/reset-password');
-        return;
-      }
-      
-      // If user is a team member, set their role based on company_type (overrides profiles.roles)
-      if (isMember && data?.company_type) {
-        const teamRole = data.company_type === 'buyer' ? 'buyer' : 'supplier';
-        console.log('Setting team member role to:', teamRole);
-        setCurrentRole(teamRole);
-      } else {
-        // For company owners (non-team members), set role based on roles array
-        // Priority: if they have 'supplier' role, default to supplier
-        // This prevents suppliers from seeing buyer dashboard on first login
-        if (roles.includes('supplier' as any)) {
-          console.log('Setting company owner role to: supplier');
-          setCurrentRole('supplier');
-        } else if (roles.includes('buyer' as any)) {
-          console.log('Setting company owner role to: buyer');
-          setCurrentRole('buyer');
-        }
-      }
-    } catch (error) {
-      console.error('Error in checkTeamMembership:', error);
-      setIsTeamMember(false);
-    } finally {
-      setMembershipLoading(false);
-    }
-  };
+  }, [contextsLoading, user, roles, isTeamMember]);
 
   const loadProfiles = async () => {
     console.log('Loading profiles...', { isTeamMember });
@@ -169,6 +145,10 @@ const DynamicDashboard = () => {
   const handleRoleSwitch = (newRole: 'buyer' | 'supplier') => {
     console.log('Switching to role:', newRole);
     setCurrentRole(newRole);
+    // Also switch context for team members
+    if (isTeamMember) {
+      switchContext(newRole);
+    }
   };
 
   const handleProfileCreated = async () => {
@@ -265,8 +245,8 @@ const DynamicDashboard = () => {
     );
   }
 
-  // Show loading while checking team membership
-  if (membershipLoading) {
+  // Show loading while checking user contexts (team membership)
+  if (contextsLoading) {
     return (
       <Card className="max-w-md mx-auto mt-8">
         <CardContent className="pt-6">
@@ -292,8 +272,22 @@ const DynamicDashboard = () => {
     );
   }
 
-  // Check if user has multiple roles (use authoritative user_roles table)
-  const hasMultipleRoles = roles.length > 1;
+  // Check if user has multiple roles/contexts
+  // For owners: check roles array, for team members: check isDualRole from contexts
+  const hasMultipleRoles = roles.length > 1 || isDualRole;
+
+  // Graceful fallback: if current role context is gone but other remains
+  if (isTeamMember) {
+    if (currentRole === 'buyer' && buyerContexts.length === 0 && supplierContexts.length > 0) {
+      console.log('Buyer context removed, falling back to supplier');
+      setCurrentRole('supplier');
+      toast.info('Your buyer access has been removed. Switched to supplier view.');
+    } else if (currentRole === 'supplier' && supplierContexts.length === 0 && buyerContexts.length > 0) {
+      console.log('Supplier context removed, falling back to buyer');
+      setCurrentRole('buyer');
+      toast.info('Your supplier access has been removed. Switched to buyer view.');
+    }
+  }
 
   // HARD BLOCK: Team members (invited users) NEVER see profile setup forms
   // This prevents race conditions where profile forms show during state transitions
@@ -322,6 +316,8 @@ const DynamicDashboard = () => {
     supplierProfileComplete: isSupplierProfileComplete(supplierProfile),
     buyerProfileComplete: isBuyerProfileComplete(buyerProfile),
     isTeamMember,
+    isDualRole,
+    contexts: contexts.length,
     needsSupplierSetup,
     needsBuyerSetup,
     hasMultipleRoles,

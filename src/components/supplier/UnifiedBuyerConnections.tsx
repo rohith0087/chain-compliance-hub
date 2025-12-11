@@ -43,11 +43,56 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
       setLoading(true);
       setError(null);
       
-      const { data: supplier, error: supplierError } = await supabase.from('suppliers').select('*').eq('profile_id', user?.id).maybeSingle();
-      if (supplierError || !supplier) { setError('Failed to load supplier profile.'); return; }
+      // Step 1: Check if user is a team member first (company ID resolution pattern)
+      const { data: teamMember } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('profile_id', user?.id)
+        .eq('company_type', 'supplier')
+        .eq('status', 'active')
+        .maybeSingle();
+
+      let supplier: any = null;
+      let supplierId: string;
+
+      if (teamMember) {
+        // Team member path - use company_id to fetch supplier profile
+        const { data: supplierData, error: supplierError } = await supabase
+          .from('suppliers')
+          .select('*')
+          .eq('id', teamMember.company_id)
+          .single();
+        
+        if (supplierError || !supplierData) {
+          setError('Failed to load supplier profile.');
+          return;
+        }
+        supplier = supplierData;
+        supplierId = teamMember.company_id;
+      } else {
+        // Company owner path
+        const { data: supplierData, error: supplierError } = await supabase
+          .from('suppliers')
+          .select('*')
+          .eq('profile_id', user?.id)
+          .maybeSingle();
+        
+        if (supplierError || !supplierData) {
+          setError('Failed to load supplier profile.');
+          return;
+        }
+        supplier = supplierData;
+        supplierId = supplierData.id;
+      }
+
       setSupplierProfile(supplier);
 
-      const { data: requestsData, error: requestsError } = await supabase.from('buyer_supplier_connections').select(`*, buyers:buyer_id (*), supplier_onboarding_requests:onboarding_request_id (*)`).eq('supplier_id', supplier.id).order('requested_at', { ascending: false });
+      const { data: requestsData, error: requestsError } = await supabase
+        .from('buyer_supplier_connections')
+        .select(`*, buyers:buyer_id (*), supplier_onboarding_requests:onboarding_request_id (*)`)
+        .eq('supplier_id', supplierId)
+        .order('requested_at', { ascending: false });
+      
       if (requestsError) { setError('Failed to load connection requests.'); return; }
 
       setRequests(requestsData?.filter((req: any) => req.status === 'pending' && req.initiated_by === 'buyer') || []);

@@ -168,8 +168,31 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
   const loadSupplierData = async () => {
     setLoading(true);
     try {
-      // Load supplier profile
-      const profile = await getSupplierProfile();
+      // Step 1: Check if user is a team member first (company ID resolution pattern)
+      const { data: teamMember } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('profile_id', authUser?.id)
+        .eq('company_type', 'supplier')
+        .eq('status', 'active')
+        .maybeSingle();
+
+      let profile: any = null;
+
+      if (teamMember) {
+        // Team member - use company_id to fetch supplier profile
+        const { data: supplierData } = await supabase
+          .from('suppliers')
+          .select('*')
+          .eq('id', teamMember.company_id)
+          .single();
+        
+        profile = supplierData;
+      } else {
+        // Company owner - use existing method
+        profile = await getSupplierProfile();
+      }
+
       setSupplierProfile(profile);
 
       if (profile) {

@@ -191,15 +191,17 @@ export function SupplierSidebarLayout({
       icon: FileText,
       value: 'library'
     },
-    {
-      title: t('supplier:tabs.items'),
-      icon: Package,
-      value: 'items'
-    },
+    // Items tab hidden for now - feature will be enabled in future iteration
+    // {
+    //   title: t('supplier:tabs.items'),
+    //   icon: Package,
+    //   value: 'items'
+    // },
     {
       title: t('supplier:tabs.contacts'),
       icon: UserCog,
-      value: 'contacts'
+      value: 'contacts',
+      ownerOnly: true // Only visible to company owners
     },
     {
       title: 'Buyer Connections',
@@ -223,7 +225,7 @@ export function SupplierSidebarLayout({
   // Filter navigation items based on permissions
   const filteredNavigationItems = navigationItems.filter(item => {
     if (item.ownerOnly) {
-      return canViewCompanyManagement();
+      return isOwner;
     }
     return true;
   });

@@ -240,39 +240,26 @@ const SupplierDiscovery = () => {
     if (!buyerProfile) return;
 
     try {
-      // First, create the onboarding request
-      const { data: onboardingRequest, error: onboardingError } = await supabase
-        .from('supplier_onboarding_requests')
-        .insert([{
-          buyer_id: buyerProfile.id,
-          supplier_id: supplier.id,
-          supplier_email: supplier.contact_email,
-          supplier_company_name: supplier.company_name,
-          status: 'requested',
-          can_choose_branches: true,
-          created_by: user?.id || buyerProfile.profile_id,
-        }])
-        .select()
-        .single();
+      // Use RPC function to create connection request (handles email lookup securely)
+      const { data, error } = await supabase.rpc('send_supplier_connection_request', {
+        p_buyer_id: buyerProfile.id,
+        p_supplier_id: supplier.id,
+        p_created_by: user?.id || buyerProfile.profile_id
+      });
 
-      if (onboardingError) throw onboardingError;
+      if (error) throw error;
 
-      // Then create the connection request linked to the onboarding request
-      const { error: connectionError } = await supabase
-        .from('buyer_supplier_connections')
-        .insert({
-          buyer_id: buyerProfile.id,
-          supplier_id: supplier.id,
-          status: 'pending',
-          initiated_by: 'buyer',
-          onboarding_request_id: onboardingRequest.id,
-        });
+      // Parse the JSON response
+      const result = data as { success: boolean; error?: string; supplier_company_name?: string };
 
-      if (connectionError) throw connectionError;
+      // Check if the function returned an error
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to send connection request');
+      }
 
       toast({
         title: "Connection Request Sent",
-        description: `Request sent to ${supplier.company_name}`,
+        description: `Request sent to ${result?.supplier_company_name || supplier.company_name}`,
       });
 
       // Refresh data

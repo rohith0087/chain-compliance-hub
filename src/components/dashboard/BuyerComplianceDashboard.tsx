@@ -36,6 +36,7 @@ import { useBranchContext } from '@/contexts/BranchContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RefreshCcw } from 'lucide-react';
 import BuyerCorporateDocuments from '../buyer/BuyerCorporateDocuments';
+import ExpiryNotificationLog from '../compliance/ExpiryNotificationLog';
 
 const BuyerComplianceDashboard = () => {
   const { currentBranch, allBranchesView } = useBranchContext();
@@ -494,11 +495,12 @@ const BuyerComplianceDashboard = () => {
       />
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="suppliers">Supplier Compliance</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="corporate">Corporate Documents</TabsTrigger>
+          <TabsTrigger value="communication">Communication Log</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6 animate-fade-in">
@@ -751,6 +753,10 @@ const BuyerComplianceDashboard = () => {
 
         <TabsContent value="corporate" className="space-y-6 animate-fade-in">
           <BuyerCorporateDocuments buyerId={buyerId} />
+        </TabsContent>
+
+        <TabsContent value="communication" className="space-y-6 animate-fade-in">
+          <ExpiryNotificationLog buyerId={buyerId} />
         </TabsContent>
       </Tabs>
 

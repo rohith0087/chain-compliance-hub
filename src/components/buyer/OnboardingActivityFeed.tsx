@@ -33,8 +33,9 @@ export const OnboardingActivityFeed = ({ buyerId, isOpen, onClose, onRequestClic
     loadRecentActivities();
     
     // Subscribe to real-time changes
+    const channelName = `activity-feed-${buyerId}`;
     const channel = supabase
-      .channel('activity-feed')
+      .channel(channelName)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',

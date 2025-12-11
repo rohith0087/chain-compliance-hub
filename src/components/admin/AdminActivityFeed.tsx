@@ -93,8 +93,9 @@ const AdminActivityFeed = () => {
     fetchActivities();
     
     // Set up real-time subscription for new activities
+    const channelName = `activity-logs-${Date.now()}`;
     const subscription = supabase
-      .channel('activity_logs')
+      .channel(channelName)
       .on('postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'user_activity_logs' },
         () => {
@@ -104,7 +105,7 @@ const AdminActivityFeed = () => {
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(subscription);
     };
   }, []);
 

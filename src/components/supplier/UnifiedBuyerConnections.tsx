@@ -31,11 +31,19 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user) {
-      fetchData();
-      const channel = supabase.channel('buyer_connections').on('postgres_changes', { event: '*', schema: 'public', table: 'buyer_supplier_connections' }, () => fetchData()).subscribe();
-      return () => { supabase.removeChannel(channel); };
-    }
+    if (!user) return;
+    
+    fetchData();
+    
+    const channelName = `buyer-connections-${user.id}`;
+    const channel = supabase
+      .channel(channelName)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'buyer_supplier_connections' }, () => fetchData())
+      .subscribe();
+    
+    return () => { 
+      supabase.removeChannel(channel); 
+    };
   }, [user]);
 
   const fetchData = async () => {

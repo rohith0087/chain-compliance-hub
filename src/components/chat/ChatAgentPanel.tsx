@@ -110,8 +110,9 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
 
   // Set up real-time subscriptions for document status updates
   useEffect(() => {
+    const channelName = `document-status-updates-${Date.now()}`;
     const channel = supabase
-      .channel('document-status-updates')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {

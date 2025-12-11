@@ -200,9 +200,14 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div><h2 className="text-2xl font-bold">Buyer Connections</h2><p className="text-gray-600 mt-1">Manage your connections</p></div>
-        <ConnectWithBuyerModal onConnectionRequest={onConnectionRequest} />
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <h2 className="text-2xl font-bold">Buyer Connections</h2>
+          <p className="text-muted-foreground mt-1">Manage your connections</p>
+        </div>
+        <div className="shrink-0">
+          <ConnectWithBuyerModal onConnectionRequest={onConnectionRequest} />
+        </div>
       </div>
       <Tabs defaultValue="connected" className="w-full">
         <TabsList className="grid w-full grid-cols-2">

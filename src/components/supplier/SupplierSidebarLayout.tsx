@@ -239,7 +239,8 @@ export function SupplierSidebarLayout({
   const handleSpecialAction = (action: string) => {
     switch (action) {
       case 'connect-buyer':
-        onConnectWithBuyer?.();
+        // Navigate to buyer connections tab instead of opening modal
+        onTabChange('buyer-connections');
         break;
       case 'upload-document':
         onUploadDocument?.();

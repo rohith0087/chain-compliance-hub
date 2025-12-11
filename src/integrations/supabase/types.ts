@@ -3856,6 +3856,18 @@ export type Database = {
         }[]
       }
       get_connected_supplier_ids_for_buyer: { Args: never; Returns: string[] }
+      get_latest_expiring_documents: {
+        Args: never
+        Returns: {
+          created_at: string
+          document_name: string
+          document_requests: Json
+          expiration_date: string
+          file_name: string
+          id: string
+          request_id: string
+        }[]
+      }
       get_onboarding_supplier_ids_for_buyer: { Args: never; Returns: string[] }
       get_platform_admin_invitations: {
         Args: never

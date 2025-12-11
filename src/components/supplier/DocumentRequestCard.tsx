@@ -37,12 +37,23 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
 
   const isCustomTemplate = request.template_type === 'custom' && request.custom_template_id;
 
+  // Helper to get the latest upload (sorted by created_at descending)
+  const getLatestUpload = () => {
+    if (!request.document_uploads?.length) return null;
+    return [...request.document_uploads].sort(
+      (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )[0];
+  };
+
   // Check if document is expiring or expired (for approved documents) using shared utility
   const getExpiryStatus = (): { status: 'expired' | 'expiring_soon'; days: number } | null => {
     if (request.status !== 'approved' || !request.document_uploads?.length) return null;
     
-    const latestUpload = request.document_uploads[0];
+    const latestUpload = getLatestUpload();
     if (!latestUpload?.expiration_date) return null;
+    
+    // Only show renewal if latest approved upload is expiring
+    if (latestUpload.status !== 'approved') return null;
     
     const result = getDocumentExpiryStatus(latestUpload.expiration_date);
     if (result && (result.status === 'expired' || result.status === 'expiring_soon')) {

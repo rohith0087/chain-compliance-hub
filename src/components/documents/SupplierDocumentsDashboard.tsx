@@ -24,12 +24,21 @@ import DocumentCard from './DocumentCard';
 import DocumentTimeline from './DocumentTimeline';
 
 
+// Helper to get the latest upload from an array (sorted by created_at descending)
+const getLatestUpload = (uploads: any[]) => {
+  if (!uploads?.length) return null;
+  return [...uploads].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  )[0];
+};
+
 const SupplierDocumentsDashboard = () => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState('documents');
   const [highlightedDocId, setHighlightedDocId] = useState<string | null>(null);
+  const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [filters, setFilters] = useState({
     search: '',
     status: '',
@@ -178,10 +187,10 @@ const SupplierDocumentsDashboard = () => {
         );
       }
 
-      // Apply expiration filter
+      // Apply expiration filter using latest upload
       if (filters.expirationStatus) {
         processedDocuments = processedDocuments.filter(doc => {
-          const upload = doc.document_uploads?.[0];
+          const upload = getLatestUpload(doc.document_uploads);
           if (!upload?.expiration_date) return filters.expirationStatus === 'valid';
           
           const expDate = new Date(upload.expiration_date);
@@ -229,6 +238,9 @@ const SupplierDocumentsDashboard = () => {
       }
 
       setDocuments(processedDocuments);
+      
+      // Load activity logs for timeline
+      await loadActivityLogs(supplierId);
     } catch (error) {
       console.error('Error loading documents:', error);
     } finally {
@@ -236,7 +248,50 @@ const SupplierDocumentsDashboard = () => {
     }
   };
 
-  // Calculate stats
+  // Load actual activity logs from database
+  const loadActivityLogs = async (supplierId: string) => {
+    try {
+      // Get all document upload IDs for this supplier's requests
+      const { data: uploads } = await supabase
+        .from('document_uploads')
+        .select(`
+          id,
+          document_requests!inner (supplier_id)
+        `)
+        .eq('document_requests.supplier_id', supplierId);
+
+      if (!uploads?.length) {
+        setActivityLogs([]);
+        return;
+      }
+
+      const uploadIds = uploads.map(u => u.id);
+
+      // Fetch activity logs for these uploads
+      const { data: logs, error } = await supabase
+        .from('document_activity_logs')
+        .select(`
+          id,
+          action_type,
+          created_at,
+          notes,
+          metadata,
+          document_upload_id,
+          document_request_id
+        `)
+        .or(`document_upload_id.in.(${uploadIds.join(',')}),document_request_id.is.not.null`)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (!error && logs) {
+        setActivityLogs(logs);
+      }
+    } catch (error) {
+      console.error('Error loading activity logs:', error);
+    }
+  };
+
+  // Calculate stats using latest upload for expiration checks
   const stats = {
     total: documents.length,
     pending: documents.filter(doc => doc.status === 'pending').length,
@@ -244,16 +299,16 @@ const SupplierDocumentsDashboard = () => {
     approved: documents.filter(doc => doc.status === 'approved').length,
     rejected: documents.filter(doc => doc.status === 'rejected').length,
     expiringSoon: documents.filter(doc => {
-      const upload = doc.document_uploads?.[0];
-      if (!upload?.expiration_date) return false;
+      const upload = getLatestUpload(doc.document_uploads);
+      if (!upload?.expiration_date || upload.status !== 'approved') return false;
       const expDate = new Date(upload.expiration_date);
       const today = new Date();
       const thirtyDaysFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
       return expDate <= thirtyDaysFromNow && expDate >= today;
     }).length,
     expired: documents.filter(doc => {
-      const upload = doc.document_uploads?.[0];
-      if (!upload?.expiration_date) return false;
+      const upload = getLatestUpload(doc.document_uploads);
+      if (!upload?.expiration_date || upload.status !== 'approved') return false;
       return new Date(upload.expiration_date) < new Date();
     }).length
   };
@@ -330,15 +385,52 @@ const SupplierDocumentsDashboard = () => {
     setFilters(prev => ({ ...prev, search: e.target.value }));
   };
 
-  // Generate timeline events
-  const timelineEvents = documents.slice(0, 10).map(doc => ({
-    id: doc.id,
-    type: doc.status as 'created' | 'submitted' | 'approved' | 'rejected' | 'expired' | 'reminder',
-    title: `Document ${doc.status}`,
-    description: `${doc.title} - ${doc.buyers?.company_name || 'Unknown Buyer'}`,
-    date: doc.updated_at || doc.created_at,
-    documentTitle: doc.title
-  }));
+  // Map action types to timeline event types
+  const mapActionToEventType = (actionType: string): 'created' | 'submitted' | 'approved' | 'rejected' | 'expired' | 'reminder' => {
+    switch (actionType) {
+      case 'requested': return 'created';
+      case 'uploaded': return 'submitted';
+      case 'approved': return 'approved';
+      case 'rejected': return 'rejected';
+      case 'downloaded': return 'reminder';
+      case 'link_created': return 'reminder';
+      case 'renewed': return 'submitted';
+      default: return 'created';
+    }
+  };
+
+  const formatActionTitle = (actionType: string): string => {
+    switch (actionType) {
+      case 'requested': return 'Document Requested';
+      case 'uploaded': return 'Document Uploaded';
+      case 'approved': return 'Document Approved';
+      case 'rejected': return 'Document Rejected';
+      case 'downloaded': return 'Document Downloaded';
+      case 'link_created': return 'Share Link Created';
+      case 'renewed': return 'Document Renewed';
+      default: return `Document ${actionType}`;
+    }
+  };
+
+  // Generate timeline events from actual activity logs
+  const timelineEvents = activityLogs.map(log => {
+    // Find the related document for context
+    const relatedDoc = documents.find(doc => 
+      doc.document_uploads?.some((u: any) => u.id === log.document_upload_id) ||
+      doc.id === log.document_request_id
+    );
+
+    return {
+      id: log.id,
+      type: mapActionToEventType(log.action_type),
+      title: formatActionTitle(log.action_type),
+      description: relatedDoc 
+        ? `${relatedDoc.title} - ${relatedDoc.buyers?.company_name || 'Unknown Buyer'}`
+        : log.notes || 'Document activity',
+      date: log.created_at,
+      documentTitle: relatedDoc?.title || 'Unknown Document'
+    };
+  });
 
 
   if (loading) {
@@ -666,25 +758,28 @@ const SupplierDocumentsDashboard = () => {
             <CardContent>
               {documents.length > 0 ? (
                 <div className="grid gap-6">
-                  {documents.map(doc => (
-                    <DocumentCard
-                      key={doc.id}
-                      document={{
-                        ...doc,
-                        buyer: doc.buyers,
-                        ...(doc.document_uploads?.[0] && {
-                          file_name: doc.document_uploads[0].file_name,
-                          file_size: doc.document_uploads[0].file_size,
-                          expiration_date: doc.document_uploads[0].expiration_date,
-                          uploader: doc.document_uploads[0].uploader
-                        })
-                      }}
-                      userRole="supplier"
-                      onView={() => console.log('View document:', doc.id)}
-                      onDownload={() => console.log('Download document:', doc.id)}
-                      onUpload={() => console.log('Upload document:', doc.id)}
-                    />
-                  ))}
+                  {documents.map(doc => {
+                    const latestUpload = getLatestUpload(doc.document_uploads);
+                    return (
+                      <DocumentCard
+                        key={doc.id}
+                        document={{
+                          ...doc,
+                          buyer: doc.buyers,
+                          ...(latestUpload && {
+                            file_name: latestUpload.file_name,
+                            file_size: latestUpload.file_size,
+                            expiration_date: latestUpload.expiration_date,
+                            uploader: latestUpload.uploader
+                          })
+                        }}
+                        userRole="supplier"
+                        onView={() => console.log('View document:', doc.id)}
+                        onDownload={() => console.log('Download document:', doc.id)}
+                        onUpload={() => console.log('Upload document:', doc.id)}
+                      />
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-12">
@@ -712,8 +807,8 @@ const SupplierDocumentsDashboard = () => {
             </CardHeader>
             <CardContent>
               {documents.filter(doc => {
-                const upload = doc.document_uploads?.[0];
-                if (!upload?.expiration_date) return false;
+                const upload = getLatestUpload(doc.document_uploads);
+                if (!upload?.expiration_date || upload.status !== 'approved') return false;
                 const expDate = new Date(upload.expiration_date);
                 const today = new Date();
                 const thirtyDaysFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -722,41 +817,44 @@ const SupplierDocumentsDashboard = () => {
                 <div className="grid gap-6">
                   {documents
                     .filter(doc => {
-                      const upload = doc.document_uploads?.[0];
-                      if (!upload?.expiration_date) return false;
+                      const upload = getLatestUpload(doc.document_uploads);
+                      if (!upload?.expiration_date || upload.status !== 'approved') return false;
                       const expDate = new Date(upload.expiration_date);
                       const today = new Date();
                       const thirtyDaysFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
                       return expDate <= thirtyDaysFromNow;
                     })
-                    .map(doc => (
-                      <div 
-                        key={doc.id}
-                        id={`doc-${doc.id}`}
-                        className={`transition-all duration-500 ${
-                          highlightedDocId === doc.id 
-                            ? 'ring-2 ring-primary ring-offset-2 rounded-lg' 
-                            : ''
-                        }`}
-                      >
-                        <DocumentCard
-                          document={{
-                            ...doc,
-                            buyer: doc.buyers,
-                            ...(doc.document_uploads?.[0] && {
-                              file_name: doc.document_uploads[0].file_name,
-                              file_size: doc.document_uploads[0].file_size,
-                              expiration_date: doc.document_uploads[0].expiration_date,
-                              uploader: doc.document_uploads[0].uploader
-                            })
-                          }}
-                          userRole="supplier"
-                          onView={() => console.log('View document:', doc.id)}
-                          onDownload={() => console.log('Download document:', doc.id)}
-                          onUpload={() => console.log('Upload document:', doc.id)}
-                        />
-                      </div>
-                    ))}
+                    .map(doc => {
+                      const latestUpload = getLatestUpload(doc.document_uploads);
+                      return (
+                        <div 
+                          key={doc.id}
+                          id={`doc-${doc.id}`}
+                          className={`transition-all duration-500 ${
+                            highlightedDocId === doc.id 
+                              ? 'ring-2 ring-primary ring-offset-2 rounded-lg' 
+                              : ''
+                          }`}
+                        >
+                          <DocumentCard
+                            document={{
+                              ...doc,
+                              buyer: doc.buyers,
+                              ...(latestUpload && {
+                                file_name: latestUpload.file_name,
+                                file_size: latestUpload.file_size,
+                                expiration_date: latestUpload.expiration_date,
+                                uploader: latestUpload.uploader
+                              })
+                            }}
+                            userRole="supplier"
+                            onView={() => console.log('View document:', doc.id)}
+                            onDownload={() => console.log('Download document:', doc.id)}
+                            onUpload={() => console.log('Upload document:', doc.id)}
+                          />
+                        </div>
+                      );
+                    })}
                 </div>
               ) : (
                 <div className="text-center py-12">

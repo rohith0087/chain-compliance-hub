@@ -339,16 +339,20 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
           .not('expiration_date', 'is', null)
           .lte('expiration_date', thirtyDaysFromNow.toISOString());
 
-        // Apply branch filter if specific branch selected (include NULL for non-branch-specific docs)
-        if (!allBranchesView && currentBranch?.id) {
-          expiringQuery = expiringQuery.or(`document_requests.supplier_branch_id.eq.${currentBranch.id},document_requests.supplier_branch_id.is.null`);
-        }
-
         const { data: expiringDocs, error: expiringError } = await expiringQuery
           .order('expiration_date', { ascending: true });
 
         if (!expiringError && expiringDocs) {
-          const processedDocs = expiringDocs.map((doc: any) => {
+          // Apply branch filter client-side (PostgREST doesn't support .or() on related tables)
+          let filteredExpiringDocs = expiringDocs;
+          if (!allBranchesView && currentBranch?.id) {
+            filteredExpiringDocs = expiringDocs.filter((doc: any) => 
+              doc.document_requests?.supplier_branch_id === currentBranch.id || 
+              doc.document_requests?.supplier_branch_id === null
+            );
+          }
+
+          const processedDocs = filteredExpiringDocs.map((doc: any) => {
             const expDate = new Date(doc.expiration_date);
             const today = new Date();
             const daysUntilExpiry = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));

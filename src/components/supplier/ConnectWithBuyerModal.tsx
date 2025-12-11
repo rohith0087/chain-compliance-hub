@@ -76,7 +76,7 @@ export const ConnectWithBuyerModal = ({ onConnectionRequest }: ConnectWithBuyerM
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="mb-4">
+        <Button size="default">
           <Plus className="h-4 w-4 mr-2" />
           Connect with Buyer
         </Button>

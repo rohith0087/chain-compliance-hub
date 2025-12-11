@@ -15,7 +15,7 @@ import { useBranchContext } from '@/contexts/BranchContext';
 interface BranchSelectorProps {
   branches: CompanyBranch[];
   currentBranch: CompanyBranch | null;
-  onBranchChange: (branch: CompanyBranch) => void;
+  onBranchChange: (branch: CompanyBranch | null) => void;
   loading?: boolean;
   showAllBranchesOption?: boolean;
 }
@@ -50,6 +50,7 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
 
   const handleAllBranchesToggle = () => {
     setAllBranchesView(true);
+    onBranchChange(null); // Notify parent that "All Branches" was selected
   };
 
   const handleBranchSelect = (branch: CompanyBranch) => {

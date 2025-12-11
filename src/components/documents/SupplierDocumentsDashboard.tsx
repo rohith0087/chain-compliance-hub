@@ -132,9 +132,9 @@ const SupplierDocumentsDashboard = () => {
         `)
         .eq('supplier_id', supplierId);
 
-      // Apply branch filter if specific branch selected
+      // Apply branch filter if specific branch selected (include NULL for non-branch-specific docs)
       if (!allBranchesView && currentBranch?.id) {
-        query = query.eq('supplier_branch_id', currentBranch.id);
+        query = query.or(`supplier_branch_id.eq.${currentBranch.id},supplier_branch_id.is.null`);
       }
 
       query = query.order('created_at', { ascending: false });

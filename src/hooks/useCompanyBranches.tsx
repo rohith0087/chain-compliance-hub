@@ -106,20 +106,29 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
 
       // Restore previously selected branch from localStorage or use default
       if (branchesData && branchesData.length > 0) {
+        const savedAllBranchesMode = localStorage.getItem('allBranchesMode');
         const savedBranchId = localStorage.getItem('selectedBranchId');
-        let branchToSet: CompanyBranch | null = null;
+        
+        // Check if "All Branches" mode was previously selected and user has access
+        if (savedAllBranchesMode === 'true' && canAccessAllBranches) {
+          // Keep currentBranch as null for "All Branches" view
+          setCurrentBranch(null);
+        } else {
+          let branchToSet: CompanyBranch | null = null;
 
-        // Try to find the saved branch (only if it's in the accessible branches)
-        if (savedBranchId) {
-          branchToSet = branchesData.find(b => b.id === savedBranchId) as CompanyBranch || null;
+          // Try to find the saved branch (only if it's in the accessible branches)
+          if (savedBranchId) {
+            branchToSet = branchesData.find(b => b.id === savedBranchId) as CompanyBranch || null;
+          }
+
+          // Fall back to Main Office or first branch if no saved selection
+          if (!branchToSet) {
+            branchToSet = branchesData.find(b => b.branch_name === 'Main Office') as CompanyBranch || branchesData[0] as CompanyBranch;
+          }
+
+          setCurrentBranch(branchToSet);
+          localStorage.setItem('allBranchesMode', 'false');
         }
-
-        // Fall back to Main Office or first branch if no saved selection
-        if (!branchToSet) {
-          branchToSet = branchesData.find(b => b.branch_name === 'Main Office') as CompanyBranch || branchesData[0] as CompanyBranch;
-        }
-
-        setCurrentBranch(branchToSet);
       }
 
     } catch (err) {
@@ -574,9 +583,17 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
     }
   };
 
-  const switchBranch = (branch: CompanyBranch) => {
+  const switchBranch = (branch: CompanyBranch | null) => {
     setCurrentBranch(branch);
-    toast.success(`Switched to ${branch.branch_name}`);
+    if (branch) {
+      localStorage.setItem('selectedBranchId', branch.id);
+      localStorage.setItem('allBranchesMode', 'false');
+      toast.success(`Switched to ${branch.branch_name}`);
+    } else {
+      localStorage.removeItem('selectedBranchId');
+      localStorage.setItem('allBranchesMode', 'true');
+      toast.success('Viewing all branches');
+    }
   };
 
   useEffect(() => {

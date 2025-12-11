@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,8 +25,13 @@ import {
   FileText,
   Search,
   Package,
-  UserCog
+  UserCog,
+  TrendingUp,
+  ArrowRight
 } from 'lucide-react';
+import { ComplianceRing } from '@/components/dashboard/ComplianceRing';
+import { MetricChip } from '@/components/dashboard/MetricChip';
+import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { SupplierSettingsModal } from '@/components/settings/SupplierSettingsModal';
 import { SupplierSidebarLayout } from '@/components/supplier/SupplierSidebarLayout';
 import { SidebarProvider } from '@/components/ui/sidebar';
@@ -83,6 +89,11 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
     category: 'all',
     documentType: 'all'
   });
+  
+  // Dashboard data state
+  const [activityTrend, setActivityTrend] = useState<{ day: string; requests: number; completed: number }[]>([]);
+  const [upcomingDeadlines, setUpcomingDeadlines] = useState<any[]>([]);
+  const [actionItems, setActionItems] = useState<any[]>([]);
   
   
   const { user: authUser } = useAuth();
@@ -296,6 +307,84 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
     loadSupplierData();
   };
 
+  // Calculate dashboard data from loaded requests
+  useEffect(() => {
+    if (documentRequests.length > 0) {
+      // Generate activity trend for last 7 days
+      const trend = [];
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dayRequests = documentRequests.filter(req => {
+          const reqDate = new Date(req.created_at);
+          return reqDate.toDateString() === date.toDateString();
+        });
+        trend.push({
+          day: days[date.getDay()],
+          requests: dayRequests.length,
+          completed: dayRequests.filter(r => r.status === 'approved' || r.status === 'submitted').length
+        });
+      }
+      setActivityTrend(trend);
+
+      // Calculate upcoming deadlines
+      const deadlines = documentRequests
+        .filter(req => req.due_date && req.status === 'pending')
+        .map(req => {
+          const dueDate = new Date(req.due_date);
+          const today = new Date();
+          const daysLeft = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+          return {
+            id: req.id,
+            title: req.title,
+            buyer: req.buyers?.company_name || 'Unknown',
+            daysLeft,
+            priority: req.priority || 'medium',
+            dueDate: req.due_date
+          };
+        })
+        .filter(d => d.daysLeft >= 0 && d.daysLeft <= 30)
+        .sort((a, b) => a.daysLeft - b.daysLeft)
+        .slice(0, 5);
+      setUpcomingDeadlines(deadlines);
+
+      // Calculate action items
+      const actions = [];
+      const overdueRequests = documentRequests.filter(req => {
+        if (req.status !== 'pending' || !req.due_date) return false;
+        return new Date(req.due_date) < new Date();
+      });
+      if (overdueRequests.length > 0) {
+        actions.push({
+          id: 'overdue',
+          type: 'urgent',
+          title: `${overdueRequests.length} overdue document${overdueRequests.length > 1 ? 's' : ''} require attention`,
+          action: () => handleNotificationNavigation('requests', undefined)
+        });
+      }
+      const pendingRequests = documentRequests.filter(req => req.status === 'pending');
+      if (pendingRequests.length > 0) {
+        actions.push({
+          id: 'pending',
+          type: 'warning',
+          title: `${pendingRequests.length} pending request${pendingRequests.length > 1 ? 's' : ''} awaiting submission`,
+          action: () => handleNotificationNavigation('requests', undefined)
+        });
+      }
+      const rejectedRequests = documentRequests.filter(req => req.status === 'rejected');
+      if (rejectedRequests.length > 0) {
+        actions.push({
+          id: 'rejected',
+          type: 'error',
+          title: `${rejectedRequests.length} rejected document${rejectedRequests.length > 1 ? 's' : ''} need resubmission`,
+          action: () => handleNotificationNavigation('requests', undefined)
+        });
+      }
+      setActionItems(actions);
+    }
+  }, [documentRequests]);
+
   // Filter document requests based on current filters
   const filteredRequests = documentRequests.filter(request => {
     const searchLower = filters.search.toLowerCase();
@@ -365,189 +454,417 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview':
+        // Prepare chart data
+        const documentStatusData = [
+          { name: 'Approved', value: stats.approvedDocuments, color: 'hsl(var(--green-accent))' },
+          { name: 'Pending', value: stats.pendingRequests, color: 'hsl(var(--amber-accent))' },
+          { name: 'Submitted', value: stats.documentsSubmitted, color: 'hsl(var(--blue-accent))' },
+        ].filter(d => d.value > 0);
+
+        const COLORS = ['hsl(142, 76%, 36%)', 'hsl(38, 92%, 50%)', 'hsl(221, 83%, 53%)'];
+
         return (
-          <>
-            {/* Company Info Banner */}
-            {supplierProfile && (
-              <Card className="mb-8">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    {supplierProfile.company_logo_url ? (
-                      <img
-                        src={supplierProfile.company_logo_url}
-                        alt={`${supplierProfile.company_name} logo`}
-                        className="w-16 h-16 object-contain rounded-lg border"
-                      />
+          <div className="space-y-6">
+            {/* Hero Section */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+            >
+              {/* Welcome Card */}
+              <div className="lg:col-span-2">
+                <Card className="h-full bg-gradient-to-br from-green-500/10 via-emerald-500/5 to-teal-500/10 border-green-500/20">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-4">
+                        <div>
+                          <h1 className="text-2xl font-bold text-foreground">
+                            Welcome back, {supplierProfile?.company_name || user.name}
+                          </h1>
+                          <p className="text-muted-foreground mt-1">
+                            Here's your compliance overview for today
+                          </p>
+                        </div>
+                        
+                        {/* Metric Chips */}
+                        <div className="flex flex-wrap gap-3 mt-6">
+                          <MetricChip 
+                            label="Pending" 
+                            value={stats.pendingRequests} 
+                            color="amber"
+                            pulse={stats.pendingRequests > 0}
+                          />
+                          <MetricChip 
+                            label="Submitted" 
+                            value={stats.documentsSubmitted} 
+                            color="blue"
+                          />
+                          <MetricChip 
+                            label="Approved" 
+                            value={stats.approvedDocuments} 
+                            color="green"
+                          />
+                          <MetricChip 
+                            label="Buyers" 
+                            value={connectedBuyers.length} 
+                            color="purple"
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Company Logo */}
+                      {supplierProfile?.company_logo_url ? (
+                        <img
+                          src={supplierProfile.company_logo_url}
+                          alt={`${supplierProfile.company_name} logo`}
+                          className="w-16 h-16 object-contain rounded-lg border border-border/50"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 bg-green-500/10 rounded-lg flex items-center justify-center">
+                          <Building2 className="w-8 h-8 text-green-500" />
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Compliance Ring */}
+              <Card className="flex items-center justify-center">
+                <CardContent className="p-6 text-center">
+                  <ComplianceRing score={completionRate} size={140} />
+                  <p className="text-sm text-muted-foreground mt-2">Completion Rate</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Charts Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Document Status Pie Chart */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                <Card className="h-full">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-medium flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-muted-foreground" />
+                      Document Status
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {documentStatusData.length > 0 ? (
+                      <div className="h-[200px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={documentStatusData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={50}
+                              outerRadius={80}
+                              paddingAngle={5}
+                              dataKey="value"
+                            >
+                              {documentStatusData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: 'hsl(var(--card))', 
+                                border: '1px solid hsl(var(--border))',
+                                borderRadius: '8px'
+                              }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="flex justify-center gap-4 mt-2">
+                          {documentStatusData.map((item, index) => (
+                            <div key={item.name} className="flex items-center gap-1.5 text-xs">
+                              <div 
+                                className="w-2.5 h-2.5 rounded-full" 
+                                style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                              />
+                              <span className="text-muted-foreground">{item.name}: {item.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     ) : (
-                      <div className="w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center">
-                        <Building2 className="w-8 h-8 text-green-600" />
+                      <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                        No documents yet
                       </div>
                     )}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-4 mb-2">
-                        <h2 className="text-2xl font-bold text-gray-900">{supplierProfile.company_name}</h2>
-                      </div>
-                      <p className="text-gray-600">{supplierProfile.industry}</p>
-                      <p className="text-sm text-gray-500">{supplierProfile.contact_email}</p>
-                    </div>
-                  </div>
-                    <Button variant="outline" onClick={() => setShowSettingsModal(true)}>
-                      <Settings className="w-4 h-4 mr-2" />
-                      {t('supplier:settings')}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                  </CardContent>
+                </Card>
+              </motion.div>
 
-            {/* Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <Card className="group overflow-hidden">
-                <CardContent className="p-6" onClick={() => handleNotificationNavigation('requests', undefined)}>
-                  <div className="flex items-center justify-between cursor-pointer">
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground">{t('supplier:stats.pendingRequests')}</p>
-                      <p className="text-3xl font-bold text-yellow-500">{stats.pendingRequests}</p>
-                      <p className="text-xs text-muted-foreground">{t('supplier:stats.awaitingSubmission')}</p>
+              {/* Activity Trend */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="lg:col-span-2"
+              >
+                <Card className="h-full">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-medium flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                      7-Day Activity
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[200px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={activityTrend}>
+                          <defs>
+                            <linearGradient id="colorRequests" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis 
+                            dataKey="day" 
+                            tick={{ fontSize: 12 }} 
+                            stroke="hsl(var(--muted-foreground))"
+                          />
+                          <YAxis 
+                            tick={{ fontSize: 12 }} 
+                            stroke="hsl(var(--muted-foreground))"
+                          />
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: 'hsl(var(--card))', 
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '8px'
+                            }}
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="requests" 
+                            stroke="hsl(142, 76%, 36%)" 
+                            fillOpacity={1} 
+                            fill="url(#colorRequests)" 
+                            name="Requests"
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
                     </div>
-                    <div className="h-12 w-12 rounded-xl bg-yellow-500/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                      <Clock className="h-6 w-6 text-yellow-500" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="group overflow-hidden">
-                <CardContent className="p-6" onClick={() => handleNotificationNavigation('compliance', undefined)}>
-                  <div className="flex items-center justify-between cursor-pointer">
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground">{t('supplier:stats.completionRate')}</p>
-                      <p className="text-3xl font-bold bg-gradient-to-r from-green-accent to-emerald-accent bg-clip-text text-transparent">{completionRate}%</p>
-                      <Progress value={completionRate} className="mt-2 h-2" />
-                    </div>
-                    <div className="h-12 w-12 rounded-xl bg-green-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                      <CheckCircle className="h-6 w-6 text-green-accent" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="group overflow-hidden">
-                <CardContent className="p-6" onClick={() => handleNotificationNavigation('documents', undefined)}>
-                  <div className="flex items-center justify-between cursor-pointer">
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground">{t('supplier:stats.documentsSubmitted')}</p>
-                      <p className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">{stats.documentsSubmitted}</p>
-                      <p className="text-xs text-muted-foreground">{t('supplier:stats.totalSubmitted')}</p>
-                    </div>
-                    <div className="h-12 w-12 rounded-xl bg-blue-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                      <Upload className="h-6 w-6 text-blue-accent" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="group overflow-hidden">
-                <CardContent className="p-6" onClick={() => handleNotificationNavigation('buyers', undefined)}>
-                  <div className="flex items-center justify-between cursor-pointer">
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground">{t('supplier:stats.connectedBuyers')}</p>
-                      <p className="text-3xl font-bold bg-gradient-to-r from-purple-accent to-primary bg-clip-text text-transparent">{connectedBuyers.length}</p>
-                      <p className="text-xs text-muted-foreground">{t('supplier:stats.activeConnections')}</p>
-                    </div>
-                    <div className="h-12 w-12 rounded-xl bg-purple-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                      <Users className="h-6 w-6 text-purple-accent" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+
+            {/* Deadlines & Action Items */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Upcoming Deadlines */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-medium flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      Upcoming Deadlines
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {upcomingDeadlines.length > 0 ? (
+                      <div className="space-y-3">
+                        {upcomingDeadlines.map((deadline) => (
+                          <div 
+                            key={deadline.id}
+                            className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"
+                            onClick={() => handleNotificationNavigation('requests', deadline.id)}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{deadline.title}</p>
+                              <p className="text-xs text-muted-foreground">{deadline.buyer}</p>
+                            </div>
+                            <Badge 
+                              variant={deadline.daysLeft <= 3 ? 'destructive' : deadline.daysLeft <= 7 ? 'default' : 'secondary'}
+                              className="ml-2 shrink-0"
+                            >
+                              {deadline.daysLeft === 0 ? 'Today' : `${deadline.daysLeft}d left`}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No upcoming deadlines</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Action Items */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-medium flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-muted-foreground" />
+                      Action Items
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {actionItems.length > 0 ? (
+                      <div className="space-y-3">
+                        {actionItems.map((item) => (
+                          <div 
+                            key={item.id}
+                            className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                              item.type === 'urgent' ? 'bg-red-500/10 hover:bg-red-500/20' :
+                              item.type === 'error' ? 'bg-orange-500/10 hover:bg-orange-500/20' :
+                              'bg-amber-500/10 hover:bg-amber-500/20'
+                            }`}
+                            onClick={item.action}
+                          >
+                            <div className="flex items-center gap-3">
+                              {item.type === 'urgent' && <AlertTriangle className="w-4 h-4 text-red-500" />}
+                              {item.type === 'error' && <AlertTriangle className="w-4 h-4 text-orange-500" />}
+                              {item.type === 'warning' && <Clock className="w-4 h-4 text-amber-500" />}
+                              <span className="text-sm font-medium">{item.title}</span>
+                            </div>
+                            <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500 opacity-50" />
+                        <p className="text-sm">All caught up!</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
             </div>
 
             {/* Recent Activity Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Recent Document Requests */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    {t('supplier:sections.recentRequests')}
-                    <Badge variant="outline">
-                      Recent (5 of {documentRequests.length})
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {documentRequests.length === 0 ? (
-                    <p className="text-gray-500 text-center py-8">
-                      {t('supplier:sections.noRecentRequests')}
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      {documentRequests.slice(0, 5).map((request) => (
-                        <div 
-                          key={request.id} 
-                          className="flex items-center justify-between p-4 border border-border/50 rounded-xl cursor-pointer hover:bg-gradient-glass backdrop-blur-sm hover:shadow-modern transition-all duration-200 hover:scale-[1.02]"
-                          onClick={() => handleNotificationNavigation('requests', request.id)}
-                        >
-                          <div className="flex items-center space-x-3">
-                            {getStatusIcon(request.status)}
-                            <div>
-                              <p className="font-medium">{request.title}</p>
-                              <p className="text-sm text-muted-foreground">{request.buyers?.company_name}</p>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+              >
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-medium flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <FileCheck className="w-4 h-4 text-muted-foreground" />
+                        Recent Requests
+                      </span>
+                      <Badge variant="outline" className="text-xs">
+                        {documentRequests.length} total
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {documentRequests.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">{t('supplier:sections.noRecentRequests')}</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {documentRequests.slice(0, 5).map((request) => (
+                          <div 
+                            key={request.id} 
+                            className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"
+                            onClick={() => handleNotificationNavigation('requests', request.id)}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              {getStatusIcon(request.status)}
+                              <div className="min-w-0">
+                                <p className="font-medium text-sm truncate">{request.title}</p>
+                                <p className="text-xs text-muted-foreground">{request.buyers?.company_name}</p>
+                              </div>
                             </div>
+                            <Badge className={`${getStatusColor(request.status)} shrink-0`}>
+                              {request.status}
+                            </Badge>
                           </div>
-                          <Badge className={getStatusColor(request.status)}>
-                            {request.status}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* My Assignments Section */}
-              <MyAssignments />
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
 
               {/* Connected Buyers */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    {t('supplier:sections.connectedBuyers')}
-                    <Badge variant="outline">{connectedBuyers.length}</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {connectedBuyers.length === 0 ? (
-                    <p className="text-gray-500 text-center py-8">{t('supplier:sections.noConnectedBuyers')}</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {connectedBuyers.slice(0, 5).map((connection) => (
-                        <div 
-                          key={connection.id} 
-                          className="flex items-center justify-between p-4 border border-border/50 rounded-xl cursor-pointer hover:bg-gradient-glass backdrop-blur-sm hover:shadow-modern transition-all duration-200 hover:scale-[1.02]"
-                          onClick={() => handleNotificationNavigation('buyers', connection.id)}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+              >
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-medium flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-muted-foreground" />
+                        Connected Buyers
+                      </span>
+                      <Badge variant="outline" className="text-xs">
+                        {connectedBuyers.length} active
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {connectedBuyers.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">{t('supplier:sections.noConnectedBuyers')}</p>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="mt-3"
+                          onClick={() => setActiveTab('connections')}
                         >
-                          <div className="flex items-center space-x-3">
-                            <div className="w-12 h-12 bg-gradient-primary/10 rounded-xl flex items-center justify-center">
-                              <Building2 className="w-6 h-6 text-primary" />
+                          Connect with Buyers
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {connectedBuyers.slice(0, 5).map((connection) => (
+                          <div 
+                            key={connection.id} 
+                            className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"
+                            onClick={() => handleNotificationNavigation('connections', connection.id)}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
+                                <Building2 className="w-4 h-4 text-primary" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-medium text-sm truncate">{connection.buyers?.company_name}</p>
+                                <p className="text-xs text-muted-foreground">{connection.buyers?.industry}</p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-medium">{connection.buyers?.company_name}</p>
-                              <p className="text-sm text-muted-foreground">{connection.buyers?.industry}</p>
-                            </div>
+                            <Badge variant="outline" className="shrink-0 text-xs">
+                              {t(`supplier:connectionStatus.${connection.unifiedStatus || 'pending'}`)}
+                            </Badge>
                           </div>
-                          <Badge variant="outline" className="bg-gradient-glass border-border/50">
-                            {t(`supplier:connectionStatus.${connection.unifiedStatus || 'pending'}`)}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
             </div>
-          </>
+          </div>
         );
       case 'requests':
         return (

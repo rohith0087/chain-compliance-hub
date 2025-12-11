@@ -223,42 +223,70 @@ serve(async (req) => {
 
     console.log('Starting document expiry check...');
 
-    // Get all documents with expiration dates that are approved
-    const { data: documents, error: docsError } = await supabase
-      .from('document_uploads')
-      .select(`
-        id,
-        document_name,
-        file_name,
-        expiration_date,
-        request_id,
-        document_requests!inner (
-          id,
-          title,
-          document_type,
-          buyer_id,
-          supplier_id,
-          buyers!inner (
-            id,
-            company_name,
-            contact_email
-          ),
-          suppliers!inner (
-            id,
-            company_name,
-            contact_email
-          )
-        )
-      `)
-      .not('expiration_date', 'is', null)
-      .eq('status', 'approved');
+    // Get only the LATEST approved upload per request (handles document renewals)
+    // This uses a window function to rank uploads by created_at within each request
+    const { data: latestUploads, error: latestError } = await supabase
+      .rpc('get_latest_expiring_documents');
 
-    if (docsError) {
-      console.error('Error fetching documents:', docsError);
-      throw docsError;
+    if (latestError) {
+      console.error('Error fetching latest documents via RPC:', latestError);
+      // Fallback to direct query if RPC doesn't exist yet
+      console.log('Falling back to direct query...');
     }
 
-    console.log(`Found ${documents?.length || 0} documents with expiration dates`);
+    // If RPC worked, use that data; otherwise fall back to original query with deduplication
+    let documents = latestUploads;
+    
+    if (!documents || latestError) {
+      // Fallback: Get all documents and deduplicate in JS
+      const { data: allDocs, error: docsError } = await supabase
+        .from('document_uploads')
+        .select(`
+          id,
+          document_name,
+          file_name,
+          expiration_date,
+          request_id,
+          created_at,
+          document_requests!inner (
+            id,
+            title,
+            document_type,
+            buyer_id,
+            supplier_id,
+            buyers!inner (
+              id,
+              company_name,
+              contact_email
+            ),
+            suppliers!inner (
+              id,
+              company_name,
+              contact_email
+            )
+          )
+        `)
+        .not('expiration_date', 'is', null)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false });
+
+      if (docsError) {
+        console.error('Error fetching documents:', docsError);
+        throw docsError;
+      }
+
+      // Deduplicate: keep only the latest upload per request_id
+      const latestByRequest = new Map();
+      for (const doc of allDocs || []) {
+        if (!latestByRequest.has(doc.request_id)) {
+          latestByRequest.set(doc.request_id, doc);
+        }
+        // Since we ordered by created_at DESC, first occurrence is the latest
+      }
+      documents = Array.from(latestByRequest.values());
+    }
+
+    console.log(`Found ${documents?.length || 0} latest documents with expiration dates (after deduplication)`);
 
     // Get all buyer notification settings
     const { data: allSettings, error: settingsError } = await supabase
@@ -272,10 +300,12 @@ serve(async (req) => {
     const settingsMap = new Map<string, NotificationSettings>();
     allSettings?.forEach(s => settingsMap.set(s.buyer_id, s));
 
-    // Get existing notifications to check limits
+    // Get existing notifications to check limits (only for current/latest uploads)
+    const documentIds = documents?.map(d => d.id) || [];
     const { data: existingNotifications } = await supabase
       .from('document_expiry_notifications')
-      .select('document_upload_id, notification_tier, channel');
+      .select('document_upload_id, notification_tier, channel')
+      .in('document_upload_id', documentIds.length > 0 ? documentIds : ['no-match']);
 
     const notificationSet = new Set(
       existingNotifications?.map(n => `${n.document_upload_id}-${n.notification_tier}-${n.channel}`) || []
@@ -361,7 +391,7 @@ serve(async (req) => {
               title: tierLabels[tier],
               message: `"${expiringDoc.document_name}" ${tier === 'overdue' ? 'has expired' : `expires in ${daysUntilExpiry} days`}. Please upload an updated document.`,
               type: `document_expiry_${tier}`,
-              reference_id: doc.request_id, // Use request_id for deep-linking to specific document
+              reference_id: doc.request_id,
             });
 
           if (!notifError) {

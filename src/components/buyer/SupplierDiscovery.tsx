@@ -124,26 +124,16 @@ const SupplierDiscovery = () => {
           setSuppliers(suppliers);
         }
 
-        // Fetch all suppliers from the database
+        // Fetch available suppliers using safe discovery RPC (bypasses RLS safely)
         const { data: allSuppliersData, error: allSuppliersError } = await supabase
-          .from('suppliers')
-          .select(`
-            id,
-            company_name,
-            contact_email,
-            industry,
-            phone,
-            address,
-            description,
-            supplier_items (
-              id,
-              item_name,
-              item_category
-            )
-          `);
+          .rpc('search_suppliers_for_discovery', {
+            p_search_query: '',
+            p_industry_filter: null,
+            p_limit: 100
+          });
 
         if (allSuppliersError) {
-          console.error('Error fetching all suppliers:', allSuppliersError);
+          console.error('Error fetching available suppliers:', allSuppliersError);
         }
 
         // Get pending connection requests
@@ -165,7 +155,9 @@ const SupplierDiscovery = () => {
         // Filter out connected suppliers (approved connections only)
         if (allSuppliersData && connectionsData) {
           const connectedSupplierIds = connectionsData.map(c => c.suppliers?.id).filter(Boolean);
-          const available = allSuppliersData.filter(s => !connectedSupplierIds.includes(s.id));
+          const pendingSupplierIds = (pendingConnectionsData || []).map(c => c.supplier_id);
+          const excludeIds = [...connectedSupplierIds, ...pendingSupplierIds];
+          const available = allSuppliersData.filter((s: any) => !excludeIds.includes(s.id));
           setAvailableSuppliers(available);
           setFilteredAvailableSuppliers(available);
         }
@@ -520,71 +512,30 @@ const SupplierDiscovery = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredAvailableSuppliers.map((supplier) => (
                 <Card key={supplier.id} className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-lg mb-2">{supplier.company_name}</CardTitle>
-                  <div className="flex gap-2 flex-wrap">
-                    {supplier.industry && (
-                      <Badge variant="secondary" className="mb-2">
-                        {supplier.industry}
-                      </Badge>
-                    )}
-                    {pendingRequests.has(supplier.id) && (
-                      <Badge className="mb-2 bg-green-100 text-black hover:bg-green-200 border-green-300">
-                        Requested
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-                  <CardContent className="space-y-3">
-                    {supplier.contact_email && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Mail className="w-4 h-4" />
-                        <span className="truncate">{supplier.contact_email}</span>
-                      </div>
-                    )}
-                    {supplier.phone && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Phone className="w-4 h-4" />
-                        <span>{supplier.phone}</span>
-                      </div>
-                    )}
-                    {supplier.address && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <MapPin className="w-4 h-4" />
-                        <span className="truncate">{supplier.address}</span>
-                      </div>
-                    )}
-                    {supplier.supplier_items && supplier.supplier_items.length > 0 && (
-                      <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                        <Package className="w-4 h-4 mt-0.5" />
-                        <div className="flex flex-wrap gap-1">
-                          {supplier.supplier_items.slice(0, 3).map((item: any, idx: number) => (
-                            <Badge key={idx} variant="outline" className="text-xs">
-                              {item.item_name}
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg mb-2">{supplier.company_name}</CardTitle>
+                        <div className="flex gap-2 flex-wrap">
+                          {supplier.industry && (
+                            <Badge variant="secondary" className="mb-2">
+                              {supplier.industry}
                             </Badge>
-                          ))}
-                          {supplier.supplier_items.length > 3 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{supplier.supplier_items.length - 3} more
+                          )}
+                          {pendingRequests.has(supplier.id) && (
+                            <Badge className="mb-2 bg-green-100 text-black hover:bg-green-200 border-green-300">
+                              Requested
                             </Badge>
                           )}
                         </div>
                       </div>
-                    )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      Send a connection request to view full supplier details
+                    </p>
                     <div className="flex gap-2 pt-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewSupplier(supplier)}
-                        className="flex-1"
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        View Details
-                      </Button>
                       {pendingRequests.has(supplier.id) ? (
                         <Button
                           size="sm"
@@ -593,7 +544,7 @@ const SupplierDiscovery = () => {
                           className="flex-1"
                         >
                           <RefreshCw className="h-4 w-4 mr-2" />
-                          Resend
+                          Resend Request
                         </Button>
                       ) : (
                         <Button

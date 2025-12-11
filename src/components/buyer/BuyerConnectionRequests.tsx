@@ -84,10 +84,15 @@ const BuyerConnectionRequests = () => {
 
   useEffect(() => {
     fetchConnectionRequests();
+  }, [user]);
 
-    // Set up real-time subscription for new connection requests
+  // Set up real-time subscription for new connection requests
+  useEffect(() => {
+    if (!user) return;
+
+    const channelName = `buyer-connection-requests-${user.id}`;
     const channel = supabase
-      .channel('buyer-connection-requests')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {

@@ -343,17 +343,22 @@ const BuyerDocumentsManager = ({
         a.click();
         window.document.body.removeChild(a);
 
-        // Log download activity
+        // Log download activity with error handling
         const { data: { user } } = await supabase.auth.getUser();
         if (user?.id && upload.id) {
-          await supabase.from('document_activity_logs').insert({
-            document_upload_id: upload.id,
-            document_request_id: doc.id,
-            user_id: user.id,
-            action_type: 'downloaded',
-            notes: `Downloaded: ${upload.file_name}`,
-            metadata: { file_name: upload.file_name }
-          });
+          try {
+            const { error: logError } = await supabase.from('document_activity_logs').insert({
+              document_upload_id: upload.id,
+              document_request_id: doc.id,
+              user_id: user.id,
+              action_type: 'downloaded',
+              notes: `Downloaded: ${upload.file_name}`,
+              metadata: { file_name: upload.file_name }
+            });
+            if (logError) console.error('Failed to log download activity:', logError);
+          } catch (logErr) {
+            console.error('Error logging download activity:', logErr);
+          }
         }
 
         toast({
@@ -382,17 +387,22 @@ const BuyerDocumentsManager = ({
       window.document.body.removeChild(a2);
       URL.revokeObjectURL(url);
 
-      // Log download activity (fallback path)
+      // Log download activity (fallback path) with error handling
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.id && upload.id) {
-        await supabase.from('document_activity_logs').insert({
-          document_upload_id: upload.id,
-          document_request_id: doc.id,
-          user_id: user.id,
-          action_type: 'downloaded',
-          notes: `Downloaded: ${upload.file_name}`,
-          metadata: { file_name: upload.file_name }
-        });
+        try {
+          const { error: logError } = await supabase.from('document_activity_logs').insert({
+            document_upload_id: upload.id,
+            document_request_id: doc.id,
+            user_id: user.id,
+            action_type: 'downloaded',
+            notes: `Downloaded: ${upload.file_name}`,
+            metadata: { file_name: upload.file_name }
+          });
+          if (logError) console.error('Failed to log download activity (fallback):', logError);
+        } catch (logErr) {
+          console.error('Error logging download activity (fallback):', logErr);
+        }
       }
 
       toast({

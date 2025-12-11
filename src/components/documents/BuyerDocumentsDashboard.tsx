@@ -644,16 +644,21 @@ if (!signedErr && signed?.signedUrl) {
   a.click();
   window.document.body.removeChild(a);
 
-  // Log download activity
+  // Log download activity with error handling
   if (user?.id && latest.id) {
-    await supabase.from('document_activity_logs').insert({
-      document_upload_id: latest.id,
-      document_request_id: doc.id,
-      user_id: user.id,
-      action_type: 'downloaded',
-      notes: `Downloaded: ${latest.file_name}`,
-      metadata: { file_name: latest.file_name }
-    });
+    try {
+      const { error: logError } = await supabase.from('document_activity_logs').insert({
+        document_upload_id: latest.id,
+        document_request_id: doc.id,
+        user_id: user.id,
+        action_type: 'downloaded',
+        notes: `Downloaded: ${latest.file_name}`,
+        metadata: { file_name: latest.file_name }
+      });
+      if (logError) console.error('Failed to log download activity:', logError);
+    } catch (logErr) {
+      console.error('Error logging download activity:', logErr);
+    }
   }
   return;
 }
@@ -673,16 +678,21 @@ a2.click();
 window.document.body.removeChild(a2);
 URL.revokeObjectURL(url);
 
-// Log download activity (fallback path)
+// Log download activity (fallback path) with error handling
 if (user?.id && latest.id) {
-  await supabase.from('document_activity_logs').insert({
-    document_upload_id: latest.id,
-    document_request_id: doc.id,
-    user_id: user.id,
-    action_type: 'downloaded',
-    notes: `Downloaded: ${latest.file_name}`,
-    metadata: { file_name: latest.file_name }
-  });
+  try {
+    const { error: logError } = await supabase.from('document_activity_logs').insert({
+      document_upload_id: latest.id,
+      document_request_id: doc.id,
+      user_id: user.id,
+      action_type: 'downloaded',
+      notes: `Downloaded: ${latest.file_name}`,
+      metadata: { file_name: latest.file_name }
+    });
+    if (logError) console.error('Failed to log download activity (fallback):', logError);
+  } catch (logErr) {
+    console.error('Error logging download activity (fallback):', logErr);
+  }
 }
     } catch (err) {
       console.error('Download error:', err);

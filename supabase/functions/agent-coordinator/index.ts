@@ -45,7 +45,7 @@ async function validateCompanyAccess(userId: string, companyId: string, companyT
   return !!companyUser;
 }
 
-async function runAgentCycle(companyId?: string, companyType?: 'buyer' | 'supplier') {
+async function runAgentCycle(companyId?: string, companyType?: 'buyer' | 'supplier', authHeader?: string) {
   try {
     console.log('Starting agent coordination cycle...', { companyId, companyType });
 
@@ -69,12 +69,16 @@ async function runAgentCycle(companyId?: string, companyType?: 'buyer' | 'suppli
 
     const results: Array<{ agent: string; action: string; ok: boolean; error?: string }> = [];
 
+    // Build headers for forwarding auth
+    const invokeHeaders = authHeader ? { Authorization: authHeader } : undefined;
+
     if (enabledAgents.has('supplier')) {
       console.log('Running supplier agent...');
 
       try {
         const { error } = await supabase.functions.invoke('supplier-agent', {
           body: { action: 'process_requests', company_id: companyId, company_type: companyType },
+          headers: invokeHeaders,
         });
         results.push({ agent: 'supplier', action: 'process_requests', ok: !error, error: (error as any)?.message });
       } catch (e: any) {
@@ -84,6 +88,7 @@ async function runAgentCycle(companyId?: string, companyType?: 'buyer' | 'suppli
       try {
         const { error } = await supabase.functions.invoke('supplier-agent', {
           body: { action: 'check_expiring', company_id: companyId, company_type: companyType },
+          headers: invokeHeaders,
         });
         results.push({ agent: 'supplier', action: 'check_expiring', ok: !error, error: (error as any)?.message });
       } catch (e: any) {
@@ -97,6 +102,7 @@ async function runAgentCycle(companyId?: string, companyType?: 'buyer' | 'suppli
       try {
         const { error } = await supabase.functions.invoke('buyer-agent', {
           body: { action: 'process_uploads', company_id: companyId, company_type: companyType },
+          headers: invokeHeaders,
         });
         results.push({ agent: 'buyer', action: 'process_uploads', ok: !error, error: (error as any)?.message });
       } catch (e: any) {
@@ -192,7 +198,7 @@ serve(async (req) => {
 
     switch (action) {
       case 'run_cycle': {
-        result = await runAgentCycle(company_id, company_type);
+        result = await runAgentCycle(company_id, company_type, authHeader);
         if (!result?.success) {
           return new Response(
             JSON.stringify({ success: false, error: result?.error || 'run_cycle failed', result }),
@@ -204,7 +210,7 @@ serve(async (req) => {
 
       case 'trigger_supplier': {
         const body = { action: 'process_requests', company_id, company_type };
-        const invokeRes = await supabase.functions.invoke('supplier-agent', { body });
+        const invokeRes = await supabase.functions.invoke('supplier-agent', { body, headers: { Authorization: authHeader } });
         if (invokeRes.error) {
           console.error('Supplier agent invoke error:', invokeRes.error);
           await supabase.from('agent_activities').insert({
@@ -227,7 +233,7 @@ serve(async (req) => {
 
       case 'trigger_buyer': {
         const body = { action: 'process_uploads', company_id, company_type };
-        const invokeRes = await supabase.functions.invoke('buyer-agent', { body });
+        const invokeRes = await supabase.functions.invoke('buyer-agent', { body, headers: { Authorization: authHeader } });
         if (invokeRes.error) {
           console.error('Buyer agent invoke error:', invokeRes.error);
           await supabase.from('agent_activities').insert({

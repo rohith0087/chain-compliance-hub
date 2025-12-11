@@ -27,6 +27,8 @@ const SupplierDocumentsDashboard = () => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [activeSubTab, setActiveSubTab] = useState('documents');
+  const [highlightedDocId, setHighlightedDocId] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     search: '',
     status: '',
@@ -38,6 +40,38 @@ const SupplierDocumentsDashboard = () => {
   });
   
   const { user } = useAuth();
+
+  // Handle URL params for subtab and document highlighting
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const subtab = urlParams.get('subtab');
+    const highlightDoc = urlParams.get('highlightDoc');
+    
+    if (subtab === 'expiring') {
+      setActiveSubTab('expiring');
+    }
+    
+    if (highlightDoc) {
+      setHighlightedDocId(highlightDoc);
+      // Scroll to document after render
+      setTimeout(() => {
+        const element = document.getElementById(`doc-${highlightDoc}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 500);
+      
+      // Clear highlight after 3 seconds
+      setTimeout(() => {
+        setHighlightedDocId(null);
+        // Clean up URL params
+        const cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete('subtab');
+        cleanUrl.searchParams.delete('highlightDoc');
+        window.history.replaceState({}, '', cleanUrl.toString());
+      }, 3000);
+    }
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -392,7 +426,7 @@ const SupplierDocumentsDashboard = () => {
       </div>
 
       {/* Main Content */}
-      <Tabs defaultValue="documents" className="space-y-6">
+      <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="documents">All Documents</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
@@ -672,30 +706,39 @@ const SupplierDocumentsDashboard = () => {
                       return expDate <= thirtyDaysFromNow;
                     })
                     .map(doc => (
-                      <DocumentCard
+                      <div 
                         key={doc.id}
-                        document={{
-                          ...doc,
-                          buyer: doc.buyers,
-                          ...(doc.document_uploads?.[0] && {
-                            file_name: doc.document_uploads[0].file_name,
-                            file_size: doc.document_uploads[0].file_size,
-                            expiration_date: doc.document_uploads[0].expiration_date,
-                            uploader: doc.document_uploads[0].uploader
-                          })
-                        }}
-                        userRole="supplier"
-                        onView={() => console.log('View document:', doc.id)}
-                        onDownload={() => console.log('Download document:', doc.id)}
-                        onUpload={() => console.log('Upload document:', doc.id)}
-                      />
+                        id={`doc-${doc.id}`}
+                        className={`transition-all duration-500 ${
+                          highlightedDocId === doc.id 
+                            ? 'ring-2 ring-primary ring-offset-2 rounded-lg' 
+                            : ''
+                        }`}
+                      >
+                        <DocumentCard
+                          document={{
+                            ...doc,
+                            buyer: doc.buyers,
+                            ...(doc.document_uploads?.[0] && {
+                              file_name: doc.document_uploads[0].file_name,
+                              file_size: doc.document_uploads[0].file_size,
+                              expiration_date: doc.document_uploads[0].expiration_date,
+                              uploader: doc.document_uploads[0].uploader
+                            })
+                          }}
+                          userRole="supplier"
+                          onView={() => console.log('View document:', doc.id)}
+                          onDownload={() => console.log('Download document:', doc.id)}
+                          onUpload={() => console.log('Upload document:', doc.id)}
+                        />
+                      </div>
                     ))}
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Expiring Documents</h3>
-                  <p className="text-gray-500">All your documents are up to date!</p>
+                  <Calendar className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No Expiring Documents</h3>
+                  <p className="text-muted-foreground">All your documents are up to date!</p>
                 </div>
               )}
             </CardContent>

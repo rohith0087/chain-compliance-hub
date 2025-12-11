@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Upload, FileText, Search, Filter, Plus, Download, Eye, Trash2 } from 'lucide-react';
 import { DocumentUploadModal } from './DocumentUploadModal';
 import { DocumentContentViewer } from './DocumentContentViewer';
+import { useBranchContext } from '@/contexts/BranchContext';
 import { toast } from 'sonner';
 
 interface SupplierDocument {
@@ -44,19 +45,27 @@ export const SupplierDocumentLibrary: React.FC<SupplierDocumentLibraryProps> = (
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const { currentBranch, allBranchesView } = useBranchContext();
 
   useEffect(() => {
     fetchDocuments();
-  }, [supplierId]);
+  }, [supplierId, currentBranch, allBranchesView]);
 
   const fetchDocuments = async () => {
     try {
       setLoading(true);
+      
+      // Build query with branch filter if needed
+      const branchFilter = !allBranchesView && currentBranch?.id 
+        ? { branch_id: currentBranch.id }
+        : {};
+
       const { data, error } = await supabase
         .from('supplier_document_library')
         .select('*')
         .eq('supplier_id', supplierId)
         .eq('is_current_version', true)
+        .match(branchFilter)
         .order('created_at', { ascending: false });
 
       if (error) {

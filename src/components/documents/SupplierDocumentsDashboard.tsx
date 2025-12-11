@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useBranchContext } from '@/contexts/BranchContext';
 import DocumentCard from './DocumentCard';
 import DocumentTimeline from './DocumentTimeline';
 
@@ -40,6 +41,7 @@ const SupplierDocumentsDashboard = () => {
   });
   
   const { user } = useAuth();
+  const { currentBranch, allBranchesView } = useBranchContext();
 
   // Handle URL params for subtab and document highlighting
   useEffect(() => {
@@ -77,19 +79,35 @@ const SupplierDocumentsDashboard = () => {
     if (user) {
       loadDocuments();
     }
-  }, [user, filters]);
+  }, [user, filters, currentBranch, allBranchesView]);
 
   const loadDocuments = async () => {
     setLoading(true);
     try {
-      // Get the supplier profile
-      const { data: supplierProfile } = await supabase
-        .from('suppliers')
-        .select('id')
+      // Check if user is a team member first (company ID resolution pattern)
+      const { data: teamMember } = await supabase
+        .from('company_users')
+        .select('company_id')
         .eq('profile_id', user?.id)
-        .single();
+        .eq('company_type', 'supplier')
+        .eq('status', 'active')
+        .maybeSingle();
 
-      if (!supplierProfile) return;
+      let supplierId: string | null = null;
+
+      if (teamMember) {
+        supplierId = teamMember.company_id;
+      } else {
+        // Get the supplier profile for company owner
+        const { data: supplierProfile } = await supabase
+          .from('suppliers')
+          .select('id')
+          .eq('profile_id', user?.id)
+          .single();
+
+        if (!supplierProfile) return;
+        supplierId = supplierProfile.id;
+      }
 
       // Load documents with uploads and buyer info
       let query = supabase
@@ -112,8 +130,14 @@ const SupplierDocumentsDashboard = () => {
             )
           )
         `)
-        .eq('supplier_id', supplierProfile.id)
-        .order('created_at', { ascending: false });
+        .eq('supplier_id', supplierId);
+
+      // Apply branch filter if specific branch selected
+      if (!allBranchesView && currentBranch?.id) {
+        query = query.eq('supplier_branch_id', currentBranch.id);
+      }
+
+      query = query.order('created_at', { ascending: false });
 
       // Apply filters with proper type checking
       const validStatuses = ['pending', 'submitted', 'approved', 'rejected'] as const;

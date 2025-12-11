@@ -57,6 +57,7 @@ import { ConnectWithBuyerModal } from '@/components/supplier/ConnectWithBuyerMod
 import { DocumentUploadModal } from '@/components/supplier/DocumentUploadModal';
 import { MyAssignments } from '@/components/shared/MyAssignments';
 import DocumentRenewalDialog from '@/components/supplier/DocumentRenewalDialog';
+import { useBranchContext } from '@/contexts/BranchContext';
 
 interface SupplierDashboardProps {
   user: { 
@@ -104,6 +105,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
   const { user: authUser } = useAuth();
   const { getSupplierProfile } = useCompanySetup();
   const { requests: allOnboardingRequests } = useOnboardingRequests();
+  const { currentBranch, allBranchesView } = useBranchContext();
 
   // Notification navigation handler
   const handleNotificationNavigation = (tab: string, notificationId?: string) => {
@@ -152,7 +154,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
     if (authUser) {
       loadSupplierData();
     }
-  }, [authUser]);
+  }, [authUser, currentBranch, allBranchesView]);
 
   // Filter onboarding requests for current supplier
   useEffect(() => {
@@ -213,7 +215,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
 
       if (profile) {
         // Load document requests for this supplier with buyer information
-        const { data: requests, error: requestsError } = await supabase
+        let requestsQuery = supabase
           .from('document_requests')
           .select(`
             *,
@@ -225,7 +227,14 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
               profile_id
             )
           `)
-          .eq('supplier_id', profile.id)
+          .eq('supplier_id', profile.id);
+
+        // Apply branch filter if specific branch selected
+        if (!allBranchesView && currentBranch?.id) {
+          requestsQuery = requestsQuery.eq('supplier_branch_id', currentBranch.id);
+        }
+
+        const { data: requests, error: requestsError } = await requestsQuery
           .order('created_at', { ascending: false });
 
         if (requestsError) {
@@ -305,7 +314,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
         const thirtyDaysFromNow = new Date();
         thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
         
-        const { data: expiringDocs, error: expiringError } = await supabase
+        let expiringQuery = supabase
           .from('document_uploads')
           .select(`
             id,
@@ -318,6 +327,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
               title,
               document_type,
               supplier_id,
+              supplier_branch_id,
               buyer_id,
               buyers (
                 company_name
@@ -327,7 +337,14 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
           .eq('status', 'approved')
           .eq('document_requests.supplier_id', profile.id)
           .not('expiration_date', 'is', null)
-          .lte('expiration_date', thirtyDaysFromNow.toISOString())
+          .lte('expiration_date', thirtyDaysFromNow.toISOString());
+
+        // Apply branch filter if specific branch selected
+        if (!allBranchesView && currentBranch?.id) {
+          expiringQuery = expiringQuery.eq('document_requests.supplier_branch_id', currentBranch.id);
+        }
+
+        const { data: expiringDocs, error: expiringError } = await expiringQuery
           .order('expiration_date', { ascending: true });
 
         if (!expiringError && expiringDocs) {

@@ -32,6 +32,7 @@ import { useUserRoles } from '@/hooks/useUserRoles';
 import { useTranslation } from 'react-i18next';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
 import { useCompanyPermissions } from '@/hooks/useCompanyPermissions';
+import { useBranchContext } from '@/contexts/BranchContext';
 import { supabase } from '@/integrations/supabase/client';
 
 import {
@@ -159,6 +160,32 @@ export function SupplierSidebarLayout({
 
   // Company permissions with resolved ID
   const { canViewCompanyManagement, isOwner, role } = useCompanyPermissions(resolvedSupplierId, 'supplier');
+
+  // Branch context for global state sync
+  const { setCurrentBranch, setAllBranchesView } = useBranchContext();
+
+  // Sync branch changes to BranchContext
+  useEffect(() => {
+    if (currentBranch) {
+      setCurrentBranch(currentBranch);
+      setAllBranchesView(false);
+    } else if (hasAllBranchAccess) {
+      setCurrentBranch(null);
+      setAllBranchesView(true);
+    }
+  }, [currentBranch, hasAllBranchAccess, setCurrentBranch, setAllBranchesView]);
+
+  // Handle branch change and sync to context
+  const handleBranchChange = (branch: any) => {
+    switchBranch(branch);
+    if (branch) {
+      setCurrentBranch(branch);
+      setAllBranchesView(false);
+    } else {
+      setCurrentBranch(null);
+      setAllBranchesView(true);
+    }
+  };
 
   // Format role name for display (e.g., 'branch_manager' → 'Branch Manager')
   const formatRole = (roleName: string | null): string => {
@@ -410,7 +437,7 @@ export function SupplierSidebarLayout({
                 <BranchSelector
                   branches={branches}
                   currentBranch={currentBranch}
-                  onBranchChange={switchBranch}
+                  onBranchChange={handleBranchChange}
                   loading={branchesLoading}
                   showAllBranchesOption={hasAllBranchAccess}
                 />

@@ -20,6 +20,7 @@ import {
 import ComplianceDashboard from './ComplianceDashboard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useBranchContext } from '@/contexts/BranchContext';
 
 const SupplierComplianceDashboard = () => {
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
@@ -27,39 +28,57 @@ const SupplierComplianceDashboard = () => {
   const [connectedBuyers, setConnectedBuyers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { currentBranch, allBranchesView } = useBranchContext();
 
   useEffect(() => {
     if (user) {
       loadDashboardData();
     }
-  }, [user]);
+  }, [user, currentBranch, allBranchesView]);
 
   const loadDashboardData = async () => {
     setLoading(true);
     try {
       console.log('Loading compliance dashboard data for user:', user?.id);
       
-      // Load supplier profile first
-      const { data: supplierProfile, error: supplierError } = await supabase
-        .from('suppliers')
-        .select('id')
+      // Check if user is a team member first (company ID resolution pattern)
+      const { data: teamMember } = await supabase
+        .from('company_users')
+        .select('company_id')
         .eq('profile_id', user?.id)
+        .eq('company_type', 'supplier')
+        .eq('status', 'active')
         .maybeSingle();
 
-      console.log('Supplier profile found:', supplierProfile);
+      let supplierId: string | null = null;
 
-      if (supplierError) {
-        console.error('Error loading supplier profile:', supplierError);
-        return;
+      if (teamMember) {
+        supplierId = teamMember.company_id;
+      } else {
+        // Load supplier profile for company owner
+        const { data: supplierProfile, error: supplierError } = await supabase
+          .from('suppliers')
+          .select('id')
+          .eq('profile_id', user?.id)
+          .maybeSingle();
+
+        if (supplierError) {
+          console.error('Error loading supplier profile:', supplierError);
+          return;
+        }
+
+        if (!supplierProfile) {
+          console.log('No supplier profile found for user');
+          return;
+        }
+
+        supplierId = supplierProfile.id;
       }
 
-      if (!supplierProfile) {
-        console.log('No supplier profile found for user');
-        return;
-      }
+      console.log('Supplier ID resolved:', supplierId);
 
       // Load document requests with buyer info
-      const { data: requests, error: requestsError } = await supabase
+      let requestsQuery = supabase
         .from('document_requests')
         .select(`
           *,
@@ -69,7 +88,14 @@ const SupplierComplianceDashboard = () => {
             industry
           )
         `)
-        .eq('supplier_id', supplierProfile.id)
+        .eq('supplier_id', supplierId);
+
+      // Apply branch filter if specific branch selected
+      if (!allBranchesView && currentBranch?.id) {
+        requestsQuery = requestsQuery.eq('supplier_branch_id', currentBranch.id);
+      }
+
+      const { data: requests, error: requestsError } = await requestsQuery
         .order('created_at', { ascending: false });
 
       console.log('Document requests loaded:', requests?.length || 0, 'requests');
@@ -97,7 +123,7 @@ const SupplierComplianceDashboard = () => {
       }
 
       // Load connected buyers
-      const { data: connections, error: connectionsError } = await supabase
+      let connectionsQuery = supabase
         .from('buyer_supplier_connections')
         .select(`
           *,
@@ -107,8 +133,15 @@ const SupplierComplianceDashboard = () => {
             industry
           )
         `)
-        .eq('supplier_id', supplierProfile.id)
+        .eq('supplier_id', supplierId)
         .eq('status', 'approved');
+
+      // Apply branch filter if specific branch selected
+      if (!allBranchesView && currentBranch?.id) {
+        connectionsQuery = connectionsQuery.eq('branch_id', currentBranch.id);
+      }
+
+      const { data: connections, error: connectionsError } = await connectionsQuery;
 
       console.log('Connected buyers loaded:', connections?.length || 0, 'connections');
       if (connectionsError) {

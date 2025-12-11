@@ -31,6 +31,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useTranslation } from 'react-i18next';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
+import { useCompanyPermissions } from '@/hooks/useCompanyPermissions';
 import { supabase } from '@/integrations/supabase/client';
 
 import {
@@ -71,6 +72,7 @@ interface NavigationItem {
   icon: any;
   value: string;
   badge?: number;
+  ownerOnly?: boolean;
   submenu?: {
     title: string;
     value: string;
@@ -115,18 +117,48 @@ export function SupplierSidebarLayout({
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation(['supplier', 'common']);
-  const { profile } = useAuth();
+  const { profile, user: authUser } = useAuth();
   const { hasRole } = useUserRoles();
   const sidebar = useSidebar();
   const collapsed = sidebar?.state === 'collapsed';
 
-  // Company branches management
+  // Resolve company ID for team members
+  const [resolvedSupplierId, setResolvedSupplierId] = useState<string | null>(supplierProfile?.id || null);
+
+  useEffect(() => {
+    const resolveCompanyId = async () => {
+      if (!authUser) return;
+      
+      // Check if user is a team member
+      const { data: teamMember } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('profile_id', authUser.id)
+        .eq('company_type', 'supplier')
+        .eq('status', 'active')
+        .maybeSingle();
+      
+      if (teamMember) {
+        setResolvedSupplierId(teamMember.company_id);
+      } else if (supplierProfile?.id) {
+        setResolvedSupplierId(supplierProfile.id);
+      }
+    };
+    
+    resolveCompanyId();
+  }, [authUser, supplierProfile?.id]);
+
+  // Company branches management with resolved ID
   const {
     branches,
     currentBranch,
     switchBranch,
-    loading: branchesLoading
-  } = useCompanyBranches(supplierProfile?.id, 'supplier');
+    loading: branchesLoading,
+    hasAllBranchAccess
+  } = useCompanyBranches(resolvedSupplierId, 'supplier');
+
+  // Company permissions with resolved ID
+  const { canViewCompanyManagement, isOwner } = useCompanyPermissions(resolvedSupplierId, 'supplier');
 
   const navigationItems: NavigationItem[] = [
     {
@@ -174,9 +206,18 @@ export function SupplierSidebarLayout({
     {
       title: t('supplier:tabs.company'),
       icon: Building2,
-      value: 'company'
+      value: 'company',
+      ownerOnly: true // Only visible to company owners
     }
   ];
+
+  // Filter navigation items based on permissions
+  const filteredNavigationItems = navigationItems.filter(item => {
+    if (item.ownerOnly) {
+      return canViewCompanyManagement();
+    }
+    return true;
+  });
 
   const isActiveRoute = (value: string) => activeTab === value;
 
@@ -277,7 +318,7 @@ export function SupplierSidebarLayout({
             <SidebarGroupLabel>Navigation</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {navigationItems.map((item) => (
+                {filteredNavigationItems.map((item) => (
                   <SidebarMenuItem key={item.value}>
                     <SidebarMenuButton
                       isActive={isActiveRoute(item.value)}
@@ -356,6 +397,7 @@ export function SupplierSidebarLayout({
                   currentBranch={currentBranch}
                   onBranchChange={switchBranch}
                   loading={branchesLoading}
+                  showAllBranchesOption={hasAllBranchAccess}
                 />
               )}
             </div>

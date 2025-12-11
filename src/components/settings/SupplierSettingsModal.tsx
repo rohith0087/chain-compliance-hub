@@ -54,7 +54,9 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
   });
   
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('company');
+  const [isOwner, setIsOwner] = useState(false);
+  const [supplierId, setSupplierId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('account'); // Default to account for non-owners
 
   useEffect(() => {
     if (isOpen && user) {
@@ -62,30 +64,87 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
     }
   }, [isOpen, user]);
 
+  // Set default tab based on owner status after data loads
+  useEffect(() => {
+    if (isOwner) {
+      setActiveTab('company');
+    } else {
+      setActiveTab('account');
+    }
+  }, [isOwner]);
+
   const loadSupplierData = async () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('suppliers')
-        .select('*')
+      // First check if user is a team member via company_users table
+      const { data: teamMember } = await supabase
+        .from('company_users')
+        .select('company_id, company_type, role')
         .eq('profile_id', user.id)
+        .eq('company_type', 'supplier')
+        .eq('status', 'active')
         .maybeSingle();
 
-      if (error) throw error;
+      if (teamMember) {
+        // Team member - check if they're also the owner
+        const { data: ownerCheck } = await supabase
+          .from('suppliers')
+          .select('id')
+          .eq('profile_id', user.id)
+          .eq('id', teamMember.company_id)
+          .maybeSingle();
 
-      if (data) {
-        setSupplierData({
-          id: data.id,
-          company_name: data.company_name || '',
-          contact_email: data.contact_email || '',
-          industry: data.industry || '',
-          phone: data.phone || '',
-          address: data.address || '',
-          description: data.description || '',
-          auto_approve_connections: data.auto_approve_connections || false,
-          company_logo_url: data.company_logo_url || ''
-        });
+        setIsOwner(!!ownerCheck);
+        setSupplierId(teamMember.company_id);
+
+        // Fetch supplier data using company_id
+        const { data, error } = await supabase
+          .from('suppliers')
+          .select('*')
+          .eq('id', teamMember.company_id)
+          .single();
+
+        if (error) throw error;
+
+        if (data) {
+          setSupplierData({
+            id: data.id,
+            company_name: data.company_name || '',
+            contact_email: data.contact_email || '',
+            industry: data.industry || '',
+            phone: data.phone || '',
+            address: data.address || '',
+            description: data.description || '',
+            auto_approve_connections: data.auto_approve_connections || false,
+            company_logo_url: data.company_logo_url || ''
+          });
+        }
+      } else {
+        // Company owner - direct lookup
+        const { data, error } = await supabase
+          .from('suppliers')
+          .select('*')
+          .eq('profile_id', user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (data) {
+          setIsOwner(true);
+          setSupplierId(data.id);
+          setSupplierData({
+            id: data.id,
+            company_name: data.company_name || '',
+            contact_email: data.contact_email || '',
+            industry: data.industry || '',
+            phone: data.phone || '',
+            address: data.address || '',
+            description: data.description || '',
+            auto_approve_connections: data.auto_approve_connections || false,
+            company_logo_url: data.company_logo_url || ''
+          });
+        }
       }
     } catch (error: any) {
       toast({
@@ -98,7 +157,7 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !supplierId) return;
 
     setLoading(true);
     try {
@@ -117,7 +176,7 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
       const { error } = await supabase
         .from('suppliers')
         .update(updateData)
-        .eq('profile_id', user.id);
+        .eq('id', supplierId);
 
       if (error) throw error;
 
@@ -143,7 +202,7 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
       // Update local state immediately
       setSupplierData(prev => ({ ...prev, company_logo_url: url || '' }));
       
-      if (!user) return;
+      if (!user || !supplierId) return;
       
       const { error } = await supabase
         .from('suppliers')
@@ -151,7 +210,7 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
           company_logo_url: url || '',
           updated_at: new Date().toISOString()
         })
-        .eq('profile_id', user.id);
+        .eq('id', supplierId);
 
       if (error) throw error;
 
@@ -185,119 +244,127 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="company">Company</TabsTrigger>
+          <TabsList className={`grid w-full ${isOwner ? 'grid-cols-4' : 'grid-cols-2'}`}>
+            {isOwner && <TabsTrigger value="company">Company</TabsTrigger>}
             <TabsTrigger value="account">Account</TabsTrigger>
-            <TabsTrigger value="logo">Logo</TabsTrigger>
+            <TabsTrigger value="password">Password</TabsTrigger>
+            {isOwner && <TabsTrigger value="logo">Logo</TabsTrigger>}
           </TabsList>
           
-          <TabsContent value="company" className="space-y-4 mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Company Information</CardTitle>
-                <CardDescription>
-                  Manage your company details and preferences
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {isOwner && (
+            <TabsContent value="company" className="space-y-4 mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Company Information</CardTitle>
+                  <CardDescription>
+                    Manage your company details and preferences
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="company_name">Company Name</Label>
+                        <Input
+                          id="company_name"
+                          value={supplierData.company_name}
+                          onChange={(e) => handleInputChange('company_name', e.target.value)}
+                          required
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="contact_email">Contact Email</Label>
+                        <Input
+                          id="contact_email"
+                          type="email"
+                          value={supplierData.contact_email}
+                          onChange={(e) => handleInputChange('contact_email', e.target.value)}
+                          required
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="industry">Industry</Label>
+                        <SafeSelect
+                          value={supplierData.industry}
+                          onValueChange={(value) => handleInputChange('industry', value)}
+                          placeholder="Select your industry"
+                        >
+                          {VALID_INDUSTRIES.map(industry => (
+                            <SafeSelectItem key={industry} value={industry}>
+                              {industry}
+                            </SafeSelectItem>
+                          ))}
+                        </SafeSelect>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone</Label>
+                        <Input
+                          id="phone"
+                          value={supplierData.phone || ''}
+                          onChange={(e) => handleInputChange('phone', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    
                     <div className="space-y-2">
-                      <Label htmlFor="company_name">Company Name</Label>
+                      <Label htmlFor="address">Address</Label>
                       <Input
-                        id="company_name"
-                        value={supplierData.company_name}
-                        onChange={(e) => handleInputChange('company_name', e.target.value)}
-                        required
+                        id="address"
+                        value={supplierData.address || ''}
+                        onChange={(e) => handleInputChange('address', e.target.value)}
                       />
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="contact_email">Contact Email</Label>
-                      <Input
-                        id="contact_email"
-                        type="email"
-                        value={supplierData.contact_email}
-                        onChange={(e) => handleInputChange('contact_email', e.target.value)}
-                        required
+                      <Label htmlFor="description">Company Description</Label>
+                      <Textarea
+                        id="description"
+                        value={supplierData.description || ''}
+                        onChange={(e) => handleInputChange('description', e.target.value)}
+                        placeholder="Brief description of your company and services"
+                        rows={3}
                       />
                     </div>
                     
-                    <div className="space-y-2">
-                      <Label htmlFor="industry">Industry</Label>
-                      <SafeSelect
-                        value={supplierData.industry}
-                        onValueChange={(value) => handleInputChange('industry', value)}
-                        placeholder="Select your industry"
-                      >
-                        {VALID_INDUSTRIES.map(industry => (
-                          <SafeSelectItem key={industry} value={industry}>
-                            {industry}
-                          </SafeSelectItem>
-                        ))}
-                      </SafeSelect>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="auto_approve"
+                        checked={supplierData.auto_approve_connections}
+                        onCheckedChange={(checked) => handleInputChange('auto_approve_connections', checked)}
+                      />
+                      <Label htmlFor="auto_approve" className="text-sm">
+                        Auto-approve connection requests
+                      </Label>
                     </div>
                     
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input
-                        id="phone"
-                        value={supplierData.phone || ''}
-                        onChange={(e) => handleInputChange('phone', e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Address</Label>
-                    <Input
-                      id="address"
-                      value={supplierData.address || ''}
-                      onChange={(e) => handleInputChange('address', e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Company Description</Label>
-                    <Textarea
-                      id="description"
-                      value={supplierData.description || ''}
-                      onChange={(e) => handleInputChange('description', e.target.value)}
-                      placeholder="Brief description of your company and services"
-                      rows={3}
-                    />
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="auto_approve"
-                      checked={supplierData.auto_approve_connections}
-                      onCheckedChange={(checked) => handleInputChange('auto_approve_connections', checked)}
-                    />
-                    <Label htmlFor="auto_approve" className="text-sm">
-                      Auto-approve connection requests
-                    </Label>
-                  </div>
-                  
-                  <Button type="submit" disabled={loading}>
-                    {loading ? 'Saving...' : 'Save Changes'}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                    <Button type="submit" disabled={loading}>
+                      {loading ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
           
           <TabsContent value="account" className="space-y-4 mt-6">
             <AccountSettingsForm />
+          </TabsContent>
+
+          <TabsContent value="password" className="space-y-4 mt-6">
             <PasswordChangeForm />
           </TabsContent>
           
-          <TabsContent value="logo" className="space-y-4 mt-6">
-            <LogoUploadWidget
-              currentLogoUrl={supplierData.company_logo_url}
-              onLogoUpdate={handleLogoUpdate}
-            />
-          </TabsContent>
+          {isOwner && (
+            <TabsContent value="logo" className="space-y-4 mt-6">
+              <LogoUploadWidget
+                currentLogoUrl={supplierData.company_logo_url}
+                onLogoUpdate={handleLogoUpdate}
+              />
+            </TabsContent>
+          )}
         </Tabs>
       </DialogContent>
     </Dialog>

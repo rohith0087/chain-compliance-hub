@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   AlertTriangle, 
   CheckCircle, 
@@ -27,7 +28,8 @@ import {
   Package,
   UserCog,
   TrendingUp,
-  ArrowRight
+  ArrowRight,
+  RefreshCw
 } from 'lucide-react';
 import { ComplianceRing } from '@/components/dashboard/ComplianceRing';
 import { MetricChip } from '@/components/dashboard/MetricChip';
@@ -54,6 +56,7 @@ import { ContactRoleManager } from '@/components/supplier/ContactRoleManager';
 import { ConnectWithBuyerModal } from '@/components/supplier/ConnectWithBuyerModal';
 import { DocumentUploadModal } from '@/components/supplier/DocumentUploadModal';
 import { MyAssignments } from '@/components/shared/MyAssignments';
+import DocumentRenewalDialog from '@/components/supplier/DocumentRenewalDialog';
 
 interface SupplierDashboardProps {
   user: { 
@@ -94,6 +97,8 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
   const [activityTrend, setActivityTrend] = useState<{ day: string; requests: number; completed: number }[]>([]);
   const [upcomingDeadlines, setUpcomingDeadlines] = useState<any[]>([]);
   const [actionItems, setActionItems] = useState<any[]>([]);
+  const [expiringDocuments, setExpiringDocuments] = useState<any[]>([]);
+  const [renewingDocument, setRenewingDocument] = useState<any>(null);
   
   
   const { user: authUser } = useAuth();
@@ -294,6 +299,54 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
               } else {
                 setConnectedBuyers([]);
               }
+        }
+
+        // Load expiring documents (approved documents with expiration within 30 days or already expired)
+        const thirtyDaysFromNow = new Date();
+        thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+        
+        const { data: expiringDocs, error: expiringError } = await supabase
+          .from('document_uploads')
+          .select(`
+            id,
+            file_name,
+            expiration_date,
+            status,
+            request_id,
+            document_requests!inner (
+              id,
+              title,
+              document_type,
+              supplier_id,
+              buyer_id,
+              buyers (
+                company_name
+              )
+            )
+          `)
+          .eq('status', 'approved')
+          .eq('document_requests.supplier_id', profile.id)
+          .not('expiration_date', 'is', null)
+          .lte('expiration_date', thirtyDaysFromNow.toISOString())
+          .order('expiration_date', { ascending: true });
+
+        if (!expiringError && expiringDocs) {
+          const processedDocs = expiringDocs.map((doc: any) => {
+            const expDate = new Date(doc.expiration_date);
+            const today = new Date();
+            const daysUntilExpiry = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            return {
+              id: doc.id,
+              request_id: doc.request_id,
+              title: doc.document_requests?.title || doc.file_name,
+              buyer_name: doc.document_requests?.buyers?.company_name || 'Unknown Buyer',
+              expiration_date: doc.expiration_date,
+              days_until_expiry: daysUntilExpiry,
+              is_expired: daysUntilExpiry < 0,
+              document_uploads: [doc] // For DocumentRenewalDialog
+            };
+          });
+          setExpiringDocuments(processedDocs);
         }
       }
     } catch (error) {
@@ -658,7 +711,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
               </motion.div>
             </div>
 
-            {/* Upcoming Deadlines */}
+            {/* Expiring Documents */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -667,36 +720,64 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base font-medium flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    Upcoming Deadlines
+                    <AlertTriangle className="w-4 h-4 text-orange-500" />
+                    Expiring Documents
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {upcomingDeadlines.length > 0 ? (
-                    <div className="space-y-3">
-                      {upcomingDeadlines.map((deadline) => (
-                        <div 
-                          key={deadline.id}
-                          className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"
-                          onClick={() => handleNotificationNavigation('requests', deadline.id)}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">{deadline.title}</p>
-                            <p className="text-xs text-muted-foreground">{deadline.buyer}</p>
-                          </div>
-                          <Badge 
-                            variant={deadline.daysLeft <= 3 ? 'destructive' : deadline.daysLeft <= 7 ? 'default' : 'secondary'}
-                            className="ml-2 shrink-0"
+                  {expiringDocuments.length > 0 ? (
+                    <ScrollArea className="h-[280px] pr-4">
+                      <div className="space-y-3">
+                        {expiringDocuments.map((doc) => (
+                          <div 
+                            key={doc.id}
+                            className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors border"
+                            onClick={() => {
+                              setActiveTab('documents');
+                              const url = new URL(window.location.href);
+                              url.searchParams.set('tab', 'documents');
+                              url.searchParams.set('subtab', 'expiring');
+                              url.searchParams.set('highlightDoc', doc.request_id);
+                              window.history.pushState({}, '', url.toString());
+                            }}
                           >
-                            {deadline.daysLeft === 0 ? 'Today' : `${deadline.daysLeft}d left`}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{doc.title}</p>
+                              <p className="text-xs text-muted-foreground">{doc.buyer_name}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge 
+                                variant={doc.is_expired ? 'destructive' : 'warning'}
+                                className="shrink-0"
+                              >
+                                {doc.is_expired 
+                                  ? 'Expired' 
+                                  : doc.days_until_expiry === 0 
+                                    ? 'Today' 
+                                    : `${doc.days_until_expiry}d left`
+                                }
+                              </Badge>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setRenewingDocument(doc);
+                                }}
+                              >
+                                <RefreshCw className="w-3 h-3 mr-1" />
+                                Renew
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
-                      <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No upcoming deadlines</p>
+                      <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
+                      <p className="text-sm">All documents are up to date!</p>
                     </div>
                   )}
                 </CardContent>
@@ -855,6 +936,23 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
           onClose={() => setShowUploadModal(false)}
           onUploadComplete={() => {
             setShowUploadModal(false);
+            loadSupplierData();
+          }}
+        />
+      )}
+
+      {/* Document Renewal Dialog */}
+      {renewingDocument && (
+        <DocumentRenewalDialog
+          isOpen={!!renewingDocument}
+          onClose={() => setRenewingDocument(null)}
+          request={renewingDocument}
+          expiryStatus={{
+            status: renewingDocument.is_expired ? 'expired' : 'expiring_soon',
+            days: Math.abs(renewingDocument.days_until_expiry)
+          }}
+          onRenewalSuccess={() => {
+            setRenewingDocument(null);
             loadSupplierData();
           }}
         />

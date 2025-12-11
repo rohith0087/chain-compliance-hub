@@ -10,10 +10,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { CompanyBranch, CompanyUser } from '@/hooks/useCompanyBranches';
 
+interface DualRoleOptions {
+  also_grant_other_role: boolean;
+  other_company_id: string;
+  other_company_type: 'buyer' | 'supplier';
+  other_branch_id?: string;
+  other_role: string;
+  other_company_name?: string;
+}
+
 interface CompanyUserManagementProps {
   branches: CompanyBranch[];
   companyUsers: CompanyUser[];
-  onInviteUser: (fullName: string, email: string, branchId: string, role: string) => Promise<any>;
+  companyType: 'buyer' | 'supplier';
+  // For dual-role support: the other company info if user owns both
+  otherCompanyId?: string;
+  otherCompanyName?: string;
+  otherCompanyBranches?: CompanyBranch[];
+  onInviteUser: (fullName: string, email: string, branchId: string, role: string, dualRoleOptions?: DualRoleOptions) => Promise<any>;
   onResendInvitation?: (email: string, branchId: string, role: string) => Promise<any>;
   onRemoveUser?: (companyUserId: string, forceDelete?: boolean) => Promise<any>;
   loading?: boolean;
@@ -36,6 +50,10 @@ const statusColors = {
 export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
   branches,
   companyUsers,
+  companyType,
+  otherCompanyId,
+  otherCompanyName,
+  otherCompanyBranches = [],
   onInviteUser,
   onResendInvitation,
   onRemoveUser,
@@ -52,8 +70,15 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
     fullName: '',
     email: '',
     branchId: '',
-    role: 'viewer'
+    role: 'viewer',
+    // Dual-role fields
+    alsoGrantOtherRole: false,
+    otherBranchId: '',
+    otherRole: 'viewer'
   });
+
+  const otherCompanyType = companyType === 'buyer' ? 'supplier' : 'buyer';
+  const hasDualCompanyAccess = !!otherCompanyId;
 
   // Auto-select "All Branches" when company_admin role is selected
   useEffect(() => {
@@ -79,14 +104,44 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
       return;
     }
 
+    // Validate dual-role fields if enabled
+    if (inviteForm.alsoGrantOtherRole && hasDualCompanyAccess) {
+      const isOtherAllBranches = inviteForm.otherBranchId === 'all_branches';
+      if (!inviteForm.otherRole || (!inviteForm.otherBranchId && !isOtherAllBranches && inviteForm.otherRole !== 'company_admin')) {
+        toast.error('Please fill in all fields for the secondary role');
+        return;
+      }
+    }
+
     setInviting(true);
     try {
       // Pass empty string for all_branches - the hook will handle sending null/undefined to the API
       const branchIdToSubmit = isAllBranches ? '' : inviteForm.branchId;
-      const result = await onInviteUser(inviteForm.fullName, inviteForm.email, branchIdToSubmit, inviteForm.role);
+      
+      // Build dual-role options if enabled
+      const dualRoleOptions = inviteForm.alsoGrantOtherRole && hasDualCompanyAccess && otherCompanyId
+        ? {
+            also_grant_other_role: true,
+            other_company_id: otherCompanyId,
+            other_company_type: otherCompanyType as 'buyer' | 'supplier',
+            other_branch_id: inviteForm.otherBranchId === 'all_branches' ? undefined : inviteForm.otherBranchId || undefined,
+            other_role: inviteForm.otherRole,
+            other_company_name: otherCompanyName
+          }
+        : undefined;
+      
+      const result = await onInviteUser(inviteForm.fullName, inviteForm.email, branchIdToSubmit, inviteForm.role, dualRoleOptions);
       if (!result.error) {
         setInviteModalOpen(false);
-        setInviteForm({ fullName: '', email: '', branchId: '', role: 'viewer' });
+        setInviteForm({ 
+          fullName: '', 
+          email: '', 
+          branchId: '', 
+          role: 'viewer',
+          alsoGrantOtherRole: false,
+          otherBranchId: '',
+          otherRole: 'viewer'
+        });
       }
     } catch (error) {
       console.error('Error creating user:', error);
@@ -296,6 +351,97 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
                   </Select>
                 </div>
 
+                {/* Dual-Role Section */}
+                {hasDualCompanyAccess && (
+                  <div className="border-t pt-4 mt-4">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <input
+                        type="checkbox"
+                        id="alsoGrantOtherRole"
+                        checked={inviteForm.alsoGrantOtherRole}
+                        onChange={(e) => setInviteForm(prev => ({ 
+                          ...prev, 
+                          alsoGrantOtherRole: e.target.checked,
+                          otherBranchId: e.target.checked ? '' : prev.otherBranchId,
+                          otherRole: e.target.checked ? 'viewer' : prev.otherRole
+                        }))}
+                        className="h-4 w-4 rounded border-input"
+                      />
+                      <Label htmlFor="alsoGrantOtherRole" className="text-sm font-medium cursor-pointer">
+                        Also grant access to {otherCompanyType} side ({otherCompanyName})
+                      </Label>
+                    </div>
+
+                    {inviteForm.alsoGrantOtherRole && (
+                      <div className="space-y-4 pl-6 border-l-2 border-primary/20">
+                        <div className="space-y-2">
+                          <Label htmlFor="otherRole">{otherCompanyType === 'buyer' ? 'Buyer' : 'Supplier'} Role</Label>
+                          <Select
+                            value={inviteForm.otherRole}
+                            onValueChange={(value) => {
+                              setInviteForm(prev => ({ 
+                                ...prev, 
+                                otherRole: value,
+                                otherBranchId: value === 'company_admin' ? 'all_branches' : prev.otherBranchId
+                              }));
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {roleOptions.map((role) => (
+                                <SelectItem key={role.value} value={role.value}>
+                                  <div>
+                                    <div className="font-medium">{role.label}</div>
+                                    <div className="text-xs text-muted-foreground">{role.description}</div>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="otherBranch">{otherCompanyType === 'buyer' ? 'Buyer' : 'Supplier'} Branch</Label>
+                          <Select
+                            value={inviteForm.otherBranchId}
+                            onValueChange={(value) => setInviteForm(prev => ({ ...prev, otherBranchId: value }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a branch" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {inviteForm.otherRole === 'company_admin' && (
+                                <SelectItem value="all_branches">
+                                  <div className="flex items-center space-x-2">
+                                    <Building className="h-4 w-4 text-primary" />
+                                    <span className="font-medium">All Branches</span>
+                                    <span className="text-xs text-muted-foreground">(Full Access)</span>
+                                  </div>
+                                </SelectItem>
+                              )}
+                              {otherCompanyBranches.map((branch) => (
+                                <SelectItem key={branch.id} value={branch.id}>
+                                  <div className="flex items-center space-x-2">
+                                    <Building className="h-4 w-4" />
+                                    <span>{branch.branch_name}</span>
+                                    {branch.location && (
+                                      <span className="text-xs text-muted-foreground">
+                                        ({branch.location})
+                                      </span>
+                                    )}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex justify-end space-x-2">
                   <Button type="button" variant="outline" onClick={() => setInviteModalOpen(false)}>
                     Cancel
@@ -309,7 +455,7 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
                     ) : (
                       <>
                         <UserPlus className="h-4 w-4 mr-2" />
-                        Create User
+                        {inviteForm.alsoGrantOtherRole ? 'Create Dual-Role User' : 'Create User'}
                       </>
                     )}
                   </Button>

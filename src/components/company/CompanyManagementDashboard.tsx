@@ -231,6 +231,7 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
           <CompanyUserManagement
             branches={branches}
             companyUsers={companyUsers}
+            companyType={companyType}
             onInviteUser={inviteUserToBranch}
             onResendInvitation={resendInvitation}
             onRemoveUser={removeUser}

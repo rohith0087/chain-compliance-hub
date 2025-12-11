@@ -22,6 +22,13 @@ interface CreateUserRequest {
   branch_id?: string;
   inviter_name?: string;
   company_name?: string;
+  // Dual-role support
+  also_grant_other_role?: boolean;
+  other_company_id?: string;
+  other_company_type?: 'buyer' | 'supplier';
+  other_branch_id?: string;
+  other_role?: 'company_admin' | 'branch_manager' | 'document_manager' | 'approver' | 'viewer';
+  other_company_name?: string;
 }
 
 function generateSecurePassword(length: number = 16): string {
@@ -50,14 +57,32 @@ Deno.serve(async (req) => {
     }
 
     const requestData: CreateUserRequest = await req.json();
-    const { email, full_name, role, company_id, company_type, branch_id, inviter_name, company_name } = requestData;
+    const { 
+      email, full_name, role, company_id, company_type, branch_id, inviter_name, company_name,
+      also_grant_other_role, other_company_id, other_company_type, other_branch_id, other_role, other_company_name
+    } = requestData;
 
-    console.log('Creating user:', { email, role, company_type, company_id });
+    console.log('Creating user:', { email, role, company_type, company_id, also_grant_other_role });
 
     // Validate required fields
     if (!email || !full_name || !role || !company_id || !company_type) {
       throw new Error('Missing required fields: email, full_name, role, company_id, company_type');
     }
+
+    // Validate dual-role fields if enabled
+    if (also_grant_other_role) {
+      if (!other_company_id || !other_company_type || !other_role) {
+        throw new Error('Dual-role enabled but missing other_company_id, other_company_type, or other_role');
+      }
+      if (other_company_type === company_type) {
+        throw new Error('other_company_type must be different from primary company_type');
+      }
+    }
+
+    // Determine roles for profile - include both if dual-role
+    const rolesArray = also_grant_other_role && other_company_type
+      ? [company_type, other_company_type]
+      : [company_type];
 
     // Generate random secure password
     const randomPassword = generateSecurePassword(16);
@@ -71,6 +96,7 @@ Deno.serve(async (req) => {
         full_name,
         company_type,
         role,
+        roles: rolesArray, // Pass all roles for trigger
       },
     });
 
@@ -85,14 +111,14 @@ Deno.serve(async (req) => {
 
     console.log('Auth user created:', authData.user.id);
 
-    // Create profile record
+    // Create profile record with all roles
     const { error: profileError } = await supabase
       .from('profiles')
       .insert({
         id: authData.user.id,
         email: email,
         full_name: full_name,
-        roles: [company_type], // Set as buyer or supplier based on company type
+        roles: rolesArray,
       });
 
     if (profileError) {
@@ -100,12 +126,12 @@ Deno.serve(async (req) => {
       // Don't throw - continue with user creation
     }
 
-    // Insert into user_roles table
+    // Insert primary role into user_roles table
     const { error: roleError } = await supabase
       .from('user_roles')
       .insert({
         user_id: authData.user.id,
-        role: company_type, // buyer or supplier
+        role: company_type,
       });
 
     if (roleError) {
@@ -113,7 +139,21 @@ Deno.serve(async (req) => {
       // Don't throw - continue with user creation
     }
 
-    // Insert into company_users with password_reset_required = true
+    // Insert secondary role if dual-role enabled
+    if (also_grant_other_role && other_company_type) {
+      const { error: otherRoleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: authData.user.id,
+          role: other_company_type,
+        });
+
+      if (otherRoleError) {
+        console.error('Error creating secondary user role:', otherRoleError);
+      }
+    }
+
+    // Insert primary company_users record
     const { data: companyUserData, error: companyUserError } = await supabase
       .from('company_users')
       .insert({
@@ -135,9 +175,41 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to create company user record: ${companyUserError.message}`);
     }
 
-    console.log('Company user created:', companyUserData);
+    console.log('Primary company user created:', companyUserData);
 
-    // Send welcome email with password reset instructions
+    // Insert secondary company_users record if dual-role enabled
+    let otherCompanyUserData = null;
+    if (also_grant_other_role && other_company_id && other_company_type && other_role) {
+      const { data: otherData, error: otherCompanyUserError } = await supabase
+        .from('company_users')
+        .insert({
+          profile_id: authData.user.id,
+          company_id: other_company_id,
+          company_type: other_company_type,
+          role: other_role,
+          branch_id: other_branch_id || null,
+          invited_by: invitingUser.id,
+          status: 'active',
+          password_reset_required: true,
+          joined_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (otherCompanyUserError) {
+        console.error('Error creating secondary company_users record:', otherCompanyUserError);
+        // Don't throw - primary creation succeeded
+      } else {
+        otherCompanyUserData = otherData;
+        console.log('Secondary company user created:', otherCompanyUserData);
+      }
+    }
+
+    // Build email content
+    const dualRoleInfo = also_grant_other_role && other_company_name
+      ? `<p>You also have access to <strong>${other_company_name}</strong> as ${other_role?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}.</p>`
+      : '';
+
     const emailSubject = `Your ${company_name || 'ComplianceFlow'} Account Has Been Created`;
     const emailBody = `
       <h2>Welcome to ComplianceFlow!</h2>
@@ -148,6 +220,8 @@ Deno.serve(async (req) => {
         <p><strong>Email:</strong> ${email}</p>
         <p><strong>Role:</strong> ${role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
       </div>
+
+      ${dualRoleInfo}
 
       <h3>Getting Started:</h3>
       <ol>
@@ -181,13 +255,17 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'User created successfully. They will receive an email with instructions.',
+        message: also_grant_other_role 
+          ? 'User created with dual-role access. They will receive an email with instructions.'
+          : 'User created successfully. They will receive an email with instructions.',
         user: {
           id: authData.user.id,
           email: email,
           full_name: full_name,
         },
         company_users: companyUserData,
+        other_company_users: otherCompanyUserData,
+        dual_role: also_grant_other_role || false,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

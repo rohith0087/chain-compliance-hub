@@ -313,16 +313,46 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
             totalDocs: totalDocs,
           });
 
-          // Generate mock activity trend for last 7 days (can be enhanced with real data later)
-          const last7Days = Array.from({ length: 7 }, (_, i) => {
-            const date = new Date();
-            date.setDate(date.getDate() - (6 - i));
-            return {
-              day: date.toLocaleDateString('en-US', { weekday: 'short' }),
-              requests: Math.floor(Math.random() * 5) + 1,
-              completed: Math.floor(Math.random() * 4),
-            };
-          });
+          // Fetch real activity trend for last 7 days
+          const last7Days: { day: string; requests: number; completed: number }[] = [];
+          const today = new Date();
+          today.setHours(23, 59, 59, 999);
+
+          for (let i = 6; i >= 0; i--) {
+            const dayStart = new Date(today);
+            dayStart.setDate(today.getDate() - i);
+            dayStart.setHours(0, 0, 0, 0);
+            
+            const dayEnd = new Date(dayStart);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            // Count requests created on this day
+            let requestsQuery = supabase
+              .from('document_requests')
+              .select('id', { count: 'exact', head: true })
+              .eq('buyer_id', effectiveBuyerId)
+              .gte('created_at', dayStart.toISOString())
+              .lte('created_at', dayEnd.toISOString());
+            if (branchFilter) requestsQuery = requestsQuery.eq('branch_id', branchFilter);
+            const { count: requestsCount } = await requestsQuery;
+
+            // Count completed (approved) requests updated on this day
+            let completedQuery = supabase
+              .from('document_requests')
+              .select('id', { count: 'exact', head: true })
+              .eq('buyer_id', effectiveBuyerId)
+              .eq('status', 'approved')
+              .gte('updated_at', dayStart.toISOString())
+              .lte('updated_at', dayEnd.toISOString());
+            if (branchFilter) completedQuery = completedQuery.eq('branch_id', branchFilter);
+            const { count: completedCount } = await completedQuery;
+
+            last7Days.push({
+              day: dayStart.toLocaleDateString('en-US', { weekday: 'short' }),
+              requests: requestsCount || 0,
+              completed: completedCount || 0,
+            });
+          }
           setActivityTrend(last7Days);
 
           // Set deadlines

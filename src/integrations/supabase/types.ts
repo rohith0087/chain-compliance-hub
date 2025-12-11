@@ -4052,6 +4052,14 @@ export type Database = {
           industry: string
         }[]
       }
+      send_supplier_connection_request: {
+        Args: {
+          p_buyer_id: string
+          p_created_by: string
+          p_supplier_id: string
+        }
+        Returns: Json
+      }
       super_admin_reset_password: {
         Args: { new_password: string; target_user_id: string }
         Returns: boolean

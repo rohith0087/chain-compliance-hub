@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Building2, Users, Settings, BarChart3, Shield } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useCompanyBranches } from '@/hooks/useCompanyBranches';
+import { useCompanyBranches, CompanyBranch } from '@/hooks/useCompanyBranches';
 import { useCompanyPermissions } from '@/hooks/useCompanyPermissions';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { BranchSelector } from './BranchSelector';
 import { BranchManagement } from './BranchManagement';
 import { CompanyUserManagement } from './CompanyUserManagement';
@@ -39,7 +41,52 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
   } = useCompanyBranches(companyId, companyType);
 
   const { canViewCompanyManagement, role, isOwner } = useCompanyPermissions(companyId, companyType);
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
+  
+  // State for "other" company info (for dual-role user invitations)
+  const [otherCompanyInfo, setOtherCompanyInfo] = useState<{
+    id: string;
+    name: string;
+    branches: CompanyBranch[];
+  } | null>(null);
+
+  // Fetch "other" company info if user owns both buyer and supplier companies
+  useEffect(() => {
+    const fetchOtherCompany = async () => {
+      if (!user) return;
+      
+      const otherType = companyType === 'buyer' ? 'supplier' : 'buyer';
+      const otherTable = companyType === 'buyer' ? 'suppliers' : 'buyers';
+      
+      // Query the other company owned by this user
+      const { data: otherCompany } = await supabase
+        .from(otherTable)
+        .select('id, company_name')
+        .eq('profile_id', user.id)
+        .maybeSingle();
+      
+      if (otherCompany) {
+        // Fetch branches for the other company
+        const { data: otherBranches } = await supabase
+          .from('company_branches')
+          .select('*')
+          .eq('company_id', otherCompany.id)
+          .eq('company_type', otherType)
+          .eq('status', 'active');
+        
+        setOtherCompanyInfo({
+          id: otherCompany.id,
+          name: otherCompany.company_name,
+          branches: (otherBranches || []) as CompanyBranch[]
+        });
+      } else {
+        setOtherCompanyInfo(null);
+      }
+    };
+    
+    fetchOtherCompany();
+  }, [user, companyType]);
 
   // Check permission - only company owner can access
   if (!loading && !canViewCompanyManagement()) {
@@ -232,6 +279,9 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
             branches={branches}
             companyUsers={companyUsers}
             companyType={companyType}
+            otherCompanyId={otherCompanyInfo?.id}
+            otherCompanyName={otherCompanyInfo?.name}
+            otherCompanyBranches={otherCompanyInfo?.branches}
             onInviteUser={inviteUserToBranch}
             onResendInvitation={resendInvitation}
             onRemoveUser={removeUser}

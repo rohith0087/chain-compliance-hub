@@ -408,7 +408,20 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
     }
   };
 
-  const inviteUserToBranch = async (fullName: string, email: string, branchId: string, role: string) => {
+  const inviteUserToBranch = async (
+    fullName: string, 
+    email: string, 
+    branchId: string, 
+    role: string,
+    dualRoleOptions?: {
+      also_grant_other_role: boolean;
+      other_company_id: string;
+      other_company_type: 'buyer' | 'supplier';
+      other_branch_id?: string;
+      other_role: string;
+      other_company_name?: string;
+    }
+  ) => {
     if (!user || !companyId || !companyType) {
       toast.error('Missing required information to create user');
       return { error: 'Missing required data' };
@@ -440,18 +453,31 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
         .eq('id', companyId)
         .single();
 
-      // Call new create-company-user edge function
+      // Build request body
+      const requestBody: Record<string, unknown> = {
+        email: email,
+        full_name: fullName,
+        role: role,
+        company_id: companyId,
+        company_type: companyType,
+        branch_id: branchId || undefined,
+        inviter_name: currentUserProfile?.full_name || user.email || 'Team Administrator',
+        company_name: companyDetails?.company_name || 'Unknown Company'
+      };
+
+      // Add dual-role options if provided
+      if (dualRoleOptions?.also_grant_other_role) {
+        requestBody.also_grant_other_role = true;
+        requestBody.other_company_id = dualRoleOptions.other_company_id;
+        requestBody.other_company_type = dualRoleOptions.other_company_type;
+        requestBody.other_branch_id = dualRoleOptions.other_branch_id || undefined;
+        requestBody.other_role = dualRoleOptions.other_role;
+        requestBody.other_company_name = dualRoleOptions.other_company_name;
+      }
+
+      // Call create-company-user edge function
       const response = await supabase.functions.invoke('create-company-user', {
-        body: {
-          email: email,
-          full_name: fullName,
-          role: role,
-          company_id: companyId,
-          company_type: companyType,
-          branch_id: branchId,
-          inviter_name: currentUserProfile?.full_name || user.email || 'Team Administrator',
-          company_name: companyDetails?.company_name || 'Unknown Company'
-        }
+        body: requestBody
       });
       
       if (response.error) {
@@ -462,10 +488,14 @@ export const useCompanyBranches = (companyId?: string, companyType?: 'buyer' | '
         throw new Error(response.data?.error || 'Failed to create user');
       }
 
-      toast.success('User created successfully! They will receive an email with instructions.');
+      const successMessage = response.data?.dual_role 
+        ? 'User created with dual-role access! They will receive an email with instructions.'
+        : 'User created successfully! They will receive an email with instructions.';
+      
+      toast.success(successMessage);
       
       // Sync branch manager if needed
-      if (response.data?.user?.id) {
+      if (response.data?.user?.id && branchId) {
         await syncBranchManager(branchId, response.data.user.id, role);
       }
 

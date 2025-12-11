@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
   Search,
@@ -12,9 +11,7 @@ import {
   Upload,
   FileCheck,
   Calendar,
-  TrendingUp,
   Download,
-  Bell,
   Link,
   Eye,
   FileText
@@ -40,14 +37,6 @@ interface ActivityEvent {
   notes?: string;
 }
 
-interface MetricData {
-  label: string;
-  value: number;
-  change?: number;
-  icon: React.ReactNode;
-  color: string;
-}
-
 interface DocumentActivityDashboardProps {
   events: ActivityEvent[];
   documents?: any[];
@@ -56,12 +45,24 @@ interface DocumentActivityDashboardProps {
 const DocumentActivityDashboard = ({ events, documents = [] }: DocumentActivityDashboardProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
+  const [selectedUser, setSelectedUser] = useState<string>('all');
   const [timeRange, setTimeRange] = useState<string>('7_days');
   const [selectedActivity, setSelectedActivity] = useState<{
     documentRequestId: string | null;
     documentTitle?: string;
     supplierName?: string;
   } | null>(null);
+
+  // Extract unique users from events
+  const uniqueUsers = useMemo(() => {
+    const users = new Map<string, string>();
+    events.forEach(event => {
+      if (event.userName && event.userEmail) {
+        users.set(event.userEmail, event.userName);
+      }
+    });
+    return Array.from(users.entries());
+  }, [events]);
 
   // Group events by time periods
   const groupedEvents = useMemo(() => {
@@ -72,12 +73,13 @@ const DocumentActivityDashboard = ({ events, documents = [] }: DocumentActivityD
         event.supplier?.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesFilter = selectedFilter === 'all' || event.type === selectedFilter;
+      const matchesUser = selectedUser === 'all' || event.userEmail === selectedUser;
       
       const eventDate = new Date(event.date);
       const cutoffDate = subDays(new Date(), timeRange === '7_days' ? 7 : timeRange === '30_days' ? 30 : 90);
       const matchesTimeRange = eventDate >= cutoffDate;
       
-      return matchesSearch && matchesFilter && matchesTimeRange;
+      return matchesSearch && matchesFilter && matchesUser && matchesTimeRange;
     });
 
     const groups: { [key: string]: ActivityEvent[] } = {
@@ -101,40 +103,7 @@ const DocumentActivityDashboard = ({ events, documents = [] }: DocumentActivityD
     });
 
     return groups;
-  }, [events, searchTerm, selectedFilter, timeRange]);
-
-  // Calculate metrics
-  const metrics: MetricData[] = useMemo(() => {
-    const sevenDaysAgo = subDays(new Date(), 7);
-    const recentEvents = events.filter(e => new Date(e.date) >= sevenDaysAgo);
-    
-    return [
-      {
-        label: 'Recent Activity',
-        value: recentEvents.length,
-        icon: <TrendingUp className="h-4 w-4" />,
-        color: 'text-blue-600'
-      },
-      {
-        label: 'Urgent Actions',
-        value: events.filter(e => e.type === 'rejected' || e.priority === 'high').length,
-        icon: <AlertTriangle className="h-4 w-4" />,
-        color: 'text-red-600'
-      },
-      {
-        label: 'Approvals',
-        value: events.filter(e => e.type === 'approved').length,
-        icon: <CheckCircle className="h-4 w-4" />,
-        color: 'text-green-600'
-      },
-      {
-        label: 'Uploads',
-        value: events.filter(e => e.type === 'uploaded').length,
-        icon: <Upload className="h-4 w-4" />,
-        color: 'text-purple-600'
-      }
-    ];
-  }, [events]);
+  }, [events, searchTerm, selectedFilter, selectedUser, timeRange]);
 
   const getEventIcon = (type: string) => {
     switch (type) {
@@ -260,30 +229,9 @@ const DocumentActivityDashboard = ({ events, documents = [] }: DocumentActivityD
 
   return (
     <div className="space-y-6">
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {metrics.map((metric, index) => (
-          <Card key={index}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{metric.label}</CardTitle>
-              <div className={metric.color}>{metric.icon}</div>
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${metric.color}`}>{metric.value}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
       {/* Controls */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Document Activity Feed
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="pt-6 space-y-4">
           {/* Search and Filters */}
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
@@ -296,7 +244,7 @@ const DocumentActivityDashboard = ({ events, documents = [] }: DocumentActivityD
               />
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <select
                 value={selectedFilter}
                 onChange={(e) => setSelectedFilter(e.target.value)}
@@ -309,6 +257,17 @@ const DocumentActivityDashboard = ({ events, documents = [] }: DocumentActivityD
                 <option value="rejected">Rejected</option>
                 <option value="downloaded">Downloaded</option>
                 <option value="link_created">Link Created</option>
+              </select>
+              
+              <select
+                value={selectedUser}
+                onChange={(e) => setSelectedUser(e.target.value)}
+                className="px-3 py-2 border border-input bg-background rounded-md text-sm"
+              >
+                <option value="all">All Users</option>
+                {uniqueUsers.map(([email, name]) => (
+                  <option key={email} value={email}>{name}</option>
+                ))}
               </select>
               
               <select

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Building2, 
@@ -164,8 +164,17 @@ export function SupplierSidebarLayout({
   // Branch context for global state sync
   const { setCurrentBranch, setAllBranchesView } = useBranchContext();
 
-  // Sync branch changes to BranchContext
+  // Track synced branch ID to prevent circular updates
+  const syncedBranchIdRef = React.useRef<string | null | undefined>(undefined);
+
+  // Sync branch changes to BranchContext - use ID comparison to prevent infinite loop
   useEffect(() => {
+    const newBranchId = currentBranch?.id || null;
+    
+    // Only sync if the branch ID actually changed
+    if (syncedBranchIdRef.current === newBranchId) return;
+    syncedBranchIdRef.current = newBranchId;
+    
     if (currentBranch) {
       setCurrentBranch(currentBranch);
       setAllBranchesView(false);
@@ -173,7 +182,7 @@ export function SupplierSidebarLayout({
       setCurrentBranch(null);
       setAllBranchesView(true);
     }
-  }, [currentBranch, hasAllBranchAccess, setCurrentBranch, setAllBranchesView]);
+  }, [currentBranch?.id, hasAllBranchAccess, setCurrentBranch, setAllBranchesView]);
 
   // Handle branch change and sync to context
   const handleBranchChange = (branch: any) => {

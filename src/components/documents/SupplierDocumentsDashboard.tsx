@@ -79,7 +79,7 @@ const SupplierDocumentsDashboard = () => {
     if (user) {
       loadDocuments();
     }
-  }, [user, filters, currentBranch, allBranchesView]);
+  }, [user, filters, currentBranch?.id, allBranchesView]);
 
   const loadDocuments = async () => {
     setLoading(true);

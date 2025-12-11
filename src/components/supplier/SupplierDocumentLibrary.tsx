@@ -49,7 +49,7 @@ export const SupplierDocumentLibrary: React.FC<SupplierDocumentLibraryProps> = (
 
   useEffect(() => {
     fetchDocuments();
-  }, [supplierId, currentBranch, allBranchesView]);
+  }, [supplierId, currentBranch?.id, allBranchesView]);
 
   const fetchDocuments = async () => {
     try {

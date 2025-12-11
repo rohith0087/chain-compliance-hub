@@ -658,212 +658,100 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
               </motion.div>
             </div>
 
-            {/* Deadlines & Action Items */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Upcoming Deadlines */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base font-medium flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-muted-foreground" />
-                      Upcoming Deadlines
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {upcomingDeadlines.length > 0 ? (
-                      <div className="space-y-3">
-                        {upcomingDeadlines.map((deadline) => (
-                          <div 
-                            key={deadline.id}
-                            className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"
-                            onClick={() => handleNotificationNavigation('requests', deadline.id)}
-                          >
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm truncate">{deadline.title}</p>
-                              <p className="text-xs text-muted-foreground">{deadline.buyer}</p>
-                            </div>
-                            <Badge 
-                              variant={deadline.daysLeft <= 3 ? 'destructive' : deadline.daysLeft <= 7 ? 'default' : 'secondary'}
-                              className="ml-2 shrink-0"
-                            >
-                              {deadline.daysLeft === 0 ? 'Today' : `${deadline.daysLeft}d left`}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No upcoming deadlines</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              {/* Action Items */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-              >
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base font-medium flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4 text-muted-foreground" />
-                      Action Items
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {actionItems.length > 0 ? (
-                      <div className="space-y-3">
-                        {actionItems.map((item) => (
-                          <div 
-                            key={item.id}
-                            className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-                              item.type === 'urgent' ? 'bg-red-500/10 hover:bg-red-500/20' :
-                              item.type === 'error' ? 'bg-orange-500/10 hover:bg-orange-500/20' :
-                              'bg-amber-500/10 hover:bg-amber-500/20'
-                            }`}
-                            onClick={item.action}
-                          >
-                            <div className="flex items-center gap-3">
-                              {item.type === 'urgent' && <AlertTriangle className="w-4 h-4 text-red-500" />}
-                              {item.type === 'error' && <AlertTriangle className="w-4 h-4 text-orange-500" />}
-                              {item.type === 'warning' && <Clock className="w-4 h-4 text-amber-500" />}
-                              <span className="text-sm font-medium">{item.title}</span>
-                            </div>
-                            <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500 opacity-50" />
-                        <p className="text-sm">All caught up!</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </div>
-
-            {/* Recent Activity Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Recent Document Requests */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base font-medium flex items-center justify-between">
-                      <span className="flex items-center gap-2">
-                        <FileCheck className="w-4 h-4 text-muted-foreground" />
-                        Recent Requests
-                      </span>
-                      <Badge variant="outline" className="text-xs">
-                        {documentRequests.length} total
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {documentRequests.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">{t('supplier:sections.noRecentRequests')}</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {documentRequests.slice(0, 5).map((request) => (
-                          <div 
-                            key={request.id} 
-                            className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"
-                            onClick={() => handleNotificationNavigation('requests', request.id)}
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              {getStatusIcon(request.status)}
-                              <div className="min-w-0">
-                                <p className="font-medium text-sm truncate">{request.title}</p>
-                                <p className="text-xs text-muted-foreground">{request.buyers?.company_name}</p>
-                              </div>
-                            </div>
-                            <Badge className={`${getStatusColor(request.status)} shrink-0`}>
-                              {request.status}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              {/* Connected Buyers */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-              >
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base font-medium flex items-center justify-between">
-                      <span className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-muted-foreground" />
-                        Connected Buyers
-                      </span>
-                      <Badge variant="outline" className="text-xs">
-                        {connectedBuyers.length} active
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {connectedBuyers.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">{t('supplier:sections.noConnectedBuyers')}</p>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="mt-3"
-                          onClick={() => setActiveTab('connections')}
+            {/* Upcoming Deadlines */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-medium flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    Upcoming Deadlines
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {upcomingDeadlines.length > 0 ? (
+                    <div className="space-y-3">
+                      {upcomingDeadlines.map((deadline) => (
+                        <div 
+                          key={deadline.id}
+                          className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"
+                          onClick={() => handleNotificationNavigation('requests', deadline.id)}
                         >
-                          Connect with Buyers
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {connectedBuyers.slice(0, 5).map((connection) => (
-                          <div 
-                            key={connection.id} 
-                            className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"
-                            onClick={() => handleNotificationNavigation('connections', connection.id)}
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-                                <Building2 className="w-4 h-4 text-primary" />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="font-medium text-sm truncate">{connection.buyers?.company_name}</p>
-                                <p className="text-xs text-muted-foreground">{connection.buyers?.industry}</p>
-                              </div>
-                            </div>
-                            <Badge variant="outline" className="shrink-0 text-xs">
-                              {t(`supplier:connectionStatus.${connection.unifiedStatus || 'pending'}`)}
-                            </Badge>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{deadline.title}</p>
+                            <p className="text-xs text-muted-foreground">{deadline.buyer}</p>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </div>
+                          <Badge 
+                            variant={deadline.daysLeft <= 3 ? 'destructive' : deadline.daysLeft <= 7 ? 'default' : 'secondary'}
+                            className="ml-2 shrink-0"
+                          >
+                            {deadline.daysLeft === 0 ? 'Today' : `${deadline.daysLeft}d left`}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No upcoming deadlines</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Recent Document Requests */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-medium flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <FileCheck className="w-4 h-4 text-muted-foreground" />
+                      Recent Requests
+                    </span>
+                    <Badge variant="outline" className="text-xs">
+                      {documentRequests.length} total
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {documentRequests.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">{t('supplier:sections.noRecentRequests')}</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {documentRequests.slice(0, 5).map((request) => (
+                        <div 
+                          key={request.id} 
+                          className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"
+                          onClick={() => handleNotificationNavigation('requests', request.id)}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            {getStatusIcon(request.status)}
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm truncate">{request.title}</p>
+                              <p className="text-xs text-muted-foreground">{request.buyers?.company_name}</p>
+                            </div>
+                          </div>
+                          <Badge className={`${getStatusColor(request.status)} shrink-0`}>
+                            {request.status}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
         );
       case 'requests':

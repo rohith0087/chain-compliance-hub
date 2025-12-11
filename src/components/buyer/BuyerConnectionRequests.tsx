@@ -66,6 +66,7 @@ const BuyerConnectionRequests = () => {
           )
         `)
         .eq('buyer_id', buyer.id)
+        .eq('initiated_by', 'supplier')
         .order('requested_at', { ascending: false });
 
       if (error) {

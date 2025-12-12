@@ -189,3 +189,11 @@ verify_jwt = true
 # Password reset with recovery code - requires JWT (user has AAL1 session)
 [functions.reset-password-with-recovery]
 verify_jwt = true
+
+# Voice-to-text transcription using OpenAI Whisper
+[functions.voice-to-text]
+verify_jwt = true
+
+# Text-to-voice synthesis using OpenAI TTS
+[functions.text-to-voice]
+verify_jwt = true

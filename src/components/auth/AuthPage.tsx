@@ -73,7 +73,7 @@ const AuthPage = () => {
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [activeTab, setActiveTab] = useState('signin');
+  const [activeTab, setActiveTab] = useState('login');
   
   const { signIn, signUp, resetPassword } = useAuth();
   const { toast } = useToast();
@@ -198,7 +198,11 @@ const AuthPage = () => {
   return (
     <div className="min-h-screen flex">
       {/* Left Hero Section */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary/90 to-accent relative overflow-hidden">
+      <div className={`hidden lg:flex lg:w-1/2 relative overflow-hidden transition-all duration-500 ${
+        activeTab === 'login' 
+          ? 'bg-gradient-to-br from-primary via-primary/90 to-accent' 
+          : 'bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-500'
+      }`}>
         <ParticleBackground />
         
         <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
@@ -258,21 +262,21 @@ const AuthPage = () => {
               <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-foreground">Welcome</h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {activeTab === 'signin' ? 'Sign in to your account' : 'Create your account'}
+                  {activeTab === 'login' ? 'Login to your account' : 'Create your account'}
                 </p>
               </div>
 
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="signin" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                    Sign In
+                  <TabsTrigger value="login" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                    Login
                   </TabsTrigger>
                   <TabsTrigger value="signup" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                     Sign Up
                   </TabsTrigger>
                 </TabsList>
                 
-                <TabsContent value="signin" className="mt-0">
+                <TabsContent value="login" className="mt-0">
                   <form onSubmit={handleSignIn} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="email" className="text-foreground">Email</Label>
@@ -322,7 +326,7 @@ const AuthPage = () => {
                     </div>
                     
                     <Button type="submit" className="w-full h-11 font-semibold" disabled={loading}>
-                      {loading ? "Signing In..." : "Sign In"}
+                      {loading ? "Logging In..." : "Login"}
                     </Button>
                     
                     <div className="text-center">

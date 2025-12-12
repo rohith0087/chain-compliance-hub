@@ -590,21 +590,34 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
                             value={stats.pendingRequests} 
                             color="amber"
                             pulse={stats.pendingRequests > 0}
+                            onClick={() => {
+                              sessionStorage.setItem('supplier_docs_filter_status', 'pending');
+                              setActiveTab('documents');
+                            }}
                           />
                           <MetricChip 
                             label="Submitted" 
                             value={stats.documentsSubmitted} 
                             color="blue"
+                            onClick={() => {
+                              sessionStorage.setItem('supplier_docs_filter_status', 'submitted');
+                              setActiveTab('documents');
+                            }}
                           />
                           <MetricChip 
                             label="Approved" 
                             value={stats.approvedDocuments} 
                             color="green"
+                            onClick={() => {
+                              sessionStorage.setItem('supplier_docs_filter_status', 'approved');
+                              setActiveTab('documents');
+                            }}
                           />
                           <MetricChip 
                             label="Buyers" 
                             value={connectedBuyers.length} 
                             color="purple"
+                            onClick={() => setActiveTab('buyers')}
                           />
                         </div>
                       </div>

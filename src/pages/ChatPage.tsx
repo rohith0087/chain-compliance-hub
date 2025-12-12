@@ -42,6 +42,9 @@ import {
   Volume2,
   VolumeX,
   Square,
+  Search,
+  Users,
+  TrendingUp,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -1234,56 +1237,45 @@ const ChatPage: React.FC = () => {
     );
   };
 
+  /* ---- Quick Actions & Suggested Insights ---- */
+  
+  const quickActions = [
+    { label: "Search Suppliers", icon: Users, query: "Show me all my connected suppliers with their compliance status" },
+    { label: "Browse Documents", icon: FileText, query: "List all documents pending review" },
+    { label: "Compliance Gaps", icon: AlertCircle, query: "Which documents are expired or expiring soon?" },
+    { label: "Insights", icon: TrendingUp, query: "Give me a compliance overview and key metrics" },
+  ];
+
+  const suggestedInsights = [
+    "Suppliers with expiring certifications this quarter",
+    "Top compliance risks by document type",
+    "Documents frequently missing across suppliers",
+  ];
+
+  const handleQuickAction = (query: string) => {
+    setInputMessage(query);
+    // Auto-send after setting
+    setTimeout(() => {
+      const syntheticEvent = { key: 'Enter' } as React.KeyboardEvent<HTMLInputElement>;
+      handleKeyPress(syntheticEvent);
+    }, 100);
+  };
+
   /* ---- UI ---- */
 
   return (
     <div className="h-screen bg-background flex overflow-hidden">
-      {/* History Sidebar (lg) */}
-      <div className="hidden lg:flex w-80 border-r border-border bg-card flex-col">
-        <div className="sticky top-0 z-10 p-6 border-b border-border bg-card">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-foreground">Chat History</h2>
-            <Button size="sm" variant="outline" onClick={startNewChat}>
-              <Plus className="w-4 h-4 mr-1" />
-              New
-            </Button>
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-4 space-y-2">
-            {chatSessions.map((s) => (
-              <Card
-                key={s.id}
-                className={`p-3 cursor-pointer transition-colors hover:bg-accent ${
-                  currentSession === s.id ? "bg-accent border-primary" : ""
-                }`}
-                onClick={() => selectSession(s)}
-              >
-                <div className="flex items-start gap-3">
-                  <MessageSquare className="w-4 h-4 mt-0.5 text-muted-foreground" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate text-foreground">{s.session_title || "Untitled Chat"}</p>
-                    <p className="text-xs text-muted-foreground">{format(new Date(s.updated_at), "MMM dd, yyyy")}</p>
-                  </div>
-                </div>
-              </Card>
-            ))}
-            {chatSessions.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No chat history yet</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
 
-      {/* Mobile History Sheet */}
+      {/* History Sheet (Universal - triggered by menu button) */}
       <Sheet open={showHistory} onOpenChange={setShowHistory}>
         <SheetContent side="left" className="w-80 p-0">
           <div className="h-full flex flex-col">
-            <div className="p-6 border-b border-border">
+            <div className="p-6 border-b border-border flex items-center justify-between">
               <h2 className="font-semibold text-foreground">Chat History</h2>
+              <Button size="sm" variant="outline" onClick={startNewChat}>
+                <Plus className="w-4 h-4 mr-1" />
+                New
+              </Button>
             </div>
             <div className="flex-1 overflow-y-auto">
               <div className="p-4 space-y-2">
@@ -1308,6 +1300,12 @@ const ChatPage: React.FC = () => {
                     </div>
                   </Card>
                 ))}
+                {chatSessions.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No chat history yet</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1315,128 +1313,179 @@ const ChatPage: React.FC = () => {
       </Sheet>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full min-h-0">
+      <div className="flex-1 flex flex-col w-full min-h-0">
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6 py-6" ref={scrollAreaRef}>
+        <div className="flex-1 overflow-y-auto" ref={scrollAreaRef}>
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] px-4">
-              <div className="w-full max-w-3xl space-y-8">
-                <h2 className="text-4xl font-semibold text-foreground text-center">
-                  What can I help with?
-                </h2>
-                
-                {/* Centered Input - Only shown when empty */}
-                <div className="relative flex items-center gap-2 bg-background border border-border rounded-full shadow-lg hover:shadow-xl transition-all p-2">
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    <Plus className="w-5 h-5 text-muted-foreground" />
-                  </Button>
-                  <Input
-                    ref={inputRef}
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Ask anything"
-                    className="flex-1 border-0 focus-visible:ring-0 text-base"
-                    disabled={isLoading || isRecording || isTranscribing}
-                  />
-                  {/* Mic Button */}
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className={`rounded-full transition-all ${
-                      isRecording 
-                        ? 'bg-destructive text-destructive-foreground animate-pulse' 
-                        : isTranscribing 
-                          ? 'bg-primary/20' 
-                          : ''
-                    }`}
-                    onClick={handleMicClick}
-                    disabled={isTranscribing || isLoading}
-                  >
-                    {isTranscribing ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : isRecording ? (
-                      <MicOff className="w-5 h-5" />
-                    ) : (
-                      <Mic className="w-5 h-5 text-muted-foreground" />
-                    )}
-                  </Button>
-                  {/* Audio Button */}
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className={`rounded-full transition-all ${
-                      isPlayingAudio 
-                        ? 'bg-primary text-primary-foreground' 
-                        : isGeneratingAudio 
-                          ? 'bg-primary/20' 
-                          : ''
-                    }`}
-                    onClick={handleAudioClick}
-                    disabled={isGeneratingAudio || messages.length === 0}
-                  >
-                    {isGeneratingAudio ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : isPlayingAudio ? (
-                      <Square className="w-4 h-4" />
-                    ) : (
-                      <Volume2 className="w-5 h-5 text-muted-foreground" />
-                    )}
-                  </Button>
-                  <Button 
-                    onClick={sendMessage} 
-                    disabled={isLoading || !inputMessage.trim()} 
-                    size="icon"
-                    className="rounded-full h-10 w-10"
-                  >
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  </Button>
+            /* Discovery Landing Page */
+            <div className="flex flex-col min-h-full">
+              {/* Header with Menu Button */}
+              <div className="flex items-center gap-3 p-4 border-b border-border">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="rounded-lg"
+                  onClick={() => setShowHistory(true)}
+                >
+                  <Menu className="w-5 h-5" />
+                </Button>
+                <span className="text-sm font-medium text-muted-foreground">Discovery</span>
+              </div>
+
+              {/* Centered Content */}
+              <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+                <div className="w-full max-w-2xl space-y-8">
+                  {/* Discovery Headline */}
+                  <div className="text-center space-y-2">
+                    <h1 className="text-3xl md:text-4xl font-semibold text-foreground">
+                      Explore suppliers, documents, and compliance insights
+                    </h1>
+                    <p className="text-muted-foreground text-base">
+                      Ask questions, search your data, or click a suggestion below
+                    </p>
+                  </div>
+                  
+                  {/* Smart Search Input */}
+                  <div className="relative flex items-center gap-2 bg-card border border-border rounded-2xl shadow-lg hover:shadow-xl transition-all p-3">
+                    <Search className="w-5 h-5 text-muted-foreground ml-2" />
+                    <Input
+                      ref={inputRef}
+                      value={inputMessage}
+                      onChange={(e) => setInputMessage(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Find suppliers missing compliance documents..."
+                      className="flex-1 border-0 focus-visible:ring-0 text-base bg-transparent"
+                      disabled={isLoading || isRecording || isTranscribing}
+                    />
+                    {/* Mic Button */}
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className={`rounded-full transition-all ${
+                        isRecording 
+                          ? 'bg-destructive text-destructive-foreground animate-pulse' 
+                          : isTranscribing 
+                            ? 'bg-primary/20' 
+                            : ''
+                      }`}
+                      onClick={handleMicClick}
+                      disabled={isTranscribing || isLoading}
+                    >
+                      {isTranscribing ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : isRecording ? (
+                        <MicOff className="w-5 h-5" />
+                      ) : (
+                        <Mic className="w-5 h-5 text-muted-foreground" />
+                      )}
+                    </Button>
+                    <Button 
+                      onClick={sendMessage} 
+                      disabled={isLoading || !inputMessage.trim()} 
+                      size="icon"
+                      className="rounded-full h-10 w-10"
+                    >
+                      {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    </Button>
+                  </div>
+
+                  {/* Quick Action Chips */}
+                  <div className="flex flex-wrap justify-center gap-3">
+                    {quickActions.map((action) => (
+                      <Button
+                        key={action.label}
+                        variant="outline"
+                        className="rounded-full gap-2 px-4 py-2 h-auto text-sm hover:bg-accent hover:border-primary/50 transition-all"
+                        onClick={() => handleQuickAction(action.query)}
+                        disabled={isLoading}
+                      >
+                        <action.icon className="w-4 h-4" />
+                        {action.label}
+                      </Button>
+                    ))}
+                  </div>
+
+                  {/* Suggested Insights */}
+                  <div className="space-y-4 pt-4">
+                    <div className="flex items-center gap-2 justify-center">
+                      <Sparkles className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium text-muted-foreground">Suggested insights</span>
+                    </div>
+                    <div className="space-y-2">
+                      {suggestedInsights.map((insight, index) => (
+                        <button
+                          key={index}
+                          className="w-full text-left p-3 rounded-lg border border-border/50 bg-card/50 hover:bg-accent hover:border-primary/30 transition-all text-sm text-muted-foreground hover:text-foreground group"
+                          onClick={() => handleQuickAction(insight)}
+                          disabled={isLoading}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary/50 group-hover:bg-primary transition-colors" />
+                            {insight}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="space-y-1">
-              {messages.map((m) => (
-                <div key={m.id} className="flex items-start gap-4 p-6 hover:bg-accent/30 transition-colors group">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      m.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20"
-                    }`}
-                  >
-                    {m.role === "user" ? <User className="w-4 h-4" /> : <Shield className="w-4 h-4 text-primary" />}
-                  </div>
-                  <div className="flex-1 min-w-0 space-y-2">
-                    <div className="font-medium text-sm text-foreground">
-                      {m.role === "user" ? "You" : "Compliance AI"}
+            <div className="flex flex-col">
+              {/* Header with Menu Button for Chat View */}
+              <div className="flex items-center gap-3 p-4 border-b border-border sticky top-0 bg-background z-10">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="rounded-lg"
+                  onClick={() => setShowHistory(true)}
+                >
+                  <Menu className="w-5 h-5" />
+                </Button>
+                <span className="text-sm font-medium text-muted-foreground">Compliance Compass</span>
+              </div>
+              <div className="space-y-1 px-6 py-6 max-w-4xl mx-auto w-full">
+                {messages.map((m) => (
+                  <div key={m.id} className="flex items-start gap-4 p-6 hover:bg-accent/30 transition-colors group">
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        m.role === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20"
+                      }`}
+                    >
+                      {m.role === "user" ? <User className="w-4 h-4" /> : <Shield className="w-4 h-4 text-primary" />}
                     </div>
-                    <div className="prose prose-sm max-w-none">
-                      {m.role === "assistant" ? (
-                        m.metadata?.structured_response || typeof m.content !== "string"
-                          ? renderStructuredMessage(m)
-                          : <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{m.content}</p>
-                      ) : typeof m.content === "string" ? (
-                        <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{m.content}</p>
-                      ) : (
-                        <pre className="text-xs text-muted-foreground whitespace-pre-wrap">
-                          {JSON.stringify(m.content, null, 2)}
-                        </pre>
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="font-medium text-sm text-foreground">
+                        {m.role === "user" ? "You" : "Compliance AI"}
+                      </div>
+                      <div className="prose prose-sm max-w-none">
+                        {m.role === "assistant" ? (
+                          m.metadata?.structured_response || typeof m.content !== "string"
+                            ? renderStructuredMessage(m)
+                            : <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{m.content}</p>
+                        ) : typeof m.content === "string" ? (
+                          <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{m.content}</p>
+                        ) : (
+                          <pre className="text-xs text-muted-foreground whitespace-pre-wrap">
+                            {JSON.stringify(m.content, null, 2)}
+                          </pre>
+                        )}
+                      </div>
+
+                      {/* Action buttons for assistant messages */}
+                      {m.role === 'assistant' && (
+                        <ResponseActionButtons
+                          message={m}
+                          messages={messages}
+                          onRegenerate={handleRegenerate}
+                          onShare={handleShareMessage}
+                        />
                       )}
                     </div>
-
-                    {/* Action buttons for assistant messages */}
-                    {m.role === 'assistant' && (
-                      <ResponseActionButtons
-                        message={m}
-                        messages={messages}
-                        onRegenerate={handleRegenerate}
-                        onShare={handleShareMessage}
-                      />
-                    )}
                   </div>
-                </div>
-              ))}
+                ))}
 
               {isLoading && (
                 <div className="flex items-start gap-4 p-6 bg-accent/20">
@@ -1462,11 +1511,10 @@ const ChatPage: React.FC = () => {
                   </div>
                 </div>
               )}
+              </div>
             </div>
           )}
         </div>
-
-        {/* Input - Only shown at bottom when messages exist */}
         {messages.length > 0 && (
           <div className="sticky bottom-0 p-6 pb-8">
             <div className="max-w-3xl mx-auto">

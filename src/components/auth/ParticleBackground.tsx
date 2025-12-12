@@ -1,22 +1,30 @@
 import { useEffect, useRef } from 'react';
 
-interface Particle {
-  x: number;
+// Tunable configuration
+const CONFIG = {
+  columnSpacing: 50,        // Pixels between columns
+  dotsPerColumn: 5,         // Staggered dots per column
+  speed: 0.25,              // Pixels per frame (slow)
+  speedVariation: 0.08,     // Slight variation per dot
+  dotSize: 1.5,             // Consistent size
+  baseOpacity: 0.25,        // Low opacity
+  interactionRadius: 70,    // Small, precise
+  maxDisplacement: 12,      // Max horizontal shift on hover
+  fadeZone: 80,             // Fade in/out zone at edges
+  easingFactor: 0.92,       // How fast dots return to center
+};
+
+interface Dot {
+  columnX: number;
   y: number;
-  baseX: number;
-  baseY: number;
-  vx: number;
-  vy: number;
-  size: number;
-  opacity: number;
   speed: number;
-  oscillationOffset: number;
-  oscillationSpeed: number;
+  baseOpacity: number;
+  offsetX: number;
 }
 
 const ParticleBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const particlesRef = useRef<Particle[]>([]);
+  const dotsRef = useRef<Dot[]>([]);
   const mouseRef = useRef({ x: -1000, y: -1000 });
   const animationRef = useRef<number>();
 
@@ -31,87 +39,83 @@ const ParticleBackground = () => {
       canvas.width = canvas.offsetWidth * window.devicePixelRatio;
       canvas.height = canvas.offsetHeight * window.devicePixelRatio;
       ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-      initParticles();
+      initDots();
     };
 
-    const initParticles = () => {
-      const particleCount = Math.floor((canvas.offsetWidth * canvas.offsetHeight) / 8000);
-      particlesRef.current = [];
+    const initDots = () => {
+      const width = canvas.offsetWidth;
+      const height = canvas.offsetHeight;
+      const columnCount = Math.floor(width / CONFIG.columnSpacing);
+      
+      dotsRef.current = [];
 
-      for (let i = 0; i < particleCount; i++) {
-        const x = Math.random() * canvas.offsetWidth;
-        const y = Math.random() * canvas.offsetHeight;
-        particlesRef.current.push({
-          x,
-          y,
-          baseX: x,
-          baseY: y,
-          vx: 0,
-          vy: 0,
-          size: Math.random() * 2.5 + 1,
-          opacity: Math.random() * 0.3 + 0.1,
-          speed: Math.random() * 0.3 + 0.1,
-          oscillationOffset: Math.random() * Math.PI * 2,
-          oscillationSpeed: Math.random() * 0.02 + 0.01,
-        });
+      for (let col = 0; col < columnCount; col++) {
+        const columnX = (col + 0.5) * CONFIG.columnSpacing;
+        
+        for (let i = 0; i < CONFIG.dotsPerColumn; i++) {
+          // Stagger dots vertically within each column
+          const staggerOffset = (height / CONFIG.dotsPerColumn) * i;
+          const randomOffset = Math.random() * (height / CONFIG.dotsPerColumn);
+          
+          dotsRef.current.push({
+            columnX,
+            y: staggerOffset + randomOffset,
+            speed: CONFIG.speed + (Math.random() - 0.5) * CONFIG.speedVariation * 2,
+            baseOpacity: CONFIG.baseOpacity + (Math.random() - 0.5) * 0.1,
+            offsetX: 0,
+          });
+        }
       }
     };
 
     const animate = () => {
       if (!ctx || !canvas) return;
 
-      ctx.clearRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
+      const width = canvas.offsetWidth;
+      const height = canvas.offsetHeight;
+
+      ctx.clearRect(0, 0, width, height);
 
       const mouse = mouseRef.current;
-      const interactionRadius = 120;
-      const repulsionStrength = 50;
 
-      particlesRef.current.forEach((particle) => {
-        // Vertical floating motion
-        particle.y -= particle.speed;
+      dotsRef.current.forEach((dot) => {
+        // Strictly vertical motion - downward only
+        dot.y += dot.speed;
 
-        // Horizontal oscillation for organic feel
-        particle.oscillationOffset += particle.oscillationSpeed;
-        const oscillation = Math.sin(particle.oscillationOffset) * 0.5;
-        particle.x += oscillation;
+        // Reset to top when exiting bottom
+        if (dot.y > height + CONFIG.fadeZone) {
+          dot.y = -CONFIG.fadeZone;
+        }
 
-        // Mouse interaction - repulsion
-        const dx = particle.x - mouse.x;
-        const dy = particle.y - mouse.y;
+        // Cursor interaction - horizontal displacement only
+        const dx = (dot.columnX + dot.offsetX) - mouse.x;
+        const dy = dot.y - mouse.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        if (distance < interactionRadius && distance > 0) {
-          const force = (interactionRadius - distance) / interactionRadius;
-          const angle = Math.atan2(dy, dx);
-          particle.vx += Math.cos(angle) * force * repulsionStrength * 0.1;
-          particle.vy += Math.sin(angle) * force * repulsionStrength * 0.1;
+        if (distance < CONFIG.interactionRadius && distance > 0) {
+          const force = 1 - (distance / CONFIG.interactionRadius);
+          const direction = dx > 0 ? 1 : -1;
+          const targetOffset = direction * force * CONFIG.maxDisplacement;
+          dot.offsetX += (targetOffset - dot.offsetX) * 0.15;
+        } else {
+          // Ease back to column center
+          dot.offsetX *= CONFIG.easingFactor;
         }
 
-        // Apply velocity with friction
-        particle.x += particle.vx;
-        particle.y += particle.vy;
-        particle.vx *= 0.92;
-        particle.vy *= 0.92;
+        // Calculate edge fading
+        const topFade = Math.min(1, Math.max(0, (dot.y + CONFIG.fadeZone) / CONFIG.fadeZone));
+        const bottomFade = Math.min(1, Math.max(0, (height + CONFIG.fadeZone - dot.y) / CONFIG.fadeZone));
+        const edgeFade = Math.min(topFade, bottomFade);
 
-        // Wrap around when particle goes off screen
-        if (particle.y < -10) {
-          particle.y = canvas.offsetHeight + 10;
-          particle.x = Math.random() * canvas.offsetWidth;
-        }
-        if (particle.x < -10) particle.x = canvas.offsetWidth + 10;
-        if (particle.x > canvas.offsetWidth + 10) particle.x = -10;
+        // Final opacity with edge fading
+        const opacity = dot.baseOpacity * edgeFade;
 
-        // Draw particle with glow effect
-        ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(0, 0%, 100%, ${particle.opacity})`;
-        ctx.fill();
-
-        // Subtle glow for larger particles
-        if (particle.size > 2) {
+        if (opacity > 0.01) {
+          const renderX = dot.columnX + dot.offsetX;
+          
           ctx.beginPath();
-          ctx.arc(particle.x, particle.y, particle.size * 2, 0, Math.PI * 2);
-          ctx.fillStyle = `hsla(0, 0%, 100%, ${particle.opacity * 0.2})`;
+          ctx.arc(renderX, dot.y, CONFIG.dotSize, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
           ctx.fill();
         }
       });
@@ -152,7 +156,7 @@ const ParticleBackground = () => {
     <canvas
       ref={canvasRef}
       className="absolute inset-0 w-full h-full pointer-events-auto"
-      style={{ opacity: 0.6 }}
+      style={{ opacity: 0.7 }}
     />
   );
 };

@@ -9,6 +9,7 @@ import { Shield, AlertCircle, Building2, ShoppingCart, Mail, Eye, EyeOff, Check,
 import { useAuth } from '@/hooks/useAuth';
 import { HelpButton } from '@/components/support/HelpButton';
 import { useToast } from '@/hooks/use-toast';
+import ParticleBackground from './ParticleBackground';
 import { z } from 'zod';
 
 // Validation schemas with security hardening
@@ -198,7 +199,7 @@ const AuthPage = () => {
     <div className="min-h-screen flex">
       {/* Left Hero Section */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary/90 to-accent relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
+        <ParticleBackground />
         
         <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
           <div className="flex items-center gap-3 mb-8">

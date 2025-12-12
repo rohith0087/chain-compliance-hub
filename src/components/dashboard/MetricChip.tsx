@@ -7,6 +7,7 @@ interface MetricChipProps {
   trend?: number;
   color?: 'blue' | 'amber' | 'teal' | 'red' | 'green' | 'purple';
   pulse?: boolean;
+  onClick?: () => void;
 }
 
 const colorMap = {
@@ -27,15 +28,18 @@ const dotColorMap = {
   purple: 'bg-purple-500',
 };
 
-export function MetricChip({ label, value, trend, color = 'blue', pulse }: MetricChipProps) {
+export function MetricChip({ label, value, trend, color = 'blue', pulse, onClick }: MetricChipProps) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
+      whileTap={onClick ? { scale: 0.98 } : undefined}
+      onClick={onClick}
       className={cn(
         'flex items-center gap-3 px-5 py-4 rounded-xl min-w-[110px]',
         'bg-gradient-to-br from-card to-muted/30 border border-border/50',
         'hover:border-primary/40 hover:shadow-md transition-all duration-200',
+        onClick && 'cursor-pointer active:scale-[0.98]',
         colorMap[color]
       )}
     >

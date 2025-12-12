@@ -440,13 +440,44 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
 
                 {/* Inline Metric Chips */}
                 <div className="flex flex-wrap items-center gap-4 p-5 rounded-2xl bg-gradient-to-br from-card to-muted/20 border border-border/40 shadow-sm">
-                  <MetricChip label="Suppliers" value={dashboardStats.connectedSuppliers} color="blue" />
+                  <MetricChip 
+                    label="Suppliers" 
+                    value={dashboardStats.connectedSuppliers} 
+                    color="blue" 
+                    onClick={() => setActiveTab('suppliers')}
+                  />
                   <div className="w-px h-14 bg-border/40" />
-                  <MetricChip label="Active" value={dashboardStats.activeRequests} color="amber" />
+                  <MetricChip 
+                    label="Active" 
+                    value={dashboardStats.activeRequests} 
+                    color="amber" 
+                    onClick={() => {
+                      sessionStorage.setItem('buyer_docs_filter_status', 'pending');
+                      setActiveTab('documents');
+                    }}
+                  />
                   <div className="w-px h-14 bg-border/40" />
-                  <MetricChip label="Pending" value={dashboardStats.pendingReview} color="teal" pulse={dashboardStats.pendingReview > 0} />
+                  <MetricChip 
+                    label="Pending" 
+                    value={dashboardStats.pendingReview} 
+                    color="teal" 
+                    pulse={dashboardStats.pendingReview > 0}
+                    onClick={() => {
+                      sessionStorage.setItem('buyer_docs_filter_status', 'submitted');
+                      setActiveTab('documents');
+                    }}
+                  />
                   <div className="w-px h-14 bg-border/40" />
-                  <MetricChip label="Expiring" value={dashboardStats.expiringSoon} color="red" pulse={dashboardStats.expiringSoon > 0} />
+                  <MetricChip 
+                    label="Expiring" 
+                    value={dashboardStats.expiringSoon} 
+                    color="red" 
+                    pulse={dashboardStats.expiringSoon > 0}
+                    onClick={() => {
+                      sessionStorage.setItem('buyer_docs_filter_expiration', 'expiring_soon');
+                      setActiveTab('documents');
+                    }}
+                  />
                 </div>
 
               </motion.div>

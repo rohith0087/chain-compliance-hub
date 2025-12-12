@@ -56,6 +56,21 @@ const BuyerDocumentsDashboard = () => {
   const loadTimeoutRef = useRef<NodeJS.Timeout>();
   const abortControllerRef = useRef<AbortController>();
 
+  // Check for pre-set filters from dashboard navigation
+  useEffect(() => {
+    const presetStatus = sessionStorage.getItem('buyer_docs_filter_status');
+    const presetExpiration = sessionStorage.getItem('buyer_docs_filter_expiration');
+    
+    if (presetStatus) {
+      setFilters(prev => ({ ...prev, status: presetStatus }));
+      sessionStorage.removeItem('buyer_docs_filter_status');
+    }
+    if (presetExpiration) {
+      setFilters(prev => ({ ...prev, expirationStatus: presetExpiration }));
+      sessionStorage.removeItem('buyer_docs_filter_expiration');
+    }
+  }, []);
+
   // Check for deep-link highlight from notification
   useEffect(() => {
     const highlightId = sessionStorage.getItem('highlight_document_request_id');

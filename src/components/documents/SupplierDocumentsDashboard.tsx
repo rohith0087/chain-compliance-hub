@@ -52,6 +52,16 @@ const SupplierDocumentsDashboard = () => {
   const { user } = useAuth();
   const { currentBranch, allBranchesView } = useBranchContext();
 
+  // Check for pre-set filters from dashboard navigation
+  useEffect(() => {
+    const presetStatus = sessionStorage.getItem('supplier_docs_filter_status');
+    
+    if (presetStatus) {
+      setFilters(prev => ({ ...prev, status: presetStatus }));
+      sessionStorage.removeItem('supplier_docs_filter_status');
+    }
+  }, []);
+
   // Handle URL params for subtab and document highlighting
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);

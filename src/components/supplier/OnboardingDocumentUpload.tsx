@@ -133,12 +133,21 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
     }
 
     // Validate file type
-    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/png', 'text/plain'];
+    const allowedTypes = [
+      'application/pdf', 
+      'application/msword', 
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'image/jpeg', 
+      'image/png', 
+      'text/plain'
+    ];
     if (!allowedTypes.includes(file.type)) {
       console.error(`🔴 DEBUG: Invalid file type: ${file.type}`);
       toast({
         title: "Invalid File Type",
-        description: "Only PDF, DOC, DOCX, JPG, PNG, and TXT files are allowed",
+        description: "Only PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, and TXT files are allowed",
         variant: "destructive"
       });
       return;
@@ -336,6 +345,8 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
           const isUploading = uploading === requirement.id;
           const progress = uploadProgress[requirement.id] || 0;
 
+          const hasTemplate = requirement.template_file_path && requirement.template_file_name;
+
           return (
             <Card key={requirement.id}>
               <CardContent className="p-4">
@@ -349,6 +360,11 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
                             Required
                           </span>
                         )}
+                        {hasTemplate && (
+                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                            Template
+                          </span>
+                        )}
                         {submission && (
                           <CheckCircle className="w-4 h-4 text-green-600" />
                         )}
@@ -360,6 +376,51 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
                       )}
                     </div>
                   </div>
+
+                  {/* Template Download Section */}
+                  {hasTemplate && !submission && (
+                    <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <FileText className="h-5 w-5 text-blue-600" />
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-blue-800">
+                          Download template, fill it out, and upload
+                        </div>
+                        <div className="text-xs text-blue-600">{requirement.template_file_name}</div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="bg-white border-blue-300 text-blue-700 hover:bg-blue-100"
+                        onClick={async () => {
+                          try {
+                            const { data, error } = await supabase.storage
+                              .from('compliance-documents')
+                              .createSignedUrl(requirement.template_file_path!, 300);
+                            if (error) throw error;
+                            if (data?.signedUrl) {
+                              // Create a download link
+                              const link = document.createElement('a');
+                              link.href = data.signedUrl;
+                              link.download = requirement.template_file_name || 'template';
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                            }
+                          } catch (err: any) {
+                            console.error('Error downloading template:', err);
+                            toast({ 
+                              title: 'Error', 
+                              description: 'Unable to download template', 
+                              variant: 'destructive' 
+                            });
+                          }
+                        }}
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Download Template
+                      </Button>
+                    </div>
+                  )}
 
                   {submission ? (
                     submission.is_document_available ? (
@@ -441,8 +502,11 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
                           {!documentNotAvailable[requirement.id] ? (
                             <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                               <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                              <p className="text-sm font-medium mb-2">
+                                {hasTemplate ? 'Upload completed template' : 'Upload document'}
+                              </p>
                               <Button 
-                                variant="outline" 
+                                variant="outline"
                                 disabled={isUploading}
                                 onClick={() => {
                                   console.log(`🔴 DEBUG: Choose File button clicked for ${requirement.id}`);
@@ -452,7 +516,7 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
                                 {isUploading ? 'Uploading...' : 'Choose File'}
                               </Button>
                               <p className="text-xs text-muted-foreground mt-2">
-                                Supported formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB)
+                                Supported formats: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG (Max 10MB)
                               </p>
                               
                               <div className="mt-4 pt-4 border-t border-gray-200">
@@ -544,7 +608,7 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
                         console.log(`🔴 DEBUG: Set ref for ${requirement.id}:`, !!el);
                       }}
                       type="file"
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.txt"
                       className="hidden"
                       onChange={(e) => {
                         console.log(`🔴 DEBUG: File input onChange triggered for ${requirement.id}`);

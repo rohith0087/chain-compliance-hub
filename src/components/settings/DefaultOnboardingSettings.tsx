@@ -7,9 +7,35 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Plus, X, GripVertical } from 'lucide-react';
+import { Plus, X, GripVertical, FileText, FileDown, ExternalLink, ChevronDown } from 'lucide-react';
 import { SafeSelect, SafeSelectItem } from '@/components/ui/SafeSelect';
 import { useBuyerDefaultSettings, DefaultDocumentRequirement, DefaultFormField } from '@/hooks/useBuyerDefaultSettings';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+
+interface CustomTemplate {
+  id: string;
+  template_name: string;
+  document_type: string;
+  category: string;
+  file_path: string;
+  file_name: string;
+  description?: string;
+}
 
 const DOCUMENT_TYPES = [
   'Business License',
@@ -19,6 +45,7 @@ const DOCUMENT_TYPES = [
   'Quality Certificate',
   'Financial Statement',
   'Certificate of Incorporation',
+  'Template Document',
   'Other'
 ];
 
@@ -39,10 +66,14 @@ export const DefaultOnboardingSettings: React.FC = () => {
     documentRequirements,
     formFields,
     loading,
+    buyerId,
     saveSettings,
     saveDocumentRequirements,
     saveFormFields,
   } = useBuyerDefaultSettings();
+
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [localSettings, setLocalSettings] = useState({
     allow_branch_selection: true,
@@ -55,6 +86,9 @@ export const DefaultOnboardingSettings: React.FC = () => {
 
   const [localDocRequirements, setLocalDocRequirements] = useState<Omit<DefaultDocumentRequirement, 'id'>[]>([]);
   const [localFormFields, setLocalFormFields] = useState<Omit<DefaultFormField, 'id'>[]>([]);
+  const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false);
+  const [templates, setTemplates] = useState<CustomTemplate[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
 
   useEffect(() => {
     if (settings) {
@@ -85,6 +119,47 @@ export const DefaultOnboardingSettings: React.FC = () => {
     saveSettings(localSettings);
   };
 
+  const fetchTemplates = async () => {
+    if (!buyerId) return;
+    setLoadingTemplates(true);
+    try {
+      const { data, error } = await supabase
+        .from('custom_document_templates')
+        .select('id, template_name, document_type, category, file_path, file_name, description')
+        .eq('buyer_id', buyerId)
+        .eq('is_active', true)
+        .order('template_name');
+      
+      if (error) throw error;
+      setTemplates(data || []);
+    } catch (error) {
+      console.error('Error fetching templates:', error);
+    } finally {
+      setLoadingTemplates(false);
+    }
+  };
+
+  const openTemplateSelector = () => {
+    fetchTemplates();
+    setTemplateSelectorOpen(true);
+  };
+
+  const handleSelectTemplate = (template: CustomTemplate) => {
+    setLocalDocRequirements(prev => [
+      ...prev,
+      {
+        document_type: 'Template Document',
+        document_name: template.template_name,
+        description: template.description || `Please download this template, fill it out, and upload the completed version.`,
+        is_required: true,
+        display_order: prev.length,
+        template_file_path: template.file_path,
+        template_file_name: template.file_name,
+      }
+    ]);
+    setTemplateSelectorOpen(false);
+  };
+
   const addDocumentRequirement = () => {
     setLocalDocRequirements(prev => [
       ...prev,
@@ -96,6 +171,12 @@ export const DefaultOnboardingSettings: React.FC = () => {
         display_order: prev.length,
       }
     ]);
+  };
+
+  const removeTemplateFromRequirement = (index: number) => {
+    setLocalDocRequirements(prev => prev.map((req, i) => 
+      i === index ? { ...req, template_file_path: undefined, template_file_name: undefined } : req
+    ));
   };
 
   const removeDocumentRequirement = (index: number) => {
@@ -242,15 +323,80 @@ export const DefaultOnboardingSettings: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Template Selector Dialog */}
+      <Dialog open={templateSelectorOpen} onOpenChange={setTemplateSelectorOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Select a Template</DialogTitle>
+            <DialogDescription>
+              Choose a template that suppliers will download, fill out, and upload back.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {loadingTemplates ? (
+            <div className="py-8 text-center text-muted-foreground">Loading templates...</div>
+          ) : templates.length === 0 ? (
+            <div className="py-8 text-center space-y-4">
+              <p className="text-muted-foreground">No templates found.</p>
+              <Button 
+                onClick={() => {
+                  setTemplateSelectorOpen(false);
+                  navigate('/dashboard?tab=templates');
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Template
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {templates.map((template) => (
+                <div
+                  key={template.id}
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
+                  onClick={() => handleSelectTemplate(template)}
+                >
+                  <div className="flex items-center gap-3">
+                    <FileDown className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <div className="font-medium">{template.template_name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {template.category} • {template.file_name}
+                      </div>
+                    </div>
+                  </div>
+                  <Badge variant="secondary">{template.document_type}</Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Document Requirements */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Default Document Requirements</CardTitle>
-            <Button onClick={addDocumentRequirement} size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Document
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Requirement
+                  <ChevronDown className="h-4 w-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={addDocumentRequirement}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Add Document
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={openTemplateSelector}>
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Add Template
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -300,6 +446,40 @@ export const DefaultOnboardingSettings: React.FC = () => {
                       />
                     </div>
 
+                    {/* Template indicator */}
+                    {req.template_file_path && (
+                      <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                        <FileDown className="h-4 w-4 text-blue-600" />
+                        <div className="flex-1">
+                          <span className="text-sm font-medium text-blue-800">Template attached: </span>
+                          <span className="text-sm text-blue-700">{req.template_file_name}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-blue-600 hover:text-blue-800"
+                          onClick={async () => {
+                            const { data } = await supabase.storage
+                              .from('compliance-documents')
+                              .createSignedUrl(req.template_file_path!, 300);
+                            if (data?.signedUrl) {
+                              window.open(data.signedUrl, '_blank');
+                            }
+                          }}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => removeTemplateFromRequirement(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+
                     <div className="flex items-center gap-4">
                       <div className="flex items-center space-x-2">
                         <Switch
@@ -311,6 +491,11 @@ export const DefaultOnboardingSettings: React.FC = () => {
                       </div>
                       {req.is_required && (
                         <Badge variant="secondary">Required</Badge>
+                      )}
+                      {req.template_file_path && (
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                          Template
+                        </Badge>
                       )}
                     </div>
                   </div>

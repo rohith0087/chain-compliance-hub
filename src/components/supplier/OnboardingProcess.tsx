@@ -9,6 +9,7 @@ import { OnboardingBranchSelection } from './OnboardingBranchSelection';
 import { OnboardingDocumentUpload } from './OnboardingDocumentUpload';
 import { OnboardingFormCompletion } from './OnboardingFormCompletion';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface OnboardingProcessProps {
   request: any;
@@ -38,6 +39,30 @@ export const OnboardingProcess: React.FC<OnboardingProcessProps> = ({
         getDocumentRequirements(request.id),
         getFormFields(request.id)
       ]);
+      
+      // Fail-safe: If no requirements exist and request is in early stages, populate from buyer defaults
+      if (docReqs.length === 0 && ['pending', 'invited', 'onboarding_initiated'].includes(request.status)) {
+        console.log('No document requirements found, attempting to populate from buyer defaults...');
+        
+        const { data, error } = await supabase.functions.invoke('populate-onboarding-requirements', {
+          body: { onboarding_request_id: request.id }
+        });
+        
+        if (error) {
+          console.error('Error populating requirements:', error);
+        } else if (data?.success && !data?.skipped) {
+          console.log('Successfully populated requirements from buyer defaults');
+          // Re-fetch after population
+          const [newDocReqs, newFormFields] = await Promise.all([
+            getDocumentRequirements(request.id),
+            getFormFields(request.id)
+          ]);
+          setDocumentRequirements(newDocReqs);
+          setFormFields(newFormFields);
+          return;
+        }
+      }
+      
       setDocumentRequirements(docReqs);
       setFormFields(formFieldsData);
     } catch (error) {

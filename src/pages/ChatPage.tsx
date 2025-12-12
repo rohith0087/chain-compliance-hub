@@ -38,7 +38,10 @@ import {
   RotateCcw,
   Link,
   Mic,
+  MicOff,
   Volume2,
+  VolumeX,
+  Square,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -209,6 +212,16 @@ const ChatPage: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [messageToShare, setMessageToShare] = useState<Message | null>(null);
+  
+  // Voice state
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -521,6 +534,252 @@ const ChatPage: React.FC = () => {
         description: "Failed to copy link.",
         variant: "destructive"
       });
+    }
+  }
+
+  /* ---- Voice Functions ---- */
+
+  async function startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          sampleRate: 16000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+        }
+      });
+      
+      const mediaRecorder = new MediaRecorder(stream, { 
+        mimeType: 'audio/webm;codecs=opus' 
+      });
+      
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      
+      mediaRecorder.onstop = async () => {
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop());
+        
+        if (audioChunksRef.current.length === 0) {
+          toast({
+            title: "No audio recorded",
+            description: "Please try speaking louder or check your microphone.",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        // Convert to base64 and send for transcription
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        await transcribeAudio(audioBlob);
+      };
+      
+      mediaRecorder.start(100); // Collect data every 100ms
+      setIsRecording(true);
+      
+      toast({
+        title: "Recording started",
+        description: "Speak now... Click mic again to stop.",
+      });
+    } catch (error: any) {
+      console.error('Failed to start recording:', error);
+      toast({
+        title: "Microphone access denied",
+        description: "Please allow microphone access to use voice input.",
+        variant: "destructive"
+      });
+    }
+  }
+
+  function stopRecording() {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  }
+
+  async function transcribeAudio(audioBlob: Blob) {
+    setIsTranscribing(true);
+    try {
+      // Convert blob to base64
+      const buffer = await audioBlob.arrayBuffer();
+      const uint8Array = new Uint8Array(buffer);
+      let binary = '';
+      const chunkSize = 32768;
+      for (let i = 0; i < uint8Array.length; i += chunkSize) {
+        const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+        binary += String.fromCharCode.apply(null, Array.from(chunk));
+      }
+      const base64Audio = btoa(binary);
+      
+      const { data, error } = await supabase.functions.invoke('voice-to-text', {
+        body: { audio: base64Audio }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.text) {
+        setInputMessage(prev => prev ? `${prev} ${data.text}` : data.text);
+        toast({
+          title: "Transcription complete",
+          description: "Your speech has been added to the input.",
+        });
+        inputRef.current?.focus();
+      } else {
+        throw new Error('No text returned from transcription');
+      }
+    } catch (error: any) {
+      console.error('Transcription error:', error);
+      toast({
+        title: "Transcription failed",
+        description: error.message || "Failed to transcribe audio. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsTranscribing(false);
+    }
+  }
+
+  function handleMicClick() {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  }
+
+  async function playLastResponse() {
+    // Find last assistant message
+    const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant');
+    if (!lastAssistant) {
+      toast({
+        title: "No response to play",
+        description: "There's no AI response to read aloud yet.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Extract text from structured response or plain content
+    let textToSpeak = '';
+    const structured = lastAssistant.metadata?.structured_response;
+    
+    if (structured) {
+      // Priority: response > content > narrative extraction
+      textToSpeak = structured.response || structured.content || '';
+      
+      // If still empty, try to extract from sections
+      if (!textToSpeak && structured.sections) {
+        textToSpeak = structured.sections.map((s: any) => s.content).join(' ');
+      }
+    }
+    
+    if (!textToSpeak && typeof lastAssistant.content === 'string') {
+      textToSpeak = lastAssistant.content;
+    }
+    
+    if (!textToSpeak) {
+      toast({
+        title: "Cannot read response",
+        description: "This response doesn't contain readable text.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Clean markdown and HTML
+    textToSpeak = textToSpeak
+      .replace(/\*\*(.*?)\*\*/g, '$1')  // Bold
+      .replace(/\*(.*?)\*/g, '$1')       // Italic
+      .replace(/#{1,6}\s/g, '')          // Headers
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')  // Links
+      .replace(/<[^>]+>/g, '')           // HTML tags
+      .replace(/`{1,3}[^`]*`{1,3}/g, '') // Code blocks
+      .trim();
+    
+    if (textToSpeak.length > 4096) {
+      textToSpeak = textToSpeak.substring(0, 4096);
+    }
+    
+    setIsGeneratingAudio(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('text-to-voice', {
+        body: { text: textToSpeak, voice: 'alloy' }
+      });
+      
+      if (error) throw error;
+      
+      if (!data?.audioContent) {
+        throw new Error('No audio content returned');
+      }
+      
+      // Decode base64 and play
+      const audioData = atob(data.audioContent);
+      const audioArray = new Uint8Array(audioData.length);
+      for (let i = 0; i < audioData.length; i++) {
+        audioArray[i] = audioData.charCodeAt(i);
+      }
+      
+      const audioBlob = new Blob([audioArray], { type: 'audio/mp3' });
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      if (audioRef.current) {
+        audioRef.current.pause();
+        URL.revokeObjectURL(audioRef.current.src);
+      }
+      
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+      
+      audio.onplay = () => setIsPlayingAudio(true);
+      audio.onended = () => {
+        setIsPlayingAudio(false);
+        URL.revokeObjectURL(audioUrl);
+      };
+      audio.onerror = () => {
+        setIsPlayingAudio(false);
+        URL.revokeObjectURL(audioUrl);
+        toast({
+          title: "Playback error",
+          description: "Failed to play audio.",
+          variant: "destructive"
+        });
+      };
+      
+      await audio.play();
+    } catch (error: any) {
+      console.error('TTS error:', error);
+      toast({
+        title: "Text-to-speech failed",
+        description: error.message || "Failed to generate audio.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingAudio(false);
+    }
+  }
+
+  function stopAudio() {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsPlayingAudio(false);
+    }
+  }
+
+  function handleAudioClick() {
+    if (isPlayingAudio) {
+      stopAudio();
+    } else {
+      playLastResponse();
     }
   }
 
@@ -1078,13 +1337,51 @@ const ChatPage: React.FC = () => {
                     onKeyPress={handleKeyPress}
                     placeholder="Ask anything"
                     className="flex-1 border-0 focus-visible:ring-0 text-base"
-                    disabled={isLoading}
+                    disabled={isLoading || isRecording || isTranscribing}
                   />
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    <Mic className="w-5 h-5 text-muted-foreground" />
+                  {/* Mic Button */}
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className={`rounded-full transition-all ${
+                      isRecording 
+                        ? 'bg-destructive text-destructive-foreground animate-pulse' 
+                        : isTranscribing 
+                          ? 'bg-primary/20' 
+                          : ''
+                    }`}
+                    onClick={handleMicClick}
+                    disabled={isTranscribing || isLoading}
+                  >
+                    {isTranscribing ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : isRecording ? (
+                      <MicOff className="w-5 h-5" />
+                    ) : (
+                      <Mic className="w-5 h-5 text-muted-foreground" />
+                    )}
                   </Button>
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    <Volume2 className="w-5 h-5 text-muted-foreground" />
+                  {/* Audio Button */}
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className={`rounded-full transition-all ${
+                      isPlayingAudio 
+                        ? 'bg-primary text-primary-foreground' 
+                        : isGeneratingAudio 
+                          ? 'bg-primary/20' 
+                          : ''
+                    }`}
+                    onClick={handleAudioClick}
+                    disabled={isGeneratingAudio || messages.length === 0}
+                  >
+                    {isGeneratingAudio ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : isPlayingAudio ? (
+                      <Square className="w-4 h-4" />
+                    ) : (
+                      <Volume2 className="w-5 h-5 text-muted-foreground" />
+                    )}
                   </Button>
                   <Button 
                     onClick={sendMessage} 
@@ -1174,6 +1471,28 @@ const ChatPage: React.FC = () => {
           <div className="sticky bottom-0 p-6 pb-8">
             <div className="max-w-3xl mx-auto">
               <div className="relative flex items-center gap-2 bg-background/95 backdrop-blur-sm border border-border/50 rounded-full shadow-lg hover:shadow-xl transition-all p-3 px-4">
+                {/* Mic Button */}
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className={`rounded-full transition-all ${
+                    isRecording 
+                      ? 'bg-destructive text-destructive-foreground animate-pulse' 
+                      : isTranscribing 
+                        ? 'bg-primary/20' 
+                        : ''
+                  }`}
+                  onClick={handleMicClick}
+                  disabled={isTranscribing || isLoading}
+                >
+                  {isTranscribing ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : isRecording ? (
+                    <MicOff className="w-5 h-5" />
+                  ) : (
+                    <Mic className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </Button>
                 <Input
                   ref={inputRef}
                   value={inputMessage}
@@ -1181,8 +1500,30 @@ const ChatPage: React.FC = () => {
                   onKeyPress={handleKeyPress}
                   placeholder="Ask about documents, compliance, or regulations..."
                   className="flex-1 border-0 focus-visible:ring-0 text-base bg-transparent"
-                  disabled={isLoading}
+                  disabled={isLoading || isRecording || isTranscribing}
                 />
+                {/* Audio Button */}
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className={`rounded-full transition-all ${
+                    isPlayingAudio 
+                      ? 'bg-primary text-primary-foreground' 
+                      : isGeneratingAudio 
+                        ? 'bg-primary/20' 
+                        : ''
+                  }`}
+                  onClick={handleAudioClick}
+                  disabled={isGeneratingAudio}
+                >
+                  {isGeneratingAudio ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : isPlayingAudio ? (
+                    <Square className="w-4 h-4" />
+                  ) : (
+                    <Volume2 className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </Button>
                 <Button 
                   onClick={sendMessage} 
                   disabled={isLoading || !inputMessage.trim()} 

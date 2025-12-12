@@ -199,16 +199,9 @@ serve(async (req) => {
           continue;
         }
 
-        // If linking to existing request, update the request status to reflect new upload
-        if (!isNewRequest) {
-          await supabase
-            .from('document_requests')
-            .update({ 
-              status: 'submitted',
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', requestId);
-        }
+        // NOTE: When linking to existing request, we do NOT update the request status
+        // This preserves the approved status of previous versions while the new upload
+        // starts with its own 'submitted' status for individual review
 
         // Notify supplier about new pre-populated document
         try {

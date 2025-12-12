@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { HelpCircle, MessageCircle, Ticket, Play, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TicketSubmissionModal } from './TicketSubmissionModal';
 import { useTour } from './TourProvider';
-import { supportTours, findTourByKeywords } from '@/config/supportTours';
+import { getToursByUserType } from '@/config/supportTours';
 
 export interface HelpButtonUser {
   id?: string;
@@ -26,6 +26,19 @@ export const HelpButton = ({ source, user }: HelpButtonProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isTicketOpen, setIsTicketOpen] = useState(false);
   const { startTour, isRunning } = useTour();
+
+  // Determine if we should show guided tours (only for logged-in users, not on login page)
+  const showGuidedTours = source !== 'login_page';
+
+  // Filter tours based on portal source
+  const filteredTours = useMemo(() => {
+    if (source === 'buyer_portal') {
+      return getToursByUserType('buyer');
+    } else if (source === 'supplier_portal') {
+      return getToursByUserType('supplier');
+    }
+    return [];
+  }, [source]);
 
   const handleStartTour = (tourId: string) => {
     setIsOpen(false);
@@ -61,61 +74,88 @@ export const HelpButton = ({ source, user }: HelpButtonProps) => {
             </SheetTitle>
           </SheetHeader>
           
-          <Tabs defaultValue="guides" className="flex flex-col h-[calc(100%-80px)]">
-            <TabsList className="grid w-full grid-cols-2 mx-6 mt-4" style={{ width: 'calc(100% - 48px)' }}>
-              <TabsTrigger value="guides" className="flex items-center gap-2">
-                <Play className="h-4 w-4" />
-                Guided Tours
-              </TabsTrigger>
-              <TabsTrigger value="ticket" className="flex items-center gap-2">
-                <Ticket className="h-4 w-4" />
-                Submit Ticket
-              </TabsTrigger>
-            </TabsList>
+          {showGuidedTours ? (
+            <Tabs defaultValue="guides" className="flex flex-col h-[calc(100%-80px)]">
+              <TabsList className="grid w-full grid-cols-2 mx-6 mt-4" style={{ width: 'calc(100% - 48px)' }}>
+                <TabsTrigger value="guides" className="flex items-center gap-2">
+                  <Play className="h-4 w-4" />
+                  Guided Tours
+                </TabsTrigger>
+                <TabsTrigger value="ticket" className="flex items-center gap-2">
+                  <Ticket className="h-4 w-4" />
+                  Submit Ticket
+                </TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="guides" className="flex-1 mt-0">
-              <ScrollArea className="h-[calc(100vh-220px)] px-6 py-4">
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Select a guided tour to learn how to use different features of the platform.
-                  </p>
-                  {supportTours.map((tour) => (
-                    <div
-                      key={tour.id}
-                      className="p-4 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors group"
-                      onClick={() => handleStartTour(tour.id)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-sm">{tour.name}</h4>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {tour.description}
-                          </p>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+              <TabsContent value="guides" className="flex-1 mt-0">
+                <ScrollArea className="h-[calc(100vh-220px)] px-6 py-4">
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Select a guided tour to learn how to use different features of the platform.
+                    </p>
+                    {filteredTours.length > 0 ? (
+                      filteredTours.map((tour) => (
+                        <div
+                          key={tour.id}
+                          className="p-4 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors group"
+                          onClick={() => handleStartTour(tour.id)}
                         >
-                          <Play className="h-4 w-4 mr-1" />
-                          Start
-                        </Button>
-                      </div>
-                      <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-                        <span className="bg-muted px-2 py-0.5 rounded">
-                          {tour.steps.length} steps
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </TabsContent>
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <h4 className="font-medium text-sm">{tour.name}</h4>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {tour.description}
+                              </p>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Play className="h-4 w-4 mr-1" />
+                              Start
+                            </Button>
+                          </div>
+                          <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+                            <span className="bg-muted px-2 py-0.5 rounded">
+                              {tour.steps.length} steps
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-8">
+                        No guided tours available for this section.
+                      </p>
+                    )}
+                  </div>
+                </ScrollArea>
+              </TabsContent>
 
-            <TabsContent value="ticket" className="flex-1 mt-0 px-6 py-4">
+              <TabsContent value="ticket" className="flex-1 mt-0 px-6 py-4">
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Can't find what you're looking for? Submit a support ticket and our team will get back to you.
+                  </p>
+                  <Button
+                    onClick={() => {
+                      setIsOpen(false);
+                      setIsTicketOpen(true);
+                    }}
+                    className="w-full"
+                  >
+                    <Ticket className="h-4 w-4 mr-2" />
+                    Open Ticket Form
+                  </Button>
+                </div>
+              </TabsContent>
+            </Tabs>
+          ) : (
+            // Login page: Show only ticket submission (no guided tours)
+            <div className="px-6 py-4">
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Can't find what you're looking for? Submit a support ticket and our team will get back to you.
+                  Need help signing in or have questions? Submit a support ticket and our team will get back to you.
                 </p>
                 <Button
                   onClick={() => {
@@ -128,8 +168,8 @@ export const HelpButton = ({ source, user }: HelpButtonProps) => {
                   Open Ticket Form
                 </Button>
               </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+          )}
         </SheetContent>
       </Sheet>
 

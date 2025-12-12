@@ -560,7 +560,7 @@ const SupplierDiscovery = () => {
                 Incoming Requests ({pendingIncomingCount})
               </h3>
               <div className="space-y-2">
-                {incomingRequests.filter(r => r.status === 'pending').map((request) => (
+                {incomingRequests.filter(r => r.status === 'pending' && r.supplier).map((request) => (
                   <Card key={request.id} className="p-4">
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3 min-w-0">

@@ -136,7 +136,7 @@ const BuyerConnectionRequests = () => {
 
     try {
       // Use the new approval with onboarding function
-      const { data, error } = await supabase.rpc('approve_connection_with_onboarding', {
+      const { data, error } = await (supabase.rpc as any)('approve_connection_with_onboarding', {
         p_connection_id: connectionId,
         p_onboarding_type: onboardingType,
         p_notes: null

@@ -21,11 +21,12 @@ interface UnifiedBuyerConnectionsProps {
 
 const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnectionsProps) => {
   const [requests, setRequests] = useState<any[]>([]);
+  const [outgoingRequests, setOutgoingRequests] = useState<any[]>([]);
   const [connectedBuyers, setConnectedBuyers] = useState<any[]>([]);
   const [supplierProfile, setSupplierProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filterTab, setFilterTab] = useState<'all' | 'active_onboarding' | 'connected_only'>('all');
+  const [filterTab, setFilterTab] = useState<'all' | 'active_onboarding' | 'connected_only' | 'pending_outgoing'>('all');
   const [selectedOnboardingRequest, setSelectedOnboardingRequest] = useState<any>(null);
   const [showOnboardingProcess, setShowOnboardingProcess] = useState(false);
   const { user } = useAuth();
@@ -113,7 +114,11 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
       
       if (requestsError) { setError('Failed to load connection requests.'); return; }
 
+      // Pending incoming requests (from buyers to this supplier)
       setRequests(requestsData?.filter((req: any) => req.status === 'pending' && req.initiated_by === 'buyer') || []);
+      // Pending outgoing requests (from this supplier to buyers)
+      setOutgoingRequests(requestsData?.filter((req: any) => req.status === 'pending' && req.initiated_by === 'supplier') || []);
+      // Approved connections
       setConnectedBuyers(requestsData?.filter((req: any) => req.status === 'approved') || []);
     } catch (error) {
       setError('An unexpected error occurred.');
@@ -208,10 +213,21 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
     );
   };
 
-  const filteredConnectedBuyers = connectedBuyers.filter(c => {
-    const s = getConnectionDisplayStatus(c);
-    return filterTab === 'active_onboarding' ? ['onboarding_pending', 'onboarding_in_progress', 'under_review', 'onboarding_requested'].includes(s.status) : filterTab === 'connected_only' ? ['connected_no_onboarding', 'fully_connected'].includes(s.status) : true;
-  });
+  // Combined list for "All" filter includes both connected buyers and pending outgoing requests
+  const allConnections = [...connectedBuyers, ...outgoingRequests];
+  
+  const filteredConnectedBuyers = filterTab === 'pending_outgoing' 
+    ? outgoingRequests 
+    : filterTab === 'all' 
+      ? allConnections
+      : connectedBuyers.filter(c => {
+          const s = getConnectionDisplayStatus(c);
+          return filterTab === 'active_onboarding' 
+            ? ['onboarding_pending', 'onboarding_in_progress', 'under_review', 'onboarding_requested'].includes(s.status) 
+            : filterTab === 'connected_only' 
+              ? ['connected_no_onboarding', 'fully_connected'].includes(s.status) 
+              : true;
+        });
 
   if (loading) return <Card><CardContent className="py-12 text-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div><p>Loading...</p></CardContent></Card>;
   if (error) return <Card><CardContent className="py-12 text-center"><AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" /><p className="text-red-600 mb-2">{error}</p><Button onClick={fetchData} variant="outline" size="sm"><RefreshCw className="w-4 h-4 mr-2" />Try Again</Button></CardContent></Card>;
@@ -229,12 +245,15 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
       </div>
       <Tabs defaultValue="connected" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="connected">Connected Buyers ({connectedBuyers.length})</TabsTrigger>
+          <TabsTrigger value="connected">Connected Buyers ({allConnections.length})</TabsTrigger>
           <TabsTrigger value="pending">Pending Requests ({requests.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="connected" className="space-y-4">
-          <div className="flex gap-2 border-b pb-2">
-            <Button variant={filterTab === 'all' ? 'default' : 'ghost'} size="sm" onClick={() => setFilterTab('all')}>All ({connectedBuyers.length})</Button>
+          <div className="flex flex-wrap gap-2 border-b pb-2">
+            <Button variant={filterTab === 'all' ? 'default' : 'ghost'} size="sm" onClick={() => setFilterTab('all')}>All ({allConnections.length})</Button>
+            <Button variant={filterTab === 'pending_outgoing' ? 'default' : 'ghost'} size="sm" onClick={() => setFilterTab('pending_outgoing')}>
+              Pending Outgoing ({outgoingRequests.length})
+            </Button>
             <Button variant={filterTab === 'active_onboarding' ? 'default' : 'ghost'} size="sm" onClick={() => setFilterTab('active_onboarding')}>Active Onboarding ({connectedBuyers.filter(c => ['onboarding_pending', 'onboarding_in_progress', 'under_review', 'onboarding_requested'].includes(getConnectionDisplayStatus(c).status)).length})</Button>
             <Button variant={filterTab === 'connected_only' ? 'default' : 'ghost'} size="sm" onClick={() => setFilterTab('connected_only')}>Connected Only ({connectedBuyers.filter(c => ['connected_no_onboarding', 'fully_connected'].includes(getConnectionDisplayStatus(c).status)).length})</Button>
           </div>

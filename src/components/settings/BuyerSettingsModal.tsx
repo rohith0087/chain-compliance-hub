@@ -217,13 +217,13 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue={defaultTab} className="w-full">
-          <TabsList className={`grid w-full ${gridCols}`}>
+        <Tabs defaultValue={defaultTab} className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className={`grid w-full ${gridCols} flex-shrink-0 sticky top-0 z-10 bg-background`}>
             {isOwner && (
               <>
                 <TabsTrigger value="company">Company</TabsTrigger>
@@ -238,106 +238,108 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
             )}
           </TabsList>
 
-          {isOwner && (
-            <>
-              <TabsContent value="company" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Company Information</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleCompanySubmit} className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+          <div className="flex-1 overflow-y-auto mt-4">
+            {isOwner && (
+              <>
+                <TabsContent value="company" className="space-y-4 mt-0">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Company Information</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <form onSubmit={handleCompanySubmit} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="companyName">Company Name</Label>
+                            <Input
+                              id="companyName"
+                              value={buyerData.company_name}
+                              onChange={(e) => setBuyerData(prev => ({ ...prev, company_name: e.target.value }))}
+                              required
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="industry">Industry</Label>
+                            <SafeSelect
+                              value={buyerData.industry}
+                              onValueChange={handleIndustryChange}
+                              placeholder="Select an industry"
+                            >
+                              {VALID_INDUSTRIES.map((industry) => (
+                                <SafeSelectItem key={industry} value={industry}>
+                                  {industry}
+                                </SafeSelectItem>
+                              ))}
+                            </SafeSelect>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="contactEmail">Contact Email</Label>
+                            <Input
+                              id="contactEmail"
+                              type="email"
+                              value={buyerData.contact_email}
+                              onChange={(e) => setBuyerData(prev => ({ ...prev, contact_email: e.target.value }))}
+                              required
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="phone">Phone</Label>
+                            <Input
+                              id="phone"
+                              value={buyerData.phone}
+                              onChange={(e) => setBuyerData(prev => ({ ...prev, phone: e.target.value }))}
+                            />
+                          </div>
+                        </div>
+
                         <div className="space-y-2">
-                          <Label htmlFor="companyName">Company Name</Label>
-                          <Input
-                            id="companyName"
-                            value={buyerData.company_name}
-                            onChange={(e) => setBuyerData(prev => ({ ...prev, company_name: e.target.value }))}
-                            required
+                          <Label htmlFor="address">Address</Label>
+                          <Textarea
+                            id="address"
+                            value={buyerData.address}
+                            onChange={(e) => setBuyerData(prev => ({ ...prev, address: e.target.value }))}
+                            rows={3}
                           />
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="industry">Industry</Label>
-                          <SafeSelect
-                            value={buyerData.industry}
-                            onValueChange={handleIndustryChange}
-                            placeholder="Select an industry"
-                          >
-                            {VALID_INDUSTRIES.map((industry) => (
-                              <SafeSelectItem key={industry} value={industry}>
-                                {industry}
-                              </SafeSelectItem>
-                            ))}
-                          </SafeSelect>
-                        </div>
-                      </div>
+                        <Button type="submit" disabled={loading} className="w-full">
+                          {loading ? "Updating..." : "Update Company Information"}
+                        </Button>
+                      </form>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="contactEmail">Contact Email</Label>
-                          <Input
-                            id="contactEmail"
-                            type="email"
-                            value={buyerData.contact_email}
-                            onChange={(e) => setBuyerData(prev => ({ ...prev, contact_email: e.target.value }))}
-                            required
-                          />
-                        </div>
+                <TabsContent value="defaults" className="mt-0">
+                  <DefaultOnboardingSettings />
+                </TabsContent>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="phone">Phone</Label>
-                          <Input
-                            id="phone"
-                            value={buyerData.phone}
-                            onChange={(e) => setBuyerData(prev => ({ ...prev, phone: e.target.value }))}
-                          />
-                        </div>
-                      </div>
+                <TabsContent value="notifications" className="mt-0">
+                  <NotificationSettingsForm />
+                </TabsContent>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="address">Address</Label>
-                        <Textarea
-                          id="address"
-                          value={buyerData.address}
-                          onChange={(e) => setBuyerData(prev => ({ ...prev, address: e.target.value }))}
-                          rows={3}
-                        />
-                      </div>
+                <TabsContent value="logo" className="mt-0">
+                  <LogoUploadWidget
+                    currentLogoUrl={buyerData.company_logo_url}
+                    onLogoUpdate={canEdit ? handleLogoUpdate : () => {}}
+                  />
+                </TabsContent>
+              </>
+            )}
 
-                      <Button type="submit" disabled={loading} className="w-full">
-                        {loading ? "Updating..." : "Update Company Information"}
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+            <TabsContent value="account" className="mt-0">
+              <AccountSettingsForm />
+            </TabsContent>
 
-              <TabsContent value="defaults">
-                <DefaultOnboardingSettings />
-              </TabsContent>
-
-              <TabsContent value="notifications">
-                <NotificationSettingsForm />
-              </TabsContent>
-
-              <TabsContent value="logo">
-                <LogoUploadWidget
-                  currentLogoUrl={buyerData.company_logo_url}
-                  onLogoUpdate={canEdit ? handleLogoUpdate : () => {}}
-                />
-              </TabsContent>
-            </>
-          )}
-
-          <TabsContent value="account">
-            <AccountSettingsForm />
-          </TabsContent>
-
-          <TabsContent value="password">
-            <PasswordChangeForm />
-          </TabsContent>
+            <TabsContent value="password" className="mt-0">
+              <PasswordChangeForm />
+            </TabsContent>
+          </div>
         </Tabs>
       </DialogContent>
     </Dialog>

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { HelpButton } from '@/components/support/HelpButton';
 import { useToast } from '@/hooks/use-toast';
 import ParticleBackground from './ParticleBackground';
+import { TurnstileWidget } from './TurnstileWidget';
+import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
 
 // Validation schemas with security hardening
@@ -74,12 +76,58 @@ const AuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState('login');
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<{ reset: () => void } | null>(null);
   
   const { signIn, signUp, resetPassword } = useAuth();
   const { toast } = useToast();
 
   const passwordStrength = useMemo(() => getPasswordStrength(password), [password]);
   const passwordRequirements = useMemo(() => checkPasswordRequirements(password), [password]);
+
+  const resetTurnstile = useCallback(() => {
+    setTurnstileToken(null);
+    turnstileRef.current?.reset();
+  }, []);
+
+  const validateTurnstile = async (): Promise<boolean> => {
+    if (!turnstileToken) {
+      toast({
+        title: "Verification Required",
+        description: "Please complete the security verification.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-turnstile', {
+        body: { token: turnstileToken }
+      });
+
+      if (error || !data?.success) {
+        console.error('Turnstile validation failed:', data?.errorCodes || error);
+        toast({
+          title: "Verification Failed",
+          description: "Please complete the verification again.",
+          variant: "destructive",
+        });
+        resetTurnstile();
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Turnstile validation error:', err);
+      toast({
+        title: "Verification Error",
+        description: "An error occurred. Please try again.",
+        variant: "destructive",
+      });
+      resetTurnstile();
+      return false;
+    }
+  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,6 +144,14 @@ const AuthPage = () => {
     }
     
     setLoading(true);
+    
+    // Validate Turnstile token first
+    const isValid = await validateTurnstile();
+    if (!isValid) {
+      setLoading(false);
+      return;
+    }
+    
     const { error } = await signIn(email.trim(), password);
     
     if (error) {
@@ -104,6 +160,7 @@ const AuthPage = () => {
         description: error.message,
         variant: "destructive",
       });
+      resetTurnstile();
     }
     setLoading(false);
   };
@@ -130,6 +187,14 @@ const AuthPage = () => {
     }
     
     setLoading(true);
+    
+    // Validate Turnstile token first
+    const isValid = await validateTurnstile();
+    if (!isValid) {
+      setLoading(false);
+      return;
+    }
+    
     const { error } = await signUp(email.trim(), password, fullName.trim(), selectedRoles, companyName.trim() || undefined);
     
     if (error) {
@@ -138,6 +203,7 @@ const AuthPage = () => {
         description: error.message,
         variant: "destructive",
       });
+      resetTurnstile();
     } else {
       toast({
         title: "Account Created",
@@ -148,6 +214,7 @@ const AuthPage = () => {
       setFullName('');
       setCompanyName('');
       setSelectedRoles(['supplier']);
+      resetTurnstile();
     }
     setLoading(false);
   };
@@ -325,7 +392,15 @@ const AuthPage = () => {
                       )}
                     </div>
                     
-                    <Button type="submit" className="w-full h-11 font-semibold" disabled={loading}>
+                    {/* Turnstile Widget */}
+                    <TurnstileWidget
+                      siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ''}
+                      onSuccess={(token) => setTurnstileToken(token)}
+                      onExpire={() => setTurnstileToken(null)}
+                      onError={() => setTurnstileToken(null)}
+                    />
+                    
+                    <Button type="submit" className="w-full h-11 font-semibold" disabled={loading || !turnstileToken}>
                       {loading ? "Logging In..." : "Login"}
                     </Button>
                     
@@ -554,10 +629,18 @@ const AuthPage = () => {
                       )}
                     </div>
                     
+                    {/* Turnstile Widget */}
+                    <TurnstileWidget
+                      siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ''}
+                      onSuccess={(token) => setTurnstileToken(token)}
+                      onExpire={() => setTurnstileToken(null)}
+                      onError={() => setTurnstileToken(null)}
+                    />
+                    
                     <Button 
                       type="submit" 
                       className="w-full h-11 font-semibold" 
-                      disabled={loading || selectedRoles.length === 0}
+                      disabled={loading || selectedRoles.length === 0 || !turnstileToken}
                     >
                       {loading ? "Creating Account..." : "Create Account"}
                     </Button>

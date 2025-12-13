@@ -90,7 +90,7 @@ const AuthPage = () => {
     turnstileRef.current?.reset();
   }, []);
 
-  const validateTurnstile = async (): Promise<boolean> => {
+  const checkTurnstileToken = (): boolean => {
     if (!turnstileToken) {
       toast({
         title: "Verification Required",
@@ -99,34 +99,7 @@ const AuthPage = () => {
       });
       return false;
     }
-
-    try {
-      const { data, error } = await supabase.functions.invoke('validate-turnstile', {
-        body: { token: turnstileToken }
-      });
-
-      if (error || !data?.success) {
-        console.error('Turnstile validation failed:', data?.errorCodes || error);
-        toast({
-          title: "Verification Failed",
-          description: "Please complete the verification again.",
-          variant: "destructive",
-        });
-        resetTurnstile();
-        return false;
-      }
-
-      return true;
-    } catch (err) {
-      console.error('Turnstile validation error:', err);
-      toast({
-        title: "Verification Error",
-        description: "An error occurred. Please try again.",
-        variant: "destructive",
-      });
-      resetTurnstile();
-      return false;
-    }
+    return true;
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -143,16 +116,15 @@ const AuthPage = () => {
       return;
     }
     
-    setLoading(true);
-    
-    // Validate Turnstile token first
-    const isValid = await validateTurnstile();
-    if (!isValid) {
-      setLoading(false);
+    // Check Turnstile token exists
+    if (!checkTurnstileToken()) {
       return;
     }
     
-    const { error } = await signIn(email.trim(), password);
+    setLoading(true);
+    
+    // Pass token directly to Supabase Auth for server-side validation
+    const { error } = await signIn(email.trim(), password, turnstileToken!);
     
     if (error) {
       toast({
@@ -186,16 +158,15 @@ const AuthPage = () => {
       return;
     }
     
-    setLoading(true);
-    
-    // Validate Turnstile token first
-    const isValid = await validateTurnstile();
-    if (!isValid) {
-      setLoading(false);
+    // Check Turnstile token exists
+    if (!checkTurnstileToken()) {
       return;
     }
     
-    const { error } = await signUp(email.trim(), password, fullName.trim(), selectedRoles, companyName.trim() || undefined);
+    setLoading(true);
+    
+    // Pass token directly to Supabase Auth for server-side validation
+    const { error } = await signUp(email.trim(), password, fullName.trim(), selectedRoles, companyName.trim() || undefined, turnstileToken!);
     
     if (error) {
       toast({

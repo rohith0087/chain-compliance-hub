@@ -52,12 +52,15 @@ const DOCUMENT_TYPES = [
 const FIELD_TYPES = [
   { value: 'text', label: 'Text Input' },
   { value: 'email', label: 'Email' },
-  { value: 'phone', label: 'Phone Number' },
+  { value: 'tel', label: 'Phone Number' },
   { value: 'textarea', label: 'Long Text' },
   { value: 'select', label: 'Dropdown' },
+  { value: 'multiselect', label: 'Multi-Select' },
   { value: 'checkbox', label: 'Checkbox' },
+  { value: 'radio', label: 'Radio Buttons' },
   { value: 'number', label: 'Number' },
   { value: 'date', label: 'Date' },
+  { value: 'file', label: 'File Upload' },
 ];
 
 export const DefaultOnboardingSettings: React.FC = () => {

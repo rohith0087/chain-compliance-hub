@@ -77,7 +77,7 @@ const NotificationCenter = ({ onNavigate }: NotificationCenterProps) => {
       case 'connection_response':
         return 'connections';
       case 'onboarding_request':
-        return 'onboarding';
+        return 'create-onboarding'; // Special value to trigger create onboarding form with pre-selected supplier
       default:
         return 'overview';
     }
@@ -87,6 +87,12 @@ const NotificationCenter = ({ onNavigate }: NotificationCenterProps) => {
     markAsRead(notification.id);
     
     const targetTab = getNotificationTargetTab(notification.type);
+    
+    // For onboarding_request, store connection ID for pre-selection in the create form
+    if (notification.type === 'onboarding_request' && notification.reference_id) {
+      sessionStorage.setItem('preselect_onboarding_supplier_connection_id', notification.reference_id);
+    }
+    
     // Pass reference_id for deep-linking to specific documents
     onNavigate?.(targetTab, notification.reference_id || notification.id);
     

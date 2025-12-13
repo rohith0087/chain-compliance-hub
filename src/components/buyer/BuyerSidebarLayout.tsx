@@ -542,6 +542,16 @@ export function BuyerSidebarLayout({
               <SubscriptionStatusWidget compact />
               <NotificationCenter 
                 onNavigate={(tab, referenceId) => {
+                  // Handle special 'create-onboarding' tab to open create form with pre-selected supplier
+                  if (tab === 'create-onboarding') {
+                    onTabChange('onboarding');
+                    // Small delay to ensure tab change renders before triggering modal
+                    setTimeout(() => {
+                      onShowQuickOnboarding();
+                    }, 100);
+                    return;
+                  }
+                  
                   onTabChange(tab);
                   if (referenceId) {
                     sessionStorage.setItem('highlight_document_request_id', referenceId);

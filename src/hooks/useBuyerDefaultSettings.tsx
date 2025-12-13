@@ -26,7 +26,7 @@ export interface DefaultDocumentRequirement {
 
 export interface DefaultFormField {
   id?: string;
-  field_type: 'text' | 'email' | 'phone' | 'select' | 'textarea' | 'checkbox' | 'number' | 'date';
+  field_type: 'text' | 'email' | 'tel' | 'select' | 'multiselect' | 'textarea' | 'checkbox' | 'radio' | 'number' | 'date' | 'file';
   field_label: string;
   field_description?: string;
   field_options?: any;

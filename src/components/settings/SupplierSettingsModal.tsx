@@ -238,21 +238,22 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className={`grid w-full ${isOwner ? 'grid-cols-4' : 'grid-cols-2'}`}>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className={`grid w-full ${isOwner ? 'grid-cols-4' : 'grid-cols-2'} flex-shrink-0 sticky top-0 z-10 bg-background`}>
             {isOwner && <TabsTrigger value="company">Company</TabsTrigger>}
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="password">Password</TabsTrigger>
             {isOwner && <TabsTrigger value="logo">Logo</TabsTrigger>}
           </TabsList>
           
+          <div className="flex-1 overflow-y-auto mt-4">
           {isOwner && (
-            <TabsContent value="company" className="space-y-4 mt-6">
+            <TabsContent value="company" className="space-y-4 mt-0">
               <Card>
                 <CardHeader>
                   <CardTitle>Company Information</CardTitle>
@@ -349,22 +350,23 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
             </TabsContent>
           )}
           
-          <TabsContent value="account" className="space-y-4 mt-6">
+          <TabsContent value="account" className="space-y-4 mt-0">
             <AccountSettingsForm />
           </TabsContent>
 
-          <TabsContent value="password" className="space-y-4 mt-6">
+          <TabsContent value="password" className="space-y-4 mt-0">
             <PasswordChangeForm />
           </TabsContent>
           
           {isOwner && (
-            <TabsContent value="logo" className="space-y-4 mt-6">
+            <TabsContent value="logo" className="space-y-4 mt-0">
               <LogoUploadWidget
                 currentLogoUrl={supplierData.company_logo_url}
                 onLogoUpdate={handleLogoUpdate}
               />
             </TabsContent>
           )}
+          </div>
         </Tabs>
       </DialogContent>
     </Dialog>

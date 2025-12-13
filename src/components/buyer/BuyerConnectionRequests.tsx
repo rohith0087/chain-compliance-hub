@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Building2, Calendar, Check, X, UserCheck } from 'lucide-react';
 import { format } from 'date-fns';
+import ConnectionApprovalModal, { OnboardingType } from './ConnectionApprovalModal';
 
 interface ConnectionRequest {
   id: string;
@@ -28,8 +30,11 @@ const BuyerConnectionRequests = () => {
   const [connectionRequests, setConnectionRequests] = useState<ConnectionRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+  const [approvalModalOpen, setApprovalModalOpen] = useState(false);
+  const [selectedConnection, setSelectedConnection] = useState<ConnectionRequest | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const fetchConnectionRequests = async () => {
     if (!user) return;
@@ -111,10 +116,17 @@ const BuyerConnectionRequests = () => {
     };
   }, [user]);
 
-  const handleConnectionResponse = async (connectionId: string, action: 'approved' | 'rejected') => {
-    console.log(`Starting ${action} action for connection ID: ${connectionId}`);
-    
-    // Prevent multiple clicks
+  const handleApproveClick = (request: ConnectionRequest) => {
+    setSelectedConnection(request);
+    setApprovalModalOpen(true);
+  };
+
+  const handleApprovalConfirm = async (onboardingType: OnboardingType) => {
+    if (!selectedConnection) return;
+
+    const connectionId = selectedConnection.id;
+    console.log(`Starting approval with onboarding type: ${onboardingType} for connection ID: ${connectionId}`);
+
     if (processingIds.has(connectionId)) {
       console.log(`Already processing connection ${connectionId}, ignoring duplicate request`);
       return;
@@ -123,25 +135,29 @@ const BuyerConnectionRequests = () => {
     setProcessingIds(prev => new Set(prev).add(connectionId));
 
     try {
-      // Use the new unified connection approval function
-      const { data, error } = await supabase.rpc('handle_unified_connection_approval', {
+      // Use the new approval with onboarding function
+      const { data, error } = await supabase.rpc('approve_connection_with_onboarding', {
         p_connection_id: connectionId,
-        p_action: action,
+        p_onboarding_type: onboardingType,
         p_notes: null
       });
 
       if (error) {
-        console.error(`Error ${action === 'approved' ? 'approving' : 'rejecting'} connection:`, error);
+        console.error('Error approving connection:', error);
         toast({
           title: "Error",
-          description: `Failed to ${action === 'approved' ? 'approve' : 'reject'} connection request`,
+          description: "Failed to approve connection request",
           variant: "destructive",
         });
         return;
       }
 
-      // Cast data to expected type since it's jsonb
-      const result = data as { success: boolean; error?: string; message?: string; onboarding_request_id?: string };
+      const result = data as { 
+        success: boolean; 
+        error?: string; 
+        message?: string; 
+        onboarding_request_id?: string 
+      };
 
       if (!result?.success) {
         toast({
@@ -152,58 +168,36 @@ const BuyerConnectionRequests = () => {
         return;
       }
 
-      const successMessage = action === 'approved' 
-        ? 'Connection approved and onboarding request created' 
-        : 'Connection request rejected';
+      // Create notification for supplier
+      await createSupplierNotification(connectionId, 'approved');
+
+      // Show success message based on onboarding type
+      let successMessage = 'Connection approved successfully';
+      if (onboardingType === 'default') {
+        successMessage = 'Connection approved and default onboarding initiated';
+      } else if (onboardingType === 'custom') {
+        successMessage = 'Connection approved. Redirecting to customize onboarding...';
+      }
 
       toast({
         title: "Success",
         description: successMessage,
       });
 
-      // Get the connection details to create notification for supplier
-      const connection = connectionRequests.find(req => req.id === connectionId);
-      if (connection) {
-        console.log(`Creating notification for supplier: ${connection.supplier_id}`);
-        
-        // Get supplier profile to send notification
-        const { data: supplier, error: supplierError } = await supabase
-          .from('suppliers')
-          .select('profile_id')
-          .eq('id', connection.supplier_id)
-          .single();
+      setApprovalModalOpen(false);
+      setSelectedConnection(null);
 
-        if (supplierError) {
-          console.error('Error fetching supplier profile:', supplierError);
-        } else if (supplier) {
-          // Create notification for supplier
-          const { error: notificationError } = await supabase.rpc('create_notification', {
-            p_user_id: supplier.profile_id,
-            p_title: `Connection Request ${action === 'approved' ? 'Approved' : 'Rejected'}`,
-            p_message: `Your connection request has been ${action} by the buyer.`,
-            p_type: 'connection_response',
-            p_reference_id: connectionId
-          });
-
-          if (notificationError) {
-            console.error('Error creating notification:', notificationError);
-          } else {
-            console.log('Notification created successfully');
-          }
-        }
+      // If custom onboarding, navigate to the onboarding customization page
+      if (onboardingType === 'custom' && result.onboarding_request_id) {
+        // Navigate to onboarding pipeline with the new request highlighted
+        navigate('/dashboard?tab=onboarding');
       }
 
-      toast({
-        title: "Success",
-        description: `Connection request ${action} successfully`,
-      });
-
-      // Refresh the data to confirm changes
-      console.log('Refreshing connection requests data');
+      // Refresh the data
       await fetchConnectionRequests();
 
     } catch (error) {
-      console.error('Unexpected error in handleConnectionResponse:', error);
+      console.error('Unexpected error in handleApprovalConfirm:', error);
       toast({
         title: "Error",
         description: "An unexpected error occurred",
@@ -215,6 +209,97 @@ const BuyerConnectionRequests = () => {
         newSet.delete(connectionId);
         return newSet;
       });
+    }
+  };
+
+  const handleReject = async (connectionId: string) => {
+    console.log(`Starting rejection for connection ID: ${connectionId}`);
+
+    if (processingIds.has(connectionId)) {
+      console.log(`Already processing connection ${connectionId}, ignoring duplicate request`);
+      return;
+    }
+
+    setProcessingIds(prev => new Set(prev).add(connectionId));
+
+    try {
+      const { data, error } = await supabase.rpc('handle_unified_connection_approval', {
+        p_connection_id: connectionId,
+        p_action: 'rejected',
+        p_notes: null
+      });
+
+      if (error) {
+        console.error('Error rejecting connection:', error);
+        toast({
+          title: "Error",
+          description: "Failed to reject connection request",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const result = data as { success: boolean; error?: string };
+
+      if (!result?.success) {
+        toast({
+          title: "Error",
+          description: result?.error || "Failed to process connection request",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await createSupplierNotification(connectionId, 'rejected');
+
+      toast({
+        title: "Success",
+        description: "Connection request rejected",
+      });
+
+      await fetchConnectionRequests();
+
+    } catch (error) {
+      console.error('Unexpected error in handleReject:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(connectionId);
+        return newSet;
+      });
+    }
+  };
+
+  const createSupplierNotification = async (connectionId: string, action: 'approved' | 'rejected') => {
+    const connection = connectionRequests.find(req => req.id === connectionId);
+    if (!connection) return;
+
+    try {
+      const { data: supplier, error: supplierError } = await supabase
+        .from('suppliers')
+        .select('profile_id')
+        .eq('id', connection.supplier_id)
+        .single();
+
+      if (supplierError || !supplier) {
+        console.error('Error fetching supplier profile:', supplierError);
+        return;
+      }
+
+      await supabase.rpc('create_notification', {
+        p_user_id: supplier.profile_id,
+        p_title: `Connection Request ${action === 'approved' ? 'Approved' : 'Rejected'}`,
+        p_message: `Your connection request has been ${action} by the buyer.`,
+        p_type: 'connection_response',
+        p_reference_id: connectionId
+      });
+    } catch (error) {
+      console.error('Error creating notification:', error);
     }
   };
 
@@ -310,7 +395,7 @@ const BuyerConnectionRequests = () => {
                 <CardContent className="pt-0">
                   <div className="flex gap-2">
                     <Button
-                      onClick={() => handleConnectionResponse(request.id, 'approved')}
+                      onClick={() => handleApproveClick(request)}
                       className="flex items-center gap-2"
                       size="sm"
                       disabled={processingIds.has(request.id)}
@@ -319,7 +404,7 @@ const BuyerConnectionRequests = () => {
                       {processingIds.has(request.id) ? 'Processing...' : 'Approve'}
                     </Button>
                     <Button
-                      onClick={() => handleConnectionResponse(request.id, 'rejected')}
+                      onClick={() => handleReject(request.id)}
                       variant="outline"
                       className="flex items-center gap-2"
                       size="sm"
@@ -335,6 +420,18 @@ const BuyerConnectionRequests = () => {
           ))}
         </div>
       )}
+
+      {/* Approval Modal with Onboarding Options */}
+      <ConnectionApprovalModal
+        isOpen={approvalModalOpen}
+        onClose={() => {
+          setApprovalModalOpen(false);
+          setSelectedConnection(null);
+        }}
+        onConfirm={handleApprovalConfirm}
+        supplierName={selectedConnection?.supplier.company_name || ''}
+        isLoading={selectedConnection ? processingIds.has(selectedConnection.id) : false}
+      />
     </div>
   );
 };

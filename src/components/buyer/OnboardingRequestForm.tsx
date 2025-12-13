@@ -70,6 +70,20 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
     }
   }, [buyerId]);
 
+  // Check for pre-selected supplier from notification click
+  useEffect(() => {
+    const preselectConnectionId = sessionStorage.getItem('preselect_onboarding_supplier_connection_id');
+    if (preselectConnectionId && suppliers.length > 0 && !loadingSuppliers) {
+      // Find the supplier by connection_id
+      const supplier = suppliers.find(s => s.connection_id === preselectConnectionId);
+      if (supplier && !selectedSupplierIds.includes(supplier.id)) {
+        setSelectedSupplierIds([supplier.id]);
+      }
+      // Clear the sessionStorage after use
+      sessionStorage.removeItem('preselect_onboarding_supplier_connection_id');
+    }
+  }, [suppliers, loadingSuppliers]);
+
   const loadDefaults = async () => {
     setLoadingDefaults(true);
     try {

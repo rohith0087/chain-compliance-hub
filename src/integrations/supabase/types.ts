@@ -3722,6 +3722,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      approve_connection_with_onboarding: {
+        Args: {
+          p_connection_id: string
+          p_notes?: string
+          p_onboarding_type: string
+        }
+        Returns: Json
+      }
       approve_document_request: {
         Args: { p_notes?: string; p_request_id: string }
         Returns: Json

@@ -63,6 +63,9 @@ const checkPasswordRequirements = (password: string) => [
   { label: 'Special character', met: /[^A-Za-z0-9]/.test(password) },
 ];
 
+// Check if Turnstile is enabled via environment variable
+const isTurnstileEnabled = import.meta.env.VITE_TURNSTILE_ENABLED === 'true';
+
 const AuthPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -91,6 +94,10 @@ const AuthPage = () => {
   }, []);
 
   const checkTurnstileToken = (): boolean => {
+    // Skip Turnstile check if disabled
+    if (!isTurnstileEnabled) {
+      return true;
+    }
     if (!turnstileToken) {
       toast({
         title: "Verification Required",
@@ -123,8 +130,8 @@ const AuthPage = () => {
     
     setLoading(true);
     
-    // Pass token directly to Supabase Auth for server-side validation
-    const { error } = await signIn(email.trim(), password, turnstileToken!);
+    // Pass token directly to Supabase Auth for server-side validation (undefined if disabled)
+    const { error } = await signIn(email.trim(), password, isTurnstileEnabled ? turnstileToken! : undefined);
     
     if (error) {
       toast({
@@ -165,8 +172,8 @@ const AuthPage = () => {
     
     setLoading(true);
     
-    // Pass token directly to Supabase Auth for server-side validation
-    const { error } = await signUp(email.trim(), password, fullName.trim(), selectedRoles, companyName.trim() || undefined, turnstileToken!);
+    // Pass token directly to Supabase Auth for server-side validation (undefined if disabled)
+    const { error } = await signUp(email.trim(), password, fullName.trim(), selectedRoles, companyName.trim() || undefined, isTurnstileEnabled ? turnstileToken! : undefined);
     
     if (error) {
       toast({
@@ -363,15 +370,17 @@ const AuthPage = () => {
                       )}
                     </div>
                     
-                    {/* Turnstile Widget */}
-                    <TurnstileWidget
-                      siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ''}
-                      onSuccess={(token) => setTurnstileToken(token)}
-                      onExpire={() => setTurnstileToken(null)}
-                      onError={() => setTurnstileToken(null)}
-                    />
+                    {/* Turnstile Widget - only show when enabled */}
+                    {isTurnstileEnabled && (
+                      <TurnstileWidget
+                        siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ''}
+                        onSuccess={(token) => setTurnstileToken(token)}
+                        onExpire={() => setTurnstileToken(null)}
+                        onError={() => setTurnstileToken(null)}
+                      />
+                    )}
                     
-                    <Button type="submit" className="w-full h-11 font-semibold" disabled={loading || !turnstileToken}>
+                    <Button type="submit" className="w-full h-11 font-semibold" disabled={loading || (isTurnstileEnabled && !turnstileToken)}>
                       {loading ? "Logging In..." : "Login"}
                     </Button>
                     
@@ -600,18 +609,20 @@ const AuthPage = () => {
                       )}
                     </div>
                     
-                    {/* Turnstile Widget */}
-                    <TurnstileWidget
-                      siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ''}
-                      onSuccess={(token) => setTurnstileToken(token)}
-                      onExpire={() => setTurnstileToken(null)}
-                      onError={() => setTurnstileToken(null)}
-                    />
+                    {/* Turnstile Widget - only show when enabled */}
+                    {isTurnstileEnabled && (
+                      <TurnstileWidget
+                        siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ''}
+                        onSuccess={(token) => setTurnstileToken(token)}
+                        onExpire={() => setTurnstileToken(null)}
+                        onError={() => setTurnstileToken(null)}
+                      />
+                    )}
                     
                     <Button 
                       type="submit" 
                       className="w-full h-11 font-semibold" 
-                      disabled={loading || selectedRoles.length === 0 || !turnstileToken}
+                      disabled={loading || selectedRoles.length === 0 || (isTurnstileEnabled && !turnstileToken)}
                     >
                       {loading ? "Creating Account..." : "Create Account"}
                     </Button>

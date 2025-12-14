@@ -2186,6 +2186,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          display_order: number | null
           document_name: string
           document_type: string
           id: string
@@ -2193,10 +2194,12 @@ export type Database = {
           onboarding_request_id: string
           template_file_name: string | null
           template_file_path: string | null
+          updated_at: string | null
         }
         Insert: {
           created_at?: string
           description?: string | null
+          display_order?: number | null
           document_name: string
           document_type: string
           id?: string
@@ -2204,10 +2207,12 @@ export type Database = {
           onboarding_request_id: string
           template_file_name?: string | null
           template_file_path?: string | null
+          updated_at?: string | null
         }
         Update: {
           created_at?: string
           description?: string | null
+          display_order?: number | null
           document_name?: string
           document_type?: string
           id?: string
@@ -2215,6 +2220,7 @@ export type Database = {
           onboarding_request_id?: string
           template_file_name?: string | null
           template_file_path?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }

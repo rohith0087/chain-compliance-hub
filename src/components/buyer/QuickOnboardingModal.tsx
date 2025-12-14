@@ -16,7 +16,7 @@ import { useOnboardingRequests } from '@/hooks/useOnboardingRequests';
 import { EditOnboardingRequestDialog } from './EditOnboardingRequestDialog';
 import { formatDistanceToNow } from 'date-fns';
 import { useConnectedSuppliersWithOnboarding, SupplierWithOnboardingStatus } from '@/hooks/useConnectedSuppliersWithOnboarding';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface QuickOnboardingModalProps {
@@ -292,38 +292,40 @@ export const QuickOnboardingModal = ({
                     <PopoverContent className="w-full p-0">
                       <Command>
                         <CommandInput placeholder="Search suppliers..." />
-                        <CommandEmpty>No suppliers found.</CommandEmpty>
-                        <CommandGroup className="max-h-64 overflow-auto">
-                          {suppliers.map((supplier) => {
-                            const isSelected = selectedSuppliers.some(s => s.id === supplier.id);
-                            const hasActiveOnboarding = supplier.has_active_onboarding;
-                            
-                            return (
-                              <CommandItem
-                                key={supplier.id}
-                                value={supplier.company_name}
-                                onSelect={() => handleSelectSupplier(supplier)}
-                                disabled={hasActiveOnboarding}
-                                className={hasActiveOnboarding ? 'opacity-50' : ''}
-                              >
-                                <div className="flex items-center justify-between w-full">
-                                  <div className="flex-1">
-                                    <div className="font-medium">{supplier.company_name}</div>
-                                    <div className="text-xs text-muted-foreground">{supplier.contact_email}</div>
+                        <CommandList className="max-h-64 overflow-auto">
+                          <CommandEmpty>No suppliers found.</CommandEmpty>
+                          <CommandGroup>
+                            {suppliers.map((supplier) => {
+                              const isSelected = selectedSuppliers.some(s => s.id === supplier.id);
+                              const hasActiveOnboarding = supplier.has_active_onboarding;
+                              
+                              return (
+                                <CommandItem
+                                  key={supplier.id}
+                                  value={supplier.company_name}
+                                  onSelect={() => handleSelectSupplier(supplier)}
+                                  disabled={hasActiveOnboarding}
+                                  className={hasActiveOnboarding ? 'opacity-50' : ''}
+                                >
+                                  <div className="flex items-center justify-between w-full">
+                                    <div className="flex-1">
+                                      <div className="font-medium">{supplier.company_name}</div>
+                                      <div className="text-xs text-muted-foreground">{supplier.contact_email}</div>
+                                    </div>
+                                    {hasActiveOnboarding ? (
+                                      <Badge variant="secondary" className="ml-2">
+                                        <AlertCircle className="w-3 h-3 mr-1" />
+                                        Onboarding in Progress
+                                      </Badge>
+                                    ) : isSelected ? (
+                                      <Check className="h-4 w-4 text-primary ml-2" />
+                                    ) : null}
                                   </div>
-                                  {hasActiveOnboarding ? (
-                                    <Badge variant="secondary" className="ml-2">
-                                      <AlertCircle className="w-3 h-3 mr-1" />
-                                      Onboarding in Progress
-                                    </Badge>
-                                  ) : isSelected ? (
-                                    <Check className="h-4 w-4 text-primary ml-2" />
-                                  ) : null}
-                                </div>
-                              </CommandItem>
-                            );
-                          })}
-                        </CommandGroup>
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        </CommandList>
                       </Command>
                     </PopoverContent>
                   </Popover>

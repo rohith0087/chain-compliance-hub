@@ -29,13 +29,15 @@ import {
   MessageSquare,
   Eye,
   Download,
-  RotateCcw
+  RotateCcw,
+  Settings2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDistanceToNow, format } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
+import { DraftRequirementsEditor } from './DraftRequirementsEditor';
 
 interface OnboardingRequestDetailDrawerProps {
   request: any;
@@ -442,6 +444,7 @@ export const OnboardingRequestDetailDrawer = ({
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; variant: any }> = {
+      draft: { label: 'Draft', variant: 'outline' },
       pending: { label: 'Invited', variant: 'secondary' },
       onboarding_initiated: { label: 'Started', variant: 'default' },
       under_review: { label: 'Under Review', variant: 'outline' },
@@ -453,6 +456,9 @@ export const OnboardingRequestDetailDrawer = ({
     const config = statusMap[status] || statusMap.pending;
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
+
+  // Check if this is a draft request needing configuration
+  const isDraft = request?.status === 'draft';
 
   const progress = calculateProgress();
 
@@ -476,265 +482,292 @@ export const OnboardingRequestDetailDrawer = ({
           </DrawerHeader>
 
           <div className="px-6 space-y-6">
-            {/* Timeline & Info */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <div className="text-sm text-muted-foreground flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  Created
+            {/* Draft Mode - Show Requirements Editor */}
+            {isDraft ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+                  <Settings2 className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="font-medium text-sm">Custom Onboarding</p>
+                    <p className="text-xs text-muted-foreground">
+                      Configure the documents you need from this supplier before sending
+                    </p>
+                  </div>
                 </div>
-                <div className="text-sm font-medium">
-                  {format(new Date(request.created_at), 'MMM d, yyyy')}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
-                </div>
+                
+                <DraftRequirementsEditor
+                  requestId={request.id}
+                  buyerId={request.buyer_id}
+                  onSendToSupplier={() => {
+                    onStatusChange?.();
+                    onOpenChange(false);
+                  }}
+                  onCancel={() => onOpenChange(false)}
+                />
               </div>
+            ) : (
+              <>
+                {/* Timeline & Info */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <div className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      Created
+                    </div>
+                    <div className="text-sm font-medium">
+                      {format(new Date(request.created_at), 'MMM d, yyyy')}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
+                    </div>
+                  </div>
 
-              {request.responded_at && (
-                <div className="space-y-1">
-                  <div className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    Last Updated
-                  </div>
-                  <div className="text-sm font-medium">
-                    {format(new Date(request.responded_at), 'MMM d, yyyy')}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(request.responded_at), { addSuffix: true })}
-                  </div>
+                  {request.responded_at && (
+                    <div className="space-y-1">
+                      <div className="text-sm text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Last Updated
+                      </div>
+                      <div className="text-sm font-medium">
+                        {format(new Date(request.responded_at), 'MMM d, yyyy')}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(request.responded_at), { addSuffix: true })}
+                      </div>
+                    </div>
+                  )}
+
+                  {request.branch_id && (
+                    <div className="space-y-1">
+                      <div className="text-sm text-muted-foreground flex items-center gap-1">
+                        <Building2 className="h-3 w-3" />
+                        Branch
+                      </div>
+                      <div className="text-sm font-medium">Branch Assigned</div>
+                    </div>
+                  )}
                 </div>
-              )}
 
-              {request.branch_id && (
-                <div className="space-y-1">
-                  <div className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Building2 className="h-3 w-3" />
-                    Branch
-                  </div>
-                  <div className="text-sm font-medium">Branch Assigned</div>
-                </div>
-              )}
-            </div>
+                <Separator />
 
-            <Separator />
-
-            {/* Progress Overview */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Overall Progress</h3>
-                <span className="text-sm font-medium">{progress}%</span>
-              </div>
-              <Progress value={progress} className="h-3" />
-              <p className="text-sm text-muted-foreground">
-                {documents.filter(doc => {
-                  const submission = submissions.find(s => s.requirement_id === doc.id);
-                  return submission && submission.is_document_available !== false;
-                }).length} of {documents.length} documents submitted
-              </p>
-            </div>
-
-            <Separator />
-
-            {/* Document Checklist */}
-            <div className="space-y-3">
-              <h3 className="font-semibold flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Document Checklist
-              </h3>
-              
-              {loading ? (
-                <div className="text-sm text-muted-foreground">Loading documents...</div>
-              ) : documents.length === 0 ? (
-                <div className="text-sm text-muted-foreground">No documents required</div>
-              ) : (
+                {/* Progress Overview */}
                 <div className="space-y-3">
-                  {documents.map((doc) => {
-                    const statusInfo = getDocumentStatus(doc);
-                    const StatusIcon = statusInfo.icon;
-                    const submission = submissions.find(s => s.requirement_id === doc.id);
-                    const isReviewing = reviewingDocId === doc.id;
-                    const canReview = submission && 
-                      submission.is_document_available !== false && 
-                      (submission.status === 'pending' || submission.status === 'resubmitted') &&
-                      (request.status === 'under_review' || request.status === 'partially_approved');
-                    
-                    return (
-                      <div
-                        key={doc.id}
-                        className="p-3 rounded-lg border bg-card space-y-2"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3 flex-1">
-                            <StatusIcon className={`h-5 w-5 ${statusInfo.color}`} />
-                            <div className="flex-1">
-                              <div className="font-medium text-sm">{doc.document_name}</div>
-                              {doc.description && (
-                                <div className="text-xs text-muted-foreground">{doc.description}</div>
-                              )}
-                              {submission && submission.is_document_available !== false && (
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  {submission.file_name} • {Math.round((submission.file_size || 0) / 1024)}KB
-                                  {submission.version > 1 && <span className="ml-2 text-blue-600">v{submission.version}</span>}
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold">Overall Progress</h3>
+                    <span className="text-sm font-medium">{progress}%</span>
+                  </div>
+                  <Progress value={progress} className="h-3" />
+                  <p className="text-sm text-muted-foreground">
+                    {documents.filter(doc => {
+                      const submission = submissions.find(s => s.requirement_id === doc.id);
+                      return submission && submission.is_document_available !== false;
+                    }).length} of {documents.length} documents submitted
+                  </p>
+                </div>
+
+                <Separator />
+
+                {/* Document Checklist */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Document Checklist
+                  </h3>
+                  
+                  {loading ? (
+                    <div className="text-sm text-muted-foreground">Loading documents...</div>
+                  ) : documents.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">No documents required</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {documents.map((doc) => {
+                        const statusInfo = getDocumentStatus(doc);
+                        const StatusIcon = statusInfo.icon;
+                        const submission = submissions.find(s => s.requirement_id === doc.id);
+                        const isReviewing = reviewingDocId === doc.id;
+                        const canReview = submission && 
+                          submission.is_document_available !== false && 
+                          (submission.status === 'pending' || submission.status === 'resubmitted') &&
+                          (request.status === 'under_review' || request.status === 'partially_approved');
+                        
+                        return (
+                          <div
+                            key={doc.id}
+                            className="p-3 rounded-lg border bg-card space-y-2"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 flex-1">
+                                <StatusIcon className={`h-5 w-5 ${statusInfo.color}`} />
+                                <div className="flex-1">
+                                  <div className="font-medium text-sm">{doc.document_name}</div>
+                                  {doc.description && (
+                                    <div className="text-xs text-muted-foreground">{doc.description}</div>
+                                  )}
+                                  {submission && submission.is_document_available !== false && (
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                      {submission.file_name} • {Math.round((submission.file_size || 0) / 1024)}KB
+                                      {submission.version > 1 && <span className="ml-2 text-blue-600">v{submission.version}</span>}
+                                    </div>
+                                  )}
+                                  {submission && submission.is_document_available === false && (
+                                    <div className="text-xs text-orange-600 mt-1">
+                                      Reason: {submission.unavailability_reason || 'Not provided'}
+                                    </div>
+                                  )}
+                                  {submission?.rejection_reason && submission.status === 'rejected' && (
+                                    <div className="text-xs text-destructive mt-1">
+                                      Rejection: {submission.rejection_reason}
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                              {submission && submission.is_document_available === false && (
-                                <div className="text-xs text-orange-600 mt-1">
-                                  Reason: {submission.unavailability_reason || 'Not provided'}
-                                </div>
-                              )}
-                              {submission?.rejection_reason && submission.status === 'rejected' && (
-                                <div className="text-xs text-destructive mt-1">
-                                  Rejection: {submission.rejection_reason}
-                                </div>
-                              )}
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                <Badge 
+                                  variant={statusInfo.status === 'approved' ? 'default' : statusInfo.status === 'rejected' ? 'destructive' : 'outline'}
+                                  className="capitalize"
+                                >
+                                  {statusInfo.label}
+                                </Badge>
+                                
+                                {submission && submission.is_document_available !== false && (
+                                  <div className="flex items-center gap-1 ml-2">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                      onClick={() => viewDocument(submission)}
+                                      className="h-8 px-2"
+                                    >
+                                      <Eye className="w-3 h-3 mr-1" />
+                                      View
+                                    </Button>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                      onClick={() => downloadDocument(submission)}
+                                      className="h-8 px-2"
+                                    >
+                                      <Download className="w-3 h-3 mr-1" />
+                                      Download
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            <Badge 
-                              variant={statusInfo.status === 'approved' ? 'default' : statusInfo.status === 'rejected' ? 'destructive' : 'outline'}
-                              className="capitalize"
-                            >
-                              {statusInfo.label}
-                            </Badge>
-                            
-                            {submission && submission.is_document_available !== false && (
-                              <div className="flex items-center gap-1 ml-2">
-                                <Button 
-                                  variant="ghost" 
+
+                            {/* Per-Document Review Actions */}
+                            {canReview && !isReviewing && (
+                              <div className="flex items-center gap-2 pt-2 border-t">
+                                <Button
                                   size="sm"
-                                  onClick={() => viewDocument(submission)}
-                                  className="h-8 px-2"
+                                  variant="outline"
+                                  className="text-green-600 border-green-600 hover:bg-green-50"
+                                  onClick={() => handleApproveDocument(submission.id)}
+                                  disabled={actionLoading}
                                 >
-                                  <Eye className="w-3 h-3 mr-1" />
-                                  View
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  Approve
                                 </Button>
-                                <Button 
-                                  variant="ghost" 
+                                <Button
                                   size="sm"
-                                  onClick={() => downloadDocument(submission)}
-                                  className="h-8 px-2"
+                                  variant="outline"
+                                  className="text-destructive border-destructive hover:bg-destructive/10"
+                                  onClick={() => setReviewingDocId(doc.id)}
+                                  disabled={actionLoading}
                                 >
-                                  <Download className="w-3 h-3 mr-1" />
-                                  Download
+                                  <XCircle className="w-3 h-3 mr-1" />
+                                  Reject
                                 </Button>
                               </div>
                             )}
-                          </div>
-                        </div>
 
-                        {/* Per-Document Review Actions */}
-                        {canReview && !isReviewing && (
-                          <div className="flex items-center gap-2 pt-2 border-t">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-green-600 border-green-600 hover:bg-green-50"
-                              onClick={() => handleApproveDocument(submission.id)}
-                              disabled={actionLoading}
-                            >
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              Approve
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-destructive border-destructive hover:bg-destructive/10"
-                              onClick={() => setReviewingDocId(doc.id)}
-                              disabled={actionLoading}
-                            >
-                              <XCircle className="w-3 h-3 mr-1" />
-                              Reject
-                            </Button>
+                            {/* Rejection Reason Input */}
+                            {isReviewing && (
+                              <div className="space-y-2 pt-2 border-t">
+                                <Input
+                                  placeholder="Enter rejection reason..."
+                                  value={perDocRejectionNotes[doc.id] || ''}
+                                  onChange={(e) => setPerDocRejectionNotes(prev => ({ ...prev, [doc.id]: e.target.value }))}
+                                />
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => handleRejectDocument(submission.id, doc.id)}
+                                    disabled={actionLoading || !perDocRejectionNotes[doc.id]?.trim()}
+                                  >
+                                    Confirm Reject
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setReviewingDocId(null);
+                                      setPerDocRejectionNotes(prev => ({ ...prev, [doc.id]: '' }));
+                                    }}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        )}
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
 
-                        {/* Rejection Reason Input */}
-                        {isReviewing && (
-                          <div className="space-y-2 pt-2 border-t">
-                            <Input
-                              placeholder="Enter rejection reason..."
-                              value={perDocRejectionNotes[doc.id] || ''}
-                              onChange={(e) => setPerDocRejectionNotes(prev => ({ ...prev, [doc.id]: e.target.value }))}
-                            />
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleRejectDocument(submission.id, doc.id)}
-                                disabled={actionLoading || !perDocRejectionNotes[doc.id]?.trim()}
-                              >
-                                Confirm Reject
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setReviewingDocId(null);
-                                  setPerDocRejectionNotes(prev => ({ ...prev, [doc.id]: '' }));
-                                }}
-                              >
-                                Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        )}
+                {/* Custom Message */}
+                {request.custom_message && (
+                  <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4" />
+                        Custom Message
+                      </h3>
+                      <p className="text-sm text-muted-foreground p-3 bg-muted rounded-lg">
+                        {request.custom_message}
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {/* Rejection Form */}
+                {showRejectionForm && (
+                  <>
+                    <Separator />
+                    <div className="space-y-3">
+                      <h3 className="font-semibold text-destructive">Decline Request</h3>
+                      <Textarea
+                        placeholder="Please provide a reason for declining this request..."
+                        value={rejectionNote}
+                        onChange={(e) => setRejectionNote(e.target.value)}
+                        rows={4}
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          variant="destructive"
+                          onClick={handleReject}
+                          disabled={actionLoading}
+                        >
+                          Confirm Decline
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setShowRejectionForm(false);
+                            setRejectionNote('');
+                          }}
+                          disabled={actionLoading}
+                        >
+                          Cancel
+                        </Button>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Custom Message */}
-            {request.custom_message && (
-              <>
-                <Separator />
-                <div className="space-y-2">
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4" />
-                    Custom Message
-                  </h3>
-                  <p className="text-sm text-muted-foreground p-3 bg-muted rounded-lg">
-                    {request.custom_message}
-                  </p>
-                </div>
-              </>
-            )}
-
-            {/* Rejection Form */}
-            {showRejectionForm && (
-              <>
-                <Separator />
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-destructive">Decline Request</h3>
-                  <Textarea
-                    placeholder="Please provide a reason for declining this request..."
-                    value={rejectionNote}
-                    onChange={(e) => setRejectionNote(e.target.value)}
-                    rows={4}
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      variant="destructive"
-                      onClick={handleReject}
-                      disabled={actionLoading}
-                    >
-                      Confirm Decline
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setShowRejectionForm(false);
-                        setRejectionNote('');
-                      }}
-                      disabled={actionLoading}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
+                    </div>
+                  </>
+                )}
               </>
             )}
           </div>

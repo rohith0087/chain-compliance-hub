@@ -17,6 +17,7 @@ interface OnboardingRequestFormProps {
   buyerId: string;
   onBack: () => void;
   onSuccess: () => void;
+  embedded?: boolean; // When true, hides the header/back button for use in Sheet
 }
 
 interface DocumentRequirement {
@@ -37,7 +38,8 @@ interface FormField {
 export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
   buyerId,
   onBack,
-  onSuccess
+  onSuccess,
+  embedded = false
 }) => {
   const [useDefaults, setUseDefaults] = useState(true);
   const [selectedSupplierIds, setSelectedSupplierIds] = useState<string[]>([]);
@@ -226,13 +228,15 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
-        <div>
-          <h2 className="text-2xl font-semibold">Create Onboarding Request</h2>
-          <p className="text-muted-foreground">Select suppliers and create bulk onboarding requests</p>
+      {!embedded && (
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
+          <div>
+            <h2 className="text-2xl font-semibold">Create Onboarding Request</h2>
+            <p className="text-muted-foreground">Select suppliers and create bulk onboarding requests</p>
+          </div>
         </div>
-      </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {!loadingDefaults && defaultsLoaded && (

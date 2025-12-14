@@ -18,7 +18,6 @@ import { BuyerSettingsModal } from '@/components/settings/BuyerSettingsModal';
 import { CompanyManagementDashboard } from '@/components/company/CompanyManagementDashboard';
 import ChatAgentPanel from '@/components/chat/ChatAgentPanel';
 import CustomTemplateManager from '@/components/buyer/CustomTemplateManager';
-import { QuickOnboardingModal } from '@/components/buyer/QuickOnboardingModal';
 import { BulkInviteModal } from '@/components/buyer/BulkInviteModal';
 import BuyerSidebarLayout from '@/components/buyer/BuyerSidebarLayout';
 import { BuyerDocumentPrePopulator } from '@/components/buyer/BuyerDocumentPrePopulator';
@@ -60,7 +59,6 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
   });
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [showQuickOnboarding, setShowQuickOnboarding] = useState(false);
   const [showBulkInvite, setShowBulkInvite] = useState(false);
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
   const [companyId, setCompanyId] = useState<string | undefined>(undefined);
@@ -412,7 +410,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         onRoleSwitch={onRoleSwitch}
         onShowRequestForm={() => setShowRequestForm(true)}
         onShowSettings={() => setShowSettings(true)}
-        onShowQuickOnboarding={() => setShowQuickOnboarding(true)}
+        onShowQuickOnboarding={() => setActiveTab('onboarding')}
         onShowBulkInvite={() => setShowBulkInvite(true)}
         buyerProfile={buyerProfile}
         companyId={companyId}
@@ -871,22 +869,12 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
       />
 
       {companyId && profile && (
-        <>
-          <QuickOnboardingModal
-            isOpen={showQuickOnboarding}
-            onClose={() => setShowQuickOnboarding(false)}
-            buyerId={companyId}
-            buyerProfile={buyerProfile || { id: companyId }}
-            userProfile={profile}
-          />
-
           <BulkInviteModal
             isOpen={showBulkInvite}
             onClose={() => setShowBulkInvite(false)}
             buyerId={companyId}
             buyerProfile={buyerProfile || { id: companyId, company_name: 'Your Company', contact_email: profile.email }}
           />
-        </>
       )}
     </BuyerSidebarLayout>
   </SidebarProvider>

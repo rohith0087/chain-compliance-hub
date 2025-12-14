@@ -6,7 +6,8 @@ import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Upload, FileText, CheckCircle, X, Download, AlertCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Upload, FileText, CheckCircle, X, Download, AlertCircle, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -28,6 +29,10 @@ interface DocumentSubmission {
   is_document_available: boolean;
   unavailability_reason: string | null;
   created_at: string;
+  status: string;
+  rejection_reason: string | null;
+  version: number;
+  previous_submission_id: string | null;
 }
 
 export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> = ({
@@ -195,6 +200,11 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
       }
 
       console.log(`🔴 DEBUG: Storage upload successful, saving to database...`);
+      
+      // Check if this is a resubmission (replacing a rejected doc)
+      const existingSubmission = submissions.find(s => s.requirement_id === requirementId);
+      const isResubmission = existingSubmission && existingSubmission.status === 'rejected';
+      
       const submissionData = {
         onboarding_request_id: request.id,
         requirement_id: requirementId,
@@ -203,11 +213,14 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
         file_name: file.name,
         file_size: file.size,
         mime_type: file.type,
-        submitted_by: user?.id
+        submitted_by: user?.id,
+        status: isResubmission ? 'resubmitted' : 'pending',
+        version: isResubmission ? (existingSubmission.version || 1) + 1 : 1,
+        previous_submission_id: isResubmission ? existingSubmission.id : null
       };
       console.log(`🔴 DEBUG: Submission data:`, submissionData);
 
-      // Save submission record
+      // If resubmission, we insert new record (to keep history)
       const { error: insertError } = await supabase
         .from('onboarding_document_submissions')
         .insert(submissionData);
@@ -224,6 +237,14 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
           variant: "destructive"
         });
         return;
+      }
+
+      // If resubmission, update request status back to under_review
+      if (isResubmission) {
+        await supabase
+          .from('supplier_onboarding_requests')
+          .update({ status: 'under_review' })
+          .eq('id', request.id);
       }
 
       console.log(`🔴 DEBUG: Success! Refreshing submissions...`);
@@ -263,7 +284,24 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
   };
 
   const getSubmissionForRequirement = (requirementId: string) => {
-    return submissions.find(sub => sub.requirement_id === requirementId);
+    // Get the latest submission for this requirement
+    const subs = submissions.filter(sub => sub.requirement_id === requirementId);
+    if (subs.length === 0) return null;
+    return subs.reduce((latest, current) => 
+      new Date(current.created_at) > new Date(latest.created_at) ? current : latest
+    );
+  };
+
+  const getDocStatusInfo = (submission: DocumentSubmission | null) => {
+    if (!submission) return { color: 'gray', label: 'Not Uploaded', canResubmit: false };
+    if (submission.is_document_available === false) return { color: 'orange', label: 'Unavailable', canResubmit: false };
+    
+    switch (submission.status) {
+      case 'approved': return { color: 'green', label: 'Approved', canResubmit: false };
+      case 'rejected': return { color: 'red', label: 'Rejected', canResubmit: true };
+      case 'resubmitted': return { color: 'blue', label: 'Resubmitted', canResubmit: false };
+      default: return { color: 'amber', label: 'Pending Review', canResubmit: false };
+    }
   };
 
   const handleDocumentUnavailable = async (requirementId: string, documentName: string) => {
@@ -348,7 +386,7 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
           const hasTemplate = requirement.template_file_path && requirement.template_file_name;
 
           return (
-            <Card key={requirement.id}>
+            <Card key={requirement.id} className={submission?.status === 'rejected' ? 'border-destructive' : ''}>
               <CardContent className="p-4">
                 <div className="space-y-3">
                   <div className="flex items-start justify-between">
@@ -366,7 +404,18 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
                           </span>
                         )}
                         {submission && (
-                          <CheckCircle className="w-4 h-4 text-green-600" />
+                          <Badge 
+                            variant={
+                              submission.status === 'approved' ? 'default' :
+                              submission.status === 'rejected' ? 'destructive' :
+                              submission.status === 'resubmitted' ? 'secondary' : 'outline'
+                            }
+                            className="text-xs"
+                          >
+                            {submission.status === 'approved' ? 'Approved' :
+                             submission.status === 'rejected' ? 'Rejected - Resubmit Required' :
+                             submission.status === 'resubmitted' ? 'Resubmitted' : 'Pending Review'}
+                          </Badge>
                         )}
                       </div>
                       {requirement.description && (
@@ -376,6 +425,17 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
                       )}
                     </div>
                   </div>
+
+                  {/* Show rejection reason if rejected */}
+                  {submission?.status === 'rejected' && submission.rejection_reason && (
+                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                      <div className="flex items-center gap-2 mb-1">
+                        <XCircle className="w-4 h-4 text-destructive" />
+                        <span className="text-sm font-medium text-destructive">Rejection Reason</span>
+                      </div>
+                      <p className="text-sm text-destructive/80">{submission.rejection_reason}</p>
+                    </div>
+                  )}
 
                   {/* Template Download Section */}
                   {hasTemplate && !submission && (
@@ -424,13 +484,20 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
 
                   {submission ? (
                     submission.is_document_available ? (
-                      <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                      <div className={`flex items-center justify-between p-3 rounded-lg ${
+                        submission.status === 'approved' ? 'bg-green-50' :
+                        submission.status === 'rejected' ? 'bg-red-50' : 'bg-amber-50'
+                      }`}>
                         <div className="flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-green-600" />
+                          <FileText className={`w-4 h-4 ${
+                            submission.status === 'approved' ? 'text-green-600' :
+                            submission.status === 'rejected' ? 'text-red-600' : 'text-amber-600'
+                          }`} />
                           <div>
                             <div className="text-sm font-medium">{submission.file_name}</div>
                             <div className="text-xs text-muted-foreground">
                               Uploaded on {new Date(submission.created_at).toLocaleDateString()}
+                              {submission.version > 1 && <span className="ml-2 text-blue-600">v{submission.version}</span>}
                             </div>
                           </div>
                         </div>
@@ -457,7 +524,22 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
                             <Download className="w-3 h-3" />
                             View
                           </Button>
-                          {!isCompleted && (
+                          {/* Allow resubmit for rejected documents */}
+                          {submission.status === 'rejected' && !isCompleted && (
+                            <Button 
+                              variant="default" 
+                              size="sm"
+                              onClick={() => {
+                                console.log(`🔴 DEBUG: Resubmit button clicked for ${requirement.id}`);
+                                triggerFileSelect(requirement.id);
+                              }}
+                            >
+                              <Upload className="w-3 h-3 mr-1" />
+                              Resubmit
+                            </Button>
+                          )}
+                          {/* Allow replace for pending/resubmitted (not approved or rejected) */}
+                          {!isCompleted && (submission.status === 'pending' || submission.status === 'resubmitted') && (
                             <Button 
                               variant="outline" 
                               size="sm"

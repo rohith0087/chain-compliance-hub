@@ -118,6 +118,32 @@ serve(async (req) => {
 
     console.log('Resolved storage path:', resolved);
 
+    // Handle legacy corrupted paths with "undefined" in the path
+    // These occurred when supplier_id wasn't available during upload
+    if (resolved.key.includes('/undefined/') || resolved.key.startsWith('undefined/')) {
+      console.log('Detected corrupted path with undefined - attempting to fix from document_request');
+      
+      // Try to find the correct supplier_id from the document_uploads + document_requests chain
+      const { data: uploadWithRequest } = await adminClient
+        .from('document_uploads')
+        .select(`
+          id,
+          file_path,
+          request_id,
+          document_requests!inner(supplier_id)
+        `)
+        .or(`file_path.eq.${resolved.key},file_path.eq.${resolved.bucket}/${resolved.key}`)
+        .maybeSingle();
+      
+      if (uploadWithRequest?.document_requests?.supplier_id) {
+        const supplierId = uploadWithRequest.document_requests.supplier_id;
+        // Reconstruct the correct path by replacing "undefined" with actual supplier_id
+        const correctedKey = resolved.key.replace(/\/?undefined\//, `${supplierId}/`);
+        console.log('Corrected path:', { original: resolved.key, corrected: correctedKey, supplierId });
+        resolved = { bucket: resolved.bucket, key: correctedKey };
+      }
+    }
+
     // Check if this is a custom template request
     const isCustomTemplate = resolved.key.startsWith('custom-templates/');
     

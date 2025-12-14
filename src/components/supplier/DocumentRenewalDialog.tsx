@@ -133,14 +133,19 @@ const DocumentRenewalDialog = ({
     setUploading(true);
 
     try {
-      // Upload file to storage
+      // Validate supplier_id is available
+      if (!request.supplier_id) {
+        throw new Error('Missing supplier ID - cannot upload document');
+      }
+
+      // Upload file to storage - use supplier_id as folder, NOT including bucket name in path
       const fileExt = file.name.split('.').pop();
       const fileName = `${request.id}_v${newVersion}_${Date.now()}.${fileExt}`;
-      const filePath = `compliance-documents/${request.supplier_id}/${fileName}`;
+      const fileKey = `${request.supplier_id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('compliance-documents')
-        .upload(filePath, file);
+        .upload(fileKey, file);
 
       if (uploadError) throw uploadError;
 
@@ -151,7 +156,7 @@ const DocumentRenewalDialog = ({
           request_id: request.id,
           uploader_id: user.id,
           file_name: file.name,
-          file_path: filePath,
+          file_path: fileKey,
           file_size: file.size,
           mime_type: file.type,
           status: 'pending_review', // New version goes to review

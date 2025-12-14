@@ -102,7 +102,46 @@ const BuyerComplianceDashboard = () => {
         setBuyerId(buyerProfile.id);
         setBuyerData(buyerProfile);
         
-        // Load document requests with supplier info and branch filter
+        // Step 1: Fetch ALL approved connections for this buyer
+        let connectionsQuery = supabase
+          .from('buyer_supplier_connections')
+          .select(`
+            id,
+            supplier_id,
+            branch_id,
+            suppliers (
+              id,
+              company_name,
+              industry,
+              company_logo_url
+            )
+          `)
+          .eq('buyer_id', buyerProfile.id)
+          .eq('status', 'approved');
+
+        // Apply branch filter if specific branch selected
+        if (currentBranch && !allBranchesView) {
+          connectionsQuery = connectionsQuery.or(`branch_id.eq.${currentBranch.id},branch_id.is.null`);
+        }
+
+        const { data: connections } = await connectionsQuery;
+
+        // Step 2: Initialize supplier stats from ALL connections
+        const supplierMap = new Map();
+        connections?.forEach(conn => {
+          if (conn.suppliers) {
+            supplierMap.set(conn.suppliers.id, {
+              ...conn.suppliers,
+              totalRequests: 0,
+              approvedRequests: 0,
+              pendingRequests: 0,
+              rejectedRequests: 0,
+              hasDocumentRequests: false
+            });
+          }
+        });
+
+        // Step 3: Load document requests with supplier info and branch filter
         let requestsQuery = supabase
           .from('document_requests')
           .select(`
@@ -125,25 +164,18 @@ const BuyerComplianceDashboard = () => {
 
         setDocumentRequests(requests || []);
 
-        // Calculate supplier compliance stats
-        const supplierMap = new Map();
+        // Step 4: Overlay document request data onto supplier stats
         requests?.forEach(request => {
           if (request.suppliers) {
             const supplierId = request.suppliers.id;
-            if (!supplierMap.has(supplierId)) {
-              supplierMap.set(supplierId, {
-                ...request.suppliers,
-                totalRequests: 0,
-                approvedRequests: 0,
-                pendingRequests: 0,
-                rejectedRequests: 0
-              });
+            if (supplierMap.has(supplierId)) {
+              const supplier = supplierMap.get(supplierId);
+              supplier.totalRequests++;
+              supplier.hasDocumentRequests = true;
+              if (request.status === 'approved') supplier.approvedRequests++;
+              if (request.status === 'pending') supplier.pendingRequests++;
+              if (request.status === 'rejected') supplier.rejectedRequests++;
             }
-            const supplier = supplierMap.get(supplierId);
-            supplier.totalRequests++;
-            if (request.status === 'approved') supplier.approvedRequests++;
-            if (request.status === 'pending') supplier.pendingRequests++;
-            if (request.status === 'rejected') supplier.rejectedRequests++;
           }
         });
 
@@ -155,10 +187,13 @@ const BuyerComplianceDashboard = () => {
         }));
 
         // Load supplier items for category filtering
-        const { data: supplierItems } = await supabase
-          .from('supplier_items')
-          .select('supplier_id, item_category')
-          .in('supplier_id', Array.from(supplierMap.keys()));
+        const supplierIds = Array.from(supplierMap.keys());
+        const { data: supplierItems } = supplierIds.length > 0 
+          ? await supabase
+              .from('supplier_items')
+              .select('supplier_id, item_category')
+              .in('supplier_id', supplierIds)
+          : { data: [] };
 
         // Create mapping of supplier -> item categories
         const itemsMap = new Map<string, Set<string>>();

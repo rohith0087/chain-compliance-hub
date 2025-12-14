@@ -25,7 +25,6 @@ import { createSafeSelectValue } from '@/utils/selectValidation';
 import IndustryBasedSupplierSetup from './IndustryBasedSupplierSetup';
 import { SupplierDetailModal } from './SupplierDetailModal';
 import { BranchSupplierDashboard } from './BranchSupplierDashboard';
-import { SupplierOnboarding } from './SupplierOnboarding';
 import { useBranchContext } from '@/contexts/BranchContext';
 import { InviteSupplierModal } from './InviteSupplierModal';
 import { format } from 'date-fns';
@@ -59,7 +58,7 @@ const SupplierDiscovery = () => {
   const [showIndustrySetup, setShowIndustrySetup] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [showSupplierDetail, setShowSupplierDetail] = useState(false);
-  const [currentView, setCurrentView] = useState<'suppliers' | 'branches' | 'onboarding'>('suppliers');
+  const [currentView, setCurrentView] = useState<'suppliers' | 'branches'>('suppliers');
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'connected' | 'discover' | 'pending'>('connected');
   const [availableSuppliers, setAvailableSuppliers] = useState<any[]>([]);
@@ -393,12 +392,6 @@ const SupplierDiscovery = () => {
     );
   }
 
-  if (currentView === 'onboarding') {
-    return buyerProfile && (
-      <SupplierOnboarding buyerId={buyerProfile.id} onBack={() => setCurrentView('suppliers')} />
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Minimal Header */}
@@ -411,10 +404,6 @@ const SupplierDiscovery = () => {
         </div>
         
         <div className="flex items-center gap-2">
-          <Button onClick={() => setCurrentView('onboarding')} size="sm" className="gap-2">
-            <Zap className="h-4 w-4" />
-            Quick Onboard
-          </Button>
           <Button variant="outline" size="sm" onClick={() => setShowInviteModal(true)} className="gap-2">
             <UserPlus className="h-4 w-4" />
             Invite

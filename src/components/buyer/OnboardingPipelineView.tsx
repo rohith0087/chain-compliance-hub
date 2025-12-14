@@ -7,7 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Clock, CheckCircle, XCircle, Search, RefreshCw, Eye, Send, AlertCircle, BarChart3, Activity, Keyboard, Download, ChevronDown, ThumbsUp, ThumbsDown, LayoutGrid, Table as TableIcon, ChevronUp } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Clock, CheckCircle, XCircle, Search, RefreshCw, Eye, Send, AlertCircle, BarChart3, Activity, Keyboard, Download, ChevronDown, ThumbsUp, ThumbsDown, LayoutGrid, Table as TableIcon, ChevronUp, Plus } from 'lucide-react';
+import { OnboardingRequestForm } from './OnboardingRequestForm';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -52,12 +54,21 @@ export const OnboardingPipelineView = () => {
   const [showActivityFeed, setShowActivityFeed] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>(() => {
     const saved = localStorage.getItem('onboarding-pipeline-view');
     return (saved as 'kanban' | 'table') || 'kanban';
   });
   const [collapsedColumns, setCollapsedColumns] = useState<Set<string>>(new Set());
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Check for pre-selected supplier from notifications/discovery
+  useEffect(() => {
+    const preselectConnectionId = sessionStorage.getItem('preselect_onboarding_supplier_connection_id');
+    if (preselectConnectionId && buyerId) {
+      setShowCreateForm(true);
+    }
+  }, [buyerId]);
 
   // Persist view mode preference
   useEffect(() => {
@@ -513,6 +524,15 @@ export const OnboardingPipelineView = () => {
         <CardContent className="pt-6">
           <div className="space-y-3">
             <div className="flex items-center gap-4">
+              {/* New Request Button */}
+              <Button 
+                onClick={() => setShowCreateForm(true)} 
+                className="gap-2 bg-gradient-to-r from-primary to-primary-hover"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">New Request</span>
+              </Button>
+              
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -842,6 +862,26 @@ export const OnboardingPipelineView = () => {
         data={prepareExportData()}
         analytics={getAnalytics()}
       />
+      
+      {/* Create Onboarding Request Sheet */}
+      <Sheet open={showCreateForm} onOpenChange={setShowCreateForm}>
+        <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Create Onboarding Request</SheetTitle>
+          </SheetHeader>
+          {buyerId && (
+            <OnboardingRequestForm
+              buyerId={buyerId}
+              onBack={() => setShowCreateForm(false)}
+              onSuccess={() => {
+                setShowCreateForm(false);
+                loadRequests();
+              }}
+              embedded
+            />
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };

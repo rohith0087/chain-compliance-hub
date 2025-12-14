@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Input } from '@/components/ui/input';
 import { 
   CheckCircle, 
   XCircle, 
@@ -27,10 +28,12 @@ import {
   ThumbsDown,
   MessageSquare,
   Eye,
-  Download
+  Download,
+  RotateCcw
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { formatDistanceToNow, format } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -48,12 +51,15 @@ export const OnboardingRequestDetailDrawer = ({
   onStatusChange
 }: OnboardingRequestDetailDrawerProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [documents, setDocuments] = useState<any[]>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [rejectionNote, setRejectionNote] = useState('');
   const [showRejectionForm, setShowRejectionForm] = useState(false);
+  const [perDocRejectionNotes, setPerDocRejectionNotes] = useState<Record<string, string>>({});
+  const [reviewingDocId, setReviewingDocId] = useState<string | null>(null);
 
   useEffect(() => {
     if (open && request) {
@@ -318,18 +324,120 @@ export const OnboardingRequestDetailDrawer = ({
 
   const getDocumentStatus = (docReq: any) => {
     const submission = submissions.find(s => s.requirement_id === docReq.id);
-    if (!submission) return { status: 'missing', icon: XCircle, color: 'text-destructive' };
-    if (submission.is_document_available === false) return { status: 'unavailable', icon: XCircle, color: 'text-muted-foreground' };
-    return { status: 'submitted', icon: CheckCircle, color: 'text-success' };
+    if (!submission) return { status: 'missing', icon: XCircle, color: 'text-destructive', label: 'Missing' };
+    if (submission.is_document_available === false) return { status: 'unavailable', icon: AlertCircle, color: 'text-muted-foreground', label: 'Unavailable' };
+    
+    // Check per-document review status
+    const docStatus = submission.status || 'pending';
+    if (docStatus === 'approved') return { status: 'approved', icon: CheckCircle, color: 'text-green-600', label: 'Approved' };
+    if (docStatus === 'rejected') return { status: 'rejected', icon: XCircle, color: 'text-destructive', label: 'Rejected' };
+    if (docStatus === 'resubmitted') return { status: 'resubmitted', icon: RotateCcw, color: 'text-blue-600', label: 'Resubmitted' };
+    return { status: 'pending', icon: Clock, color: 'text-amber-600', label: 'Pending Review' };
   };
 
   const calculateProgress = () => {
     if (documents.length === 0) return 0;
-    const submitted = documents.filter(doc => {
-      const submission = submissions.find(s => s.requirement_id === doc.id);
-      return submission && submission.is_document_available !== false;
-    }).length;
-    return Math.round((submitted / documents.length) * 100);
+    const approved = submissions.filter(sub => sub.status === 'approved').length;
+    return Math.round((approved / documents.length) * 100);
+  };
+
+  const handleApproveDocument = async (submissionId: string) => {
+    try {
+      setActionLoading(true);
+      const { error } = await supabase
+        .from('onboarding_document_submissions')
+        .update({
+          status: 'approved',
+          reviewed_by: user?.id,
+          reviewed_at: new Date().toISOString()
+        })
+        .eq('id', submissionId);
+
+      if (error) throw error;
+
+      toast({ title: 'Document Approved', description: 'The document has been approved.' });
+      await loadDocuments();
+      await updateRequestStatusBasedOnDocs();
+    } catch (error: any) {
+      toast({ title: 'Error', description: 'Failed to approve document', variant: 'destructive' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectDocument = async (submissionId: string, requirementId: string) => {
+    const reason = perDocRejectionNotes[requirementId];
+    if (!reason?.trim()) {
+      toast({ title: 'Reason Required', description: 'Please provide a rejection reason', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      const { error } = await supabase
+        .from('onboarding_document_submissions')
+        .update({
+          status: 'rejected',
+          reviewed_by: user?.id,
+          reviewed_at: new Date().toISOString(),
+          rejection_reason: reason
+        })
+        .eq('id', submissionId);
+
+      if (error) throw error;
+
+      toast({ title: 'Document Rejected', description: 'The supplier will be notified to resubmit.' });
+      setPerDocRejectionNotes(prev => ({ ...prev, [requirementId]: '' }));
+      setReviewingDocId(null);
+      await loadDocuments();
+      await updateRequestStatusBasedOnDocs();
+    } catch (error: any) {
+      toast({ title: 'Error', description: 'Failed to reject document', variant: 'destructive' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const updateRequestStatusBasedOnDocs = async () => {
+    // Re-fetch submissions to get latest state
+    const { data: latestSubs } = await supabase
+      .from('onboarding_document_submissions')
+      .select('*')
+      .eq('onboarding_request_id', request.id);
+
+    if (!latestSubs || latestSubs.length === 0) return;
+
+    const allApproved = latestSubs.every(s => s.status === 'approved');
+    const anyRejected = latestSubs.some(s => s.status === 'rejected');
+    const anyPending = latestSubs.some(s => s.status === 'pending' || s.status === 'resubmitted');
+
+    let newStatus = request.status;
+    if (allApproved) {
+      newStatus = 'approved';
+    } else if (anyRejected && !anyPending) {
+      newStatus = 'partially_approved';
+    }
+
+    if (newStatus !== request.status) {
+      await supabase
+        .from('supplier_onboarding_requests')
+        .update({ status: newStatus })
+        .eq('id', request.id);
+      onStatusChange?.();
+    }
+  };
+
+  const handleCompleteReview = async () => {
+    // Check if all documents have been reviewed
+    const allReviewed = submissions.every(s => s.status === 'approved' || s.status === 'rejected');
+    if (!allReviewed) {
+      toast({ title: 'Review Incomplete', description: 'Please review all documents before completing.', variant: 'destructive' });
+      return;
+    }
+
+    await updateRequestStatusBasedOnDocs();
+    toast({ title: 'Review Completed', description: 'The onboarding review has been completed.' });
+    onStatusChange?.();
   };
 
   const getStatusBadge = (status: string) => {
@@ -337,6 +445,7 @@ export const OnboardingRequestDetailDrawer = ({
       pending: { label: 'Invited', variant: 'secondary' },
       onboarding_initiated: { label: 'Started', variant: 'default' },
       under_review: { label: 'Under Review', variant: 'outline' },
+      partially_approved: { label: 'Needs Resubmission', variant: 'outline' },
       approved: { label: 'Approved', variant: 'default' },
       rejected: { label: 'Declined', variant: 'destructive' }
     };
@@ -439,65 +548,138 @@ export const OnboardingRequestDetailDrawer = ({
               ) : documents.length === 0 ? (
                 <div className="text-sm text-muted-foreground">No documents required</div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {documents.map((doc) => {
                     const statusInfo = getDocumentStatus(doc);
                     const StatusIcon = statusInfo.icon;
                     const submission = submissions.find(s => s.requirement_id === doc.id);
+                    const isReviewing = reviewingDocId === doc.id;
+                    const canReview = submission && 
+                      submission.is_document_available !== false && 
+                      (submission.status === 'pending' || submission.status === 'resubmitted') &&
+                      (request.status === 'under_review' || request.status === 'partially_approved');
                     
                     return (
                       <div
                         key={doc.id}
-                        className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                        className="p-3 rounded-lg border bg-card space-y-2"
                       >
-                        <div className="flex items-center gap-3 flex-1">
-                          <StatusIcon className={`h-5 w-5 ${statusInfo.color}`} />
-                          <div className="flex-1">
-                            <div className="font-medium text-sm">{doc.document_name}</div>
-                            {doc.description && (
-                              <div className="text-xs text-muted-foreground">{doc.description}</div>
-                            )}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 flex-1">
+                            <StatusIcon className={`h-5 w-5 ${statusInfo.color}`} />
+                            <div className="flex-1">
+                              <div className="font-medium text-sm">{doc.document_name}</div>
+                              {doc.description && (
+                                <div className="text-xs text-muted-foreground">{doc.description}</div>
+                              )}
+                              {submission && submission.is_document_available !== false && (
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  {submission.file_name} • {Math.round((submission.file_size || 0) / 1024)}KB
+                                  {submission.version > 1 && <span className="ml-2 text-blue-600">v{submission.version}</span>}
+                                </div>
+                              )}
+                              {submission && submission.is_document_available === false && (
+                                <div className="text-xs text-orange-600 mt-1">
+                                  Reason: {submission.unavailability_reason || 'Not provided'}
+                                </div>
+                              )}
+                              {submission?.rejection_reason && submission.status === 'rejected' && (
+                                <div className="text-xs text-destructive mt-1">
+                                  Rejection: {submission.rejection_reason}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              variant={statusInfo.status === 'approved' ? 'default' : statusInfo.status === 'rejected' ? 'destructive' : 'outline'}
+                              className="capitalize"
+                            >
+                              {statusInfo.label}
+                            </Badge>
+                            
                             {submission && submission.is_document_available !== false && (
-                              <div className="text-xs text-muted-foreground mt-1">
-                                {submission.file_name} • {Math.round((submission.file_size || 0) / 1024)}KB
-                              </div>
-                            )}
-                            {submission && submission.is_document_available === false && (
-                              <div className="text-xs text-orange-600 mt-1">
-                                Reason: {submission.unavailability_reason || 'Not provided'}
+                              <div className="flex items-center gap-1 ml-2">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => viewDocument(submission)}
+                                  className="h-8 px-2"
+                                >
+                                  <Eye className="w-3 h-3 mr-1" />
+                                  View
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => downloadDocument(submission)}
+                                  className="h-8 px-2"
+                                >
+                                  <Download className="w-3 h-3 mr-1" />
+                                  Download
+                                </Button>
                               </div>
                             )}
                           </div>
                         </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="capitalize">
-                            {statusInfo.status}
-                          </Badge>
-                          
-                          {submission && submission.is_document_available !== false && (
-                            <div className="flex items-center gap-1 ml-2">
-                              <Button 
-                                variant="ghost" 
+
+                        {/* Per-Document Review Actions */}
+                        {canReview && !isReviewing && (
+                          <div className="flex items-center gap-2 pt-2 border-t">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-green-600 border-green-600 hover:bg-green-50"
+                              onClick={() => handleApproveDocument(submission.id)}
+                              disabled={actionLoading}
+                            >
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-destructive border-destructive hover:bg-destructive/10"
+                              onClick={() => setReviewingDocId(doc.id)}
+                              disabled={actionLoading}
+                            >
+                              <XCircle className="w-3 h-3 mr-1" />
+                              Reject
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Rejection Reason Input */}
+                        {isReviewing && (
+                          <div className="space-y-2 pt-2 border-t">
+                            <Input
+                              placeholder="Enter rejection reason..."
+                              value={perDocRejectionNotes[doc.id] || ''}
+                              onChange={(e) => setPerDocRejectionNotes(prev => ({ ...prev, [doc.id]: e.target.value }))}
+                            />
+                            <div className="flex gap-2">
+                              <Button
                                 size="sm"
-                                onClick={() => viewDocument(submission)}
-                                className="h-8 px-2"
+                                variant="destructive"
+                                onClick={() => handleRejectDocument(submission.id, doc.id)}
+                                disabled={actionLoading || !perDocRejectionNotes[doc.id]?.trim()}
                               >
-                                <Eye className="w-3 h-3 mr-1" />
-                                View
+                                Confirm Reject
                               </Button>
-                              <Button 
-                                variant="ghost" 
+                              <Button
                                 size="sm"
-                                onClick={() => downloadDocument(submission)}
-                                className="h-8 px-2"
+                                variant="outline"
+                                onClick={() => {
+                                  setReviewingDocId(null);
+                                  setPerDocRejectionNotes(prev => ({ ...prev, [doc.id]: '' }));
+                                }}
                               >
-                                <Download className="w-3 h-3 mr-1" />
-                                Download
+                                Cancel
                               </Button>
                             </div>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -559,23 +741,45 @@ export const OnboardingRequestDetailDrawer = ({
 
           <DrawerFooter className="pt-6">
             <div className="flex gap-2 w-full">
-              {request.status === 'under_review' && !showRejectionForm && (
+              {(request.status === 'under_review' || request.status === 'partially_approved') && !showRejectionForm && (
                 <>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          className="flex-1"
-                          onClick={handleApprove}
-                          disabled={actionLoading}
-                        >
-                          <ThumbsUp className="mr-2 h-4 w-4" />
-                          Approve
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Approve this supplier</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  {/* Show Complete Review when all docs are reviewed */}
+                  {submissions.length > 0 && submissions.every(s => s.status === 'approved' || s.status === 'rejected') && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            className="flex-1"
+                            onClick={handleCompleteReview}
+                            disabled={actionLoading}
+                          >
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            Complete Review
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Finalize the review process</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+
+                  {/* Approve All - only if all docs are pending */}
+                  {submissions.length > 0 && submissions.every(s => s.status === 'pending' || s.status === 'resubmitted') && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            className="flex-1"
+                            onClick={handleApprove}
+                            disabled={actionLoading}
+                          >
+                            <ThumbsUp className="mr-2 h-4 w-4" />
+                            Approve All
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Approve all documents and this supplier</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
 
                   <TooltipProvider>
                     <Tooltip>
@@ -586,10 +790,10 @@ export const OnboardingRequestDetailDrawer = ({
                           disabled={actionLoading}
                         >
                           <ThumbsDown className="mr-2 h-4 w-4" />
-                          Decline
+                          Decline All
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Decline this request</TooltipContent>
+                      <TooltipContent>Decline the entire request</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </>

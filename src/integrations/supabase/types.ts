@@ -2229,10 +2229,16 @@ export type Database = {
           is_document_available: boolean
           mime_type: string | null
           onboarding_request_id: string
+          previous_submission_id: string | null
+          rejection_reason: string | null
           requirement_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string | null
           submitted_by: string
           unavailability_reason: string | null
           updated_at: string
+          version: number | null
         }
         Insert: {
           created_at?: string
@@ -2244,10 +2250,16 @@ export type Database = {
           is_document_available?: boolean
           mime_type?: string | null
           onboarding_request_id: string
+          previous_submission_id?: string | null
+          rejection_reason?: string | null
           requirement_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
           submitted_by: string
           unavailability_reason?: string | null
           updated_at?: string
+          version?: number | null
         }
         Update: {
           created_at?: string
@@ -2259,12 +2271,40 @@ export type Database = {
           is_document_available?: boolean
           mime_type?: string | null
           onboarding_request_id?: string
+          previous_submission_id?: string | null
+          rejection_reason?: string | null
           requirement_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
           submitted_by?: string
           unavailability_reason?: string | null
           updated_at?: string
+          version?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_document_submissions_previous_submission_id_fkey"
+            columns: ["previous_submission_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_document_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_document_submissions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_document_submissions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       onboarding_form_fields: {
         Row: {

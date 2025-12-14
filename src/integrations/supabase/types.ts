@@ -2315,6 +2315,7 @@ export type Database = {
       onboarding_form_fields: {
         Row: {
           created_at: string
+          field_category: string | null
           field_description: string | null
           field_label: string
           field_options: Json | null
@@ -2323,9 +2324,11 @@ export type Database = {
           id: string
           is_required: boolean
           onboarding_request_id: string
+          updated_at: string | null
         }
         Insert: {
           created_at?: string
+          field_category?: string | null
           field_description?: string | null
           field_label: string
           field_options?: Json | null
@@ -2334,9 +2337,11 @@ export type Database = {
           id?: string
           is_required?: boolean
           onboarding_request_id: string
+          updated_at?: string | null
         }
         Update: {
           created_at?: string
+          field_category?: string | null
           field_description?: string | null
           field_label?: string
           field_options?: Json | null
@@ -2345,6 +2350,7 @@ export type Database = {
           id?: string
           is_required?: boolean
           onboarding_request_id?: string
+          updated_at?: string | null
         }
         Relationships: []
       }

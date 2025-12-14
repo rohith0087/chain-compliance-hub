@@ -8,10 +8,34 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, X, Settings, Zap, Users, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, X, Zap, Users, Loader2, FileText, FileDown, ExternalLink, ChevronDown } from 'lucide-react';
 import { useOnboardingRequests } from '@/hooks/useOnboardingRequests';
 import { useConnectedSuppliersWithOnboarding } from '@/hooks/useConnectedSuppliersWithOnboarding';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+
+interface CustomTemplate {
+  id: string;
+  template_name: string;
+  document_type: string;
+  category: string;
+  file_path: string;
+  file_name: string;
+  description?: string;
+}
 
 interface OnboardingRequestFormProps {
   buyerId: string;
@@ -25,6 +49,8 @@ interface DocumentRequirement {
   document_name: string;
   description: string;
   is_required: boolean;
+  template_file_path?: string;
+  template_file_name?: string;
 }
 
 interface FormField {
@@ -52,6 +78,9 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [loadingDefaults, setLoadingDefaults] = useState(false);
   const [defaultsLoaded, setDefaultsLoaded] = useState(false);
+  const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false);
+  const [templates, setTemplates] = useState<CustomTemplate[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
   
   const { suppliers, loading: loadingSuppliers } = useConnectedSuppliersWithOnboarding(buyerId);
   const { 
@@ -105,6 +134,8 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
           document_name: doc.document_name,
           description: doc.description || '',
           is_required: doc.is_required,
+          template_file_path: doc.template_file_path,
+          template_file_name: doc.template_file_name,
         })));
       }
 
@@ -202,6 +233,45 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
     setDocumentRequirements([...documentRequirements, { document_type: '', document_name: '', description: '', is_required: true }]);
   };
 
+  const fetchTemplates = async () => {
+    setLoadingTemplates(true);
+    try {
+      const { data, error } = await supabase
+        .from('custom_document_templates')
+        .select('id, template_name, document_type, category, file_path, file_name, description')
+        .eq('buyer_id', buyerId)
+        .eq('is_active', true)
+        .order('template_name');
+      
+      if (error) throw error;
+      setTemplates(data || []);
+    } catch (error) {
+      console.error('Error fetching templates:', error);
+    } finally {
+      setLoadingTemplates(false);
+    }
+  };
+
+  const openTemplateSelector = () => {
+    fetchTemplates();
+    setTemplateSelectorOpen(true);
+  };
+
+  const handleSelectTemplate = (template: CustomTemplate) => {
+    setDocumentRequirements(prev => [
+      ...prev,
+      {
+        document_type: 'Template Document',
+        document_name: template.template_name,
+        description: template.description || 'Please download this template, fill it out, and upload the completed version.',
+        is_required: true,
+        template_file_path: template.file_path,
+        template_file_name: template.file_name,
+      }
+    ]);
+    setTemplateSelectorOpen(false);
+  };
+
   const removeDocumentRequirement = (index: number) => {
     setDocumentRequirements(documentRequirements.filter((_, i) => i !== index));
   };
@@ -227,6 +297,48 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
   };
 
   return (
+    <>
+      {/* Template Selector Dialog */}
+      <Dialog open={templateSelectorOpen} onOpenChange={setTemplateSelectorOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Select a Template</DialogTitle>
+            <DialogDescription>
+              Choose a template that suppliers will download, fill out, and upload back.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {loadingTemplates ? (
+            <div className="py-8 text-center text-muted-foreground">Loading templates...</div>
+          ) : templates.length === 0 ? (
+            <div className="py-8 text-center space-y-4">
+              <p className="text-muted-foreground">No templates found. Create templates in Requests & Documents → Templates.</p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {templates.map((template) => (
+                <div
+                  key={template.id}
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
+                  onClick={() => handleSelectTemplate(template)}
+                >
+                  <div className="flex items-center gap-3">
+                    <FileDown className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <div className="font-medium">{template.template_name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {template.category} • {template.file_name}
+                      </div>
+                    </div>
+                  </div>
+                  <Badge variant="secondary">{template.document_type}</Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
     <div className="space-y-6">
       {!embedded && (
         <div className="flex items-center gap-4">
@@ -333,16 +445,25 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
                 )}
               </div>
               {!useDefaults && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addDocumentRequirementLocal}
-                  className="flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Document
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button type="button" variant="outline" size="sm">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Requirement
+                      <ChevronDown className="w-4 h-4 ml-2" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-background border">
+                    <DropdownMenuItem onClick={addDocumentRequirementLocal}>
+                      <FileText className="w-4 h-4 mr-2" />
+                      Add Document
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={openTemplateSelector}>
+                      <FileDown className="w-4 h-4 mr-2" />
+                      Add Template
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           </CardHeader>
@@ -358,11 +479,19 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
             ) : (
               documentRequirements.map((req, index) => (
                 <div key={index} className="border rounded-lg p-4 space-y-4 relative">
-                  {useDefaults && (
-                    <Badge variant="outline" className="absolute top-2 right-2 text-xs">
-                      Default
-                    </Badge>
-                  )}
+                  <div className="absolute top-2 right-2 flex items-center gap-2">
+                    {req.template_file_path && (
+                      <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                        <FileDown className="w-3 h-3 mr-1" />
+                        Template
+                      </Badge>
+                    )}
+                    {useDefaults && (
+                      <Badge variant="outline" className="text-xs">
+                        Default
+                      </Badge>
+                    )}
+                  </div>
                   <div className="flex items-center justify-between">
                     <h4 className="font-medium">Document Requirement {index + 1}</h4>
                     {!useDefaults && (
@@ -413,6 +542,33 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
                     />
                     <Label>Required document</Label>
                   </div>
+                  
+                  {/* Template indicator */}
+                  {req.template_file_path && (
+                    <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-950 dark:border-blue-800">
+                      <FileDown className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <div className="flex-1">
+                        <span className="text-sm font-medium text-blue-800 dark:text-blue-300">Template attached: </span>
+                        <span className="text-sm text-blue-700 dark:text-blue-400">{req.template_file_name}</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                        onClick={async () => {
+                          const { data } = await supabase.storage
+                            .from('compliance-documents')
+                            .createSignedUrl(req.template_file_path!, 300);
+                          if (data?.signedUrl) {
+                            window.open(data.signedUrl, '_blank');
+                          }
+                        }}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -543,5 +699,6 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
         </div>
       </form>
     </div>
+    </>
   );
 };

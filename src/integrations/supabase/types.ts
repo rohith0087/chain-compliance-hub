@@ -885,6 +885,9 @@ export type Database = {
           id: string
           last_activity_at: string | null
           session_title: string | null
+          state: Json | null
+          summary: string | null
+          summary_updated_at: string | null
           updated_at: string
           user_id: string
         }
@@ -896,6 +899,9 @@ export type Database = {
           id?: string
           last_activity_at?: string | null
           session_title?: string | null
+          state?: Json | null
+          summary?: string | null
+          summary_updated_at?: string | null
           updated_at?: string
           user_id: string
         }
@@ -907,6 +913,9 @@ export type Database = {
           id?: string
           last_activity_at?: string | null
           session_title?: string | null
+          state?: Json | null
+          summary?: string | null
+          summary_updated_at?: string | null
           updated_at?: string
           user_id?: string
         }

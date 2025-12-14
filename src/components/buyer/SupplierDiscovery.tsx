@@ -27,6 +27,8 @@ import { SupplierDetailModal } from './SupplierDetailModal';
 import { BranchSupplierDashboard } from './BranchSupplierDashboard';
 import { useBranchContext } from '@/contexts/BranchContext';
 import { InviteSupplierModal } from './InviteSupplierModal';
+import ConnectionApprovalModal, { OnboardingType } from './ConnectionApprovalModal';
+import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 
 interface ConnectionRequest {
@@ -67,9 +69,12 @@ const SupplierDiscovery = () => {
   const [incomingRequests, setIncomingRequests] = useState<ConnectionRequest[]>([]);
   const [outgoingRequests, setOutgoingRequests] = useState<any[]>([]);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+  const [approvalModalOpen, setApprovalModalOpen] = useState(false);
+  const [selectedConnectionRequest, setSelectedConnectionRequest] = useState<ConnectionRequest | null>(null);
   const { user } = useAuth();
   const { getBuyerProfile } = useBuyerSetup();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (user) {
@@ -291,14 +296,69 @@ const SupplierDiscovery = () => {
     }
   };
 
-  const handleConnectionResponse = async (connectionId: string, action: 'approved' | 'rejected') => {
+  const handleApproveClick = (request: ConnectionRequest) => {
+    setSelectedConnectionRequest(request);
+    setApprovalModalOpen(true);
+  };
+
+  const handleApprovalConfirm = async (onboardingType: OnboardingType) => {
+    if (!selectedConnectionRequest) return;
+    
+    setProcessingIds(prev => new Set(prev).add(selectedConnectionRequest.id));
+    
+    try {
+      const { data, error } = await (supabase.rpc as any)('approve_connection_with_onboarding', {
+        p_connection_id: selectedConnectionRequest.id,
+        p_onboarding_type: onboardingType,
+        p_notes: null
+      });
+      
+      if (error) throw error;
+      
+      const result = data as { success: boolean; error?: string; onboarding_request_id?: string };
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to approve connection');
+      }
+      
+      toast({
+        title: "Connection Approved",
+        description: onboardingType === 'none' 
+          ? "Supplier has been connected successfully" 
+          : "Supplier connected and onboarding initiated",
+      });
+      
+      // Navigate to custom onboarding setup if selected
+      if (onboardingType === 'custom' && result.onboarding_request_id) {
+        navigate(`/dashboard?tab=onboarding&request=${result.onboarding_request_id}`);
+      }
+      
+      await fetchData();
+    } catch (error: any) {
+      console.error('Error approving connection:', error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(selectedConnectionRequest.id);
+        return newSet;
+      });
+      setApprovalModalOpen(false);
+      setSelectedConnectionRequest(null);
+    }
+  };
+
+  const handleRejectConnection = async (connectionId: string) => {
     if (processingIds.has(connectionId)) return;
     setProcessingIds(prev => new Set(prev).add(connectionId));
 
     try {
       const { data, error } = await supabase.rpc('handle_unified_connection_approval', {
         p_connection_id: connectionId,
-        p_action: action,
+        p_action: 'rejected',
         p_notes: null
       });
 
@@ -306,19 +366,17 @@ const SupplierDiscovery = () => {
 
       const result = data as { success: boolean; error?: string };
       if (!result?.success) {
-        throw new Error(result?.error || 'Failed to process request');
+        throw new Error(result?.error || 'Failed to reject request');
       }
 
       toast({
-        title: action === 'approved' ? "Connection Approved" : "Request Rejected",
-        description: action === 'approved' 
-          ? "Supplier has been connected successfully" 
-          : "Connection request has been rejected",
+        title: "Request Rejected",
+        description: "Connection request has been rejected",
       });
 
       await fetchData();
     } catch (error: any) {
-      console.error('Error handling connection response:', error);
+      console.error('Error rejecting connection:', error);
       toast({
         title: "Error",
         description: error.message,
@@ -573,7 +631,7 @@ const SupplierDiscovery = () => {
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <Button
                           size="sm"
-                          onClick={() => handleConnectionResponse(request.id, 'approved')}
+                          onClick={() => handleApproveClick(request)}
                           disabled={processingIds.has(request.id)}
                           className="gap-1"
                         >
@@ -583,7 +641,7 @@ const SupplierDiscovery = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleConnectionResponse(request.id, 'rejected')}
+                          onClick={() => handleRejectConnection(request.id)}
                           disabled={processingIds.has(request.id)}
                         >
                           <X className="h-4 w-4" />
@@ -666,6 +724,17 @@ const SupplierDiscovery = () => {
         onClose={() => setShowSupplierDetail(false)}
         connectionStatus={selectedSupplier ? getConnectionStatus(selectedSupplier.id) : undefined}
         connectionDate={selectedSupplier ? getConnectionDate(selectedSupplier.id) : undefined}
+      />
+
+      <ConnectionApprovalModal
+        isOpen={approvalModalOpen}
+        onClose={() => {
+          setApprovalModalOpen(false);
+          setSelectedConnectionRequest(null);
+        }}
+        onConfirm={handleApprovalConfirm}
+        supplierName={selectedConnectionRequest?.supplier?.company_name || ''}
+        isLoading={selectedConnectionRequest ? processingIds.has(selectedConnectionRequest.id) : false}
       />
     </div>
   );

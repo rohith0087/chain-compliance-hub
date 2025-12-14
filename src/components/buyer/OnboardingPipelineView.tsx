@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -43,6 +44,7 @@ export const OnboardingPipelineView = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { currentBranch, allBranchesView } = useBranchContext();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState<any[]>([]);
   const [requirementCounts, setRequirementCounts] = useState<Record<string, number>>({});
@@ -69,6 +71,21 @@ export const OnboardingPipelineView = () => {
       setShowCreateForm(true);
     }
   }, [buyerId]);
+
+  // Auto-open drawer for specific request (e.g., from custom onboarding flow)
+  useEffect(() => {
+    const requestId = searchParams.get('request');
+    if (requestId && requests.length > 0 && !loading) {
+      const targetRequest = requests.find(r => r.id === requestId);
+      if (targetRequest) {
+        setSelectedRequest(targetRequest);
+        setDrawerOpen(true);
+        // Clear the URL parameter
+        searchParams.delete('request');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [requests, searchParams, loading]);
 
   // Persist view mode preference
   useEffect(() => {

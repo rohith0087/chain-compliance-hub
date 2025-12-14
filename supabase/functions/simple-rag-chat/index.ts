@@ -2108,6 +2108,197 @@ async function executeToolCall(toolName: string, args: any, buyerId: string) {
   }
 }
 
+// ============= SESSION STATE MANAGEMENT =============
+// Updates session state after tool calls for context-aware follow-ups
+async function updateSessionState(
+  sessionId: string, 
+  toolName: string, 
+  toolArgs: any,
+  toolResult: any
+) {
+  try {
+    // Fetch current state
+    const { data: session } = await supabase
+      .from('chat_sessions')
+      .select('state')
+      .eq('id', sessionId)
+      .single();
+    
+    const currentState = session?.state || {};
+    
+    // Build state patch based on tool
+    let statePatch: any = {
+      last_tool: { name: toolName, at: new Date().toISOString() }
+    };
+    
+    // Tool-specific state updates
+    if (toolName === 'query_suppliers' && toolResult.success && toolResult.suppliers?.length > 0) {
+      statePatch.last_suppliers = toolResult.suppliers.slice(0, 5).map((s: any) => ({
+        id: s.supplier_id,
+        name: s.supplier_name
+      }));
+    }
+    
+    if (toolName === 'get_missing_required_documents' && toolResult.success) {
+      statePatch.current_supplier_name = toolResult.supplier?.name;
+      statePatch.current_supplier_id = toolResult.supplier?.id;
+      statePatch.last_missing_documents = toolResult.missing_documents;
+      statePatch.last_compliance_percentage = toolResult.compliance_percentage;
+    }
+    
+    if (toolName === 'query_documents' && toolResult.success) {
+      statePatch.last_document_query = {
+        filters: toolArgs,
+        count: toolResult.documents?.length || 0,
+        at: new Date().toISOString()
+      };
+      // If filtered by single supplier, store it
+      if (toolArgs.supplier_names?.length === 1) {
+        statePatch.current_supplier_name = toolArgs.supplier_names[0];
+      }
+    }
+    
+    if (toolName === 'create_document_request' && toolResult.success) {
+      statePatch.last_created_requests = {
+        supplier_name: toolResult.supplier_name,
+        document_types: toolResult.document_types,
+        request_ids: toolResult.request_ids,
+        at: new Date().toISOString()
+      };
+      // Clear pending action after successful creation
+      statePatch.pending_action = null;
+    }
+    
+    if (toolName === 'get_document_sets' && toolResult.success) {
+      statePatch.available_document_sets = toolResult.document_sets?.map((s: any) => ({
+        id: s.id,
+        name: s.name
+      }));
+    }
+    
+    // Merge and save
+    const newState = { ...currentState, ...statePatch };
+    await supabase
+      .from('chat_sessions')
+      .update({ 
+        state: newState,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', sessionId);
+    
+    console.log('✓ Updated session state:', Object.keys(statePatch));
+  } catch (error) {
+    console.error('Failed to update session state:', error);
+  }
+}
+
+// ============= ROLLING SUMMARIZATION =============
+// Compresses older messages into a summary for long conversations
+async function maybeUpdateSummary(sessionId: string) {
+  try {
+    // Get message count and last summary time
+    const { data: session } = await supabase
+      .from('chat_sessions')
+      .select('summary, summary_updated_at')
+      .eq('id', sessionId)
+      .single();
+    
+    const { count } = await supabase
+      .from('chat_messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('session_id', sessionId);
+    
+    // Trigger if: 20+ messages AND (no summary OR 12+ messages since last summary)
+    const messageThreshold = 20;
+    const updateThreshold = 12;
+    
+    if (!count || count < messageThreshold) {
+      return; // Not enough messages yet
+    }
+    
+    // Calculate messages since last summary
+    let messagesSinceSummary = count;
+    if (session?.summary_updated_at) {
+      const { count: recentCount } = await supabase
+        .from('chat_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('session_id', sessionId)
+        .gt('created_at', session.summary_updated_at);
+      messagesSinceSummary = recentCount || 0;
+    }
+    
+    if (messagesSinceSummary < updateThreshold && session?.summary) {
+      return; // Recent summary still valid
+    }
+    
+    console.log('📝 Triggering summary generation:', { totalMessages: count, messagesSinceSummary });
+    
+    // Fetch messages to summarize (all except last 12)
+    const { data: allMessages } = await supabase
+      .from('chat_messages')
+      .select('role, content, created_at')
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: true });
+    
+    if (!allMessages || allMessages.length < messageThreshold) return;
+    
+    const keepRecent = 12;
+    const toSummarize = allMessages.slice(0, Math.max(0, allMessages.length - keepRecent));
+    
+    if (toSummarize.length === 0) return;
+    
+    const summaryPrompt = `You are summarizing a compliance assistant conversation. Create a concise summary (max 10 bullet points) capturing:
+- User's goals and questions asked
+- Supplier names mentioned (with context)
+- Document types discussed
+- Decisions made or actions taken
+- Pending requests or follow-ups needed
+
+${session?.summary ? `Previous summary to incorporate:\n${session.summary}\n\n` : ''}
+
+Messages to summarize (${toSummarize.length} messages):
+${toSummarize.map(m => `${m.role.toUpperCase()}: ${m.content.substring(0, 500)}`).join('\n\n')}
+
+Provide updated summary (bullet points, max 10):`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini', // Use cheaper model for summarization
+        messages: [{ role: 'user', content: summaryPrompt }],
+        max_tokens: 500,
+        temperature: 0.3
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Summary generation failed: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    const newSummary = result.choices[0]?.message?.content;
+    
+    if (newSummary) {
+      await supabase
+        .from('chat_sessions')
+        .update({ 
+          summary: newSummary,
+          summary_updated_at: new Date().toISOString()
+        })
+        .eq('id', sessionId);
+      
+      console.log('✓ Summary updated:', newSummary.substring(0, 100) + '...');
+    }
+  } catch (error) {
+    console.error('Summary generation failed:', error);
+    // Non-critical, don't throw
+  }
+}
+
 async function callOpenAI(messages: any[], toolChoice: any = "auto") {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -2255,23 +2446,46 @@ serve(async (req) => {
     // Fetch recent conversation history for context
     let conversationHistory: any[] = [];
     let pendingAction: any = null;
+    let sessionSummary: string | null = null;
+    let sessionState: any = {};
     
     if (session_id) {
+      // Load session with summary and state for production-ready context
+      const { data: session } = await supabase
+        .from('chat_sessions')
+        .select('id, summary, state, summary_updated_at')
+        .eq('id', session_id)
+        .single();
+      
+      if (session) {
+        sessionSummary = session.summary;
+        sessionState = session.state || {};
+        console.log('Loaded session context:', { 
+          hasSummary: !!sessionSummary, 
+          stateKeys: Object.keys(sessionState),
+          summaryAge: session.summary_updated_at ? 
+            Math.round((Date.now() - new Date(session.summary_updated_at).getTime()) / 60000) + 'min' : 'N/A'
+        });
+      }
+      
+      // Increased limit from 8 to 20 for better multi-turn context
       const { data: recentMessages } = await supabase
         .from('chat_messages')
         .select('role, content, created_at, metadata')
         .eq('session_id', session_id)
         .order('created_at', { ascending: false })
-        .limit(8); // Last 8 messages for better context
+        .limit(20);
 
       if (recentMessages && recentMessages.length > 0) {
         // Reverse to get chronological order (oldest first)
+        // CRITICAL FIX: Preserve metadata for context-aware follow-ups
         conversationHistory = recentMessages
           .reverse()
           .filter(msg => msg.role === 'user' || msg.role === 'assistant')
           .map(msg => ({
             role: msg.role,
-            content: msg.content
+            content: msg.content,
+            metadata: msg.metadata || {} // Preserve metadata for tool tracking
           }));
         
         // Check for pending actions in recent assistant messages
@@ -2564,6 +2778,20 @@ serve(async (req) => {
         }
       }
     }
+
+    // Build memory preamble from session summary and state
+    const memoryPreamble = (sessionSummary || Object.keys(sessionState).length > 0) ? {
+      role: "system",
+      content: `## CONVERSATION MEMORY (use this for context-aware follow-ups)
+
+### Summary of Earlier Discussion:
+${sessionSummary || "This is a new conversation - no previous context."}
+
+### Current Session State (authoritative context for follow-ups like "create them", "same supplier", "that list"):
+${JSON.stringify(sessionState, null, 2)}
+
+CRITICAL: When user says "create them", "same supplier", "that list", or similar references, use the state above to resolve context. Do NOT ask for clarification if the information is in session state.`
+    } : null;
 
     // Step 1: Initial conversation with OpenAI
     const messages = [
@@ -3043,8 +3271,10 @@ IMPORTANT:
 - The generated charts will be interactive with tooltips, legends, and proper styling
 - Summarize what the visualization shows in 1-2 sentences`
       },
-      // Add recent conversation history for context
-      ...conversationHistory,
+      // Inject memory preamble (summary + state) BEFORE conversation history
+      ...(memoryPreamble ? [memoryPreamble] : []),
+      // Add recent conversation history for context (with metadata preserved)
+      ...conversationHistory.map(msg => ({ role: msg.role, content: msg.content })),
       // Add current question
       {
         role: "user",
@@ -3077,12 +3307,17 @@ IMPORTANT:
       // Add the assistant's response with tool calls
       messages.push(aiResponse);
       
-      // Execute each tool call
+      // Execute each tool call and update session state
       for (const toolCall of aiResponse.tool_calls) {
         const toolName = toolCall.function.name;
         const toolArgs = JSON.parse(toolCall.function.arguments);
         
         const toolResult = await executeToolCall(toolName, toolArgs, buyer_id);
+        
+        // Update session state after each tool call for context-aware follow-ups
+        if (session_id) {
+          await updateSessionState(session_id, toolName, toolArgs, toolResult);
+        }
         
         // Add tool result to conversation
         messages.push({
@@ -3157,16 +3392,29 @@ IMPORTANT:
           console.log('✓ LLM detected pending action:', pendingActionToSave);
         }
         
+        // Store tool info in metadata for context tracking
+        const toolsExecuted = messages
+          .filter((m: any) => m.role === 'tool')
+          .map((m: any) => m.name);
+        
         await supabase.from('chat_messages').insert({
           session_id,
           role: 'assistant',
           content: aiResponse.content,
-          metadata: pendingActionToSave ? { pending_action: pendingActionToSave } : 
-                    documentRequestResult ? { action: 'document_requests_created', data: documentRequestResult } :
-                    queryDocumentsResult ? { action: 'documents_queried', count: queryDocumentsResult.documents?.length || 0 } : {}
+          metadata: {
+            ...(pendingActionToSave ? { pending_action: pendingActionToSave } : {}),
+            ...(documentRequestResult ? { action: 'document_requests_created', data: documentRequestResult } : {}),
+            ...(queryDocumentsResult ? { action: 'documents_queried', count: queryDocumentsResult.documents?.length || 0 } : {}),
+            tools_executed: toolsExecuted.length > 0 ? toolsExecuted : undefined
+          }
         });
 
         console.log('Saved assistant response to chat history', pendingActionToSave ? 'WITH pending action' : 'without pending action');
+        
+        // Trigger rolling summarization in background
+        maybeUpdateSummary(session_id).catch(e => 
+          console.error('Background summary failed:', e)
+        );
       }
 
       // If we queried documents, format the response with structured document cards
@@ -3272,14 +3520,20 @@ IMPORTANT:
 
     console.log('simple-rag-chat response generated successfully');
 
-    // Update session activity
+    // Update session activity and trigger rolling summarization
     if (session_id) {
+      // Update session activity timestamp
       await supabase
         .from('chat_sessions')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', session_id)
         .then(() => console.log('✓ Updated session activity'))
         .catch((e) => console.error('Failed to update session activity:', e));
+      
+      // Trigger rolling summarization in background (non-blocking)
+      maybeUpdateSummary(session_id).catch(e => 
+        console.error('Background summary failed:', e)
+      );
     }
 
     return new Response(

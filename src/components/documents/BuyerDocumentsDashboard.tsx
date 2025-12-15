@@ -293,9 +293,9 @@ const BuyerDocumentsDashboard = () => {
         query = query.eq('supplier_id', filters.supplier);
       }
 
-      // Filter by branch if not viewing all branches (same as Document Requests)
+      // Filter by branch if not viewing all branches - include company-wide docs (NULL branch_id)
       if (!allBranchesView && currentBranch) {
-        query = query.eq('branch_id', currentBranch.id);
+        query = query.or(`branch_id.eq.${currentBranch.id},branch_id.is.null`);
       }
 
       const { data, error } = await query;

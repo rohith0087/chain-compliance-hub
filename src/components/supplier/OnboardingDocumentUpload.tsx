@@ -65,8 +65,10 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
 
   const checkCompletion = () => {
     const requiredDocs = documentRequirements.filter(req => req.is_required);
+    // Only count submissions that are NOT rejected
     const submittedRequiredDocs = submissions.filter(sub => 
-      requiredDocs.some(req => req.id === sub.requirement_id)
+      requiredDocs.some(req => req.id === sub.requirement_id) &&
+      sub.status !== 'rejected'
     );
 
     console.log('🔴 DEBUG: Checking completion:', {
@@ -297,7 +299,10 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
 
   const getDocStatusInfo = (submission: DocumentSubmission | null) => {
     if (!submission) return { color: 'gray', label: 'Not Uploaded', canResubmit: false };
-    if (submission.is_document_available === false) return { color: 'orange', label: 'Unavailable', canResubmit: false };
+    // Allow resubmit for rejected unavailable documents too
+    if (submission.is_document_available === false) {
+      return { color: 'orange', label: 'Unavailable', canResubmit: submission.status === 'rejected' };
+    }
     
     switch (submission.status) {
       case 'approved': return { color: 'green', label: 'Approved', canResubmit: false };
@@ -366,8 +371,12 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
   };
 
   const requiredSubmissions = documentRequirements.filter(req => req.is_required);
-  const completedRequired = requiredSubmissions.filter(req => getSubmissionForRequirement(req.id));
-  const allRequiredCompleted = completedRequired.length === requiredSubmissions.length;
+  // Only count as complete if submission exists AND is not rejected
+  const completedRequired = requiredSubmissions.filter(req => {
+    const sub = getSubmissionForRequirement(req.id);
+    return sub && sub.status !== 'rejected';
+  });
+  const allRequiredCompleted = completedRequired.length === requiredSubmissions.length && requiredSubmissions.length > 0;
 
   return (
     <div className="space-y-4">
@@ -557,18 +566,41 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
                         </div>
                       </div>
                     ) : (
-                      <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                      <div className={`p-3 border rounded-lg ${submission.status === 'rejected' ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200'}`}>
                         <div className="flex items-center gap-2 mb-2">
-                          <AlertCircle className="w-4 h-4 text-orange-600" />
-                          <span className="text-sm font-medium text-orange-800">Document Not Available</span>
+                          <AlertCircle className={`w-4 h-4 ${submission.status === 'rejected' ? 'text-red-600' : 'text-orange-600'}`} />
+                          <span className={`text-sm font-medium ${submission.status === 'rejected' ? 'text-red-800' : 'text-orange-800'}`}>
+                            {submission.status === 'rejected' ? 'Document Rejected' : 'Document Not Available'}
+                          </span>
                         </div>
-                        <div className="text-sm text-orange-700 mb-2">
-                          <span className="font-medium">Reason: </span>
+                        {submission.status === 'rejected' && submission.rejection_reason && (
+                          <div className="text-sm text-red-700 mb-2">
+                            <span className="font-medium">Rejection Reason: </span>
+                            {submission.rejection_reason}
+                          </div>
+                        )}
+                        <div className={`text-sm mb-2 ${submission.status === 'rejected' ? 'text-red-700' : 'text-orange-700'}`}>
+                          <span className="font-medium">Unavailability Reason: </span>
                           {submission.unavailability_reason}
                         </div>
-                        <div className="text-xs text-orange-600">
+                        <div className={`text-xs ${submission.status === 'rejected' ? 'text-red-600' : 'text-orange-600'}`}>
                           Submitted on {new Date(submission.created_at).toLocaleDateString()}
                         </div>
+                        {/* Resubmit button for rejected unavailable documents */}
+                        {submission.status === 'rejected' && !isCompleted && (
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            className="mt-3"
+                            onClick={() => {
+                              console.log(`🔴 DEBUG: Resubmit (unavailable) button clicked for ${requirement.id}`);
+                              triggerFileSelect(requirement.id);
+                            }}
+                          >
+                            <Upload className="w-3 h-3 mr-1" />
+                            Upload Document
+                          </Button>
+                        )}
                       </div>
                     )
                   ) : (

@@ -134,8 +134,8 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
     if (connection.status === 'approved') {
       if (!onboardingRequest) return { status: 'connected_no_onboarding', label: 'Connected - No Onboarding', color: 'bg-gray-100 text-gray-800', icon: <CheckCircle className="w-4 h-4 text-gray-500" />, action: 'request_onboarding', description: 'Buyer has not initiated onboarding process yet' };
       
-      // Check if under_review but has rejected documents (needs resubmission)
-      const hasRejectedDocuments = onboardingRequest.status === 'under_review' && onboardingRequest.rejection_reason;
+      // Check if under_review or partially_approved but has rejected documents (needs resubmission)
+      const hasRejectedDocuments = (onboardingRequest.status === 'under_review' || onboardingRequest.status === 'partially_approved') && onboardingRequest.rejection_reason;
       
       const statusMap: any = { 
         requested: { status: 'onboarding_requested', label: 'Onboarding Requested', color: 'bg-purple-100 text-purple-800', icon: <Clock className="w-4 h-4 text-purple-500" />, action: 'awaiting_buyer', description: 'Waiting for buyer to approve' }, 
@@ -144,6 +144,16 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
         under_review: hasRejectedDocuments 
           ? { status: 'changes_requested', label: 'Changes Requested', color: 'bg-orange-100 text-orange-800', icon: <AlertCircle className="w-4 h-4 text-orange-500" />, action: 'continue_onboarding', description: `Revisions needed: ${onboardingRequest.rejection_reason}` }
           : { status: 'under_review', label: 'Under Review', color: 'bg-yellow-100 text-yellow-800', icon: <Clock className="w-4 h-4 text-yellow-500" />, action: 'awaiting_buyer', description: 'Buyer is reviewing' }, 
+        partially_approved: { 
+          status: 'changes_requested', 
+          label: 'Changes Requested', 
+          color: 'bg-orange-100 text-orange-800', 
+          icon: <AlertCircle className="w-4 h-4 text-orange-500" />, 
+          action: 'continue_onboarding', 
+          description: onboardingRequest.rejection_reason 
+            ? `Revisions needed: ${onboardingRequest.rejection_reason}` 
+            : 'Some documents need resubmission'
+        },
         approved: { status: 'fully_connected', label: 'Fully Connected', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="w-4 h-4 text-green-500" />, action: 'none', description: 'Onboarding complete' } 
       };
       return statusMap[onboardingRequest.status] || { status: 'unknown', label: 'Status Unknown', color: 'bg-gray-100 text-gray-800', icon: <AlertCircle className="w-4 h-4 text-gray-500" />, action: 'none' };

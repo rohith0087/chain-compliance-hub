@@ -239,11 +239,14 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
         return;
       }
 
-      // If resubmission, update request status back to under_review
+      // If resubmission, update request status back to under_review and clear rejection reason
       if (isResubmission) {
         await supabase
           .from('supplier_onboarding_requests')
-          .update({ status: 'under_review' })
+          .update({ 
+            status: 'under_review',
+            rejection_reason: null 
+          })
           .eq('id', request.id);
       }
 

@@ -277,6 +277,25 @@ export const OnboardingRequestDetailDrawer = ({
 
       if (requestError) throw requestError;
 
+      // Send notification to supplier about all documents being declined
+      if (request.supplier_id) {
+        const { data: supplier } = await supabase
+          .from('suppliers')
+          .select('profile_id')
+          .eq('id', request.supplier_id)
+          .single();
+
+        if (supplier?.profile_id) {
+          await supabase.rpc('create_notification', {
+            p_user_id: supplier.profile_id,
+            p_title: 'Documents Require Resubmission',
+            p_message: `All submitted documents have been declined. Reason: ${rejectionNote}. Please review and resubmit.`,
+            p_type: 'documents_rejected',
+            p_reference_id: request.id
+          });
+        }
+      }
+
       toast({
         title: 'All Documents Declined',
         description: 'The supplier has been notified and can resubmit their documents.'
@@ -414,6 +433,25 @@ export const OnboardingRequestDetailDrawer = ({
         .eq('id', submissionId);
 
       if (error) throw error;
+
+      // Send notification to supplier about per-document rejection
+      if (request.supplier_id) {
+        const { data: supplier } = await supabase
+          .from('suppliers')
+          .select('profile_id')
+          .eq('id', request.supplier_id)
+          .single();
+
+        if (supplier?.profile_id) {
+          await supabase.rpc('create_notification', {
+            p_user_id: supplier.profile_id,
+            p_title: 'Document Rejected',
+            p_message: `Your document has been rejected. Reason: ${reason}. Please resubmit.`,
+            p_type: 'document_rejected',
+            p_reference_id: request.id
+          });
+        }
+      }
 
       toast({ title: 'Document Rejected', description: 'The supplier will be notified to resubmit.' });
       setPerDocRejectionNotes(prev => ({ ...prev, [requirementId]: '' }));

@@ -315,6 +315,9 @@ export const OnboardingPipelineView = () => {
 
   const handleRejectRequest = async (requestId: string, reason: string) => {
     try {
+      // Get the request data to find the supplier
+      const requestData = requests.find(r => r.id === requestId);
+
       const { error } = await supabase
         .from('supplier_onboarding_requests')
         .update({ 
@@ -325,6 +328,25 @@ export const OnboardingPipelineView = () => {
         .eq('id', requestId);
 
       if (error) throw error;
+
+      // Send notification to supplier about full onboarding decline
+      if (requestData?.supplier_id) {
+        const { data: supplier } = await supabase
+          .from('suppliers')
+          .select('profile_id')
+          .eq('id', requestData.supplier_id)
+          .single();
+
+        if (supplier?.profile_id) {
+          await supabase.rpc('create_notification', {
+            p_user_id: supplier.profile_id,
+            p_title: 'Onboarding Request Declined',
+            p_message: `Your onboarding request has been declined. Reason: ${reason}`,
+            p_type: 'onboarding_declined',
+            p_reference_id: requestId
+          });
+        }
+      }
 
       toast({
         title: 'Request Declined',

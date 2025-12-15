@@ -32,8 +32,18 @@ export const MFAGracePeriodBanner = ({ onSetupClick }: MFAGracePeriodBannerProps
   }[urgencyLevel];
 
   return (
-    <Alert className={`${bgColor} border shadow-lg rounded-lg bg-card`}>
-      <div className="flex items-center gap-3">
+    <Alert className={`${bgColor} border shadow-lg rounded-lg bg-card relative`}>
+      {urgencyLevel !== 'urgent' && (
+        <Button 
+          variant="ghost" 
+          size="icon"
+          className="absolute top-2 right-2 h-6 w-6"
+          onClick={() => setDismissed(true)}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      )}
+      <div className="flex items-center gap-3 pr-8">
         <div className={`p-2 rounded-full ${urgencyLevel === 'urgent' ? 'bg-destructive/20' : urgencyLevel === 'warning' ? 'bg-amber-500/20' : 'bg-primary/20'}`}>
           {urgencyLevel === 'urgent' ? (
             <Clock className={`h-4 w-4 ${textColor}`} />
@@ -63,17 +73,6 @@ export const MFAGracePeriodBanner = ({ onSetupClick }: MFAGracePeriodBannerProps
             >
               Set Up Now
             </Button>
-            
-            {urgencyLevel !== 'urgent' && (
-              <Button 
-                variant="ghost" 
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setDismissed(true)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
           </div>
         </AlertDescription>
       </div>

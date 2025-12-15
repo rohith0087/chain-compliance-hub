@@ -39,6 +39,7 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -78,8 +79,10 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
           .maybeSingle();
         
         userIsOwner = !!ownerCheck;
+        const userIsAdmin = teamMember.role === 'company_admin';
         setIsOwner(userIsOwner);
-        setCanEdit(userIsOwner || teamMember.role === 'company_admin');
+        setIsAdmin(userIsAdmin);
+        setCanEdit(userIsOwner || userIsAdmin);
       } else {
         // Company owner - get their buyer profile
         const { data: buyer } = await supabase
@@ -208,12 +211,13 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
     setBuyerData(prev => ({ ...prev, industry: value }));
   };
 
-  // Determine default tab and grid columns based on ownership status
-  // Owner tabs: Company, Onboarding, Notifications, Logo (4 tabs)
-  // Admin tabs: none of the owner tabs
-  // All users: Account, Password (2 tabs)
-  const defaultTab = isOwner ? 'company' : 'account';
-  const gridCols = isOwner ? 'grid-cols-6' : 'grid-cols-2';
+  // Determine default tab and grid columns based on ownership/admin status
+  // Owner tabs: Company, Onboarding, Notifications, Account, Password, Logo (6 tabs)
+  // Admin tabs: Onboarding, Account, Password (3 tabs)
+  // Other team members: Account, Password (2 tabs)
+  const canAccessOnboarding = isOwner || isAdmin;
+  const defaultTab = isOwner ? 'company' : (isAdmin ? 'defaults' : 'account');
+  const gridCols = isOwner ? 'grid-cols-6' : (isAdmin ? 'grid-cols-3' : 'grid-cols-2');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -231,6 +235,10 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
                 <TabsTrigger value="notifications">Notifications</TabsTrigger>
               </>
             )}
+            {/* Show Onboarding tab for admins who aren't owners */}
+            {!isOwner && isAdmin && (
+              <TabsTrigger value="defaults">Onboarding</TabsTrigger>
+            )}
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="password">Password</TabsTrigger>
             {isOwner && (
@@ -239,6 +247,7 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
           </TabsList>
 
           <div className="flex-1 overflow-y-auto mt-4">
+            {/* Owner-only tabs */}
             {isOwner && (
               <>
                 <TabsContent value="company" className="space-y-4 mt-0">
@@ -315,10 +324,6 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
                   </Card>
                 </TabsContent>
 
-                <TabsContent value="defaults" className="mt-0">
-                  <DefaultOnboardingSettings />
-                </TabsContent>
-
                 <TabsContent value="notifications" className="mt-0">
                   <NotificationSettingsForm />
                 </TabsContent>
@@ -330,6 +335,13 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
                   />
                 </TabsContent>
               </>
+            )}
+
+            {/* Onboarding tab - accessible by owners AND admins */}
+            {canAccessOnboarding && (
+              <TabsContent value="defaults" className="mt-0">
+                <DefaultOnboardingSettings />
+              </TabsContent>
             )}
 
             <TabsContent value="account" className="mt-0">

@@ -244,18 +244,32 @@ export const OnboardingRequestDetailDrawer = ({
     try {
       setActionLoading(true);
 
-      const { error } = await supabase
+      // Step 1: Update ALL document submissions to rejected status
+      const { error: docsError } = await supabase
+        .from('onboarding_document_submissions')
+        .update({
+          status: 'rejected',
+          rejection_reason: rejectionNote,
+          reviewed_by: user?.id,
+          reviewed_at: new Date().toISOString()
+        })
+        .eq('onboarding_request_id', request.id);
+
+      if (docsError) throw docsError;
+
+      // Step 2: Update the overall request status to allow supplier resubmission
+      const { error: requestError } = await supabase
         .from('supplier_onboarding_requests')
         .update({ 
-          status: 'pending',
+          status: 'under_review', // Keep in under_review so supplier can resubmit
           rejection_reason: rejectionNote
         })
         .eq('id', request.id);
 
-      if (error) throw error;
+      if (requestError) throw requestError;
 
       toast({
-        title: 'Request Declined',
+        title: 'All Documents Declined',
         description: 'The supplier has been notified and can resubmit their documents.'
       });
 

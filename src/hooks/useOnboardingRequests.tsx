@@ -266,6 +266,23 @@ export const useOnboardingRequests = () => {
           console.error('Warning: Failed to link onboarding request to connection:', updateError);
           // Don't throw - the request was created successfully
         }
+
+        // Send notification to supplier about the onboarding request
+        const { data: supplier } = await supabase
+          .from('suppliers')
+          .select('profile_id')
+          .eq('id', supplierId)
+          .single();
+
+        if (supplier?.profile_id) {
+          await supabase.rpc('create_notification', {
+            p_user_id: supplier.profile_id,
+            p_title: 'New Onboarding Request',
+            p_message: 'You have received a new onboarding request. Please complete the required documents.',
+            p_type: 'onboarding_request',
+            p_reference_id: data.id
+          });
+        }
       }
 
       await fetchOnboardingRequests();

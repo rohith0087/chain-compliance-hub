@@ -98,6 +98,15 @@ export const OnboardingRequestDetailDrawer = ({
     }
   };
 
+  // Helper to get the latest submission for a document requirement (handles resubmissions)
+  const getLatestSubmissionForDoc = (requirementId: string) => {
+    const subs = submissions.filter(s => s.requirement_id === requirementId);
+    if (subs.length === 0) return null;
+    return subs.reduce((latest, current) => 
+      new Date(current.created_at) > new Date(latest.created_at) ? current : latest
+    );
+  };
+
   const viewDocument = async (submission: any) => {
     try {
       const { data, error } = await supabase.storage
@@ -339,7 +348,7 @@ export const OnboardingRequestDetailDrawer = ({
   };
 
   const getDocumentStatus = (docReq: any) => {
-    const submission = submissions.find(s => s.requirement_id === docReq.id);
+    const submission = getLatestSubmissionForDoc(docReq.id);
     if (!submission) return { status: 'missing', icon: XCircle, color: 'text-destructive', label: 'Missing' };
     if (submission.is_document_available === false) return { status: 'unavailable', icon: AlertCircle, color: 'text-muted-foreground', label: 'Unavailable' };
     
@@ -353,8 +362,12 @@ export const OnboardingRequestDetailDrawer = ({
 
   const calculateProgress = () => {
     if (documents.length === 0) return 0;
-    const approved = submissions.filter(sub => sub.status === 'approved').length;
-    return Math.round((approved / documents.length) * 100);
+    // Get latest submission per document and count approved ones
+    const approvedCount = documents.filter(doc => {
+      const latestSub = getLatestSubmissionForDoc(doc.id);
+      return latestSub && latestSub.status === 'approved';
+    }).length;
+    return Math.round((approvedCount / documents.length) * 100);
   };
 
   const handleApproveDocument = async (submissionId: string) => {
@@ -416,16 +429,25 @@ export const OnboardingRequestDetailDrawer = ({
 
   const updateRequestStatusBasedOnDocs = async () => {
     // Re-fetch submissions to get latest state
-    const { data: latestSubs } = await supabase
+    const { data: allSubs } = await supabase
       .from('onboarding_document_submissions')
       .select('*')
       .eq('onboarding_request_id', request.id);
 
-    if (!latestSubs || latestSubs.length === 0) return;
+    if (!allSubs || allSubs.length === 0) return;
 
-    const allApproved = latestSubs.every(s => s.status === 'approved');
-    const anyRejected = latestSubs.some(s => s.status === 'rejected');
-    const anyPending = latestSubs.some(s => s.status === 'pending' || s.status === 'resubmitted');
+    // Get the latest submission for each document requirement
+    const requirementIds = [...new Set(allSubs.map(s => s.requirement_id))];
+    const latestSubsPerDoc = requirementIds.map(reqId => {
+      const subs = allSubs.filter(s => s.requirement_id === reqId);
+      return subs.reduce((latest, current) => 
+        new Date(current.created_at) > new Date(latest.created_at) ? current : latest
+      );
+    });
+
+    const allApproved = latestSubsPerDoc.every(s => s.status === 'approved');
+    const anyRejected = latestSubsPerDoc.some(s => s.status === 'rejected');
+    const anyPending = latestSubsPerDoc.some(s => s.status === 'pending' || s.status === 'resubmitted');
 
     let newStatus = request.status;
     if (allApproved) {
@@ -573,7 +595,7 @@ export const OnboardingRequestDetailDrawer = ({
                   <Progress value={progress} className="h-3" />
                   <p className="text-sm text-muted-foreground">
                     {documents.filter(doc => {
-                      const submission = submissions.find(s => s.requirement_id === doc.id);
+                      const submission = getLatestSubmissionForDoc(doc.id);
                       return submission && submission.is_document_available !== false;
                     }).length} of {documents.length} documents submitted
                   </p>
@@ -597,7 +619,7 @@ export const OnboardingRequestDetailDrawer = ({
                       {documents.map((doc) => {
                         const statusInfo = getDocumentStatus(doc);
                         const StatusIcon = statusInfo.icon;
-                        const submission = submissions.find(s => s.requirement_id === doc.id);
+                        const submission = getLatestSubmissionForDoc(doc.id);
                         const isReviewing = reviewingDocId === doc.id;
                         const canReview = submission && 
                           submission.is_document_available !== false && 

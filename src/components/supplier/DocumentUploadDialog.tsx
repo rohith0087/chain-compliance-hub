@@ -8,11 +8,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Upload, File, X, Calendar, AlertTriangle, Cloud, HardDrive, Search, Check } from 'lucide-react';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Upload, File, X, Calendar as CalendarIcon, AlertTriangle, Cloud, HardDrive, Search, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSupplierItems, ITEM_CATEGORIES } from '@/hooks/useSupplierItems';
+import { cn } from '@/lib/utils';
+import { format, parseISO } from 'date-fns';
 
 interface LibraryDocument {
   id: string;
@@ -36,7 +40,8 @@ interface DocumentUploadDialogProps {
 const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: DocumentUploadDialogProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [notes, setNotes] = useState('');
-  const [expirationDate, setExpirationDate] = useState('');
+  const [expirationDate, setExpirationDate] = useState<Date | undefined>(undefined);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [updateMetadataOnly, setUpdateMetadataOnly] = useState(false);
   const [linkedItemIds, setLinkedItemIds] = useState<string[]>([]);
@@ -90,7 +95,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
     setSelectedLibraryDoc(doc);
     // Pre-fill expiration date from library document if available
     if (doc.expiration_date) {
-      setExpirationDate(doc.expiration_date);
+      setExpirationDate(parseISO(doc.expiration_date));
     }
     // Clear file selection when choosing from library
     setFile(null);
@@ -222,7 +227,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
           .from('document_uploads')
           .update({
             reviewer_notes: notes || null,
-            expiration_date: expirationDate || null,
+            expiration_date: expirationDate ? format(expirationDate, 'yyyy-MM-dd') : null,
             status: 'pending_review'
           })
           .eq('id', latestUpload.id);
@@ -241,7 +246,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
             mime_type: mimeType,
             status: 'pending_review',
             reviewer_notes: notes || null,
-            expiration_date: expirationDate || null,
+            expiration_date: expirationDate ? format(expirationDate, 'yyyy-MM-dd') : null,
             version: version,
             linked_item_ids: linkedItemIds.length > 0 ? linkedItemIds : null
           });
@@ -311,7 +316,8 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
   const resetForm = () => {
     setFile(null);
     setNotes('');
-    setExpirationDate('');
+    setExpirationDate(undefined);
+    setIsCalendarOpen(false);
     setUpdateMetadataOnly(false);
     setUploadSource('machine');
     setSelectedLibraryDoc(null);
@@ -555,18 +561,47 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
 
             {/* Expiration Date */}
             <div>
-              <Label htmlFor="expiration-date" className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
+              <Label className="flex items-center gap-2">
+                <CalendarIcon className="w-4 h-4" />
                 Document Expiration Date (Optional)
               </Label>
-              <Input
-                id="expiration-date"
-                type="date"
-                value={expirationDate}
-                onChange={(e) => setExpirationDate(e.target.value)}
-                className="mt-1"
-                min={new Date().toISOString().split('T')[0]}
-              />
+              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal mt-1",
+                      !expirationDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {expirationDate ? format(expirationDate, "PPP") : "Select expiration date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 z-50" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={expirationDate}
+                    onSelect={(date) => {
+                      setExpirationDate(date);
+                      setIsCalendarOpen(false);
+                    }}
+                    disabled={(date) => date < new Date()}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              {expirationDate && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setExpirationDate(undefined)}
+                  className="mt-1 text-xs"
+                >
+                  Clear date
+                </Button>
+              )}
               <p className="text-xs text-muted-foreground mt-1">
                 Set when this document expires (e.g., certificate expiry, license renewal date)
               </p>

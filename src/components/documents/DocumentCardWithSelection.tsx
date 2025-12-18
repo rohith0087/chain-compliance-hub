@@ -139,13 +139,15 @@ const DocumentCardWithSelection = ({
     return new Date(expirationDate) < new Date();
   };
 
+  // Show approve/decline buttons for buyers when document is submitted and has a file
+  // Also show for custom template documents (file is in template_submissions)
   const canApproveOrDecline = userRole === 'buyer' && 
     document.status === 'submitted' && 
-    document.file_name;
+    (document.file_name || (document as any).template_type === 'custom' || (document as any).has_template_submission);
 
   const canCreateLink = userRole === 'buyer' && 
     document.status === 'approved' && 
-    document.file_name && 
+    (document.file_name || (document as any).template_type === 'custom' || (document as any).has_template_submission) && 
     onCreateLink;
 
   const getCategoryColor = (category: string) => {

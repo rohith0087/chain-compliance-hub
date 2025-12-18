@@ -345,6 +345,36 @@ const BuyerDocumentsDashboard = () => {
         };
       });
 
+      // Fetch template_submissions for custom template documents to get file info
+      const customTemplateDocIds = processedDocuments
+        .filter(doc => doc.template_type === 'custom' && doc.status === 'submitted')
+        .map(doc => doc.id);
+
+      if (customTemplateDocIds.length > 0) {
+        const { data: templateSubmissions } = await supabase
+          .from('template_submissions')
+          .select('request_id, submission_file_name, submission_file_path, submission_file_size, submission_mime_type')
+          .in('request_id', customTemplateDocIds);
+
+        if (templateSubmissions && templateSubmissions.length > 0) {
+          const submissionMap = new Map(templateSubmissions.map(s => [s.request_id, s]));
+          processedDocuments = processedDocuments.map(doc => {
+            const submission = submissionMap.get(doc.id);
+            if (submission) {
+              return {
+                ...doc,
+                file_name: submission.submission_file_name,
+                file_path: submission.submission_file_path,
+                file_size: submission.submission_file_size,
+                mime_type: submission.submission_mime_type,
+                has_template_submission: true
+              };
+            }
+            return doc;
+          });
+        }
+      }
+
       // Apply search filter
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();

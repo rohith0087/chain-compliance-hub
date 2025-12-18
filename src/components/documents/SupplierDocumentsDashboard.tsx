@@ -22,6 +22,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useBranchContext } from '@/contexts/BranchContext';
 import DocumentCard from './DocumentCard';
 import DocumentTimeline from './DocumentTimeline';
+import DocumentUploadDialog from '@/components/supplier/DocumentUploadDialog';
 
 
 // Helper to get the latest upload from an array (sorted by created_at descending)
@@ -39,6 +40,7 @@ const SupplierDocumentsDashboard = () => {
   const [activeSubTab, setActiveSubTab] = useState('documents');
   const [highlightedDocId, setHighlightedDocId] = useState<string | null>(null);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
+  const [uploadDialogDoc, setUploadDialogDoc] = useState<any>(null);
   const [filters, setFilters] = useState({
     search: '',
     status: '',
@@ -442,6 +444,10 @@ const SupplierDocumentsDashboard = () => {
     };
   });
 
+  // Handle upload button click - opens upload dialog
+  const handleUpload = (doc: any) => {
+    setUploadDialogDoc(doc);
+  };
 
   if (loading) {
     return <div className="flex items-center justify-center h-64">Loading documents...</div>;
@@ -786,7 +792,8 @@ const SupplierDocumentsDashboard = () => {
                         userRole="supplier"
                         onView={() => console.log('View document:', doc.id)}
                         onDownload={() => console.log('Download document:', doc.id)}
-                        onUpload={() => console.log('Upload document:', doc.id)}
+                        onUpload={() => handleUpload(doc)}
+                        onRenewalSuccess={loadDocuments}
                       />
                     );
                   })}
@@ -860,7 +867,8 @@ const SupplierDocumentsDashboard = () => {
                             userRole="supplier"
                             onView={() => console.log('View document:', doc.id)}
                             onDownload={() => console.log('Download document:', doc.id)}
-                            onUpload={() => console.log('Upload document:', doc.id)}
+                            onUpload={() => handleUpload(doc)}
+                            onRenewalSuccess={loadDocuments}
                           />
                         </div>
                       );
@@ -877,6 +885,19 @@ const SupplierDocumentsDashboard = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Upload Dialog */}
+      {uploadDialogDoc && (
+        <DocumentUploadDialog
+          isOpen={!!uploadDialogDoc}
+          onClose={() => setUploadDialogDoc(null)}
+          request={uploadDialogDoc}
+          onUploadSuccess={() => {
+            setUploadDialogDoc(null);
+            loadDocuments();
+          }}
+        />
+      )}
     </div>
   );
 };

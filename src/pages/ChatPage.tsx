@@ -241,22 +241,59 @@ const ChatPage: React.FC = () => {
     setUserId(user.id);
     (async () => {
       try {
-        // Try buyer, else supplier
+        // Step 1: Check if user is company OWNER (buyer)
         const { data: buyer } = await supabase
           .from("buyers")
           .select("id, industry")
           .eq("profile_id", user.id)
-          .single();
+          .maybeSingle();
         if (buyer) {
           setCompanyInfo({ id: buyer.id, type: "buyer", industry: buyer.industry });
           return;
         }
+
+        // Step 2: Check if user is company OWNER (supplier)
         const { data: supplier } = await supabase
           .from("suppliers")
           .select("id, industry")
           .eq("profile_id", user.id)
-          .single();
-        if (supplier) setCompanyInfo({ id: supplier.id, type: "supplier", industry: supplier.industry });
+          .maybeSingle();
+        if (supplier) {
+          setCompanyInfo({ id: supplier.id, type: "supplier", industry: supplier.industry });
+          return;
+        }
+
+        // Step 3: Check if user is a company TEAM MEMBER
+        const { data: companyUser } = await supabase
+          .from("company_users")
+          .select("company_id, company_type")
+          .eq("profile_id", user.id)
+          .eq("status", "active")
+          .maybeSingle();
+
+        if (companyUser) {
+          if (companyUser.company_type === 'buyer') {
+            const { data: teamBuyer } = await supabase
+              .from("buyers")
+              .select("id, industry")
+              .eq("id", companyUser.company_id)
+              .single();
+            if (teamBuyer) {
+              setCompanyInfo({ id: teamBuyer.id, type: "buyer", industry: teamBuyer.industry });
+              return;
+            }
+          } else if (companyUser.company_type === 'supplier') {
+            const { data: teamSupplier } = await supabase
+              .from("suppliers")
+              .select("id, industry")
+              .eq("id", companyUser.company_id)
+              .single();
+            if (teamSupplier) {
+              setCompanyInfo({ id: teamSupplier.id, type: "supplier", industry: teamSupplier.industry });
+              return;
+            }
+          }
+        }
       } catch (e) {
         console.error("getCompanyInfo", e);
       }

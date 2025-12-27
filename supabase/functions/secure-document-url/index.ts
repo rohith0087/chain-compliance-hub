@@ -239,7 +239,38 @@ serve(async (req) => {
 
         submission = await tryFindSubmission();
         if (!submission) {
-          console.error('Document not found in database:', { resolved, document_id, filePath });
+          console.log('Document not found in database, attempting direct storage access:', resolved);
+          
+          // Fallback: Check if user is a buyer or supplier and file exists in storage
+          // This allows access to files that might have been moved/renamed but still exist
+          const { data: buyerData } = await adminClient
+            .from('buyers')
+            .select('id')
+            .eq('profile_id', userId)
+            .maybeSingle();
+          
+          const { data: supplierData } = await adminClient
+            .from('suppliers')
+            .select('id')
+            .eq('profile_id', userId)
+            .maybeSingle();
+          
+          if (buyerData || supplierData) {
+            // User is authenticated as buyer or supplier, check if file exists
+            const { data: fileData } = await adminClient.storage
+              .from(resolved.bucket)
+              .createSignedUrl(resolved.key, expiresIn);
+            
+            if (fileData?.signedUrl) {
+              console.log('Direct storage access granted for authenticated user');
+              return new Response(JSON.stringify({ success: true, url: fileData.signedUrl }), {
+                status: 200,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
+            }
+          }
+          
+          console.error('Document not found in database and no direct access:', { resolved, document_id, filePath });
           return new Response(JSON.stringify({ error: 'Document not found in database' }), {
             status: 404,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -254,6 +254,29 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
         for (const supplierId of formData.suppliers) {
           const supplierBranchId = formData.supplierBranches[supplierId] === 'all' ? null : (formData.supplierBranches[supplierId] || null);
           
+          // Auto-fetch sample template for this document type if not manually provided
+          let finalSampleData = { ...sampleData };
+          if (!sampleDocument?.source) {
+            // Check for a saved sample template for this document type
+            const { data: templateData } = await supabase
+              .from('buyer_sample_templates')
+              .select('*')
+              .eq('buyer_id', buyerProfile.id)
+              .eq('document_type', doc.title)
+              .maybeSingle();
+
+            if (templateData) {
+              finalSampleData = {
+                sample_file_path: templateData.sample_file_path,
+                sample_file_name: templateData.sample_file_name,
+                sample_file_size: templateData.sample_file_size,
+                sample_mime_type: templateData.sample_mime_type,
+                sample_uploaded_by: templateData.uploaded_by,
+                sample_uploaded_at: templateData.created_at
+              };
+            }
+          }
+          
           const insertData: any = {
             title: doc.title,
             description: doc.description,
@@ -268,7 +291,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
             supplier_branch_id: supplierBranchId, // Target supplier branch
             notes: formData.notes || null,
             template_sections: doc.template || null,
-            ...sampleData // Include sample document data
+            ...finalSampleData // Include sample document data (manual or auto-attached)
           };
 
           // Add custom template ID if this is a custom template

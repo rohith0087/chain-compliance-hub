@@ -27,7 +27,8 @@ import {
   ClipboardCheck,
   GitBranch,
   Package,
-  FolderKanban
+  FolderKanban,
+  FileImage
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
@@ -198,6 +199,7 @@ export function BuyerSidebarLayout({
         { title: t('common:navigation.requests'), value: 'requests', icon: ListChecks },
         { title: t('common:navigation.documents'), value: 'documents', icon: FileCheck },
         { title: 'Templates', value: 'templates', icon: FileText },
+        { title: 'Sample Templates', value: 'sample-templates', icon: FileImage },
         { title: 'Document Sets', value: 'document-sets', icon: FolderKanban }
       ]
     },

@@ -15,6 +15,8 @@ import { PasswordChangeForm } from './PasswordChangeForm';
 import { AccountSettingsForm } from './AccountSettingsForm';
 import { SafeSelect, SafeSelectItem } from '@/components/ui/SafeSelect';
 import { VALID_INDUSTRIES } from '@/config/industries';
+import { useSupplierNotificationSettings } from '@/hooks/useSupplierNotificationSettings';
+import { Bell, Mail, MessageSquare } from 'lucide-react';
 
 interface SupplierSettingsModalProps {
   isOpen: boolean;
@@ -41,7 +43,7 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
 }) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  
+  const { settings: notificationSettings, loading: notificationsLoading, saving: notificationsSaving, updateSettings: updateNotificationSettings } = useSupplierNotificationSettings();
   const [supplierData, setSupplierData] = useState<SupplierData>({
     company_name: '',
     contact_email: '',
@@ -244,10 +246,11 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className={`grid w-full ${isOwner ? 'grid-cols-4' : 'grid-cols-2'} flex-shrink-0 sticky top-0 z-10 bg-background`}>
+          <TabsList className={`grid w-full ${isOwner ? 'grid-cols-5' : 'grid-cols-3'} flex-shrink-0 sticky top-0 z-10 bg-background`}>
             {isOwner && <TabsTrigger value="company">Company</TabsTrigger>}
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="password">Password</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
             {isOwner && <TabsTrigger value="logo">Logo</TabsTrigger>}
           </TabsList>
           
@@ -357,7 +360,77 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
           <TabsContent value="password" className="space-y-4 mt-0">
             <PasswordChangeForm />
           </TabsContent>
-          
+
+          <TabsContent value="notifications" className="space-y-4 mt-0">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className="h-5 w-5" />
+                  New Request Notifications
+                </CardTitle>
+                <CardDescription>
+                  Configure how you receive notifications when buyers send you document requests
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {notificationsLoading ? (
+                  <div className="text-center py-4 text-muted-foreground">Loading settings...</div>
+                ) : (
+                  <>
+                    {/* In-App Notifications (always on) */}
+                    <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <Label className="text-base font-medium">In-App Notifications</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Receive notifications in the app when new requests arrive
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={true}
+                        disabled={true}
+                        className="opacity-50"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground -mt-2 ml-11">
+                      In-app notifications are always enabled for new requests
+                    </p>
+
+                    {/* Email Notifications (configurable) */}
+                    <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Mail className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <Label className="text-base font-medium">Email Notifications</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Receive email notifications when buyers send new document requests
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={notificationSettings?.new_request_email_enabled || false}
+                        onCheckedChange={(checked) => updateNotificationSettings({ new_request_email_enabled: checked })}
+                        disabled={notificationsSaving}
+                      />
+                    </div>
+
+                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
+                      <p className="text-sm text-blue-800 dark:text-blue-200">
+                        <strong>When enabled</strong>, email notifications for new requests will be sent to:
+                      </p>
+                      <ul className="mt-2 text-sm text-blue-700 dark:text-blue-300 list-disc list-inside space-y-1">
+                        <li>Company owner</li>
+                        <li>Company administrators</li>
+                        <li>Users assigned to the target branch (if applicable)</li>
+                      </ul>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
           {isOwner && (
             <TabsContent value="logo" className="space-y-4 mt-0">
               <LogoUploadWidget

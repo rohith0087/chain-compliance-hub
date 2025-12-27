@@ -222,9 +222,9 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
         });
       }
 
-      // Trigger new request email notification (fire and forget)
+      // Trigger new request email notification to SUPPLIER (fire and forget)
       supabase.functions.invoke('send-new-request-email', {
-        body: { requestId: request.id, buyerId: buyerProfile.id }
+        body: { requestId: request.id, supplierId: selectedSupplier }
       }).catch(err => console.error('Failed to send new request email:', err));
 
       toast({

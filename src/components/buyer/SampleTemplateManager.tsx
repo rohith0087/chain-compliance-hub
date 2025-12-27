@@ -17,12 +17,24 @@ import {
   Download,
   Edit2,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  Filter,
+  FolderOpen,
+  X
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getComplianceDocuments } from '@/components/requests/ComplianceDocuments';
 import { SampleTemplateUploadModal } from './SampleTemplateUploadModal';
+import { useDocumentSets } from '@/hooks/useDocumentSets';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -142,7 +154,15 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<SampleTemplate | null>(null);
   const [deleting, setDeleting] = useState(false);
+  
+  // New filter states
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedRegulatoryBody, setSelectedRegulatoryBody] = useState('all');
+  const [selectedSetId, setSelectedSetId] = useState('all');
+  const [uploadStatus, setUploadStatus] = useState<'all' | 'uploaded' | 'not-uploaded'>('all');
+  
   const { toast } = useToast();
+  const { documentSets } = useDocumentSets(buyerId);
 
   // Get all available document types
   const allDocumentTypes = useMemo(() => {
@@ -256,27 +276,92 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
     fetchTemplates();
   };
 
-  // Filter document types based on search
-  const filteredDocTypes = useMemo(() => {
-    if (!searchQuery.trim()) return allDocumentTypes;
-    const query = searchQuery.toLowerCase();
-    return allDocumentTypes.filter(doc => 
-      doc.title.toLowerCase().includes(query) ||
-      doc.category.toLowerCase().includes(query)
-    );
-  }, [allDocumentTypes, searchQuery]);
-
   // Get template for a document type
   const getTemplateForDocType = (docType: string) => {
     return templates.find(t => t.document_type === docType);
   };
 
-  // Stats
+  // Extract unique categories and regulatory bodies
+  const filterOptions = useMemo(() => {
+    const categories = [...new Set(allDocumentTypes.map(d => d.category))].sort();
+    const regulatoryBodies = [...new Set(allDocumentTypes.map(d => d.regulatoryBody))].sort();
+    return { categories, regulatoryBodies };
+  }, [allDocumentTypes]);
+
+  // Enhanced filtering logic
+  const filteredDocTypes = useMemo(() => {
+    let filtered = allDocumentTypes;
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(doc => 
+        doc.title.toLowerCase().includes(query) ||
+        doc.category.toLowerCase().includes(query)
+      );
+    }
+
+    // Category filter
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(doc => doc.category === selectedCategory);
+    }
+
+    // Regulatory body filter
+    if (selectedRegulatoryBody !== 'all') {
+      filtered = filtered.filter(doc => doc.regulatoryBody === selectedRegulatoryBody);
+    }
+
+    // Document set filter
+    if (selectedSetId !== 'all') {
+      const selectedSet = documentSets?.find(s => s.id === selectedSetId);
+      if (selectedSet) {
+        const docIds = Array.isArray(selectedSet.document_ids) 
+          ? selectedSet.document_ids 
+          : [];
+        filtered = filtered.filter(doc => docIds.includes(doc.id));
+      }
+    }
+
+    // Upload status filter
+    if (uploadStatus === 'uploaded') {
+      filtered = filtered.filter(doc => !!getTemplateForDocType(doc.title));
+    } else if (uploadStatus === 'not-uploaded') {
+      filtered = filtered.filter(doc => !getTemplateForDocType(doc.title));
+    }
+
+    return filtered;
+  }, [allDocumentTypes, searchQuery, selectedCategory, selectedRegulatoryBody, selectedSetId, documentSets, uploadStatus, templates]);
+
+  // Stats - based on filtered results
   const stats = useMemo(() => {
     const total = allDocumentTypes.length;
     const configured = templates.length;
-    return { total, configured, remaining: total - configured };
-  }, [allDocumentTypes, templates]);
+    const filteredTotal = filteredDocTypes.length;
+    const filteredConfigured = filteredDocTypes.filter(doc => !!getTemplateForDocType(doc.title)).length;
+    return { 
+      total, 
+      configured, 
+      remaining: total - configured,
+      filteredTotal,
+      filteredConfigured,
+      filteredRemaining: filteredTotal - filteredConfigured
+    };
+  }, [allDocumentTypes, templates, filteredDocTypes]);
+
+  // Check if any filters are active
+  const hasActiveFilters = selectedCategory !== 'all' || 
+    selectedRegulatoryBody !== 'all' || 
+    selectedSetId !== 'all' || 
+    uploadStatus !== 'all' ||
+    searchQuery.trim() !== '';
+
+  const clearAllFilters = () => {
+    setSelectedCategory('all');
+    setSelectedRegulatoryBody('all');
+    setSelectedSetId('all');
+    setUploadStatus('all');
+    setSearchQuery('');
+  };
 
   const formatFileSize = (bytes: number | null) => {
     if (!bytes) return 'Unknown size';
@@ -344,16 +429,126 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
         </Card>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search document types..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+      {/* Filters Section */}
+      <Card className="border-border/50">
+        <CardContent className="pt-6 space-y-4">
+          {/* Filter Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Filter className="h-4 w-4" />
+              Filters
+            </div>
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-7 text-xs">
+                <X className="h-3 w-3 mr-1" />
+                Clear All
+              </Button>
+            )}
+          </div>
+
+          {/* Filter Dropdowns Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Category Filter */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Category</label>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {filterOptions.categories.map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Regulatory Body Filter */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Regulatory Body</label>
+              <Select value={selectedRegulatoryBody} onValueChange={setSelectedRegulatoryBody}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All Regulatory Bodies" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Regulatory Bodies</SelectItem>
+                  {filterOptions.regulatoryBodies.map(reg => (
+                    <SelectItem key={reg} value={reg}>{reg}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Document Sets Filter */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                <FolderOpen className="h-3 w-3" />
+                Document Set
+              </label>
+              <Select value={selectedSetId} onValueChange={setSelectedSetId}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All Document Sets" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Document Sets</SelectItem>
+                  {documentSets?.map(set => (
+                    <SelectItem key={set.id} value={set.id}>
+                      {set.set_name}
+                      {set.is_default && (
+                        <Badge variant="secondary" className="ml-2 text-xs">Default</Badge>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Upload Status Tabs */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Upload Status</label>
+            <Tabs value={uploadStatus} onValueChange={(v) => setUploadStatus(v as typeof uploadStatus)}>
+              <TabsList className="grid w-full grid-cols-3 h-9">
+                <TabsTrigger value="all" className="text-xs">
+                  All ({stats.total})
+                </TabsTrigger>
+                <TabsTrigger value="uploaded" className="text-xs">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  Uploaded ({stats.configured})
+                </TabsTrigger>
+                <TabsTrigger value="not-uploaded" className="text-xs">
+                  <XCircle className="h-3 w-3 mr-1" />
+                  Needs Template ({stats.remaining})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search document types..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-9"
+            />
+          </div>
+
+          {/* Filter Results Summary */}
+          {hasActiveFilters && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground pt-1 border-t">
+              <span>Showing <span className="font-medium text-foreground">{stats.filteredTotal}</span> of {stats.total} document types</span>
+              {stats.filteredConfigured > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {stats.filteredConfigured} with templates
+                </Badge>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Document Type List */}
       <Card>

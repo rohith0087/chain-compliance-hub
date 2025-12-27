@@ -455,6 +455,38 @@ const tools = [
         required: ["visualization_type", "data_query"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "draft_compliance_email",
+      description: "Draft compliance follow-up emails for suppliers with expired, expiring, or pending documents. Use this when user clicks 'Address Now' for expired documents, 'Schedule Renewals' for expiring documents, or explicitly asks to send email/follow up about compliance issues. Returns draft email content that user can review and edit before sending. Automatically groups by supplier for multi-supplier scenarios to ensure no cross-supplier data leakage.",
+      parameters: {
+        type: "object",
+        properties: {
+          action_type: {
+            type: "string",
+            enum: ["expired_documents", "expiring_documents", "pending_review", "general_followup"],
+            description: "Type of compliance action triggering the email"
+          },
+          supplier_ids: {
+            type: "array",
+            items: { type: "string" },
+            description: "Specific supplier IDs to send emails to. If not provided, will determine from document context."
+          },
+          document_ids: {
+            type: "array",
+            items: { type: "string" },
+            description: "Specific document IDs to reference in the email"
+          },
+          custom_message: {
+            type: "string",
+            description: "Optional custom context or message to include in the email draft"
+          }
+        },
+        required: ["action_type"]
+      }
+    }
   }
 ];
 
@@ -2284,6 +2316,318 @@ function generateFallbackInsights(metrics: any, supplierMetrics: any[]) {
   return insights.slice(0, 4);
 }
 
+// ============= DRAFT COMPLIANCE EMAIL =============
+// Drafts context-aware follow-up emails grouped by supplier
+async function draftComplianceEmail(params: any, buyerId: string) {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  try {
+    const actionType = params.action_type || 'general_followup';
+    const supplierIds = params.supplier_ids || [];
+    const documentIds = params.document_ids || [];
+    const customMessage = params.custom_message || '';
+    
+    console.log('📧 Draft email params:', { actionType, supplierIds: supplierIds.length, documentIds: documentIds.length });
+    
+    // 1. Fetch relevant documents based on action type
+    let documentsQuery = supabase
+      .from('document_uploads')
+      .select(`
+        id,
+        document_name,
+        file_name,
+        status,
+        expiration_date,
+        created_at,
+        document_requests!inner(
+          id,
+          title,
+          document_type,
+          supplier_id,
+          buyer_id,
+          suppliers(id, company_name, contact_email, profile_id)
+        )
+      `)
+      .eq('document_requests.buyer_id', buyerId);
+    
+    // Filter by action type
+    const now = new Date();
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    
+    if (actionType === 'expired_documents') {
+      documentsQuery = documentsQuery.lt('expiration_date', now.toISOString());
+    } else if (actionType === 'expiring_documents') {
+      documentsQuery = documentsQuery
+        .gte('expiration_date', now.toISOString())
+        .lte('expiration_date', thirtyDaysFromNow.toISOString());
+    } else if (actionType === 'pending_review') {
+      documentsQuery = documentsQuery.in('status', ['pending_review', 'submitted']);
+    }
+    
+    // Filter by specific document IDs if provided
+    if (documentIds.length > 0) {
+      documentsQuery = documentsQuery.in('id', documentIds);
+    }
+    
+    const { data: documents, error: docsError } = await documentsQuery;
+    
+    if (docsError) throw docsError;
+    
+    if (!documents || documents.length === 0) {
+      return {
+        success: false,
+        error: `No ${actionType.replace(/_/g, ' ')} found for your company.`,
+        drafts: []
+      };
+    }
+    
+    // 2. Group documents by supplier (CRITICAL for data isolation)
+    const supplierGroups = new Map<string, {
+      supplier: any;
+      documents: any[];
+    }>();
+    
+    for (const doc of documents) {
+      const supplier = (doc.document_requests as any)?.suppliers;
+      if (!supplier) continue;
+      
+      const supplierId = supplier.id;
+      
+      // Filter by specific suppliers if provided
+      if (supplierIds.length > 0 && !supplierIds.includes(supplierId)) {
+        continue;
+      }
+      
+      if (!supplierGroups.has(supplierId)) {
+        supplierGroups.set(supplierId, {
+          supplier,
+          documents: []
+        });
+      }
+      
+      supplierGroups.get(supplierId)!.documents.push({
+        id: doc.id,
+        name: doc.document_name || doc.file_name || (doc.document_requests as any)?.title || 'Untitled',
+        type: (doc.document_requests as any)?.document_type || 'Document',
+        expiration_date: doc.expiration_date,
+        status: doc.status
+      });
+    }
+    
+    if (supplierGroups.size === 0) {
+      return {
+        success: false,
+        error: 'No suppliers found with matching documents.',
+        drafts: []
+      };
+    }
+    
+    // 3. Get buyer info for email signature
+    const { data: buyer } = await supabase
+      .from('buyers')
+      .select('company_name, contact_email, profile_id')
+      .eq('id', buyerId)
+      .single();
+    
+    const { data: buyerProfile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', buyer?.profile_id)
+      .single();
+    
+    // 4. Fetch recipient details for each supplier
+    const drafts: any[] = [];
+    
+    for (const [supplierId, group] of supplierGroups) {
+      const { supplier, documents: supplierDocs } = group;
+      
+      // Get recipients: primary email, owner, and admins
+      const recipients: any[] = [];
+      
+      // Primary contact email
+      if (supplier.contact_email) {
+        recipients.push({
+          email: supplier.contact_email,
+          name: supplier.company_name,
+          type: 'primary'
+        });
+      }
+      
+      // Supplier owner
+      if (supplier.profile_id) {
+        const { data: ownerProfile } = await supabase
+          .from('profiles')
+          .select('email, full_name')
+          .eq('id', supplier.profile_id)
+          .single();
+        
+        if (ownerProfile?.email && ownerProfile.email !== supplier.contact_email) {
+          recipients.push({
+            email: ownerProfile.email,
+            name: ownerProfile.full_name || 'Supplier Owner',
+            type: 'owner'
+          });
+        }
+      }
+      
+      // Company admins
+      const { data: admins } = await supabase
+        .from('company_users')
+        .select('profile_id, profiles(email, full_name)')
+        .eq('company_id', supplierId)
+        .eq('company_type', 'supplier')
+        .in('role', ['admin', 'owner'])
+        .eq('status', 'active')
+        .limit(3);
+      
+      for (const admin of admins || []) {
+        const adminProfile = admin.profiles as any;
+        if (adminProfile?.email && !recipients.some(r => r.email === adminProfile.email)) {
+          recipients.push({
+            email: adminProfile.email,
+            name: adminProfile.full_name || 'Admin',
+            type: 'admin'
+          });
+        }
+      }
+      
+      // If no recipients found, use contact email as fallback
+      if (recipients.length === 0 && supplier.contact_email) {
+        recipients.push({
+          email: supplier.contact_email,
+          name: supplier.company_name,
+          type: 'primary'
+        });
+      }
+      
+      // 5. Generate AI-drafted email content
+      let subject = '';
+      let body = '';
+      
+      const docList = supplierDocs.map(d => {
+        const expInfo = d.expiration_date 
+          ? ` - ${d.status === 'expired' ? 'Expired' : 'Expires'} ${new Date(d.expiration_date).toLocaleDateString()}`
+          : '';
+        return `• ${d.name}${expInfo}`;
+      }).join('\n');
+      
+      if (OPENAI_API_KEY) {
+        try {
+          const emailPrompt = `Generate a professional compliance follow-up email for the following scenario:
+
+Action Type: ${actionType.replace(/_/g, ' ')}
+Supplier: ${supplier.company_name}
+Documents (${supplierDocs.length}):
+${docList}
+
+Buyer Company: ${buyer?.company_name || 'Our Company'}
+Sender: ${buyerProfile?.full_name || 'Compliance Team'}
+${customMessage ? `Additional Context: ${customMessage}` : ''}
+
+Generate:
+1. A clear, professional subject line (max 60 chars)
+2. A friendly but professional email body that:
+   - Greets the supplier appropriately
+   - Clearly explains the compliance issue
+   - Lists the specific documents with their status/dates
+   - Provides a clear call to action
+   - Mentions they can upload through the compliance portal
+   - Signs off professionally
+
+Format your response as JSON:
+{
+  "subject": "...",
+  "body": "..."
+}`;
+
+          const emailResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${OPENAI_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o-mini',
+              messages: [
+                { role: 'system', content: 'You are a professional business communication expert. Generate concise, clear compliance emails.' },
+                { role: 'user', content: emailPrompt }
+              ],
+              temperature: 0.7,
+              response_format: { type: 'json_object' }
+            })
+          });
+          
+          if (emailResponse.ok) {
+            const emailData = await emailResponse.json();
+            const parsed = JSON.parse(emailData.choices[0]?.message?.content || '{}');
+            subject = parsed.subject || '';
+            body = parsed.body || '';
+          }
+        } catch (aiError) {
+          console.error('AI email generation failed:', aiError);
+        }
+      }
+      
+      // Fallback if AI fails
+      if (!subject || !body) {
+        const actionLabel = {
+          expired_documents: 'Expired',
+          expiring_documents: 'Expiring Soon',
+          pending_review: 'Pending Review',
+          general_followup: 'Follow-up Required'
+        }[actionType] || 'Action Required';
+        
+        subject = `Action Required: ${supplierDocs.length} ${actionLabel} Compliance Document${supplierDocs.length > 1 ? 's' : ''}`;
+        
+        body = `Dear ${supplier.company_name} Team,
+
+I hope this message finds you well.
+
+I wanted to follow up regarding the following compliance documents that require your attention:
+
+${docList}
+
+Please submit the ${actionType === 'expired_documents' ? 'renewed' : 'updated'} documents through the compliance portal at your earliest convenience.
+
+If you have any questions or need assistance, please don't hesitate to reach out.
+
+Best regards,
+${buyerProfile?.full_name || 'Compliance Team'}
+${buyer?.company_name || ''}`;
+      }
+      
+      drafts.push({
+        supplier_id: supplierId,
+        supplier_name: supplier.company_name,
+        recipients,
+        subject,
+        body,
+        documents: supplierDocs
+      });
+    }
+    
+    console.log(`✓ Generated ${drafts.length} email drafts for ${actionType}`);
+    
+    return {
+      success: true,
+      type: 'email_composer',
+      action_type: actionType,
+      total_suppliers: drafts.length,
+      total_documents: documents.length,
+      buyer_id: buyerId,
+      drafts
+    };
+  } catch (error: any) {
+    console.error('Error drafting compliance email:', error);
+    return {
+      success: false,
+      error: error.message,
+      drafts: []
+    };
+  }
+}
+
+
 async function getMissingRequiredDocuments(params: any, buyerId: string) {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   
@@ -2432,6 +2776,9 @@ async function executeToolCall(toolName: string, args: any, buyerId: string) {
     case "get_compliance_insights_dashboard":
       console.log('📊 Generating compliance insights dashboard:', args);
       return await getComplianceInsightsDashboard(args, buyerId);
+    case "draft_compliance_email":
+      console.log('📧 Drafting compliance follow-up email:', args);
+      return await draftComplianceEmail(args, buyerId);
     default:
       return {
         success: false,

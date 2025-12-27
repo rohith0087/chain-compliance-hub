@@ -205,3 +205,7 @@ verify_jwt = true
 # Turnstile validation - public (used before user is authenticated)
 [functions.validate-turnstile]
 verify_jwt = false
+
+# Compliance follow-up email sending - requires authentication
+[functions.send-compliance-followup]
+verify_jwt = true

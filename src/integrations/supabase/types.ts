@@ -720,6 +720,7 @@ export type Database = {
         Row: {
           buyer_id: string
           created_at: string | null
+          display_name: string | null
           document_type: string
           id: string
           notes: string | null
@@ -733,6 +734,7 @@ export type Database = {
         Insert: {
           buyer_id: string
           created_at?: string | null
+          display_name?: string | null
           document_type: string
           id?: string
           notes?: string | null
@@ -746,6 +748,7 @@ export type Database = {
         Update: {
           buyer_id?: string
           created_at?: string | null
+          display_name?: string | null
           document_type?: string
           id?: string
           notes?: string | null

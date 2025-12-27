@@ -19,6 +19,7 @@ import ShareDialog from "@/components/chat/ShareDialog";
 import { CodeVisualizationRenderer } from "@/components/chat/CodeVisualizationRenderer";
 import AdvancedComplianceInsightsDashboard from "@/components/chat/AdvancedComplianceInsightsDashboard";
 import ComplianceEmailComposer from "@/components/chat/ComplianceEmailComposer";
+import { StructuredResponseRenderer, hasStructuredContent } from "@/components/chat/structured";
 import {
   MessageSquare,
   Send,
@@ -893,8 +894,13 @@ const ChatPage: React.FC = () => {
           </div>
         )}
 
-        {/* Narrative / markdown */}
-        {!isError && (parsed.response || parsed.content) && (
+        {/* Structured Response Renderer - for AI responses with HTML-like tags */}
+        {!isError && (parsed.response || parsed.content) && hasStructuredContent(parsed.response || parsed.content || '') && (
+          <StructuredResponseRenderer content={parsed.response || parsed.content || ''} />
+        )}
+
+        {/* Narrative / markdown - only if no structured content */}
+        {!isError && (parsed.response || parsed.content) && !hasStructuredContent(parsed.response || parsed.content || '') && (
           <div className="text-muted-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none">
             <ReactMarkdown>
               {parsed.response || parsed.content || ""}

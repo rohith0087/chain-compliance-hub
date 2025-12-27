@@ -4043,7 +4043,132 @@ IMPORTANT:
 - Use this for CUSTOM visualizations that require specific chart types or aggregations
 - DO NOT use for standard compliance dashboards or supplier comparisons (those have existing UI)
 - The generated charts will be interactive with tooltips, legends, and proper styling
-- Summarize what the visualization shows in 1-2 sentences`
+- Summarize what the visualization shows in 1-2 sentences
+
+STRUCTURED RESPONSE FORMAT - CRITICAL FOR BEAUTIFUL UI:
+
+When answering informational queries (suppliers, documents, compliance status, entity lists), YOU MUST use structured HTML-like tags that can be parsed into beautiful UI components.
+
+AVAILABLE TAGS:
+
+<COMPLIANCE_SUMMARY> - Wrapper for all structured responses
+<ENTITY_LIST type="suppliers" count="N"> - List of entities (suppliers, buyers)
+  <ENTITY id="...">
+    <NAME>...</NAME>
+    <EMAIL>...</EMAIL>
+    <INDUSTRY>...</INDUSTRY>
+    <STATUS>approved|pending|rejected</STATUS>
+    <ADDRESS>...</ADDRESS>
+    <PHONE>...</PHONE>
+    <COMPLIANCE_SCORE>85</COMPLIANCE_SCORE>
+  </ENTITY>
+</ENTITY_LIST>
+
+<ENTITY_DETAILS> - Single entity detail view
+  <FIELD label="Entity Name">Supplier ABC</FIELD>
+  <FIELD label="Status" status="warning">Action Required</FIELD>
+  <FIELD label="Risk Level" status="high">High</FIELD>
+</ENTITY_DETAILS>
+
+<ISSUES_IDENTIFIED> - Problems grouped by type
+  <ISSUE_GROUP type="expired_documents">
+    <ISSUE>COA – Lot #4578 (Expired: 2025-01-10)</ISSUE>
+    <ISSUE>HACCP Certificate (Expired: 2024-12-22)</ISSUE>
+  </ISSUE_GROUP>
+  <ISSUE_GROUP type="missing_documents">
+    <ISSUE>Insurance Certificate</ISSUE>
+  </ISSUE_GROUP>
+</ISSUES_IDENTIFIED>
+
+<IMPACT>Business impact statement explaining consequences of non-compliance</IMPACT>
+
+<RECOMMENDED_ACTIONS> - Action items with priority
+  <ACTION priority="high">Upload updated COA for Lot #4578</ACTION>
+  <ACTION priority="medium">Submit renewed HACCP Certificate</ACTION>
+</RECOMMENDED_ACTIONS>
+
+<FOLLOW_UP_EMAIL_DRAFT>
+  <SUBJECT>Action Required – Compliance Documents</SUBJECT>
+  <BODY>Hello [Supplier Name],<br/><br/>Our records indicate...</BODY>
+</FOLLOW_UP_EMAIL_DRAFT>
+
+<SYSTEM_METADATA>
+  entity_id: supplier_123
+  document_count: 4
+  issue_types: expired, missing
+  urgency: high
+</SYSTEM_METADATA>
+
+WHEN TO USE STRUCTURED TAGS:
+1. "Who are my suppliers?" → Use <ENTITY_LIST type="suppliers">
+2. "Show me supplier X's status" → Use <ENTITY_DETAILS> + <ISSUES_IDENTIFIED>
+3. "What documents are missing?" → Use <ISSUES_IDENTIFIED> + <RECOMMENDED_ACTIONS>
+4. "How's my compliance?" → Use <ENTITY_DETAILS> + <IMPACT>
+5. ANY list of entities → Use <ENTITY_LIST>
+
+RULES:
+- ALWAYS wrap structured responses in <COMPLIANCE_SUMMARY>
+- Include ALL relevant tags based on the query type
+- Use status attributes: "good", "warning", "high", "error" for visual styling
+- Use priority attributes: "high", "medium", "low" for actions
+- Keep human-readable content inside tags
+- Use conversational text for simple confirmations only
+
+EXAMPLE - Supplier List Query:
+<COMPLIANCE_SUMMARY>
+<ENTITY_LIST type="suppliers" count="3">
+  <ENTITY id="sup_001">
+    <NAME>Test Supplier</NAME>
+    <EMAIL>test@example.com</EMAIL>
+    <INDUSTRY>Technology</INDUSTRY>
+    <STATUS>approved</STATUS>
+  </ENTITY>
+  <ENTITY id="sup_002">
+    <NAME>ABC Foods</NAME>
+    <EMAIL>contact@abcfoods.com</EMAIL>
+    <INDUSTRY>Food Manufacturing</INDUSTRY>
+    <STATUS>approved</STATUS>
+    <COMPLIANCE_SCORE>92</COMPLIANCE_SCORE>
+  </ENTITY>
+</ENTITY_LIST>
+</COMPLIANCE_SUMMARY>
+
+EXAMPLE - Compliance Status Query:
+<COMPLIANCE_SUMMARY>
+<ENTITY_DETAILS>
+  <FIELD label="Entity Name">Supplier ABC Foods</FIELD>
+  <FIELD label="Entity Type">Supplier</FIELD>
+  <FIELD label="Overall Status" status="warning">Action Required</FIELD>
+  <FIELD label="Risk Level" status="high">High</FIELD>
+</ENTITY_DETAILS>
+
+<ISSUES_IDENTIFIED>
+  <ISSUE_GROUP type="expired_documents">
+    <ISSUE>COA – Lot #4578 (Expired: 2025-01-10)</ISSUE>
+    <ISSUE>HACCP Certificate (Expired: 2024-12-22)</ISSUE>
+  </ISSUE_GROUP>
+  <ISSUE_GROUP type="missing_documents">
+    <ISSUE>Insurance Certificate</ISSUE>
+    <ISSUE>Supplier Attestation Form</ISSUE>
+  </ISSUE_GROUP>
+</ISSUES_IDENTIFIED>
+
+<IMPACT>Products associated with expired or missing documentation cannot be approved. Continued non-compliance increases regulatory and operational risk.</IMPACT>
+
+<RECOMMENDED_ACTIONS>
+  <ACTION priority="high">Upload updated COA for Lot #4578</ACTION>
+  <ACTION priority="high">Submit renewed HACCP Certificate</ACTION>
+  <ACTION priority="medium">Provide Insurance Certificate</ACTION>
+  <ACTION priority="medium">Complete Supplier Attestation Form</ACTION>
+</RECOMMENDED_ACTIONS>
+
+<SYSTEM_METADATA>
+  entity_id: supplier_abc_001
+  document_count: 4
+  issue_types: expired, missing
+  urgency: high
+</SYSTEM_METADATA>
+</COMPLIANCE_SUMMARY>`
       },
       // Inject memory preamble (summary + state) BEFORE conversation history
       ...(memoryPreamble ? [memoryPreamble] : []),

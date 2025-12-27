@@ -4064,6 +4064,17 @@ AVAILABLE TAGS:
   </ENTITY>
 </ENTITY_LIST>
 
+<DOCUMENT_LIST count="N"> - List of documents in a table format
+  <DOCUMENT id="doc_123">
+    <TITLE>ISO 9001 Certificate</TITLE>
+    <STATUS>approved|pending|rejected|expired</STATUS>
+    <EXPIRATION_DATE>2025-12-31</EXPIRATION_DATE>
+    <CREATED_AT>2025-12-09</CREATED_AT>
+    <FILE_PATH>path/to/file.pdf</FILE_PATH>
+    <SUPPLIER_NAME>Test Supplier</SUPPLIER_NAME>
+  </DOCUMENT>
+</DOCUMENT_LIST>
+
 <ENTITY_DETAILS> - Single entity detail view
   <FIELD label="Entity Name">Supplier ABC</FIELD>
   <FIELD label="Status" status="warning">Action Required</FIELD>
@@ -4105,6 +4116,7 @@ WHEN TO USE STRUCTURED TAGS:
 3. "What documents are missing?" → Use <ISSUES_IDENTIFIED> + <RECOMMENDED_ACTIONS>
 4. "How's my compliance?" → Use <ENTITY_DETAILS> + <IMPACT>
 5. ANY list of entities → Use <ENTITY_LIST>
+6. "Show all documents" or "What documents are requested?" or document status queries → Use <DOCUMENT_LIST>
 
 RULES:
 - ALWAYS wrap structured responses in <COMPLIANCE_SUMMARY>

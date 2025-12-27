@@ -6,6 +6,7 @@ import { ActionsChecklist } from './ActionsChecklist';
 import { ImpactStatement } from './ImpactStatement';
 import { EmailDraftCard } from './EmailDraftCard';
 import { MetadataPanel } from './MetadataPanel';
+import { DocumentTable } from './DocumentTable';
 
 interface StructuredResponseRendererProps {
   content: string;
@@ -24,7 +25,7 @@ function parseStructuredResponse(content: string): ParsedSection[] {
   const sections: ParsedSection[] = [];
   
   // Check if content contains structured tags
-  if (!content.includes('<COMPLIANCE_SUMMARY>') && !content.includes('<ENTITY_LIST>')) {
+  if (!content.includes('<COMPLIANCE_SUMMARY>') && !content.includes('<ENTITY_LIST>') && !content.includes('<DOCUMENT_LIST')) {
     return sections;
   }
   
@@ -74,6 +75,51 @@ function parseStructuredResponse(content: string): ParsedSection[] {
         entities,
       },
       raw: entityListMatch[0],
+    });
+  }
+  
+  // Parse DOCUMENT_LIST
+  const documentListMatch = content.match(/<DOCUMENT_LIST[^>]*>([\s\S]*?)<\/DOCUMENT_LIST>/i);
+  if (documentListMatch) {
+    const listContent = documentListMatch[1];
+    const countMatch = documentListMatch[0].match(/count="(\d+)"/);
+    
+    const documents: any[] = [];
+    const documentMatches = listContent.matchAll(/<DOCUMENT[^>]*>([\s\S]*?)<\/DOCUMENT>/gi);
+    
+    for (const match of documentMatches) {
+      const docContent = match[1];
+      const idMatch = match[0].match(/id="([^"]+)"/);
+      
+      const doc: any = {
+        id: idMatch?.[1] || `doc_${documents.length}`,
+      };
+      
+      // Extract fields
+      const titleMatch = docContent.match(/<TITLE>([\s\S]*?)<\/TITLE>/i);
+      const statusMatch = docContent.match(/<STATUS>([\s\S]*?)<\/STATUS>/i);
+      const expirationMatch = docContent.match(/<EXPIRATION_DATE>([\s\S]*?)<\/EXPIRATION_DATE>/i);
+      const createdMatch = docContent.match(/<CREATED_AT>([\s\S]*?)<\/CREATED_AT>/i);
+      const filePathMatch = docContent.match(/<FILE_PATH>([\s\S]*?)<\/FILE_PATH>/i);
+      const supplierMatch = docContent.match(/<SUPPLIER_NAME>([\s\S]*?)<\/SUPPLIER_NAME>/i);
+      
+      if (titleMatch) doc.title = titleMatch[1].trim();
+      if (statusMatch) doc.status = statusMatch[1].trim();
+      if (expirationMatch) doc.expiration_date = expirationMatch[1].trim();
+      if (createdMatch) doc.created_at = createdMatch[1].trim();
+      if (filePathMatch) doc.file_path = filePathMatch[1].trim();
+      if (supplierMatch) doc.supplier_name = supplierMatch[1].trim();
+      
+      documents.push(doc);
+    }
+    
+    sections.push({
+      type: 'document_list',
+      data: {
+        count: parseInt(countMatch?.[1] || '0', 10) || documents.length,
+        documents,
+      },
+      raw: documentListMatch[0],
     });
   }
   
@@ -218,6 +264,7 @@ export function hasStructuredContent(content: string): boolean {
   return (
     content.includes('<COMPLIANCE_SUMMARY>') ||
     content.includes('<ENTITY_LIST') ||
+    content.includes('<DOCUMENT_LIST') ||
     content.includes('<ENTITY_DETAILS>') ||
     content.includes('<ISSUES_IDENTIFIED>') ||
     content.includes('<RECOMMENDED_ACTIONS>')
@@ -252,6 +299,8 @@ export const StructuredResponseRenderer: React.FC<StructuredResponseRendererProp
             );
           case 'entity_details':
             return <EntityDetailsCard key={index} fields={section.data.fields} />;
+          case 'document_list':
+            return <DocumentTable key={index} documents={section.data.documents} count={section.data.count} />;
           case 'issues':
             return <IssuesPanel key={index} groups={section.data.groups} />;
           case 'impact':

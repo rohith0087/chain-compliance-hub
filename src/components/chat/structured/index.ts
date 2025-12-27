@@ -6,3 +6,4 @@ export { ActionsChecklist } from './ActionsChecklist';
 export { ImpactStatement } from './ImpactStatement';
 export { EmailDraftCard } from './EmailDraftCard';
 export { MetadataPanel } from './MetadataPanel';
+export { DocumentTable } from './DocumentTable';

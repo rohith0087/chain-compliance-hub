@@ -17,6 +17,7 @@ import ChatDocumentViewer from "@/components/chat/ChatDocumentViewer";
 import ResponseActionButtons from "@/components/chat/ResponseActionButtons";
 import ShareDialog from "@/components/chat/ShareDialog";
 import { CodeVisualizationRenderer } from "@/components/chat/CodeVisualizationRenderer";
+import AdvancedComplianceInsightsDashboard from "@/components/chat/AdvancedComplianceInsightsDashboard";
 import {
   MessageSquare,
   Send,
@@ -137,6 +138,12 @@ interface StructuredResponse {
   // Code visualization
   code?: string;                // Generated React component code
   summary?: string;             // Summary of the visualization
+  
+  // Compliance Insights Dashboard
+  metrics?: any;                // Dashboard metrics
+  supplier_metrics?: any[];     // Supplier performance data
+  ai_insights?: any[];          // AI-generated insights
+  timeframe?: string;           // Dashboard timeframe
 }
 
 type CompanyInfo = { id: string; type: "buyer" | "supplier"; industry?: string } | null;
@@ -951,6 +958,25 @@ const ChatPage: React.FC = () => {
               code={parsed.code}
               data={parsed.data}
               summary={parsed.summary || ''}
+            />
+          </div>
+        )}
+
+        {/* Compliance Insights Dashboard - AI Tool Triggered */}
+        {!isError && parsed.type === 'compliance_insights_dashboard' && parsed.metrics && companyInfo && (
+          <div className="my-4">
+            <AdvancedComplianceInsightsDashboard
+              companyId={companyInfo.id}
+              companyType={companyInfo.type}
+              initialData={{
+                metrics: {
+                  ...parsed.metrics,
+                  trend_data: parsed.metrics.trend_data || []
+                },
+                supplier_metrics: parsed.supplier_metrics || [],
+                ai_insights: parsed.ai_insights || []
+              }}
+              timeframe={(parsed.timeframe as '7D' | '30D' | '90D' | '1Y') || '30D'}
             />
           </div>
         )}

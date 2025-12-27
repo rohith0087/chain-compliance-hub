@@ -17,6 +17,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSupplierItems, ITEM_CATEGORIES } from '@/hooks/useSupplierItems';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
+import SampleDocumentViewer from '@/components/shared/SampleDocumentViewer';
 
 interface LibraryDocument {
   id: string;
@@ -343,6 +344,18 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
         
         <ScrollArea className="flex-1 min-h-0 pr-4">
           <div className="space-y-4 pr-2">
+            {/* Sample Document Viewer - Show if sample exists */}
+            {request.sample_file_path && (
+              <SampleDocumentViewer
+                requestId={request.id}
+                fileName={request.sample_file_name}
+                fileSize={request.sample_file_size}
+                mimeType={request.sample_mime_type}
+                uploadedAt={request.sample_uploaded_at}
+                notes={request.notes}
+              />
+            )}
+
             {/* Request Info */}
             <div className={`p-3 rounded-lg ${isResubmission ? 'bg-orange-50 border border-orange-200' : 'bg-muted/50'}`}>
               <h4 className="font-medium text-sm mb-1">{request.title}</h4>

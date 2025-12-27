@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,11 +14,27 @@ import { ComplianceDocument } from './ComplianceDocuments';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
+import SampleDocumentUpload from './SampleDocumentUpload';
+
+interface LibraryDocument {
+  id: string;
+  document_name: string;
+  file_path: string;
+  file_size: number | null;
+  mime_type: string | null;
+  category: string | null;
+}
 
 interface SupplierBranch {
   id: string;
   branch_name: string;
   location?: string;
+}
+
+interface SampleDocument {
+  file?: File;
+  libraryDoc?: LibraryDocument;
+  source: 'device' | 'library' | null;
 }
 
 interface RequestConfigurationStepProps {
@@ -34,10 +50,11 @@ interface RequestConfigurationStepProps {
   onSuppliersChange: (suppliers: string[]) => void;
   onSupplierBranchChange: (supplierId: string, branchId: string) => void;
   onBack: () => void;
-  onCreateRequests: () => void;
+  onCreateRequests: (sampleDocument?: SampleDocument) => void;
   onCancel: () => void;
   loading?: boolean;
   connectedSuppliers: any[];
+  buyerId?: string;
 }
 
 const RequestConfigurationStep = ({
@@ -50,13 +67,15 @@ const RequestConfigurationStep = ({
   onCreateRequests,
   onCancel,
   loading = false,
-  connectedSuppliers
+  connectedSuppliers,
+  buyerId
 }: RequestConfigurationStepProps) => {
-  const [dueDate, setDueDate] = React.useState<Date>();
-  const [open, setOpen] = React.useState(false);
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [supplierBranches, setSupplierBranches] = React.useState<Record<string, SupplierBranch[]>>({});
-  const [loadingBranches, setLoadingBranches] = React.useState<Record<string, boolean>>({});
+  const [dueDate, setDueDate] = useState<Date>();
+  const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [supplierBranches, setSupplierBranches] = useState<Record<string, SupplierBranch[]>>({});
+  const [loadingBranches, setLoadingBranches] = useState<Record<string, boolean>>({});
+  const [sampleDocument, setSampleDocument] = useState<SampleDocument>({ source: null });
 
   // Fetch branches for selected suppliers
   useEffect(() => {
@@ -307,6 +326,15 @@ const RequestConfigurationStep = ({
             rows={3}
           />
         </div>
+
+        {/* Sample Document Upload */}
+        {buyerId && (
+          <SampleDocumentUpload
+            buyerId={buyerId}
+            currentSample={sampleDocument}
+            onSampleChange={setSampleDocument}
+          />
+        )}
       </div>
 
       {/* Action Buttons */}
@@ -319,7 +347,7 @@ const RequestConfigurationStep = ({
             Cancel
           </Button>
           <Button 
-            onClick={onCreateRequests} 
+            onClick={() => onCreateRequests(sampleDocument)} 
             disabled={!isFormValid || loading}
           >
             {loading ? 'Creating Requests...' : `Create ${selectedDocuments.length} Request(s)`}

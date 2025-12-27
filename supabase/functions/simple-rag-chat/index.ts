@@ -585,9 +585,8 @@ async function queryDocuments(filters: any, buyerId: string) {
       query = query.in('status', filters.status);
     }
     
-    if (filters.document_types && filters.document_types.length > 0) {
-      query = query.in('document_requests.document_type', filters.document_types);
-    }
+    // Note: document_type filtering is done post-query with fuzzy matching
+    // to support partial matches (e.g., "ISO 9001" matches "ISO 9001 Certificate")
     
     // Handle expiration date filtering
     const today = new Date().toISOString();
@@ -652,6 +651,27 @@ async function queryDocuments(filters: any, buyerId: string) {
         requested: filters.supplier_names,
         filtered_count: results.length,
         sample_matches: results.slice(0, 3).map((r: any) => r.document_requests?.suppliers?.company_name)
+      });
+    }
+    
+    // Filter by document types with fuzzy/partial matching
+    // e.g., "ISO 9001" matches "ISO 9001 Certificate", "iso_9001", etc.
+    if (filters.document_types && filters.document_types.length > 0) {
+      results = results.filter((doc: any) => {
+        const docType = doc.document_requests?.document_type?.toLowerCase() || '';
+        return filters.document_types.some((filterType: string) => {
+          const normalizedFilter = filterType.toLowerCase().replace(/[_-]/g, ' ');
+          const normalizedDocType = docType.replace(/[_-]/g, ' ');
+          // Match if filter is contained in doc type or doc type is contained in filter
+          return normalizedDocType.includes(normalizedFilter) || 
+                 normalizedFilter.includes(normalizedDocType);
+        });
+      });
+      
+      console.log('Document type filter applied:', {
+        requested: filters.document_types,
+        filtered_count: results.length,
+        sample_types: results.slice(0, 5).map((r: any) => r.document_requests?.document_type)
       });
     }
 

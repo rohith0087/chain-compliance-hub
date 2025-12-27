@@ -34,6 +34,8 @@ interface SendRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  console.log("[send-compliance-followup] Function invoked");
+  
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -42,7 +44,10 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     // Validate auth
     const authHeader = req.headers.get("authorization");
+    console.log("[send-compliance-followup] Auth header present:", !!authHeader);
+    
     if (!authHeader) {
+      console.error("[send-compliance-followup] No authorization header");
       return new Response(JSON.stringify({ error: "No authorization header" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -55,18 +60,37 @@ const handler = async (req: Request): Promise<Response> => {
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
+    console.log("[send-compliance-followup] User verified:", user?.id);
+    
     if (authError || !user) {
+      console.error("[send-compliance-followup] Auth error:", authError);
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { emails }: SendRequest = await req.json();
+    const requestBody = await req.json();
+    console.log("[send-compliance-followup] Request body:", JSON.stringify(requestBody, null, 2));
+    
+    const { emails }: SendRequest = requestBody;
 
     if (!emails || !Array.isArray(emails) || emails.length === 0) {
+      console.error("[send-compliance-followup] No emails in request");
       return new Response(JSON.stringify({ error: "No emails to send" }), {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Check if RESEND_API_KEY is set
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    console.log("[send-compliance-followup] RESEND_API_KEY configured:", !!resendApiKey);
+    
+    if (!resendApiKey) {
+      console.error("[send-compliance-followup] RESEND_API_KEY not configured");
+      return new Response(JSON.stringify({ error: "Email service not configured. Please add RESEND_API_KEY." }), {
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -77,13 +101,17 @@ const handler = async (req: Request): Promise<Response> => {
       .select("full_name, email")
       .eq("id", user.id)
       .single();
+    
+    console.log("[send-compliance-followup] Sender profile:", senderProfile?.full_name, senderProfile?.email);
 
     // Get buyer company info
     const { data: buyer } = await supabase
       .from("buyers")
-      .select("company_name")
+      .select("company_name, id")
       .eq("id", emails[0].buyer_id)
       .single();
+    
+    console.log("[send-compliance-followup] Buyer:", buyer?.company_name);
 
     const results: Array<{
       supplier_id: string;
@@ -95,6 +123,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send emails for each supplier (individually, NOT CC/BCC)
     for (const emailPayload of emails) {
+      console.log(`[send-compliance-followup] Processing supplier: ${emailPayload.supplier_name} with ${emailPayload.recipients.length} recipients`);
+      
       const supplierResults = {
         supplier_id: emailPayload.supplier_id,
         supplier_name: emailPayload.supplier_name,
@@ -104,6 +134,8 @@ const handler = async (req: Request): Promise<Response> => {
       };
 
       for (const recipient of emailPayload.recipients) {
+        console.log(`[send-compliance-followup] Sending to: ${recipient.email}`);
+        
         try {
           // Build personalized email with signature
           const emailHtml = buildEmailHtml({
@@ -120,10 +152,36 @@ const handler = async (req: Request): Promise<Response> => {
             html: emailHtml,
           });
 
-          console.log(`✓ Email sent to ${recipient.email} for ${emailPayload.supplier_name}:`, emailResponse);
+          console.log(`[send-compliance-followup] ✓ Email sent to ${recipient.email}:`, JSON.stringify(emailResponse));
           supplierResults.emails_sent++;
 
-          // Log to audit trail
+          // Log to email_audit_logs table
+          const { error: auditError } = await supabase.from("email_audit_logs").insert({
+            sender_id: user.id,
+            sender_email: senderProfile?.email || user.email,
+            sender_name: senderProfile?.full_name,
+            recipient_email: recipient.email,
+            recipient_name: recipient.name,
+            subject: emailPayload.subject,
+            body_preview: emailPayload.body.substring(0, 500),
+            supplier_id: emailPayload.supplier_id,
+            buyer_id: emailPayload.buyer_id,
+            action_type: emailPayload.action_type,
+            status: "sent",
+            resend_id: emailResponse?.data?.id || null,
+            metadata: {
+              recipient_type: recipient.type,
+              document_ids: emailPayload.document_ids,
+            },
+          });
+          
+          if (auditError) {
+            console.warn("[send-compliance-followup] Failed to log to email_audit_logs:", auditError);
+          } else {
+            console.log("[send-compliance-followup] ✓ Logged to email_audit_logs");
+          }
+
+          // Also log to auth_audit_logs for backward compatibility
           await supabase.from("auth_audit_logs").insert({
             user_id: user.id,
             user_email: senderProfile?.email || user.email,
@@ -140,8 +198,28 @@ const handler = async (req: Request): Promise<Response> => {
             },
           });
         } catch (sendError: any) {
-          console.error(`✗ Failed to send to ${recipient.email}:`, sendError);
+          console.error(`[send-compliance-followup] ✗ Failed to send to ${recipient.email}:`, sendError);
           supplierResults.errors.push(`${recipient.email}: ${sendError.message}`);
+          
+          // Log failed attempt
+          await supabase.from("email_audit_logs").insert({
+            sender_id: user.id,
+            sender_email: senderProfile?.email || user.email,
+            sender_name: senderProfile?.full_name,
+            recipient_email: recipient.email,
+            recipient_name: recipient.name,
+            subject: emailPayload.subject,
+            body_preview: emailPayload.body.substring(0, 500),
+            supplier_id: emailPayload.supplier_id,
+            buyer_id: emailPayload.buyer_id,
+            action_type: emailPayload.action_type,
+            status: "failed",
+            error_message: sendError.message,
+            metadata: {
+              recipient_type: recipient.type,
+              document_ids: emailPayload.document_ids,
+            },
+          });
         }
       }
 
@@ -154,6 +232,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     const totalSent = results.reduce((acc, r) => acc + r.emails_sent, 0);
     const failedSuppliers = results.filter((r) => !r.success);
+
+    console.log(`[send-compliance-followup] Complete. Total sent: ${totalSent}, Failed suppliers: ${failedSuppliers.length}`);
 
     return new Response(
       JSON.stringify({
@@ -169,9 +249,9 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   } catch (error: any) {
-    console.error("Error in send-compliance-followup:", error);
+    console.error("[send-compliance-followup] Unhandled error:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message, stack: error.stack }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

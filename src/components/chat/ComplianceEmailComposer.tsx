@@ -118,43 +118,61 @@ const ComplianceEmailComposer: React.FC<ComplianceEmailComposerProps> = ({
     }
 
     setIsSending(true);
+    console.log("[ComplianceEmailComposer] Starting email send for:", draft.supplier_name);
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log("[ComplianceEmailComposer] Current user:", user?.id);
+
+      const payload = {
+        emails: [
+          {
+            supplier_id: draft.supplier_id,
+            supplier_name: draft.supplier_name,
+            recipients: selectedRecipients.map((r) => ({
+              email: r.email,
+              name: r.name,
+              type: r.type,
+            })),
+            subject: draft.subject,
+            body: draft.body,
+            action_type: actionType,
+            document_ids: draft.documents.map((d) => d.id),
+            buyer_id: buyerId,
+            sender_user_id: user?.id,
+          },
+        ],
+      };
+      console.log("[ComplianceEmailComposer] Sending payload:", JSON.stringify(payload, null, 2));
+
       const { data, error } = await supabase.functions.invoke("send-compliance-followup", {
-        body: {
-          emails: [
-            {
-              supplier_id: draft.supplier_id,
-              supplier_name: draft.supplier_name,
-              recipients: selectedRecipients.map((r) => ({
-                email: r.email,
-                name: r.name,
-                type: r.type,
-              })),
-              subject: draft.subject,
-              body: draft.body,
-              action_type: actionType,
-              document_ids: draft.documents.map((d) => d.id),
-              buyer_id: buyerId,
-              sender_user_id: (await supabase.auth.getUser()).data.user?.id,
-            },
-          ],
-        },
+        body: payload,
       });
 
-      if (error) throw error;
+      console.log("[ComplianceEmailComposer] Response data:", data);
+      console.log("[ComplianceEmailComposer] Response error:", error);
+
+      if (error) {
+        console.error("[ComplianceEmailComposer] Function error:", error);
+        throw error;
+      }
+
+      if (!data || data.error) {
+        console.error("[ComplianceEmailComposer] Data error:", data?.error);
+        throw new Error(data?.error || "Unknown error from send function");
+      }
 
       setSentSuppliers((prev) => new Set([...prev, draft.supplier_id]));
       toast({
         title: "Email sent successfully",
-        description: `Sent ${data.total_emails_sent} email(s) to ${draft.supplier_name}.`,
+        description: `Sent ${data.total_emails_sent || 0} email(s) to ${draft.supplier_name}.`,
       });
 
       if (onSent) {
         onSent(data);
       }
     } catch (err: any) {
-      console.error("Failed to send email:", err);
+      console.error("[ComplianceEmailComposer] Failed to send email:", err);
       toast({
         title: "Failed to send email",
         description: err.message || "Please try again.",

@@ -2117,6 +2117,92 @@ export type Database = {
         }
         Relationships: []
       }
+      email_audit_logs: {
+        Row: {
+          action_type: string | null
+          body_preview: string | null
+          buyer_id: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          recipient_email: string
+          recipient_name: string | null
+          resend_id: string | null
+          sender_email: string | null
+          sender_id: string | null
+          sender_name: string | null
+          status: string | null
+          subject: string
+          supplier_id: string | null
+        }
+        Insert: {
+          action_type?: string | null
+          body_preview?: string | null
+          buyer_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          recipient_email: string
+          recipient_name?: string | null
+          resend_id?: string | null
+          sender_email?: string | null
+          sender_id?: string | null
+          sender_name?: string | null
+          status?: string | null
+          subject: string
+          supplier_id?: string | null
+        }
+        Update: {
+          action_type?: string | null
+          body_preview?: string | null
+          buyer_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          recipient_email?: string
+          recipient_name?: string | null
+          resend_id?: string | null
+          sender_email?: string | null
+          sender_id?: string | null
+          sender_name?: string | null
+          status?: string | null
+          subject?: string
+          supplier_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_audit_logs_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_audit_logs_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_audit_logs_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_audit_logs_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       item_facility_mappings: {
         Row: {
           certifications: Json | null

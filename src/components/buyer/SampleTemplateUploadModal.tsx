@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
   Dialog,
@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Upload, FileText, X, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -25,6 +26,7 @@ interface SampleTemplate {
   sample_file_size: number | null;
   sample_mime_type: string | null;
   notes: string | null;
+  display_name?: string | null;
 }
 
 interface SampleTemplateUploadModalProps {
@@ -56,9 +58,18 @@ export function SampleTemplateUploadModal({
 }: SampleTemplateUploadModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [notes, setNotes] = useState(existingTemplate?.notes || '');
+  const [displayName, setDisplayName] = useState(existingTemplate?.display_name || '');
   const [uploading, setUploading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+
+  // Auto-populate display name when a new file is selected
+  useEffect(() => {
+    if (file && !displayName) {
+      const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
+      setDisplayName(nameWithoutExt);
+    }
+  }, [file]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -138,6 +149,7 @@ export function SampleTemplateUploadModal({
         sample_file_size: fileSize,
         sample_mime_type: mimeType,
         notes: notes.trim() || null,
+        display_name: displayName.trim() || null,
         uploaded_by: user.id,
         updated_at: new Date().toISOString(),
       };
@@ -185,6 +197,7 @@ export function SampleTemplateUploadModal({
   const handleClose = () => {
     setFile(null);
     setNotes(existingTemplate?.notes || '');
+    setDisplayName(existingTemplate?.display_name || '');
     onClose();
   };
 
@@ -213,30 +226,33 @@ export function SampleTemplateUploadModal({
           {/* File Upload Zone */}
           <div>
             <Label className="mb-2 block">Sample Document</Label>
-            {file ? (
-              <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
-                <div className="flex items-center gap-3 min-w-0">
+          {file ? (
+              <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50 overflow-hidden">
+                <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
                   <FileText className="h-8 w-8 text-primary flex-shrink-0" />
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{file.name}</p>
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <p className="font-medium truncate max-w-[250px]" title={file.name}>{file.name}</p>
                     <p className="text-sm text-muted-foreground">{formatFileSize(file.size)}</p>
                   </div>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setFile(null)}
+                  onClick={() => { setFile(null); setDisplayName(''); }}
+                  className="flex-shrink-0"
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
             ) : existingTemplate && !file ? (
               <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 border rounded-lg bg-green-500/5 border-green-500/20">
-                  <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center justify-between p-3 border rounded-lg bg-green-500/5 border-green-500/20 overflow-hidden">
+                  <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
                     <FileText className="h-8 w-8 text-green-500 flex-shrink-0" />
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{existingTemplate.sample_file_name}</p>
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                      <p className="font-medium truncate max-w-[250px]" title={existingTemplate.sample_file_name}>
+                        {existingTemplate.display_name || existingTemplate.sample_file_name}
+                      </p>
                       <p className="text-sm text-muted-foreground">
                         {formatFileSize(existingTemplate.sample_file_size || 0)} • Current file
                       </p>
@@ -273,6 +289,22 @@ export function SampleTemplateUploadModal({
                 </p>
               </div>
             )}
+          </div>
+
+          {/* Display Name */}
+          <div>
+            <Label htmlFor="displayName" className="mb-2 block">
+              Display Name (Optional)
+            </Label>
+            <Input
+              id="displayName"
+              placeholder="Enter a friendly name for this template..."
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              A custom name to display instead of the original file name.
+            </p>
           </div>
 
           {/* Notes */}

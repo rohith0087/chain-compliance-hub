@@ -1656,6 +1656,12 @@ export type Database = {
           notes: string | null
           priority: Database["public"]["Enums"]["request_priority"] | null
           requester_id: string | null
+          sample_file_name: string | null
+          sample_file_path: string | null
+          sample_file_size: number | null
+          sample_mime_type: string | null
+          sample_uploaded_at: string | null
+          sample_uploaded_by: string | null
           status: Database["public"]["Enums"]["request_status"] | null
           supplier_branch_id: string | null
           supplier_id: string | null
@@ -1680,6 +1686,12 @@ export type Database = {
           notes?: string | null
           priority?: Database["public"]["Enums"]["request_priority"] | null
           requester_id?: string | null
+          sample_file_name?: string | null
+          sample_file_path?: string | null
+          sample_file_size?: number | null
+          sample_mime_type?: string | null
+          sample_uploaded_at?: string | null
+          sample_uploaded_by?: string | null
           status?: Database["public"]["Enums"]["request_status"] | null
           supplier_branch_id?: string | null
           supplier_id?: string | null
@@ -1704,6 +1716,12 @@ export type Database = {
           notes?: string | null
           priority?: Database["public"]["Enums"]["request_priority"] | null
           requester_id?: string | null
+          sample_file_name?: string | null
+          sample_file_path?: string | null
+          sample_file_size?: number | null
+          sample_mime_type?: string | null
+          sample_uploaded_at?: string | null
+          sample_uploaded_by?: string | null
           status?: Database["public"]["Enums"]["request_status"] | null
           supplier_branch_id?: string | null
           supplier_id?: string | null
@@ -1747,6 +1765,20 @@ export type Database = {
           {
             foreignKeyName: "document_requests_requester_id_fkey"
             columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_requests_sample_uploaded_by_fkey"
+            columns: ["sample_uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_requests_sample_uploaded_by_fkey"
+            columns: ["sample_uploaded_by"]
             isOneToOne: false
             referencedRelation: "profiles_with_roles"
             referencedColumns: ["id"]

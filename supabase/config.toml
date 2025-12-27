@@ -130,6 +130,10 @@ verify_jwt = true
 [functions.secure-document-url]
 verify_jwt = true
 
+# Secure sample document URL generation - requires authentication
+[functions.secure-sample-url]
+verify_jwt = true
+
 # Knowledge base - require authentication
 [functions.knowledge-populator]
 verify_jwt = true

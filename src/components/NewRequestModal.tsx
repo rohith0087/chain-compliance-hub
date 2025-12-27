@@ -189,7 +189,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
     }));
   };
 
-  const handleCreateRequests = async () => {
+  const handleCreateRequests = async (sampleDocument?: { file?: File; libraryDoc?: any; source: 'device' | 'library' | null }) => {
     if (!user || !buyerProfile || selectedDocuments.length === 0 || formData.suppliers.length === 0) {
       toast({
         title: "Error",
@@ -202,6 +202,51 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
     setLoading(true);
 
     try {
+      // Upload sample document if provided
+      let sampleData: {
+        sample_file_path?: string;
+        sample_file_name?: string;
+        sample_file_size?: number;
+        sample_mime_type?: string;
+        sample_uploaded_by?: string;
+        sample_uploaded_at?: string;
+      } = {};
+
+      if (sampleDocument?.source === 'device' && sampleDocument.file) {
+        const file = sampleDocument.file;
+        const fileExt = file.name.split('.').pop();
+        const timestamp = Date.now();
+        const fileKey = `${buyerProfile.id}/${crypto.randomUUID()}_${timestamp}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('sample-documents')
+          .upload(fileKey, file);
+
+        if (uploadError) {
+          console.error('Sample upload error:', uploadError);
+          throw new Error('Failed to upload sample document');
+        }
+
+        sampleData = {
+          sample_file_path: fileKey,
+          sample_file_name: file.name,
+          sample_file_size: file.size,
+          sample_mime_type: file.type,
+          sample_uploaded_by: user.id,
+          sample_uploaded_at: new Date().toISOString()
+        };
+      } else if (sampleDocument?.source === 'library' && sampleDocument.libraryDoc) {
+        const libDoc = sampleDocument.libraryDoc;
+        sampleData = {
+          sample_file_path: libDoc.file_path,
+          sample_file_name: libDoc.document_name,
+          sample_file_size: libDoc.file_size,
+          sample_mime_type: libDoc.mime_type,
+          sample_uploaded_by: user.id,
+          sample_uploaded_at: new Date().toISOString()
+        };
+      }
+
       let totalRequestsCreated = 0;
       
       // Create a separate request for each selected document AND each selected supplier
@@ -223,6 +268,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
             supplier_branch_id: supplierBranchId, // Target supplier branch
             notes: formData.notes || null,
             template_sections: doc.template || null,
+            ...sampleData // Include sample document data
           };
 
           // Add custom template ID if this is a custom template
@@ -401,6 +447,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
             onCancel={onClose}
             loading={loading}
             connectedSuppliers={connectedSuppliers}
+            buyerId={buyerProfile?.id}
           />
         )}
       </DialogContent>

@@ -11,10 +11,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { 
-  Building2, Search, ArrowLeft, Mail, Phone, MapPin, 
-  Send, RefreshCw, Eye, MoreHorizontal, UserPlus, Zap, 
+  Building2, Search, ArrowLeft, Mail, Phone, 
+  Send, RefreshCw, Eye, MoreHorizontal, UserPlus, 
   Users, Check, X, Calendar, Clock
 } from 'lucide-react';
+import { CompanyLogo } from '@/components/ui/CompanyLogo';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -42,6 +43,7 @@ interface ConnectionRequest {
   supplier: {
     company_name: string;
     industry: string;
+    company_logo_url?: string | null;
     profile?: {
       full_name: string;
     } | null;
@@ -161,7 +163,7 @@ const SupplierDiscovery = () => {
           .select(`
             id, buyer_id, supplier_id, status, notes, requested_at, initiated_by,
             supplier:suppliers (
-              company_name, industry,
+              company_name, industry, company_logo_url,
               profile:profiles!suppliers_profile_id_fkey (full_name)
             )
           `)
@@ -611,9 +613,11 @@ const SupplierDiscovery = () => {
                   <Card key={request.id} className="p-4">
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <Building2 className="h-5 w-5 text-primary" />
-                        </div>
+                        <CompanyLogo 
+                          logoUrl={request.supplier?.company_logo_url}
+                          companyName={request.supplier?.company_name}
+                          size="sm"
+                        />
                         <div className="min-w-0">
                           <p className="font-medium truncate">{request.supplier.company_name}</p>
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -744,9 +748,11 @@ const SupplierDiscovery = () => {
 const CompactSupplierCard = ({ supplier, onView }: { supplier: any; onView: () => void }) => (
   <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer group" onClick={onView}>
     <div className="flex items-start gap-3">
-      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-        <Building2 className="h-5 w-5 text-primary" />
-      </div>
+      <CompanyLogo 
+        logoUrl={supplier.company_logo_url}
+        companyName={supplier.company_name}
+        size="sm"
+      />
       <div className="flex-1 min-w-0">
         <h4 className="font-medium truncate group-hover:text-primary transition-colors">
           {supplier.company_name}
@@ -791,9 +797,11 @@ const DiscoverSupplierCard = ({
   <Card className="p-4">
     <div className="flex items-start justify-between gap-3">
       <div className="flex items-start gap-3 min-w-0">
-        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-          <Building2 className="h-5 w-5 text-muted-foreground" />
-        </div>
+        <CompanyLogo 
+          logoUrl={supplier.company_logo_url}
+          companyName={supplier.company_name}
+          size="sm"
+        />
         <div className="min-w-0">
           <h4 className="font-medium truncate">{supplier.company_name}</h4>
           {supplier.industry && (

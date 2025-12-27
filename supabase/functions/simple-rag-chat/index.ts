@@ -460,19 +460,24 @@ const tools = [
     type: "function",
     function: {
       name: "draft_compliance_email",
-      description: "Draft compliance follow-up emails for suppliers with expired, expiring, or pending documents. Use this when user clicks 'Address Now' for expired documents, 'Schedule Renewals' for expiring documents, or explicitly asks to send email/follow up about compliance issues. Returns draft email content that user can review and edit before sending. Automatically groups by supplier for multi-supplier scenarios to ensure no cross-supplier data leakage.",
+      description: "Draft compliance follow-up emails for suppliers. Use this when user says 'send email to [supplier]', 'email [supplier] about documents', 'follow up with [supplier]', 'draft email to [supplier]', clicks 'Address Now' for expired documents, or 'Schedule Renewals' for expiring documents. Automatically finds supplier by name (fuzzy matching), pulls their documents, and drafts personalized email with sender's name, role, and company. Returns draft email content that user can review and edit before sending.",
       parameters: {
         type: "object",
         properties: {
           action_type: {
             type: "string",
             enum: ["expired_documents", "expiring_documents", "pending_review", "general_followup"],
-            description: "Type of compliance action triggering the email"
+            description: "Type of compliance action triggering the email. Default to 'expired_documents' if user mentions expired docs, 'expiring_documents' for expiring soon, 'pending_review' for pending/submitted, 'general_followup' for generic follow-up."
+          },
+          supplier_names: {
+            type: "array",
+            items: { type: "string" },
+            description: "Supplier names to send emails to (fuzzy matching supported). Use this when user mentions supplier by name like 'email Kerry' or 'send to Test Supplier'."
           },
           supplier_ids: {
             type: "array",
             items: { type: "string" },
-            description: "Specific supplier IDs to send emails to. If not provided, will determine from document context."
+            description: "Specific supplier IDs to send emails to. If not provided, will determine from document context or supplier_names."
           },
           document_ids: {
             type: "array",
@@ -2323,11 +2328,42 @@ async function draftComplianceEmail(params: any, buyerId: string) {
   
   try {
     const actionType = params.action_type || 'general_followup';
-    const supplierIds = params.supplier_ids || [];
+    const supplierNames = params.supplier_names || [];
+    let supplierIds = params.supplier_ids || [];
     const documentIds = params.document_ids || [];
     const customMessage = params.custom_message || '';
     
-    console.log('📧 Draft email params:', { actionType, supplierIds: supplierIds.length, documentIds: documentIds.length });
+    console.log('📧 Draft email params:', { actionType, supplierNames, supplierIds: supplierIds.length, documentIds: documentIds.length });
+    
+    // NEW: Resolve supplier names to IDs using fuzzy matching
+    if (supplierNames.length > 0 && supplierIds.length === 0) {
+      const { data: connections } = await supabase
+        .from('buyer_supplier_connections')
+        .select('supplier_id, suppliers(id, company_name)')
+        .eq('buyer_id', buyerId)
+        .eq('status', 'approved');
+      
+      for (const searchName of supplierNames) {
+        for (const conn of connections || []) {
+          const supplierName = (conn.suppliers as any)?.company_name || '';
+          if (fuzzyMatch(supplierName, searchName)) {
+            const suppId = (conn.suppliers as any)?.id || conn.supplier_id;
+            if (!supplierIds.includes(suppId)) {
+              supplierIds.push(suppId);
+              console.log(`✓ Fuzzy matched "${searchName}" → "${supplierName}" (${suppId})`);
+            }
+          }
+        }
+      }
+      
+      if (supplierIds.length === 0) {
+        return {
+          success: false,
+          error: `No approved supplier found matching "${supplierNames.join(', ')}". Please check the supplier name or connection status.`,
+          drafts: []
+        };
+      }
+    }
     
     // 1. Fetch relevant documents based on action type
     let documentsQuery = supabase
@@ -2349,6 +2385,11 @@ async function draftComplianceEmail(params: any, buyerId: string) {
         )
       `)
       .eq('document_requests.buyer_id', buyerId);
+    
+    // Filter by specific suppliers if resolved from names
+    if (supplierIds.length > 0) {
+      documentsQuery = documentsQuery.in('document_requests.supplier_id', supplierIds);
+    }
     
     // Filter by action type
     const now = new Date();
@@ -2373,10 +2414,12 @@ async function draftComplianceEmail(params: any, buyerId: string) {
     
     if (docsError) throw docsError;
     
+    // If no documents found for the specific action type, provide helpful message
     if (!documents || documents.length === 0) {
+      const supplierNameList = supplierNames.length > 0 ? ` for ${supplierNames.join(', ')}` : '';
       return {
         success: false,
-        error: `No ${actionType.replace(/_/g, ' ')} found for your company.`,
+        error: `No ${actionType.replace(/_/g, ' ')}${supplierNameList}. The supplier may not have any documents matching this criteria.`,
         drafts: []
       };
     }
@@ -2392,11 +2435,6 @@ async function draftComplianceEmail(params: any, buyerId: string) {
       if (!supplier) continue;
       
       const supplierId = supplier.id;
-      
-      // Filter by specific suppliers if provided
-      if (supplierIds.length > 0 && !supplierIds.includes(supplierId)) {
-        continue;
-      }
       
       if (!supplierGroups.has(supplierId)) {
         supplierGroups.set(supplierId, {
@@ -2422,7 +2460,7 @@ async function draftComplianceEmail(params: any, buyerId: string) {
       };
     }
     
-    // 3. Get buyer info for email signature
+    // 3. Get buyer info for email signature including user role
     const { data: buyer } = await supabase
       .from('buyers')
       .select('company_name, contact_email, profile_id')
@@ -2431,9 +2469,27 @@ async function draftComplianceEmail(params: any, buyerId: string) {
     
     const { data: buyerProfile } = await supabase
       .from('profiles')
-      .select('full_name')
+      .select('full_name, email')
       .eq('id', buyer?.profile_id)
       .single();
+    
+    // NEW: Fetch user role for email signature
+    const { data: buyerUser } = await supabase
+      .from('company_users')
+      .select('role')
+      .eq('profile_id', buyer?.profile_id)
+      .eq('company_type', 'buyer')
+      .maybeSingle();
+    
+    // Format role for display
+    const roleMap: Record<string, string> = {
+      'owner': 'Owner',
+      'admin': 'Administrator',
+      'manager': 'Manager',
+      'member': 'Team Member',
+      'viewer': 'Viewer'
+    };
+    const senderRole = roleMap[buyerUser?.role] || buyerUser?.role || 'Compliance Team';
     
     // 4. Fetch recipient details for each supplier
     const drafts: any[] = [];
@@ -2520,8 +2576,10 @@ Supplier: ${supplier.company_name}
 Documents (${supplierDocs.length}):
 ${docList}
 
-Buyer Company: ${buyer?.company_name || 'Our Company'}
-Sender: ${buyerProfile?.full_name || 'Compliance Team'}
+Sender Details:
+- Name: ${buyerProfile?.full_name || 'Compliance Team'}
+- Role: ${senderRole}
+- Company: ${buyer?.company_name || 'Our Company'}
 ${customMessage ? `Additional Context: ${customMessage}` : ''}
 
 Generate:
@@ -2532,7 +2590,7 @@ Generate:
    - Lists the specific documents with their status/dates
    - Provides a clear call to action
    - Mentions they can upload through the compliance portal
-   - Signs off professionally
+   - Signs off professionally with the sender's name, role, and company
 
 Format your response as JSON:
 {
@@ -2549,7 +2607,7 @@ Format your response as JSON:
             body: JSON.stringify({
               model: 'gpt-4o-mini',
               messages: [
-                { role: 'system', content: 'You are a professional business communication expert. Generate concise, clear compliance emails.' },
+                { role: 'system', content: 'You are a professional business communication expert. Generate concise, clear compliance emails. Always include the sender\'s name, role, and company in the signature.' },
                 { role: 'user', content: emailPrompt }
               ],
               temperature: 0.7,
@@ -2593,6 +2651,7 @@ If you have any questions or need assistance, please don't hesitate to reach out
 
 Best regards,
 ${buyerProfile?.full_name || 'Compliance Team'}
+${senderRole}
 ${buyer?.company_name || ''}`;
       }
       
@@ -3703,6 +3762,33 @@ This tool compares required documents (from sets or defaults) against approved u
 - Compliance percentage
 - Total required vs total submitted counts
 
+EMAIL FOLLOW-UP HANDLING - draft_compliance_email:
+Use this tool when user wants to send emails or follow up with suppliers about documents:
+
+Trigger phrases (IMMEDIATELY call draft_compliance_email):
+- "Send email to [supplier]" → draft_compliance_email({ action_type: "general_followup", supplier_names: ["supplier"] })
+- "Email [supplier] about expired docs" → draft_compliance_email({ action_type: "expired_documents", supplier_names: ["supplier"] })
+- "Follow up with [supplier]" → draft_compliance_email({ action_type: "general_followup", supplier_names: ["supplier"] })
+- "Draft email to [supplier] about expiring documents" → draft_compliance_email({ action_type: "expiring_documents", supplier_names: ["supplier"] })
+- "Send reminder to [supplier] about pending documents" → draft_compliance_email({ action_type: "pending_review", supplier_names: ["supplier"] })
+
+Action type mapping:
+- "expired", "overdue" → action_type: "expired_documents"
+- "expiring", "expiring soon", "about to expire" → action_type: "expiring_documents"  
+- "pending", "submitted", "awaiting review" → action_type: "pending_review"
+- Generic follow-up → action_type: "general_followup"
+
+The tool will:
+1. Fuzzy match supplier names to find the correct supplier
+2. Pull all relevant documents for that supplier based on action_type
+3. Draft a personalized email with the user's name, role, and company
+4. Return an email composer UI where user can review/edit before sending
+
+Example flow:
+User: "Hey send an email to Test Supplier about expired documents"
+AI: [IMMEDIATELY calls draft_compliance_email({ action_type: "expired_documents", supplier_names: ["Test Supplier"] })]
+→ Returns email composer with drafted email showing all expired docs from Test Supplier
+
 CRITICAL - READ vs WRITE OPERATIONS:
 
 READ-ONLY tools (informational, never auto-execute write actions):
@@ -3710,6 +3796,7 @@ READ-ONLY tools (informational, never auto-execute write actions):
 - query_documents, query_suppliers: Information retrieval only
 - get_compliance_metrics, get_document_timeseries: Analysis only
 - resolve_supplier: Lookup only
+- draft_compliance_email: Drafts emails for review (user sends manually via UI)
 
 WRITE tools (require explicit user confirmation):
 - create_document_request: Creates new requests

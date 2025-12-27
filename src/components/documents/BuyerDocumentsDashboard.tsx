@@ -18,6 +18,7 @@ import DocumentActivityDashboard from './DocumentActivityDashboard';
 
 import BuyerDocumentsManager from './BuyerDocumentsManager';
 import DocumentDeclineDialog from './DocumentDeclineDialog';
+import DocumentWithdrawDialog from './DocumentWithdrawDialog';
 import { resolveStoragePath } from '@/utils/storagePath';
 import { useBranchContext } from '@/contexts/BranchContext';
 
@@ -27,10 +28,20 @@ const BuyerDocumentsDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [approveLoading, setApproveLoading] = useState<string | null>(null);
   const [declineLoading, setDeclineLoading] = useState<string | null>(null);
+  const [withdrawLoading, setWithdrawLoading] = useState<string | null>(null);
   const [buyerId, setBuyerId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [highlightedDocId, setHighlightedDocId] = useState<string | null>(null);
   const [declineDialog, setDeclineDialog] = useState<{
+    isOpen: boolean;
+    documentId: string;
+    documentTitle: string;
+  }>({
+    isOpen: false,
+    documentId: '',
+    documentTitle: ''
+  });
+  const [withdrawDialog, setWithdrawDialog] = useState<{
     isOpen: boolean;
     documentId: string;
     documentTitle: string;
@@ -552,6 +563,71 @@ const BuyerDocumentsDashboard = () => {
     });
   };
 
+  const openWithdrawDialog = (documentId: string, documentTitle: string) => {
+    setWithdrawDialog({
+      isOpen: true,
+      documentId,
+      documentTitle
+    });
+  };
+
+  const handleWithdrawDocument = async (documentId: string, note: string) => {
+    setWithdrawLoading(documentId);
+    try {
+      const document = documents.find(doc => doc.id === documentId);
+      if (!document) {
+        throw new Error('Document not found');
+      }
+
+      // Update the request status to withdrawn
+      const { error: updateError } = await supabase
+        .from('document_requests')
+        .update({ 
+          status: 'withdrawn',
+          notes: note,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', documentId);
+
+      if (updateError) {
+        throw new Error(`Failed to withdraw request: ${updateError.message}`);
+      }
+
+      // Log the withdrawal activity
+      if (user?.id) {
+        const { error: logError } = await supabase.from('document_activity_logs').insert({
+          document_request_id: documentId,
+          user_id: user.id,
+          action_type: 'withdrawn',
+          notes: note,
+          metadata: { reason: note }
+        });
+        
+        if (logError) {
+          console.error('Failed to log withdrawal activity:', logError);
+        }
+      }
+
+      toast({
+        title: "Request Withdrawn",
+        description: `"${document.document_type}" has been withdrawn and will no longer be visible to the supplier.`,
+      });
+
+      // Close dialog and reload documents
+      setWithdrawDialog({ isOpen: false, documentId: '', documentTitle: '' });
+      await loadDocuments();
+    } catch (error) {
+      console.error('Error withdrawing document:', error);
+      toast({
+        title: "Withdrawal Failed",
+        description: error instanceof Error ? error.message : "Failed to withdraw the request. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setWithdrawLoading(null);
+    }
+  };
+
 // Robust view logic using signed URLs and popup-safe flow
 const handleViewDocumentFile = async (doc: any) => {
   let preOpenedTab: Window | null = null;
@@ -969,9 +1045,13 @@ if (user?.id && latest.id) {
               const doc = documents.find(d => d.id === documentId);
               openDeclineDialog(documentId, doc?.document_type || 'Document');
             }}
+            onWithdraw={(documentId, documentTitle) => {
+              openWithdrawDialog(documentId, documentTitle);
+            }}
             onRefresh={loadDocuments}
             approveLoading={approveLoading}
             declineLoading={declineLoading}
+            withdrawLoading={withdrawLoading}
           />
         </TabsContent>
 
@@ -987,6 +1067,15 @@ if (user?.id && latest.id) {
         onConfirm={(reason) => handleDeclineDocument(declineDialog.documentId, reason)}
         documentTitle={declineDialog.documentTitle}
         loading={declineLoading === declineDialog.documentId}
+      />
+
+      {/* Withdraw Dialog */}
+      <DocumentWithdrawDialog
+        isOpen={withdrawDialog.isOpen}
+        onClose={() => setWithdrawDialog({ isOpen: false, documentId: '', documentTitle: '' })}
+        onConfirm={(note) => handleWithdrawDocument(withdrawDialog.documentId, note)}
+        documentTitle={withdrawDialog.documentTitle}
+        loading={withdrawLoading === withdrawDialog.documentId}
       />
     </div>
   );

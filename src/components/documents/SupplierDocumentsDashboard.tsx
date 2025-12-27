@@ -151,7 +151,8 @@ const SupplierDocumentsDashboard = () => {
             )
           )
         `)
-        .eq('supplier_id', supplierId);
+        .eq('supplier_id', supplierId)
+        .neq('status', 'withdrawn');
 
       // Apply branch filter if specific branch selected (include NULL for non-branch-specific docs)
       if (!allBranchesView && currentBranch?.id) {

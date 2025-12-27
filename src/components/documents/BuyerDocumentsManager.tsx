@@ -23,9 +23,11 @@ interface BuyerDocumentsManagerProps {
   documents: any[];
   onApprove: (documentId: string) => Promise<void>;
   onDecline: (documentId: string) => void;
+  onWithdraw: (documentId: string, documentTitle: string) => void;
   onRefresh: () => Promise<void>;
   approveLoading?: string | null;
   declineLoading?: string | null;
+  withdrawLoading?: string | null;
 }
 
 // Helper to get the latest upload (most recent by created_at)
@@ -41,9 +43,11 @@ const BuyerDocumentsManager = ({
   documents, 
   onApprove, 
   onDecline, 
+  onWithdraw,
   onRefresh,
   approveLoading,
-  declineLoading 
+  declineLoading,
+  withdrawLoading 
 }: BuyerDocumentsManagerProps) => {
   const [filters, setFilters] = useState({
     search: '',
@@ -687,9 +691,11 @@ const BuyerDocumentsManager = ({
                   downloadLoading={downloading === doc.id}
                   onApprove={() => onApprove(doc.id)}
                   onDecline={() => onDecline(doc.id)}
+                  onWithdraw={() => onWithdraw(doc.id, doc.title || doc.document_type)}
                   onCreateLink={() => handleCreateLink(doc)}
                   approveLoading={approveLoading === doc.id}
                   declineLoading={declineLoading === doc.id}
+                  withdrawLoading={withdrawLoading === doc.id}
                   showSelection={true}
                   isSelected={selectedDocuments.has(doc.id)}
                   onSelectionChange={(selected) => handleDocumentSelectionChange(doc.id, selected)}

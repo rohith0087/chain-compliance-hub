@@ -275,6 +275,46 @@ const AdvancedComplianceInsightsDashboard: React.FC<AdvancedComplianceInsightsDa
     setAiInsights(insights);
   };
 
+  // Helper functions - must be defined before useMemo that uses them
+  const getScoreColor = (score: number) => {
+    if (score >= 85) return 'text-green-500';
+    if (score >= 70) return 'text-blue-500';
+    if (score >= 50) return 'text-yellow-500';
+    return 'text-red-500';
+  };
+
+  const getRiskLabel = (riskScore: number) => {
+    if (riskScore <= 20) return 'Low';
+    if (riskScore <= 40) return 'Moderate';
+    if (riskScore <= 60) return 'Elevated';
+    return 'High';
+  };
+
+  const getRiskBadgeVariant = (risk: string | number): 'default' | 'secondary' | 'destructive' | 'outline' => {
+    if (typeof risk === 'number') {
+      if (risk <= 20) return 'secondary';
+      if (risk <= 40) return 'default';
+      return 'destructive';
+    }
+    switch (risk) {
+      case 'critical': return 'destructive';
+      case 'high': return 'destructive';
+      case 'medium': return 'default';
+      case 'low': return 'secondary';
+      default: return 'default';
+    }
+  };
+
+  const getInsightIcon = (type: string) => {
+    switch (type) {
+      case 'warning': return AlertTriangle;
+      case 'suggestion': return Lightbulb;
+      case 'prediction': return Eye;
+      case 'opportunity': return TrendingUp;
+      default: return Brain;
+    }
+  };
+
   // Dynamic actions based on real metrics and AI insights
   const dynamicActions = useMemo(() => {
     if (!metrics) return [];
@@ -337,45 +377,6 @@ const AdvancedComplianceInsightsDashboard: React.FC<AdvancedComplianceInsightsDa
     
     return actions;
   }, [metrics, aiInsights]);
-
-  const getScoreColor = (score: number) => {
-    if (score >= 85) return 'text-green-500';
-    if (score >= 70) return 'text-blue-500';
-    if (score >= 50) return 'text-yellow-500';
-    return 'text-red-500';
-  };
-
-  const getRiskLabel = (riskScore: number) => {
-    if (riskScore <= 20) return 'Low';
-    if (riskScore <= 40) return 'Moderate';
-    if (riskScore <= 60) return 'Elevated';
-    return 'High';
-  };
-
-  const getRiskBadgeVariant = (risk: string | number): 'default' | 'secondary' | 'destructive' | 'outline' => {
-    if (typeof risk === 'number') {
-      if (risk <= 20) return 'secondary';
-      if (risk <= 40) return 'default';
-      return 'destructive';
-    }
-    switch (risk) {
-      case 'critical': return 'destructive';
-      case 'high': return 'destructive';
-      case 'medium': return 'default';
-      case 'low': return 'secondary';
-      default: return 'default';
-    }
-  };
-
-  const getInsightIcon = (type: string) => {
-    switch (type) {
-      case 'warning': return AlertTriangle;
-      case 'suggestion': return Lightbulb;
-      case 'prediction': return Eye;
-      case 'opportunity': return TrendingUp;
-      default: return Brain;
-    }
-  };
 
   const getUrgencyStyles = (urgency: string) => {
     switch (urgency) {

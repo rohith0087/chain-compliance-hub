@@ -536,6 +536,30 @@ const ChatPage: React.FC = () => {
     setShareDialogOpen(true);
   }
 
+  // Handle email action from structured supplier grid
+  function handleEmailSupplier(entity: { id: string; name?: string; email?: string }) {
+    const supplierName = entity.name || 'supplier';
+    const prompt = `Draft a compliance follow-up email to ${supplierName} about their pending documents`;
+    setInputMessage(prompt);
+    toast({
+      title: "Drafting email...",
+      description: `Preparing email for ${supplierName}`,
+    });
+    setTimeout(() => sendMessage(), 100);
+  }
+
+  // Handle view details action from structured supplier grid
+  function handleViewSupplierDetails(entity: { id: string; name?: string; email?: string }) {
+    const supplierName = entity.name || 'supplier';
+    const prompt = `Show me detailed compliance information for ${supplierName}`;
+    setInputMessage(prompt);
+    toast({
+      title: "Loading details...",
+      description: `Fetching information for ${supplierName}`,
+    });
+    setTimeout(() => sendMessage(), 100);
+  }
+
   async function handleViewDocumentInNewWindow(doc: DocumentReference) {
     if (!doc.file_path) {
       toast({
@@ -896,7 +920,11 @@ const ChatPage: React.FC = () => {
 
         {/* Structured Response Renderer - for AI responses with HTML-like tags */}
         {!isError && (parsed.response || parsed.content) && hasStructuredContent(parsed.response || parsed.content || '') && (
-          <StructuredResponseRenderer content={parsed.response || parsed.content || ''} />
+          <StructuredResponseRenderer 
+            content={parsed.response || parsed.content || ''} 
+            onEmailSupplier={handleEmailSupplier}
+            onViewSupplierDetails={handleViewSupplierDetails}
+          />
         )}
 
         {/* Narrative / markdown - only if no structured content */}

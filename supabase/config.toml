@@ -209,3 +209,7 @@ verify_jwt = false
 # Compliance follow-up email sending - requires authentication
 [functions.send-compliance-followup]
 verify_jwt = true
+
+# New request email notifications - requires authentication
+[functions.send-new-request-email]
+verify_jwt = true

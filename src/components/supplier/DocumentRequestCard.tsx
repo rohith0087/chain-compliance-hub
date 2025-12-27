@@ -10,13 +10,12 @@ import {
   CheckCircle, 
   AlertTriangle, 
   Upload,
-  Building2,
-  User,
   Calendar,
   AlertCircle,
   Eye,
   RefreshCw
 } from 'lucide-react';
+import { CompanyLogo } from '@/components/ui/CompanyLogo';
 import DocumentUploadDialog from './DocumentUploadDialog';
 import DocumentPreview from './DocumentPreview';
 import CustomTemplateResponse from './CustomTemplateResponse';
@@ -211,7 +210,11 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                       <div>
                         <h4 className="font-semibold mb-3 text-gray-900">Requested By</h4>
                         <div className="flex items-center gap-3 p-3 border rounded-lg">
-                          <Building2 className="w-8 h-8 text-blue-500" />
+                          <CompanyLogo 
+                            logoUrl={request.buyers.company_logo_url}
+                            companyName={request.buyers.company_name}
+                            size="md"
+                          />
                           <div>
                             <p className="font-medium">{request.buyers.company_name}</p>
                             <p className="text-sm text-gray-600">{request.buyers.industry}</p>
@@ -365,7 +368,11 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
           {request.buyers && (
             <div className="mt-3 pt-3 border-t">
               <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <Building2 className="w-4 h-4" />
+                <CompanyLogo 
+                  logoUrl={request.buyers.company_logo_url}
+                  companyName={request.buyers.company_name}
+                  size="sm"
+                />
                 <span>Requested by: {request.buyers.company_name}</span>
               </div>
             </div>

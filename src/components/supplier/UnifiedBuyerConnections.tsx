@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  CheckCircle, XCircle, Clock, Building2, AlertCircle, Users, Mail, Phone, MapPin, Send, RefreshCw, Upload
+  CheckCircle, XCircle, Clock, AlertCircle, Users, Mail, Send, RefreshCw, Upload
 } from 'lucide-react';
+import { CompanyLogo } from '@/components/ui/CompanyLogo';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { ConnectWithBuyerModal } from './ConnectWithBuyerModal';
 import { OnboardingProcess } from './OnboardingProcess';
@@ -193,7 +194,11 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-start space-x-4 flex-1">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center"><Building2 className="w-6 h-6 text-blue-600" /></div>
+              <CompanyLogo 
+                logoUrl={buyerInfo?.company_logo_url}
+                companyName={buyerInfo?.company_name}
+                size="md"
+              />
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">{displayStatus.icon}<h3 className="font-semibold text-lg">{buyerInfo?.company_name}</h3></div>
                 <div className="space-y-1 text-sm text-gray-600">

@@ -34,6 +34,7 @@ import { TimelineItemSkeleton } from '@/components/ui/skeleton-card';
 import { UrgencyBadge } from '@/components/ui/priority-badge';
 import { DocumentSetManager } from '@/components/buyer/DocumentSetManager';
 import { BuyerSupplierFacilityMatrix } from '@/components/buyer/BuyerSupplierFacilityMatrix';
+import SampleTemplateManager from '@/components/buyer/SampleTemplateManager';
 import { SupplierMap } from '@/components/buyer/SupplierMap';
 import { ComplianceRing } from '@/components/dashboard/ComplianceRing';
 import { MetricChip } from '@/components/dashboard/MetricChip';
@@ -804,6 +805,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         {/* Templates Content */}
         {activeTab === 'templates' && (
           <CustomTemplateManager />
+        )}
+
+        {/* Sample Templates Content */}
+        {activeTab === 'sample-templates' && companyId && (
+          <SampleTemplateManager buyerId={companyId} />
         )}
 
         {/* Document Sets Content */}

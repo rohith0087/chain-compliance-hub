@@ -716,6 +716,56 @@ export type Database = {
           },
         ]
       }
+      buyer_sample_templates: {
+        Row: {
+          buyer_id: string
+          created_at: string | null
+          document_type: string
+          id: string
+          notes: string | null
+          sample_file_name: string
+          sample_file_path: string
+          sample_file_size: number | null
+          sample_mime_type: string | null
+          updated_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string | null
+          document_type: string
+          id?: string
+          notes?: string | null
+          sample_file_name: string
+          sample_file_path: string
+          sample_file_size?: number | null
+          sample_mime_type?: string | null
+          updated_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string | null
+          document_type?: string
+          id?: string
+          notes?: string | null
+          sample_file_name?: string
+          sample_file_path?: string
+          sample_file_size?: number | null
+          sample_mime_type?: string | null
+          updated_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyer_sample_templates_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       buyer_supplier_connections: {
         Row: {
           branch_id: string | null

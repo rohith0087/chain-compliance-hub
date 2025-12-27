@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,10 +22,13 @@ import {
   Zap,
   BarChart3,
   Eye,
-  Lightbulb
+  Lightbulb,
+  ArrowRight,
+  ChevronRight
 } from 'lucide-react';
 import { format, subDays } from 'date-fns';
-import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { cn } from '@/lib/utils';
 
 interface ComplianceMetrics {
   total_documents: number;
@@ -88,29 +91,6 @@ const AdvancedComplianceInsightsDashboard: React.FC<AdvancedComplianceInsightsDa
   const [loading, setLoading] = useState(!initialData);
   const [selectedTimeframe, setSelectedTimeframe] = useState<'7D' | '30D' | '90D' | '1Y'>(initialTimeframe || '30D');
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: "spring" as const,
-        stiffness: 100
-      }
-    }
-  };
-
   // If initialData is provided, use it directly without fetching
   useEffect(() => {
     if (initialData) {
@@ -121,7 +101,6 @@ const AdvancedComplianceInsightsDashboard: React.FC<AdvancedComplianceInsightsDa
       return;
     }
     
-    // Only fetch if no initialData and we have companyId
     if (companyId && companyType === 'buyer') {
       loadAdvancedMetrics();
       loadSupplierMetrics();
@@ -153,8 +132,7 @@ const AdvancedComplianceInsightsDashboard: React.FC<AdvancedComplianceInsightsDa
       const now = new Date();
       const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-      // Calculate enhanced metrics
-      const metrics = documents.reduce((acc, doc) => {
+      const metricsData = documents.reduce((acc, doc) => {
         acc.total_documents++;
         
         if (doc.status === 'pending_review') acc.pending_documents++;
@@ -177,28 +155,26 @@ const AdvancedComplianceInsightsDashboard: React.FC<AdvancedComplianceInsightsDa
         expiring_soon: 0,
         compliance_score: 0,
         avg_approval_time: 24,
-        trend_data: [],
+        trend_data: [] as Array<{ date: string; score: number; documents: number }>,
         risk_score: 0,
         efficiency_score: 0
       });
 
-      // Calculate advanced scores
-      const activeDocuments = metrics.total_documents - metrics.expired_documents;
-      const approvedPercentage = activeDocuments > 0 ? (metrics.approved_documents / activeDocuments) * 100 : 0;
-      const urgentIssues = metrics.expired_documents + metrics.expiring_soon;
+      const activeDocuments = metricsData.total_documents - metricsData.expired_documents;
+      const approvedPercentage = activeDocuments > 0 ? (metricsData.approved_documents / activeDocuments) * 100 : 0;
+      const urgentIssues = metricsData.expired_documents + metricsData.expiring_soon;
       
-      metrics.compliance_score = Math.max(0, Math.round(approvedPercentage - (urgentIssues * 10)));
-      metrics.risk_score = Math.min(100, urgentIssues * 15 + metrics.rejected_documents * 10);
-      metrics.efficiency_score = Math.max(0, 100 - (metrics.pending_documents * 5) - (metrics.avg_approval_time * 2));
+      metricsData.compliance_score = Math.max(0, Math.round(approvedPercentage - (urgentIssues * 10)));
+      metricsData.risk_score = Math.min(100, urgentIssues * 15 + metricsData.rejected_documents * 10);
+      metricsData.efficiency_score = Math.max(0, 100 - (metricsData.pending_documents * 5) - (metricsData.avg_approval_time * 2));
 
-      // Generate trend data (mock for demo)
-      metrics.trend_data = Array.from({ length: 7 }, (_, i) => ({
+      metricsData.trend_data = Array.from({ length: 7 }, (_, i) => ({
         date: format(subDays(now, 6 - i), 'MMM dd'),
-        score: metrics.compliance_score + Math.random() * 10 - 5,
-        documents: Math.floor(metrics.total_documents * (0.8 + Math.random() * 0.4))
+        score: metricsData.compliance_score + Math.random() * 10 - 5,
+        documents: Math.floor(metricsData.total_documents * (0.8 + Math.random() * 0.4))
       }));
 
-      setMetrics(metrics);
+      setMetrics(metricsData);
     } catch (error) {
       console.error('Error loading compliance metrics:', error);
     } finally {
@@ -223,7 +199,7 @@ const AdvancedComplianceInsightsDashboard: React.FC<AdvancedComplianceInsightsDa
 
       if (!connections) return;
 
-      const supplierMetrics = await Promise.all(
+      const supplierMetricsData = await Promise.all(
         connections.map(async (conn) => {
           const supplierId = conn.supplier_id;
           const supplierName = conn.suppliers?.company_name || 'Unknown';
@@ -238,17 +214,16 @@ const AdvancedComplianceInsightsDashboard: React.FC<AdvancedComplianceInsightsDa
             `)
             .eq('document_requests.supplier_id', supplierId);
 
-           const docCount = docs?.length || 0;
-           const approvedDocs = docs?.filter(d => d?.status === 'approved').length || 0;
-           const expiredDocs = docs?.filter(d => {
-             if (!d?.expiration_date) return false;
-             return new Date(d.expiration_date) < new Date();
-           }).length || 0;
+          const docCount = docs?.length || 0;
+          const approvedDocs = docs?.filter(d => d?.status === 'approved').length || 0;
+          const expiredDocs = docs?.filter(d => {
+            if (!d?.expiration_date) return false;
+            return new Date(d.expiration_date) < new Date();
+          }).length || 0;
 
           let complianceScore = docCount > 0 ? Math.round((approvedDocs / docCount) * 100) : 0;
           complianceScore = Math.max(0, complianceScore - (expiredDocs * 20));
 
-          // Enhanced risk assessment
           let riskLevel: 'low' | 'medium' | 'high' | 'critical' = 'low';
           if (expiredDocs > 3 || complianceScore < 40) riskLevel = 'critical';
           else if (expiredDocs > 2 || complianceScore < 60) riskLevel = 'high';
@@ -267,14 +242,13 @@ const AdvancedComplianceInsightsDashboard: React.FC<AdvancedComplianceInsightsDa
         })
       );
 
-      setSupplierMetrics(supplierMetrics);
+      setSupplierMetrics(supplierMetricsData);
     } catch (error) {
       console.error('Error loading supplier metrics:', error);
     }
   };
 
   const generateAIInsights = async () => {
-    // Mock AI insights - in real implementation, this would call GPT API
     const insights: AIInsight[] = [
       {
         type: 'warning',
@@ -296,38 +270,100 @@ const AdvancedComplianceInsightsDashboard: React.FC<AdvancedComplianceInsightsDa
         description: '12 documents will expire in the next 30 days based on current trends.',
         action: 'Schedule renewals',
         urgency: 'medium'
-      },
-      {
-        type: 'opportunity',
-        title: 'Compliance Excellence',
-        description: 'Your organization is 15% above industry average for compliance scoring.',
-        urgency: 'low'
       }
     ];
-
     setAiInsights(insights);
   };
 
+  // Dynamic actions based on real metrics and AI insights
+  const dynamicActions = useMemo(() => {
+    if (!metrics) return [];
+    
+    const actions: Array<{
+      icon: typeof Clock;
+      title: string;
+      subtitle: string;
+      urgency: 'low' | 'medium' | 'high' | 'critical';
+      actionLabel: string;
+      count?: number;
+    }> = [];
+    
+    // Only add if there ARE expired documents (critical)
+    if (metrics.expired_documents > 0) {
+      actions.push({
+        icon: AlertTriangle,
+        title: `${metrics.expired_documents} Expired Document${metrics.expired_documents > 1 ? 's' : ''}`,
+        subtitle: 'Critical compliance gaps requiring immediate attention',
+        urgency: 'critical',
+        actionLabel: 'Address Now',
+        count: metrics.expired_documents
+      });
+    }
+    
+    // Only add if there ARE pending documents
+    if (metrics.pending_documents > 0) {
+      actions.push({
+        icon: Clock,
+        title: `${metrics.pending_documents} Pending Review`,
+        subtitle: 'Documents awaiting your approval',
+        urgency: metrics.pending_documents > 5 ? 'high' : 'medium',
+        actionLabel: 'Review Now',
+        count: metrics.pending_documents
+      });
+    }
+    
+    // Only add if there ARE expiring documents
+    if (metrics.expiring_soon > 0) {
+      actions.push({
+        icon: Calendar,
+        title: `${metrics.expiring_soon} Expiring Soon`,
+        subtitle: 'Documents expiring in the next 30 days',
+        urgency: metrics.expiring_soon > 3 ? 'high' : 'medium',
+        actionLabel: 'Schedule Renewals',
+        count: metrics.expiring_soon
+      });
+    }
+    
+    // Add AI-suggested actions from insights
+    aiInsights.filter(i => i.action).slice(0, 2).forEach(insight => {
+      actions.push({
+        icon: getInsightIcon(insight.type),
+        title: insight.title,
+        subtitle: insight.description,
+        urgency: insight.urgency,
+        actionLabel: insight.action || 'View Details'
+      });
+    });
+    
+    return actions;
+  }, [metrics, aiInsights]);
+
   const getScoreColor = (score: number) => {
-    if (score >= 85) return 'text-green-accent';
-    if (score >= 70) return 'text-blue-accent';
-    if (score >= 50) return 'text-purple-accent';
-    return 'text-destructive';
+    if (score >= 85) return 'text-green-500';
+    if (score >= 70) return 'text-blue-500';
+    if (score >= 50) return 'text-yellow-500';
+    return 'text-red-500';
   };
 
-  const getGaugeColor = (score: number) => {
-    if (score >= 85) return 'hsl(var(--green-accent))';
-    if (score >= 70) return 'hsl(var(--blue-accent))';
-    if (score >= 50) return 'hsl(var(--purple-accent))';
-    return 'hsl(var(--destructive))';
+  const getRiskLabel = (riskScore: number) => {
+    if (riskScore <= 20) return 'Low';
+    if (riskScore <= 40) return 'Moderate';
+    if (riskScore <= 60) return 'Elevated';
+    return 'High';
   };
 
-  const getRiskBadgeVariant = (risk: 'low' | 'medium' | 'high' | 'critical') => {
+  const getRiskBadgeVariant = (risk: string | number): 'default' | 'secondary' | 'destructive' | 'outline' => {
+    if (typeof risk === 'number') {
+      if (risk <= 20) return 'secondary';
+      if (risk <= 40) return 'default';
+      return 'destructive';
+    }
     switch (risk) {
       case 'critical': return 'destructive';
       case 'high': return 'destructive';
       case 'medium': return 'default';
       case 'low': return 'secondary';
+      default: return 'default';
     }
   };
 
@@ -341,254 +377,336 @@ const AdvancedComplianceInsightsDashboard: React.FC<AdvancedComplianceInsightsDa
     }
   };
 
+  const getUrgencyStyles = (urgency: string) => {
+    switch (urgency) {
+      case 'critical':
+        return 'border-l-4 border-l-red-500 bg-red-500/5';
+      case 'high':
+        return 'border-l-4 border-l-orange-500 bg-orange-500/5';
+      case 'medium':
+        return 'border-l-4 border-l-yellow-500 bg-yellow-500/5';
+      case 'low':
+        return 'border-l-4 border-l-green-500 bg-green-500/5';
+      default:
+        return 'border-l-4 border-l-muted bg-muted/5';
+    }
+  };
+
+  const getUrgencyIconColor = (urgency: string) => {
+    switch (urgency) {
+      case 'critical': return 'text-red-500';
+      case 'high': return 'text-orange-500';
+      case 'medium': return 'text-yellow-500';
+      case 'low': return 'text-green-500';
+      default: return 'text-muted-foreground';
+    }
+  };
+
   const pieData = useMemo(() => {
     if (!metrics) return [];
     return [
-      { name: 'Approved', value: metrics.approved_documents, color: 'hsl(var(--green-accent))' },
-      { name: 'Pending', value: metrics.pending_documents, color: 'hsl(var(--blue-accent))' },
-      { name: 'Rejected', value: metrics.rejected_documents, color: 'hsl(var(--destructive))' },
-      { name: 'Expired', value: metrics.expired_documents, color: 'hsl(var(--muted-foreground))' }
+      { name: 'Approved', value: metrics.approved_documents, color: 'hsl(142, 76%, 36%)' },
+      { name: 'Pending', value: metrics.pending_documents, color: 'hsl(217, 91%, 60%)' },
+      { name: 'Rejected', value: metrics.rejected_documents, color: 'hsl(0, 84%, 60%)' },
+      { name: 'Expired', value: metrics.expired_documents, color: 'hsl(215, 16%, 47%)' }
     ];
   }, [metrics]);
 
+  // High-risk suppliers count
+  const highRiskSuppliers = useMemo(() => {
+    return supplierMetrics.filter(s => s.risk_level === 'high' || s.risk_level === 'critical');
+  }, [supplierMetrics]);
+
   if (loading) {
     return (
-      <div className="space-y-6">
-        {[1, 2, 3, 4].map((i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: i * 0.1 }}
-          >
-            <Card className="overflow-hidden bg-gradient-subtle backdrop-blur-sm border-0 shadow-elegant">
-              <div className="h-32 bg-gradient-primary/10 animate-pulse rounded"></div>
-            </Card>
-          </motion.div>
-        ))}
+      <div className="space-y-4">
+        <div className="h-32 bg-muted/20 animate-pulse rounded-lg" />
+        <div className="grid grid-cols-4 gap-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-20 bg-muted/20 animate-pulse rounded-lg" />
+          ))}
+        </div>
+        <div className="h-48 bg-muted/20 animate-pulse rounded-lg" />
       </div>
     );
   }
 
   if (!metrics) return null;
 
+  // Calculate stroke dash for circular progress
+  const circumference = 2 * Math.PI * 45;
+  const strokeDashoffset = circumference - (metrics.compliance_score / 100) * circumference;
+
   return (
-    <motion.div 
-      className={`space-y-6 ${className}`}
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
-      {/* Enhanced Header */}
-      <motion.div variants={itemVariants} className="flex items-center justify-between">
-        <div className="space-y-2">
-          <h2 className="text-3xl font-bold flex items-center gap-3">
-            <div className="p-2 bg-gradient-primary rounded-lg">
-              <Activity className="w-7 h-7 text-white" />
+    <div className={cn("space-y-4", className)}>
+      {/* Section 1: Executive Summary Bar */}
+      <Card className="overflow-hidden border-0 bg-gradient-to-br from-card via-card to-muted/20">
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between gap-6">
+            {/* Compliance Score - Big Circular Gauge */}
+            <div className="flex items-center gap-5">
+              <div className="relative w-28 h-28">
+                <svg className="w-28 h-28 -rotate-90">
+                  <circle
+                    cx="56"
+                    cy="56"
+                    r="45"
+                    fill="none"
+                    stroke="hsl(var(--muted))"
+                    strokeWidth="8"
+                  />
+                  <circle
+                    cx="56"
+                    cy="56"
+                    r="45"
+                    fill="none"
+                    stroke={metrics.compliance_score >= 70 ? 'hsl(142, 76%, 36%)' : metrics.compliance_score >= 50 ? 'hsl(48, 96%, 53%)' : 'hsl(0, 84%, 60%)'}
+                    strokeWidth="8"
+                    strokeLinecap="round"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={strokeDashoffset}
+                    className="transition-all duration-700 ease-out"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className={cn("text-3xl font-bold", getScoreColor(metrics.compliance_score))}>
+                    {metrics.compliance_score}%
+                  </span>
+                </div>
+              </div>
+              
+              <div className="space-y-1">
+                <h3 className="text-xl font-semibold">Compliance Score</h3>
+                <Badge variant={getRiskBadgeVariant(metrics.risk_score)} className="text-xs">
+                  {getRiskLabel(metrics.risk_score)} Risk
+                </Badge>
+              </div>
             </div>
-            Compliance Compass
-          </h2>
-          <p className="text-muted-foreground text-lg">AI-powered compliance insights and analytics</p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          {(['7D', '30D', '90D', '1Y'] as const).map((timeframe) => (
-            <Button
-              key={timeframe}
-              variant={selectedTimeframe === timeframe ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedTimeframe(timeframe)}
-              className="min-w-[60px]"
-            >
-              {timeframe}
-            </Button>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* AI Insights Panel */}
-      <motion.div variants={itemVariants}>
-        <Card className="overflow-hidden bg-gradient-subtle backdrop-blur-sm border-0 shadow-elegant">
-          <CardHeader className="bg-gradient-primary text-white">
-            <CardTitle className="flex items-center gap-2">
-              <Brain className="w-5 h-5" />
-              AI-Powered Insights
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {aiInsights.map((insight, index) => {
-                const Icon = getInsightIcon(insight.type);
-                return (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="p-4 rounded-lg border bg-card/50 backdrop-blur-sm hover:shadow-lg transition-all duration-300"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-lg ${
-                        insight.urgency === 'high' ? 'bg-destructive/10 text-destructive' :
-                        insight.urgency === 'medium' ? 'bg-blue-accent/10 text-blue-accent' :
-                        'bg-green-accent/10 text-green-accent'
-                      }`}>
-                        <Icon className="w-4 h-4" />
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <h4 className="font-semibold text-sm">{insight.title}</h4>
-                        <p className="text-xs text-muted-foreground">{insight.description}</p>
-                        {insight.action && (
-                          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
-                            {insight.action}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
+            
+            {/* Key Numbers - Compact */}
+            <div className="flex items-center gap-6 border-l pl-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-yellow-500">{metrics.pending_documents}</div>
+                <div className="text-xs text-muted-foreground">Pending</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-orange-500">{metrics.expiring_soon}</div>
+                <div className="text-xs text-muted-foreground">Expiring</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-500">{metrics.expired_documents}</div>
+                <div className="text-xs text-muted-foreground">Expired</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-500">{metrics.approved_documents}</div>
+                <div className="text-xs text-muted-foreground">Approved</div>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
 
-      {/* Enhanced Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Timeframe Selector */}
+            <div className="flex items-center gap-1 ml-auto">
+              {(['7D', '30D', '90D', '1Y'] as const).map((tf) => (
+                <Button
+                  key={tf}
+                  variant={selectedTimeframe === tf ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setSelectedTimeframe(tf)}
+                  className="h-7 px-2 text-xs"
+                >
+                  {tf}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Section 2: Quick Stats Row - Compact */}
+      <div className="grid grid-cols-4 gap-3">
         {[
-          {
-            title: 'Compliance Health',
-            value: `${metrics.compliance_score}%`,
-            icon: Shield,
-            trend: '+2.3%',
-            color: getScoreColor(metrics.compliance_score),
-            progress: metrics.compliance_score,
-            gradient: 'from-green-400 to-emerald-600'
-          },
-          {
-            title: 'Risk Score',
-            value: `${metrics.risk_score}%`,
-            icon: AlertTriangle,
-            trend: '-1.2%',
-            color: getScoreColor(100 - metrics.risk_score),
-            progress: 100 - metrics.risk_score,
-            gradient: 'from-red-400 to-rose-600'
-          },
-          {
-            title: 'Efficiency',
-            value: `${metrics.efficiency_score}%`,
-            icon: Zap,
-            trend: '+5.7%',
-            color: getScoreColor(metrics.efficiency_score),
-            progress: metrics.efficiency_score,
-            gradient: 'from-blue-400 to-indigo-600'
-          },
-          {
-            title: 'Total Documents',
-            value: metrics.total_documents.toString(),
-            icon: FileText,
-            trend: `+${Math.round(metrics.total_documents * 0.12)}`,
-            color: 'text-blue-accent',
-            progress: 75,
-            gradient: 'from-purple-400 to-violet-600'
-          }
-        ].map((metric, index) => (
-          <motion.div key={index} variants={itemVariants}>
-            <Card className="overflow-hidden bg-gradient-subtle backdrop-blur-sm border-0 shadow-elegant hover:shadow-xl transition-all duration-300">
-              <CardContent className="p-6 relative">
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`p-3 rounded-full bg-gradient-to-r ${metric.gradient}`}>
-                    <metric.icon className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs text-muted-foreground flex items-center gap-1">
-                      <TrendingUp className="w-3 h-3" />
-                      {metric.trend}
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">{metric.title}</p>
-                  <p className={`text-2xl font-bold ${metric.color}`}>{metric.value}</p>
-                  <div className="relative">
-                    <Progress value={metric.progress} className="h-2" />
-                    <div 
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"
-                      style={{ width: `${metric.progress}%` }}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Advanced Analytics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Compliance Trend */}
-        <motion.div variants={itemVariants}>
-          <Card className="overflow-hidden bg-gradient-subtle backdrop-blur-sm border-0 shadow-elegant">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5" />
-                Compliance Trend
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={metrics.trend_data}>
-                    <defs>
-                      <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--blue-accent))" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="hsl(var(--blue-accent))" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
-                    <YAxis stroke="hsl(var(--muted-foreground))" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px'
-                      }}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="score" 
-                      stroke="hsl(var(--blue-accent))" 
-                      fillOpacity={1} 
-                      fill="url(#scoreGradient)" 
-                      strokeWidth={3}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+          { label: 'Total Documents', value: metrics.total_documents, icon: FileText, color: 'text-blue-500' },
+          { label: 'Efficiency Score', value: `${metrics.efficiency_score}%`, icon: Zap, color: 'text-purple-500' },
+          { label: 'Avg Approval Time', value: `${metrics.avg_approval_time}h`, icon: Clock, color: 'text-cyan-500' },
+          { label: 'High Risk Suppliers', value: highRiskSuppliers.length, icon: Shield, color: highRiskSuppliers.length > 0 ? 'text-red-500' : 'text-green-500' }
+        ].map((stat, index) => (
+          <Card key={index} className="border-0 bg-card/50">
+            <CardContent className="p-3 flex items-center gap-3">
+              <div className={cn("p-2 rounded-lg bg-muted/50", stat.color)}>
+                <stat.icon className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-lg font-semibold">{stat.value}</div>
+                <div className="text-xs text-muted-foreground">{stat.label}</div>
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        ))}
+      </div>
 
-        {/* Status Distribution */}
-        <motion.div variants={itemVariants}>
-          <Card className="overflow-hidden bg-gradient-subtle backdrop-blur-sm border-0 shadow-elegant">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="w-5 h-5" />
-                Document Distribution
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64">
+      {/* Section 3: Supplier Risk Summary */}
+      {supplierMetrics.length > 0 && (
+        <Card className="border-0 bg-card/50">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Building className="w-4 h-4" />
+              Supplier Risk Summary
+              {highRiskSuppliers.length > 0 && (
+                <Badge variant="destructive" className="ml-2 text-xs">
+                  {highRiskSuppliers.length} at risk
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              {supplierMetrics.slice(0, 8).map((supplier) => (
+                <div
+                  key={supplier.id}
+                  className={cn(
+                    "p-3 rounded-lg border transition-colors hover:bg-muted/50",
+                    supplier.risk_level === 'critical' && "border-red-500/30 bg-red-500/5",
+                    supplier.risk_level === 'high' && "border-orange-500/30 bg-orange-500/5"
+                  )}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium truncate max-w-[120px]">{supplier.name}</span>
+                    <div className="flex items-center gap-1">
+                      {supplier.trend === 'up' && <TrendingUp className="w-3 h-3 text-green-500" />}
+                      {supplier.trend === 'down' && <TrendingDown className="w-3 h-3 text-red-500" />}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Badge variant={getRiskBadgeVariant(supplier.risk_level)} className="text-[10px] h-5">
+                      {supplier.risk_level}
+                    </Badge>
+                    <span className={cn("text-sm font-semibold", getScoreColor(supplier.compliance_score))}>
+                      {supplier.compliance_score}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Section 4: AI Insights & Recommended Actions - List Format */}
+      <Card className="border-0 bg-card/50">
+        <CardHeader className="pb-2 pt-4 px-4">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Brain className="w-4 h-4 text-primary" />
+            Recommended Actions
+            {dynamicActions.filter(a => a.urgency === 'critical' || a.urgency === 'high').length > 0 && (
+              <Badge variant="outline" className="ml-2 text-xs border-orange-500 text-orange-500">
+                {dynamicActions.filter(a => a.urgency === 'critical' || a.urgency === 'high').length} urgent
+              </Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 pb-4">
+          {dynamicActions.length === 0 ? (
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+              <CheckCircle className="w-5 h-5 text-green-500" />
+              <div>
+                <p className="font-medium text-sm">All caught up!</p>
+                <p className="text-xs text-muted-foreground">No urgent actions required at this time.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {dynamicActions.map((action, index) => {
+                const Icon = action.icon;
+                return (
+                  <div
+                    key={index}
+                    className={cn(
+                      "flex items-center justify-between p-3 rounded-lg border transition-colors hover:bg-muted/30",
+                      getUrgencyStyles(action.urgency)
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon className={cn("w-5 h-5", getUrgencyIconColor(action.urgency))} />
+                      <div>
+                        <p className="font-medium text-sm">{action.title}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-1">{action.subtitle}</p>
+                      </div>
+                    </div>
+                    <Button size="sm" variant="ghost" className="h-8 text-xs gap-1 hover:bg-background">
+                      {action.actionLabel}
+                      <ChevronRight className="w-3 h-3" />
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Section 5: Charts - Side by Side, Compact */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Compliance Trend */}
+        <Card className="border-0 bg-card/50">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Compliance Trend
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={metrics.trend_data}>
+                  <defs>
+                    <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" tick={{ fontSize: 10 }} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" tick={{ fontSize: 10 }} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                      fontSize: '12px'
+                    }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="score" 
+                    stroke="hsl(217, 91%, 60%)" 
+                    fillOpacity={1} 
+                    fill="url(#scoreGradient)" 
+                    strokeWidth={2}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Document Distribution */}
+        <Card className="border-0 bg-card/50">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Target className="w-4 h-4" />
+              Document Distribution
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <div className="flex items-center gap-4">
+              <div className="h-40 w-40">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={pieData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
+                      innerRadius={35}
+                      outerRadius={60}
                       paddingAngle={2}
                       dataKey="value"
                     >
@@ -600,163 +718,32 @@ const AdvancedComplianceInsightsDashboard: React.FC<AdvancedComplianceInsightsDa
                       contentStyle={{ 
                         backgroundColor: 'hsl(var(--card))',
                         border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px'
+                        borderRadius: '8px',
+                        fontSize: '12px'
                       }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="flex-1 space-y-2">
                 {pieData.map((item, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: item.color }}
-                    />
-                    <span className="text-sm text-muted-foreground">{item.name}</span>
-                    <span className="text-sm font-medium ml-auto">{item.value}</span>
+                  <div key={index} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-2.5 h-2.5 rounded-full" 
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="text-xs text-muted-foreground">{item.name}</span>
+                    </div>
+                    <span className="text-sm font-medium">{item.value}</span>
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* Enhanced Supplier Risk Matrix */}
-      {supplierMetrics.length > 0 && (
-        <motion.div variants={itemVariants}>
-          <Card className="overflow-hidden bg-gradient-subtle backdrop-blur-sm border-0 shadow-elegant">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building className="w-5 h-5" />
-                Supplier Performance Matrix
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {supplierMetrics.slice(0, 6).map((supplier, index) => (
-                  <motion.div
-                    key={supplier.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="p-4 rounded-lg border bg-card/50 backdrop-blur-sm hover:shadow-lg transition-all duration-300"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="font-medium">{supplier.name}</span>
-                          <Badge variant={getRiskBadgeVariant(supplier.risk_level)} className="text-xs">
-                            {supplier.risk_level} risk
-                          </Badge>
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            {supplier.trend === 'up' ? <TrendingUp className="w-3 h-3 text-green-500" /> :
-                             supplier.trend === 'down' ? <TrendingDown className="w-3 h-3 text-red-500" /> :
-                             <div className="w-3 h-3 bg-gray-400 rounded-full" />}
-                            {supplier.trend}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>{supplier.documents_count} documents</span>
-                          <span>Efficiency: {supplier.efficiency}%</span>
-                          <span>Last active: {format(new Date(supplier.last_activity), 'MMM dd')}</span>
-                        </div>
-                      </div>
-                      <div className="text-right space-y-1">
-                        <div className={`text-xl font-bold ${getScoreColor(supplier.compliance_score)}`}>
-                          {supplier.compliance_score}%
-                        </div>
-                        <Progress value={supplier.compliance_score} className="w-20 h-2" />
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
-
-      {/* Smart Action Center */}
-      <motion.div variants={itemVariants}>
-        <Card className="overflow-hidden bg-gradient-primary backdrop-blur-sm border-0 shadow-elegant">
-          <CardHeader className="text-white">
-            <CardTitle className="flex items-center gap-2">
-              <Zap className="w-5 h-5" />
-              Smart Action Center
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="bg-white/95 backdrop-blur-sm">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[
-                {
-                  icon: Clock,
-                  title: `Review ${metrics.pending_documents} Pending`,
-                  subtitle: 'Reduce approval time by 40%',
-                  urgent: metrics.pending_documents > 5,
-                  action: 'Quick Review'
-                },
-                {
-                  icon: AlertTriangle,
-                  title: `Address ${metrics.expired_documents} Expired`,
-                  subtitle: 'Critical compliance gaps',
-                  urgent: metrics.expired_documents > 0,
-                  action: 'Immediate Action'
-                },
-                {
-                  icon: Calendar,
-                  title: `Follow ${metrics.expiring_soon} Expiring`,
-                  subtitle: 'Prevent future issues',
-                  urgent: metrics.expiring_soon > 3,
-                  action: 'Schedule Renewals'
-                },
-                {
-                  icon: BarChart3,
-                  title: 'Generate AI Report',
-                  subtitle: 'Executive summary with insights',
-                  urgent: false,
-                  action: 'Create Report'
-                },
-                {
-                  icon: Brain,
-                  title: 'Optimize Workflow',
-                  subtitle: 'AI-recommended improvements',
-                  urgent: false,
-                  action: 'View Suggestions'
-                },
-                {
-                  icon: Shield,
-                  title: 'Risk Assessment',
-                  subtitle: 'Comprehensive security audit',
-                  urgent: metrics.risk_score > 30,
-                  action: 'Run Audit'
-                }
-              ].map((item, index) => (
-                <motion.div
-                  key={index}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Button 
-                    variant={item.urgent ? "default" : "outline"}
-                    className={`w-full h-auto p-4 text-left justify-start ${
-                      item.urgent ? 'animate-pulse-glow' : ''
-                    }`}
-                  >
-                    <item.icon className="w-5 h-5 mr-3 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">{item.title}</div>
-                      <div className="text-xs text-muted-foreground truncate">{item.subtitle}</div>
-                    </div>
-                  </Button>
-                </motion.div>
-              ))}
             </div>
           </CardContent>
         </Card>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 };
 

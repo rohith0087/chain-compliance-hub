@@ -9,6 +9,8 @@ import { MetadataPanel } from './MetadataPanel';
 
 interface StructuredResponseRendererProps {
   content: string;
+  onEmailSupplier?: (entity: { id: string; name?: string; email?: string }) => void;
+  onViewSupplierDetails?: (entity: { id: string; name?: string; email?: string }) => void;
 }
 
 interface ParsedSection {
@@ -222,7 +224,11 @@ export function hasStructuredContent(content: string): boolean {
   );
 }
 
-export const StructuredResponseRenderer: React.FC<StructuredResponseRendererProps> = ({ content }) => {
+export const StructuredResponseRenderer: React.FC<StructuredResponseRendererProps> = ({ 
+  content, 
+  onEmailSupplier, 
+  onViewSupplierDetails 
+}) => {
   const sections = parseStructuredResponse(content);
   
   if (sections.length === 0) {
@@ -240,6 +246,8 @@ export const StructuredResponseRenderer: React.FC<StructuredResponseRendererProp
                 entities={section.data.entities} 
                 entityType={section.data.entityType}
                 count={section.data.count}
+                onEmailClick={onEmailSupplier}
+                onViewDetails={onViewSupplierDetails}
               />
             );
           case 'entity_details':

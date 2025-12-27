@@ -19,6 +19,8 @@ interface SupplierGridProps {
   entities: Entity[];
   entityType: string;
   count: number;
+  onEmailClick?: (entity: Entity) => void;
+  onViewDetails?: (entity: Entity) => void;
 }
 
 const getStatusIcon = (status: string) => {
@@ -53,7 +55,7 @@ const getStatusBadgeClass = (status: string) => {
   }
 };
 
-export const SupplierGrid: React.FC<SupplierGridProps> = ({ entities, entityType, count }) => {
+export const SupplierGrid: React.FC<SupplierGridProps> = ({ entities, entityType, count, onEmailClick, onViewDetails }) => {
   const title = entityType === 'suppliers' ? 'Suppliers' : 
                 entityType === 'buyers' ? 'Buyers' : 
                 'Entities';
@@ -141,12 +143,22 @@ export const SupplierGrid: React.FC<SupplierGridProps> = ({ entities, entityType
               {/* Quick actions */}
               <div className="pt-2 flex gap-2">
                 {entity.email && (
-                  <Button variant="outline" size="sm" className="flex-1 text-xs">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1 text-xs"
+                    onClick={() => onEmailClick?.(entity)}
+                  >
                     <Mail className="w-3 h-3 mr-1" />
                     Email
                   </Button>
                 )}
-                <Button variant="ghost" size="sm" className="flex-1 text-xs">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="flex-1 text-xs"
+                  onClick={() => onViewDetails?.(entity)}
+                >
                   View Details
                 </Button>
               </div>

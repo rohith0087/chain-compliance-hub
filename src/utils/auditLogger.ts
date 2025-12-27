@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 export async function logDocumentActivity(
   documentUploadId: string | null,
   documentRequestId: string | null,
-  actionType: 'requested' | 'uploaded' | 'approved' | 'rejected' | 'downloaded' | 'link_created' | 'link_accessed',
+  actionType: 'requested' | 'uploaded' | 'approved' | 'rejected' | 'downloaded' | 'link_created' | 'link_accessed' | 'withdrawn',
   notes?: string,
   metadata?: Record<string, any>
 ) {

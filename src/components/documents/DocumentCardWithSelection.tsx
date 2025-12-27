@@ -14,7 +14,8 @@ import {
   Upload,
   ThumbsUp,
   ThumbsDown,
-  Link
+  Link,
+  Ban
 } from 'lucide-react';
 import DocumentVersionHistory from './DocumentVersionHistory';
 
@@ -63,11 +64,13 @@ interface DocumentCardWithSelectionProps {
   onApprove?: () => void;
   onDecline?: () => void;
   onCreateLink?: () => void;
+  onWithdraw?: () => void;
   showActions?: boolean;
   userRole?: 'buyer' | 'supplier';
   approveLoading?: boolean;
   declineLoading?: boolean;
   downloadLoading?: boolean;
+  withdrawLoading?: boolean;
   isSelected?: boolean;
   onSelectionChange?: (selected: boolean) => void;
   showSelection?: boolean;
@@ -81,11 +84,13 @@ const DocumentCardWithSelection = ({
   onApprove,
   onDecline,
   onCreateLink,
+  onWithdraw,
   showActions = true,
-  userRole = 'supplier',
+  userRole = 'buyer',
   approveLoading = false,
   declineLoading = false,
   downloadLoading = false,
+  withdrawLoading = false,
   isSelected = false,
   onSelectionChange,
   showSelection = false
@@ -97,6 +102,7 @@ const DocumentCardWithSelection = ({
       case 'submitted': return 'bg-gradient-to-r from-[hsl(var(--blue-accent))] to-[hsl(var(--accent))] text-white border-0';
       case 'rejected': return 'bg-gradient-to-r from-destructive to-red-600 text-white border-0';
       case 'expired': return 'bg-gradient-to-r from-gray-400 to-gray-500 text-white border-0';
+      case 'withdrawn': return 'bg-gradient-to-r from-gray-400 to-gray-500 text-white border-0';
       default: return 'bg-gradient-to-r from-[hsl(var(--teal-accent))] to-cyan-600 text-white border-0';
     }
   };
@@ -107,6 +113,7 @@ const DocumentCardWithSelection = ({
       case 'pending': return <Clock className="w-4 h-4" />;
       case 'submitted': return <FileText className="w-4 h-4" />;
       case 'rejected': return <AlertTriangle className="w-4 h-4" />;
+      case 'withdrawn': return <Ban className="w-4 h-4" />;
       default: return <Clock className="w-4 h-4" />;
     }
   };
@@ -149,6 +156,11 @@ const DocumentCardWithSelection = ({
     document.status === 'approved' && 
     (document.file_name || (document as any).template_type === 'custom' || (document as any).has_template_submission) && 
     onCreateLink;
+
+  // Show withdraw button for buyers when document is pending
+  const canWithdraw = userRole === 'buyer' && 
+    document.status === 'pending' && 
+    onWithdraw;
 
   const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
@@ -268,6 +280,27 @@ const DocumentCardWithSelection = ({
                 <Button size="sm" variant="outline" onClick={onCreateLink}>
                   <Link className="w-4 h-4 mr-2" />
                   Create Link
+                </Button>
+              )}
+              {canWithdraw && (
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                  onClick={onWithdraw}
+                  disabled={withdrawLoading}
+                >
+                  {withdrawLoading ? (
+                    <>
+                      <Clock className="w-4 h-4 mr-2 animate-spin" />
+                      Withdrawing...
+                    </>
+                  ) : (
+                    <>
+                      <Ban className="w-4 h-4 mr-2" />
+                      Withdraw
+                    </>
+                  )}
                 </Button>
               )}
             </div>

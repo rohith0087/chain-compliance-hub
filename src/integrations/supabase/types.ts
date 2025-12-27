@@ -4283,6 +4283,7 @@ export type Database = {
         | "rejected"
         | "expired"
         | "completed"
+        | "withdrawn"
       subscription_plan_type:
         | "buyer_basic"
         | "buyer_professional"
@@ -4459,6 +4460,7 @@ export const Constants = {
         "rejected",
         "expired",
         "completed",
+        "withdrawn",
       ],
       subscription_plan_type: [
         "buyer_basic",

@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { FileText, Upload, Cloud, HardDrive, X, Search, Check, Loader2 } from 'lucide-react';
+import { FileText, Upload, Cloud, HardDrive, X, Search, Check, Loader2, Paperclip } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -105,20 +105,27 @@ const SampleDocumentUpload = ({ buyerId, onSampleChange, currentSample }: Sample
   };
 
   return (
-    <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
-      <Label className="flex items-center gap-2 text-sm font-medium">
-        <FileText className="w-4 h-4" />
-        Sample/Reference Document (Optional)
-      </Label>
-      <p className="text-xs text-muted-foreground">
-        Upload a sample to help suppliers understand the expected format and content
-      </p>
+    <div className="p-4 rounded-lg border bg-card shadow-sm">
+      <div className="flex items-center gap-2 mb-3 pb-3 border-b">
+        <div className="p-1.5 rounded-md bg-orange-500/10">
+          <Paperclip className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-sm">Sample/Reference Document</h3>
+          <p className="text-xs text-muted-foreground">
+            Upload a sample to help suppliers understand the expected format
+          </p>
+        </div>
+        <span className="ml-auto text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">Optional</span>
+      </div>
 
       {/* Show selected file or allow selection */}
       {currentSample.source === 'device' && currentSample.file ? (
-        <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg border border-primary/20">
-          <div className="flex items-center gap-2">
-            <HardDrive className="w-4 h-4 text-primary" />
+        <div className="flex items-center justify-between p-3 bg-primary/5 rounded-lg border border-primary/20 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-md bg-primary/10">
+              <HardDrive className="w-4 h-4 text-primary" />
+            </div>
             <div>
               <p className="text-sm font-medium">{currentSample.file.name}</p>
               <p className="text-xs text-muted-foreground">
@@ -126,14 +133,16 @@ const SampleDocumentUpload = ({ buyerId, onSampleChange, currentSample }: Sample
               </p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleClear}>
+          <Button variant="ghost" size="sm" onClick={handleClear} className="hover:bg-destructive/10 hover:text-destructive">
             <X className="w-4 h-4" />
           </Button>
         </div>
       ) : currentSample.source === 'library' && currentSample.libraryDoc ? (
-        <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg border border-primary/20">
-          <div className="flex items-center gap-2">
-            <Cloud className="w-4 h-4 text-primary" />
+        <div className="flex items-center justify-between p-3 bg-primary/5 rounded-lg border border-primary/20 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-md bg-primary/10">
+              <Cloud className="w-4 h-4 text-primary" />
+            </div>
             <div>
               <p className="text-sm font-medium">{currentSample.libraryDoc.document_name}</p>
               <p className="text-xs text-muted-foreground">
@@ -141,35 +150,45 @@ const SampleDocumentUpload = ({ buyerId, onSampleChange, currentSample }: Sample
               </p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleClear}>
+          <Button variant="ghost" size="sm" onClick={handleClear} className="hover:bg-destructive/10 hover:text-destructive">
             <X className="w-4 h-4" />
           </Button>
         </div>
       ) : (
         <Tabs value={uploadSource} onValueChange={(v) => setUploadSource(v as 'device' | 'library')} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="device" className="flex items-center gap-2 text-xs">
-              <HardDrive className="w-3 h-3" />
+          <TabsList className="grid w-full grid-cols-2 bg-muted/50">
+            <TabsTrigger 
+              value="device" 
+              className="flex items-center gap-2 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              <HardDrive className="w-3.5 h-3.5" />
               Upload New
             </TabsTrigger>
-            <TabsTrigger value="library" className="flex items-center gap-2 text-xs">
-              <Cloud className="w-3 h-3" />
+            <TabsTrigger 
+              value="library" 
+              className="flex items-center gap-2 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              <Cloud className="w-3.5 h-3.5" />
               From Library
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="device" className="mt-3">
-            <div>
+            <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-border/60 rounded-lg cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-all group">
+              <div className="p-3 rounded-full bg-muted/50 group-hover:bg-primary/10 transition-colors mb-2">
+                <Upload className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+              <span className="text-sm font-medium text-foreground">Click to upload</span>
+              <span className="text-xs text-muted-foreground mt-1">
+                PDF, DOC, XLS, JPG, PNG (Max 10MB)
+              </span>
               <Input
                 type="file"
                 onChange={handleFileChange}
                 accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
-                className="cursor-pointer"
+                className="hidden"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                PDF, DOC, XLS, JPG, PNG (Max 10MB)
-              </p>
-            </div>
+            </label>
           </TabsContent>
 
           <TabsContent value="library" className="mt-3">
@@ -181,50 +200,68 @@ const SampleDocumentUpload = ({ buyerId, onSampleChange, currentSample }: Sample
                   placeholder="Search library documents..."
                   value={librarySearchTerm}
                   onChange={(e) => setLibrarySearchTerm(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 border-border/80"
                 />
               </div>
 
               {/* Library Documents List */}
               {loadingLibrary ? (
-                <div className="flex items-center justify-center py-4 text-muted-foreground text-sm gap-2">
+                <div className="flex items-center justify-center py-6 text-muted-foreground text-sm gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Loading library...
                 </div>
               ) : filteredLibraryDocs.length === 0 ? (
-                <div className="text-center py-4 text-muted-foreground text-sm border rounded-lg bg-muted/20">
+                <div className="text-center py-6 text-muted-foreground text-sm border rounded-lg bg-muted/20">
+                  <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
                   {libraryDocuments.length === 0
                     ? 'No documents in your library yet.'
                     : 'No documents match your search.'
                   }
                 </div>
               ) : (
-                <ScrollArea className="h-36 border rounded-lg">
+                <ScrollArea className="h-40 border rounded-lg bg-muted/10">
                   <div className="p-2 space-y-1">
                     {filteredLibraryDocs.map((doc) => (
                       <div
                         key={doc.id}
                         onClick={() => handleSelectLibraryDoc(doc)}
-                        className={`p-2 rounded-lg cursor-pointer transition-colors border ${
+                        className={`p-2.5 rounded-lg cursor-pointer transition-all border ${
                           currentSample.libraryDoc?.id === doc.id
-                            ? 'bg-primary/10 border-primary'
-                            : 'hover:bg-muted/50 border-transparent'
+                            ? 'bg-primary/10 border-primary/30 shadow-sm'
+                            : 'hover:bg-muted/50 border-transparent hover:border-border/50'
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className={`p-1.5 rounded-md ${
+                              currentSample.libraryDoc?.id === doc.id 
+                                ? 'bg-primary/10' 
+                                : 'bg-muted/50'
+                            }`}>
+                              <FileText className={`w-3.5 h-3.5 ${
+                                currentSample.libraryDoc?.id === doc.id 
+                                  ? 'text-primary' 
+                                  : 'text-muted-foreground'
+                              }`} />
+                            </div>
                             <div className="min-w-0">
                               <p className="text-sm font-medium truncate">{doc.document_name}</p>
-                              {doc.category && (
-                                <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                                  {doc.category}
+                              <div className="flex items-center gap-2 mt-0.5">
+                                {doc.category && (
+                                  <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                    {doc.category}
+                                  </span>
+                                )}
+                                <span className="text-xs text-muted-foreground">
+                                  {formatFileSize(doc.file_size)}
                                 </span>
-                              )}
+                              </div>
                             </div>
                           </div>
                           {currentSample.libraryDoc?.id === doc.id && (
-                            <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                            <div className="p-1 rounded-full bg-primary/10">
+                              <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                            </div>
                           )}
                         </div>
                       </div>

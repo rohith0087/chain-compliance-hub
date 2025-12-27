@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Upload, File, X, Calendar as CalendarIcon, AlertTriangle, Cloud, HardDrive, Search, Check } from 'lucide-react';
+import { Upload, File, X, Calendar as CalendarIcon, AlertTriangle, Cloud, HardDrive, Search, Check, FileText, Info, Link2, MessageSquare } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -41,11 +41,13 @@ interface DocumentUploadDialogProps {
 const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: DocumentUploadDialogProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [notes, setNotes] = useState('');
+  const [documentName, setDocumentName] = useState('');
   const [expirationDate, setExpirationDate] = useState<Date | undefined>(undefined);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [updateMetadataOnly, setUpdateMetadataOnly] = useState(false);
   const [linkedItemIds, setLinkedItemIds] = useState<string[]>([]);
+  const [supplierCompanyName, setSupplierCompanyName] = useState<string>('');
   
   // Library document selection state
   const [uploadSource, setUploadSource] = useState<'machine' | 'library'>('machine');
@@ -60,6 +62,36 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
   const isResubmission = request.status === 'rejected';
   const latestUpload = request.document_uploads?.[0];
   const { items, loading: itemsLoading } = useSupplierItems(request.supplier_id);
+
+  // Fetch supplier company name for default document name
+  useEffect(() => {
+    const fetchSupplierName = async () => {
+      if (!request.supplier_id) return;
+      
+      const { data, error } = await supabase
+        .from('suppliers')
+        .select('company_name')
+        .eq('id', request.supplier_id)
+        .single();
+      
+      if (!error && data) {
+        setSupplierCompanyName(data.company_name || '');
+      }
+    };
+    
+    if (isOpen) {
+      fetchSupplierName();
+    }
+  }, [request.supplier_id, isOpen]);
+
+  // Generate default document name when dialog opens or relevant data changes
+  useEffect(() => {
+    if (isOpen && supplierCompanyName && request.document_type) {
+      const currentYear = new Date().getFullYear();
+      const defaultName = `${supplierCompanyName} - ${request.document_type} - ${currentYear}`;
+      setDocumentName(defaultName);
+    }
+  }, [isOpen, supplierCompanyName, request.document_type]);
 
   // Fetch library documents when source changes to 'library'
   useEffect(() => {
@@ -227,6 +259,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
         const { error: updateError } = await supabase
           .from('document_uploads')
           .update({
+            document_name: documentName.trim() || null,
             reviewer_notes: notes || null,
             expiration_date: expirationDate ? format(expirationDate, 'yyyy-MM-dd') : null,
             status: 'pending_review'
@@ -245,6 +278,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
             file_path: filePath,
             file_size: fileSize,
             mime_type: mimeType,
+            document_name: documentName.trim() || null,
             status: 'pending_review',
             reviewer_notes: notes || null,
             expiration_date: expirationDate ? format(expirationDate, 'yyyy-MM-dd') : null,
@@ -317,12 +351,14 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
   const resetForm = () => {
     setFile(null);
     setNotes('');
+    setDocumentName('');
     setExpirationDate(undefined);
     setIsCalendarOpen(false);
     setUpdateMetadataOnly(false);
     setUploadSource('machine');
     setSelectedLibraryDoc(null);
     setLibrarySearchTerm('');
+    setLinkedItemIds([]);
   };
 
   const handleClose = () => {
@@ -332,49 +368,86 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
-      <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle>
-            {isResubmission ? 'Resubmit Document' : 'Upload Document'}
-          </DialogTitle>
-          <DialogDescription id="upload-dialog-desc">
-            Provide or update the requested document and optional metadata.
-          </DialogDescription>
+      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4 border-b bg-gradient-to-r from-primary/5 to-transparent">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Upload className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <DialogTitle className="text-lg font-semibold">
+                {isResubmission ? 'Resubmit Document' : 'Upload Document'}
+              </DialogTitle>
+              <DialogDescription id="upload-dialog-desc" className="text-sm">
+                Provide or update the requested document and optional metadata.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
         
-        <ScrollArea className="flex-1 min-h-0 pr-4">
-          <div className="space-y-4 pr-2">
-            {/* Sample Document Viewer - Show if sample exists */}
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="px-6 py-4 space-y-5">
+            
+            {/* Sample Document Reference Section */}
             {request.sample_file_path && (
-              <SampleDocumentViewer
-                requestId={request.id}
-                fileName={request.sample_file_name}
-                fileSize={request.sample_file_size}
-                mimeType={request.sample_mime_type}
-                uploadedAt={request.sample_uploaded_at}
-                notes={request.notes}
-              />
+              <div className="rounded-xl border border-blue-200/60 bg-blue-50/40 p-4 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                  <Info className="h-4 w-4 text-blue-600" />
+                  <h3 className="text-sm font-semibold text-blue-900 uppercase tracking-wide">Reference Document</h3>
+                </div>
+                <SampleDocumentViewer
+                  requestId={request.id}
+                  fileName={request.sample_file_name}
+                  fileSize={request.sample_file_size}
+                  mimeType={request.sample_mime_type}
+                  uploadedAt={request.sample_uploaded_at}
+                  notes={request.notes}
+                />
+              </div>
             )}
 
-            {/* Request Info */}
-            <div className={`p-3 rounded-lg ${isResubmission ? 'bg-orange-50 border border-orange-200' : 'bg-muted/50'}`}>
-              <h4 className="font-medium text-sm mb-1">{request.title}</h4>
-              <p className="text-xs text-muted-foreground">Type: {request.document_type}</p>
-              <p className="text-xs text-muted-foreground">Category: {request.category}</p>
-              {isResubmission && (
-                <p className="text-xs text-orange-700 mt-2 font-medium">
-                  Document was rejected - please review feedback and resubmit
-                </p>
-              )}
+            {/* Request Info Section */}
+            <div className={cn(
+              "rounded-xl border p-4 shadow-sm",
+              isResubmission 
+                ? "border-orange-200/60 bg-orange-50/40" 
+                : "border-slate-200/60 bg-slate-50/40"
+            )}>
+              <div className="flex items-center gap-2 mb-3">
+                <FileText className={cn("h-4 w-4", isResubmission ? "text-orange-600" : "text-slate-600")} />
+                <h3 className={cn(
+                  "text-sm font-semibold uppercase tracking-wide",
+                  isResubmission ? "text-orange-900" : "text-slate-700"
+                )}>Request Details</h3>
+              </div>
+              <div className="space-y-1.5">
+                <h4 className="font-medium text-foreground">{request.title}</h4>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="px-2 py-1 rounded-md bg-background border text-muted-foreground">
+                    Type: {request.document_type}
+                  </span>
+                  <span className="px-2 py-1 rounded-md bg-background border text-muted-foreground">
+                    Category: {request.category}
+                  </span>
+                </div>
+                {isResubmission && (
+                  <p className="text-xs text-orange-700 mt-2 font-medium flex items-center gap-1.5">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    Document was rejected - please review feedback and resubmit
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Rejection Feedback */}
             {isResubmission && latestUpload?.reviewer_notes && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5" />
+              <div className="rounded-xl border border-red-200/60 bg-red-50/40 p-4 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
+                    <AlertTriangle className="w-4 h-4 text-red-600" />
+                  </div>
                   <div>
-                    <p className="text-sm font-medium text-red-800 mb-1">Rejection Feedback:</p>
+                    <p className="text-sm font-semibold text-red-800 mb-1">Rejection Feedback</p>
                     <p className="text-sm text-red-700">{latestUpload.reviewer_notes}</p>
                   </div>
                 </div>
@@ -383,29 +456,32 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
 
             {/* Resubmission Options */}
             {isResubmission && (
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm font-medium text-blue-800 mb-2">Resubmission Options:</p>
+              <div className="rounded-xl border border-blue-200/60 bg-blue-50/40 p-4 shadow-sm">
+                <p className="text-sm font-semibold text-blue-900 mb-3">Resubmission Options</p>
                 <div className="space-y-2">
-                  <label className="flex items-center space-x-2 text-sm">
+                  <label className="flex items-center space-x-3 text-sm cursor-pointer p-2 rounded-lg hover:bg-blue-100/50 transition-colors">
                     <input
                       type="radio"
                       name="resubmit-type"
                       checked={!updateMetadataOnly}
                       onChange={() => setUpdateMetadataOnly(false)}
-                      className="text-blue-600"
+                      className="text-primary h-4 w-4"
                     />
-                    <span>Upload new document file</span>
+                    <span className="text-blue-800">Upload new document file</span>
                   </label>
-                  <label className={`flex items-center space-x-2 text-sm ${!latestUpload ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                  <label className={cn(
+                    "flex items-center space-x-3 text-sm p-2 rounded-lg transition-colors",
+                    !latestUpload ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-blue-100/50'
+                  )}>
                     <input
                       type="radio"
                       name="resubmit-type"
                       checked={updateMetadataOnly}
                       onChange={() => latestUpload && setUpdateMetadataOnly(true)}
                       disabled={!latestUpload}
-                      className="text-blue-600"
+                      className="text-primary h-4 w-4"
                     />
-                    <span>Update expiration date and notes only</span>
+                    <span className="text-blue-800">Update expiration date and notes only</span>
                     {!latestUpload && <span className="text-xs text-muted-foreground">(no existing file)</span>}
                   </label>
                 </div>
@@ -414,22 +490,27 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
 
             {/* Document Source Selection */}
             {(!isResubmission || !updateMetadataOnly) && (
-              <div className="space-y-3">
-                <Label>{isResubmission ? 'Select New Document *' : 'Select Document *'}</Label>
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                  <Upload className="h-4 w-4 text-primary" />
+                  <Label className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                    {isResubmission ? 'Select New Document *' : 'Select Document *'}
+                  </Label>
+                </div>
                 
                 <Tabs value={uploadSource} onValueChange={(v) => setUploadSource(v as 'machine' | 'library')} className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="machine" className="flex items-center gap-2">
-                      <HardDrive className="w-4 h-4" />
+                  <TabsList className="grid w-full grid-cols-2 mb-3">
+                    <TabsTrigger value="machine" className="flex items-center gap-2 text-xs">
+                      <HardDrive className="w-3.5 h-3.5" />
                       From Device
                     </TabsTrigger>
-                    <TabsTrigger value="library" className="flex items-center gap-2">
-                      <Cloud className="w-4 h-4" />
+                    <TabsTrigger value="library" className="flex items-center gap-2 text-xs">
+                      <Cloud className="w-3.5 h-3.5" />
                       From Library
                     </TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="machine" className="mt-3">
+                  <TabsContent value="machine" className="mt-0">
                     <div>
                       <Input
                         id="file-upload"
@@ -438,51 +519,50 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
                         onChange={handleFileChange}
                         accept="image/*,application/pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
                         multiple={false}
-                        className="cursor-pointer"
+                        className="cursor-pointer bg-background"
                       />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Supported formats: PDF, DOC, DOCX, JPG, PNG, TXT (Max 10MB)
+                      <p className="text-xs text-muted-foreground mt-1.5">
+                        PDF, DOC, DOCX, JPG, PNG, TXT (Max 10MB)
                       </p>
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="library" className="mt-3">
+                  <TabsContent value="library" className="mt-0">
                     <div className="space-y-3">
-                      {/* Search */}
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input
                           placeholder="Search library documents..."
                           value={librarySearchTerm}
                           onChange={(e) => setLibrarySearchTerm(e.target.value)}
-                          className="pl-9"
+                          className="pl-9 bg-background"
                         />
                       </div>
 
-                      {/* Library Documents List */}
                       {loadingLibrary ? (
                         <div className="text-center py-4 text-muted-foreground text-sm">
                           Loading library...
                         </div>
                       ) : filteredLibraryDocs.length === 0 ? (
-                        <div className="text-center py-4 text-muted-foreground text-sm border rounded-lg bg-muted/20">
+                        <div className="text-center py-4 text-muted-foreground text-sm border rounded-lg bg-background">
                           {libraryDocuments.length === 0 
                             ? "No documents in your library yet. Upload documents to your library first."
                             : "No documents match your search."
                           }
                         </div>
                       ) : (
-                        <ScrollArea className="h-48 border rounded-lg">
+                        <ScrollArea className="h-40 border rounded-lg bg-background">
                           <div className="p-2 space-y-1">
                             {filteredLibraryDocs.map((doc) => (
                               <div
                                 key={doc.id}
                                 onClick={() => handleSelectLibraryDoc(doc)}
-                                className={`p-3 rounded-lg cursor-pointer transition-colors border ${
+                                className={cn(
+                                  "p-3 rounded-lg cursor-pointer transition-colors border",
                                   selectedLibraryDoc?.id === doc.id
                                     ? 'bg-primary/10 border-primary'
                                     : 'hover:bg-muted/50 border-transparent'
-                                }`}
+                                )}
                               >
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex items-start gap-2 flex-1 min-w-0">
@@ -510,172 +590,210 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
                     </div>
                   </TabsContent>
                 </Tabs>
+
+                {/* Selected File Display (from machine) */}
+                {file && uploadSource === 'machine' && (
+                  <div className="flex items-center justify-between p-3 mt-3 bg-background rounded-lg border border-primary/30">
+                    <div className="flex items-center space-x-2 min-w-0">
+                      <HardDrive className="w-4 h-4 text-primary flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{file.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(file.size / 1024 / 1024).toFixed(2)} MB • From device
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setFile(null)}
+                      className="flex-shrink-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+
+                {/* Selected Library Document Display */}
+                {selectedLibraryDoc && uploadSource === 'library' && (
+                  <div className="flex items-center justify-between p-3 mt-3 bg-background rounded-lg border border-primary/30">
+                    <div className="flex items-center space-x-2 min-w-0">
+                      <Cloud className="w-4 h-4 text-primary flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{selectedLibraryDoc.document_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {selectedLibraryDoc.file_size ? `${(selectedLibraryDoc.file_size / 1024 / 1024).toFixed(2)} MB • ` : ''}
+                          From library • v{selectedLibraryDoc.version}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedLibraryDoc(null)}
+                      className="flex-shrink-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Current Document Info for Resubmission */}
             {isResubmission && updateMetadataOnly && latestUpload && (
-              <div className="p-3 bg-muted/50 border rounded-lg">
-                <p className="text-sm font-medium mb-1">Current Document:</p>
+              <div className="rounded-xl border border-slate-200/60 bg-slate-50/40 p-4 shadow-sm">
+                <p className="text-sm font-semibold text-slate-700 mb-2">Current Document</p>
                 <div className="flex items-center space-x-2">
                   <File className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">{latestUpload.file_name}</span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground mt-1.5">
                   You are updating metadata for this document without replacing the file
                 </p>
               </div>
             )}
 
-            {/* Selected File Display (from machine) */}
-            {file && uploadSource === 'machine' && (
-              <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg border border-primary/20">
-                <div className="flex items-center space-x-2">
-                  <HardDrive className="w-4 h-4 text-primary" />
-                  <div>
-                    <p className="text-sm font-medium">{file.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {(file.size / 1024 / 1024).toFixed(2)} MB • From device
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setFile(null)}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
+            {/* Document Details Section */}
+            <div className="rounded-xl border border-amber-200/50 bg-amber-50/30 p-4 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 mb-1">
+                <FileText className="h-4 w-4 text-amber-600" />
+                <h3 className="text-sm font-semibold text-amber-900 uppercase tracking-wide">Document Details</h3>
               </div>
-            )}
 
-            {/* Selected Library Document Display */}
-            {selectedLibraryDoc && uploadSource === 'library' && (
-              <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg border border-primary/20">
-                <div className="flex items-center space-x-2">
-                  <Cloud className="w-4 h-4 text-primary" />
-                  <div>
-                    <p className="text-sm font-medium">{selectedLibraryDoc.document_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {selectedLibraryDoc.file_size ? `${(selectedLibraryDoc.file_size / 1024 / 1024).toFixed(2)} MB • ` : ''}
-                      From library • v{selectedLibraryDoc.version}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedLibraryDoc(null)}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
-
-            {/* Expiration Date */}
-            <div>
-              <Label className="flex items-center gap-2">
-                <CalendarIcon className="w-4 h-4" />
-                Document Expiration Date (Optional)
-              </Label>
-              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal mt-1",
-                      !expirationDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {expirationDate ? format(expirationDate, "PPP") : "Select expiration date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 z-50" align="start">
-                  <CalendarComponent
-                    mode="single"
-                    selected={expirationDate}
-                    onSelect={(date) => {
-                      setExpirationDate(date);
-                      setIsCalendarOpen(false);
-                    }}
-                    disabled={(date) => date < new Date()}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-              {expirationDate && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setExpirationDate(undefined)}
-                  className="mt-1 text-xs"
-                >
-                  Clear date
-                </Button>
-              )}
-              <p className="text-xs text-muted-foreground mt-1">
-                Set when this document expires (e.g., certificate expiry, license renewal date)
-              </p>
-            </div>
-
-            {/* Link Items */}
-            {items.length > 0 && (
-              <div>
-                <Label>Link to Items (Optional)</Label>
-                <div className="mt-2 space-y-2 max-h-40 overflow-y-auto border rounded-lg p-3">
-                  {ITEM_CATEGORIES.map(category => {
-                    const categoryItems = items.filter(i => i.item_category === category.value);
-                    if (categoryItems.length === 0) return null;
-                    return (
-                      <div key={category.value}>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">
-                          {category.icon} {category.label}
-                        </p>
-                        {categoryItems.map(item => (
-                          <label key={item.id} className="flex items-center gap-2 text-sm pl-4 cursor-pointer hover:bg-muted/50 rounded py-1">
-                            <Checkbox
-                              checked={linkedItemIds.includes(item.id)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setLinkedItemIds([...linkedItemIds, item.id]);
-                                } else {
-                                  setLinkedItemIds(linkedItemIds.filter(id => id !== item.id));
-                                }
-                              }}
-                            />
-                            {item.item_name}
-                          </label>
-                        ))}
-                      </div>
-                    );
-                  })}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Link this document to specific items (e.g., COA for Yellowfin Tuna)
+              {/* Document Display Name */}
+              <div className="space-y-1.5">
+                <Label htmlFor="document-name" className="text-xs font-medium text-foreground">
+                  Document Display Name
+                </Label>
+                <Input
+                  id="document-name"
+                  value={documentName}
+                  onChange={(e) => setDocumentName(e.target.value)}
+                  placeholder={`${supplierCompanyName || 'Supplier'} - ${request.document_type || 'Document'} - ${new Date().getFullYear()}`}
+                  className="bg-background"
+                />
+                <p className="text-xs text-muted-foreground">
+                  A clear name helps buyers identify your document easily
                 </p>
               </div>
-            )}
 
-            {/* Notes */}
-            <div>
-              <Label htmlFor="notes">Additional Notes (Optional)</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add any additional information about this document..."
-                rows={3}
-                className="mt-1"
-              />
+              {/* Expiration Date */}
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-2 text-xs font-medium text-foreground">
+                  <CalendarIcon className="w-3.5 h-3.5 text-amber-600" />
+                  Expiration Date (Optional)
+                </Label>
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal bg-background",
+                        !expirationDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {expirationDate ? format(expirationDate, "PPP") : "Select expiration date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 z-50" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={expirationDate}
+                      onSelect={(date) => {
+                        setExpirationDate(date);
+                        setIsCalendarOpen(false);
+                      }}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+                {expirationDate && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setExpirationDate(undefined)}
+                    className="text-xs h-7 px-2"
+                  >
+                    Clear date
+                  </Button>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Set when this document expires (e.g., certificate expiry, license renewal)
+                </p>
+              </div>
+            </div>
+
+            {/* Additional Options Section */}
+            <div className="rounded-xl border border-slate-200/60 bg-muted/30 p-4 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Link2 className="h-4 w-4 text-slate-600" />
+                <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Additional Options</h3>
+              </div>
+
+              {/* Link Items */}
+              {items.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-foreground">Link to Items (Optional)</Label>
+                  <div className="max-h-32 overflow-y-auto border rounded-lg p-3 bg-background">
+                    {ITEM_CATEGORIES.map(category => {
+                      const categoryItems = items.filter(i => i.item_category === category.value);
+                      if (categoryItems.length === 0) return null;
+                      return (
+                        <div key={category.value} className="mb-2 last:mb-0">
+                          <p className="text-xs font-medium text-muted-foreground mb-1">
+                            {category.icon} {category.label}
+                          </p>
+                          {categoryItems.map(item => (
+                            <label key={item.id} className="flex items-center gap-2 text-sm pl-4 cursor-pointer hover:bg-muted/50 rounded py-1">
+                              <Checkbox
+                                checked={linkedItemIds.includes(item.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setLinkedItemIds([...linkedItemIds, item.id]);
+                                  } else {
+                                    setLinkedItemIds(linkedItemIds.filter(id => id !== item.id));
+                                  }
+                                }}
+                              />
+                              {item.item_name}
+                            </label>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Link this document to specific items (e.g., COA for Yellowfin Tuna)
+                  </p>
+                </div>
+              )}
+
+              {/* Notes */}
+              <div className="space-y-1.5">
+                <Label htmlFor="notes" className="flex items-center gap-2 text-xs font-medium text-foreground">
+                  <MessageSquare className="w-3.5 h-3.5 text-slate-500" />
+                  Additional Notes (Optional)
+                </Label>
+                <Textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Add any additional information about this document..."
+                  rows={2}
+                  className="bg-background text-sm"
+                />
+              </div>
             </div>
           </div>
         </ScrollArea>
 
         {/* Actions - Fixed at bottom */}
-        <div className="flex justify-end space-x-2 pt-4 border-t mt-2 flex-shrink-0">
-          <Button variant="outline" onClick={handleClose}>
+        <div className="flex justify-end gap-3 px-6 py-4 border-t bg-muted/30 flex-shrink-0">
+          <Button variant="outline" onClick={handleClose} className="px-5">
             Cancel
           </Button>
           <Button 
@@ -689,6 +807,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
               (isResubmission && !file && !selectedLibraryDoc && !updateMetadataOnly) || 
               uploading
             }
+            className="px-5"
           >
             {uploading ? (
               <>{isResubmission ? 'Resubmitting...' : 'Uploading...'}</>

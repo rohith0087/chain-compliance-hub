@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -9,8 +9,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Upload, X, FileText, Loader2, Trash2 } from 'lucide-react';
+import { Upload, X, FileText, Loader2, Trash2, FolderOpen, Calendar, Tag, Info } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface DocumentUploadModalProps {
   supplierId: string;
@@ -64,12 +65,40 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
   const [uploading, setUploading] = useState(false);
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [dragActive, setDragActive] = useState(false);
+  const [supplierCompanyName, setSupplierCompanyName] = useState<string>('');
 
-  const cleanFileName = (fileName: string): string => {
-    return fileName
+  // Fetch supplier company name for default document names
+  useEffect(() => {
+    const fetchSupplierName = async () => {
+      if (!supplierId) return;
+      
+      const { data, error } = await supabase
+        .from('suppliers')
+        .select('company_name')
+        .eq('id', supplierId)
+        .single();
+      
+      if (!error && data) {
+        setSupplierCompanyName(data.company_name || '');
+      }
+    };
+    
+    fetchSupplierName();
+  }, [supplierId]);
+
+  const generateDefaultName = (fileName: string): string => {
+    const cleanName = fileName
       .replace(/\.[^/.]+$/, '')
       .replace(/[_-]/g, ' ')
       .replace(/\b\w/g, l => l.toUpperCase());
+    
+    const currentYear = new Date().getFullYear();
+    
+    if (supplierCompanyName) {
+      return `${supplierCompanyName} - ${cleanName} - ${currentYear}`;
+    }
+    
+    return cleanName;
   };
 
   const handleFilesSelect = (selectedFiles: FileList | null) => {
@@ -94,7 +123,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
       newFiles.push({
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         file,
-        document_name: cleanFileName(file.name),
+        document_name: generateDefaultName(file.name),
         document_type: fileExtension,
         category: '',
         description: '',
@@ -256,23 +285,32 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
-            Upload Documents to Library
-          </DialogTitle>
-          <DialogDescription>
-            Upload multiple documents at once. Add category, tags, and expiration dates for each file.
-          </DialogDescription>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b bg-gradient-to-r from-primary/5 to-transparent">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Upload className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <DialogTitle className="text-lg font-semibold">
+                Upload Documents to Library
+              </DialogTitle>
+              <DialogDescription className="text-sm">
+                Upload multiple documents at once. Add category, tags, and expiration dates for each file.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden flex flex-col space-y-4">
+        <div className="flex-1 overflow-hidden flex flex-col px-6 py-4">
           {/* File Upload Area */}
           <div
-            className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${
-              dragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-muted-foreground/50'
-            }`}
+            className={cn(
+              "border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer mb-4",
+              dragActive 
+                ? 'border-primary bg-primary/5 shadow-inner' 
+                : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30'
+            )}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
@@ -280,9 +318,11 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
             onClick={() => document.getElementById('multi-file-input')?.click()}
           >
             <div className="space-y-2">
-              <Upload className="h-8 w-8 text-muted-foreground mx-auto" />
+              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
+                <Upload className="h-6 w-6 text-primary" />
+              </div>
               <div>
-                <p className="font-medium">Click to upload or drag and drop</p>
+                <p className="font-semibold text-foreground">Click to upload or drag and drop</p>
                 <p className="text-sm text-muted-foreground">
                   PDF, TXT, DOC, DOCX, JPG, PNG, GIF files up to 50MB each
                 </p>
@@ -300,27 +340,39 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
 
           {/* Selected Files List */}
           {files.length > 0 && (
-            <ScrollArea className="max-h-[400px]">
+            <ScrollArea className="flex-1">
               <div className="space-y-4 pr-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Selected Files ({files.length})</span>
+                <div className="flex items-center justify-between sticky top-0 bg-background py-2 z-10">
+                  <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <FolderOpen className="h-4 w-4 text-primary" />
+                    Selected Files ({files.length})
+                  </span>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setFiles([])}
-                    className="text-destructive hover:text-destructive"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
                   >
+                    <Trash2 className="h-4 w-4 mr-1" />
                     Clear All
                   </Button>
                 </div>
 
                 {files.map((fileEntry) => (
-                  <div key={fileEntry.id} className="border rounded-lg p-4 space-y-3 bg-card">
+                  <div 
+                    key={fileEntry.id} 
+                    className="rounded-xl border border-slate-200/60 bg-slate-50/40 p-4 space-y-4 shadow-sm"
+                  >
+                    {/* File Header */}
                     <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-5 w-5 text-primary shrink-0" />
-                        <div>
-                          <p className="font-medium text-sm">{fileEntry.file.name}</p>
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <FileText className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm text-foreground truncate max-w-[300px]" title={fileEntry.file.name}>
+                            {fileEntry.file.name}
+                          </p>
                           <p className="text-xs text-muted-foreground">
                             {(fileEntry.file.size / 1024 / 1024).toFixed(2)} MB
                           </p>
@@ -329,73 +381,88 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         onClick={() => removeFile(fileEntry.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Document Name *</Label>
-                        <Input
-                          value={fileEntry.document_name}
-                          onChange={(e) => updateFileEntry(fileEntry.id, { document_name: e.target.value })}
-                          placeholder="Enter document name"
-                          className="h-9"
-                        />
+                    {/* Document Details Section */}
+                    <div className="rounded-lg border border-amber-200/50 bg-amber-50/30 p-3 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Info className="h-3.5 w-3.5 text-amber-600" />
+                        <span className="text-xs font-semibold text-amber-900 uppercase tracking-wide">Document Details</span>
                       </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium">Document Name *</Label>
+                          <Input
+                            value={fileEntry.document_name}
+                            onChange={(e) => updateFileEntry(fileEntry.id, { document_name: e.target.value })}
+                            placeholder={`${supplierCompanyName || 'Supplier'} - Document - ${new Date().getFullYear()}`}
+                            className="h-9 bg-background"
+                          />
+                        </div>
 
-                      <div className="space-y-1">
-                        <Label className="text-xs">Category *</Label>
-                        <Select
-                          value={fileEntry.category}
-                          onValueChange={(value) => updateFileEntry(fileEntry.id, { category: value })}
-                        >
-                          <SelectTrigger className="h-9">
-                            <SelectValue placeholder="Select category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {DOCUMENT_CATEGORIES.map(category => (
-                              <SelectItem key={category} value={category}>
-                                {category}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium">Category *</Label>
+                          <Select
+                            value={fileEntry.category}
+                            onValueChange={(value) => updateFileEntry(fileEntry.id, { category: value })}
+                          >
+                            <SelectTrigger className="h-9 bg-background">
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {DOCUMENT_CATEGORIES.map(category => (
+                                <SelectItem key={category} value={category}>
+                                  {category}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                      <div className="space-y-1">
-                        <Label className="text-xs">Expiration Date</Label>
-                        <Input
-                          type="date"
-                          value={fileEntry.expiration_date}
-                          onChange={(e) => updateFileEntry(fileEntry.id, { expiration_date: e.target.value })}
-                          className="h-9"
-                        />
-                      </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium flex items-center gap-1.5">
+                            <Calendar className="h-3 w-3 text-amber-600" />
+                            Expiration Date
+                          </Label>
+                          <Input
+                            type="date"
+                            value={fileEntry.expiration_date}
+                            onChange={(e) => updateFileEntry(fileEntry.id, { expiration_date: e.target.value })}
+                            className="h-9 bg-background"
+                          />
+                        </div>
 
-                      <div className="space-y-1">
-                        <Label className="text-xs">Document Type</Label>
-                        <Input
-                          value={fileEntry.document_type}
-                          onChange={(e) => updateFileEntry(fileEntry.id, { document_type: e.target.value })}
-                          placeholder="e.g., PDF, Certificate"
-                          className="h-9"
-                        />
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium">Document Type</Label>
+                          <Input
+                            value={fileEntry.document_type}
+                            onChange={(e) => updateFileEntry(fileEntry.id, { document_type: e.target.value })}
+                            placeholder="e.g., PDF, Certificate"
+                            className="h-9 bg-background"
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <Label className="text-xs">Tags</Label>
+                    {/* Tags Section */}
+                    <div className="rounded-lg border border-slate-200/60 bg-muted/30 p-3 space-y-2">
+                      <Label className="text-xs font-medium flex items-center gap-1.5">
+                        <Tag className="h-3 w-3 text-slate-500" />
+                        Tags
+                      </Label>
                       <div className="flex gap-2">
                         <Input
                           value={fileEntry.tagInput}
                           onChange={(e) => updateFileEntry(fileEntry.id, { tagInput: e.target.value })}
                           onKeyPress={(e) => handleKeyPress(e, fileEntry.id)}
                           placeholder="Add tags (press Enter)"
-                          className="flex-1 h-9"
+                          className="flex-1 h-9 bg-background"
                         />
                         <Button
                           type="button"
@@ -408,9 +475,9 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                         </Button>
                       </div>
                       {fileEntry.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
+                        <div className="flex flex-wrap gap-1.5 mt-2">
                           {fileEntry.tags.map((tag, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs flex items-center gap-1">
+                            <Badge key={index} variant="secondary" className="text-xs flex items-center gap-1 px-2 py-0.5">
                               {tag}
                               <X
                                 className="h-3 w-3 cursor-pointer hover:text-destructive"
@@ -422,14 +489,15 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                       )}
                     </div>
 
+                    {/* Description */}
                     <div className="space-y-1">
-                      <Label className="text-xs">Description</Label>
+                      <Label className="text-xs font-medium">Description</Label>
                       <Textarea
                         value={fileEntry.description}
                         onChange={(e) => updateFileEntry(fileEntry.id, { description: e.target.value })}
-                        placeholder="Brief description..."
+                        placeholder="Brief description of this document..."
                         rows={2}
-                        className="text-sm"
+                        className="text-sm bg-background resize-none"
                       />
                     </div>
                   </div>
@@ -438,28 +506,40 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
             </ScrollArea>
           )}
 
-          {/* Actions */}
-          <div className="flex justify-end space-x-2 pt-4 border-t">
-            <Button variant="outline" onClick={onClose} disabled={uploading}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleUploadAll} 
-              disabled={uploading || files.length === 0}
-            >
-              {uploading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload {files.length > 0 ? `${files.length} Document${files.length > 1 ? 's' : ''}` : 'Documents'}
-                </>
-              )}
-            </Button>
-          </div>
+          {/* Empty State */}
+          {files.length === 0 && (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center text-muted-foreground">
+                <FolderOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">No files selected yet</p>
+                <p className="text-xs">Click the upload area above or drag and drop files</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex justify-end gap-3 px-6 py-4 border-t bg-muted/30">
+          <Button variant="outline" onClick={onClose} disabled={uploading} className="px-5">
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleUploadAll} 
+            disabled={uploading || files.length === 0}
+            className="px-5"
+          >
+            {uploading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="h-4 w-4 mr-2" />
+                Upload {files.length > 0 ? `${files.length} Document${files.length > 1 ? 's' : ''}` : 'Documents'}
+              </>
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

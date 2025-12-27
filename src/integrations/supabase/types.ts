@@ -664,6 +664,8 @@ export type Database = {
           expiring_soon_days: number
           id: string
           max_notifications_per_document: number
+          new_request_email_enabled: boolean
+          new_request_in_app_enabled: boolean
           overdue_email: boolean
           overdue_in_app: boolean
           overdue_threshold_days: number
@@ -681,6 +683,8 @@ export type Database = {
           expiring_soon_days?: number
           id?: string
           max_notifications_per_document?: number
+          new_request_email_enabled?: boolean
+          new_request_in_app_enabled?: boolean
           overdue_email?: boolean
           overdue_in_app?: boolean
           overdue_threshold_days?: number
@@ -698,6 +702,8 @@ export type Database = {
           expiring_soon_days?: number
           id?: string
           max_notifications_per_document?: number
+          new_request_email_enabled?: boolean
+          new_request_in_app_enabled?: boolean
           overdue_email?: boolean
           overdue_in_app?: boolean
           overdue_threshold_days?: number

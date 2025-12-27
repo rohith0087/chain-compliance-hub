@@ -6,7 +6,8 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Bell, Mail, Clock, AlertTriangle, AlertCircle, Loader2, Play } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Bell, Mail, Clock, AlertTriangle, AlertCircle, Loader2, Play, FileText, Lock, Info } from 'lucide-react';
 import { useBuyerNotificationSettings, NotificationSettings } from '@/hooks/useBuyerNotificationSettings';
 
 export const NotificationSettingsForm: React.FC = () => {
@@ -47,7 +48,78 @@ export const NotificationSettingsForm: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Master Toggle */}
+      {/* New Request Notifications - Always shown at the top */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            New Request Notifications
+          </CardTitle>
+          <CardDescription>
+            Get notified when new document requests are created
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-3">
+                <Bell className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <Label className="font-medium">In-App Notifications</Label>
+                  <p className="text-sm text-muted-foreground">Receive in-app notifications for new requests</p>
+                </div>
+              </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-2">
+                      <Lock className="h-4 w-4 text-muted-foreground" />
+                      <Switch
+                        checked={true}
+                        disabled={true}
+                        className="opacity-70"
+                      />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>In-app notifications are always enabled for new requests</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-3">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <Label className="font-medium">Email Notifications</Label>
+                  <p className="text-sm text-muted-foreground">Send emails when new requests are created</p>
+                </div>
+              </div>
+              <Switch
+                checked={localSettings.new_request_email_enabled ?? false}
+                onCheckedChange={(checked) => handleChange('new_request_email_enabled', checked)}
+              />
+            </div>
+
+            {localSettings.new_request_email_enabled && (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+                <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  When enabled, email notifications for new requests will be sent to:
+                  <ul className="list-disc list-inside mt-1 ml-1">
+                    <li>Company owner</li>
+                    <li>Company administrators</li>
+                    <li>Users assigned to the target branch</li>
+                  </ul>
+                </p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Master Toggle for Document Expiry Notifications */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">

@@ -326,6 +326,11 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
           // Call the callback to update the parent component
           onCreateRequest(request);
           totalRequestsCreated++;
+
+          // Trigger new request email notification (fire and forget)
+          supabase.functions.invoke('send-new-request-email', {
+            body: { requestId: request.id, buyerId: buyerProfile.id }
+          }).catch(err => console.error('Failed to send new request email:', err));
         }
       }
 

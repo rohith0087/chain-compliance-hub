@@ -222,6 +222,11 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
         });
       }
 
+      // Trigger new request email notification (fire and forget)
+      supabase.functions.invoke('send-new-request-email', {
+        body: { requestId: request.id, buyerId: buyerProfile.id }
+      }).catch(err => console.error('Failed to send new request email:', err));
+
       toast({
         title: "Request Created",
         description: "Document request has been sent to the supplier.",

@@ -17,6 +17,9 @@ export interface NotificationSettings {
   overdue_in_app: boolean;
   overdue_email: boolean;
   enabled: boolean;
+  // New request notification settings
+  new_request_in_app_enabled: boolean;
+  new_request_email_enabled: boolean;
 }
 
 const defaultSettings: Omit<NotificationSettings, 'buyer_id'> = {
@@ -31,6 +34,9 @@ const defaultSettings: Omit<NotificationSettings, 'buyer_id'> = {
   overdue_in_app: true,
   overdue_email: true,
   enabled: true,
+  // New request notifications
+  new_request_in_app_enabled: true,
+  new_request_email_enabled: false,
 };
 
 export const useBuyerNotificationSettings = () => {

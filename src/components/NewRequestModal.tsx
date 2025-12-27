@@ -327,9 +327,9 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
           onCreateRequest(request);
           totalRequestsCreated++;
 
-          // Trigger new request email notification (fire and forget)
+          // Trigger new request email notification to SUPPLIER (fire and forget)
           supabase.functions.invoke('send-new-request-email', {
-            body: { requestId: request.id, buyerId: buyerProfile.id }
+            body: { requestId: request.id, supplierId: supplierId }
           }).catch(err => console.error('Failed to send new request email:', err));
         }
       }

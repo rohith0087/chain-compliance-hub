@@ -3106,6 +3106,44 @@ export type Database = {
           },
         ]
       }
+      supplier_notification_settings: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          new_request_email_enabled: boolean
+          new_request_in_app_enabled: boolean
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          new_request_email_enabled?: boolean
+          new_request_in_app_enabled?: boolean
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          new_request_email_enabled?: boolean
+          new_request_in_app_enabled?: boolean
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_notification_settings_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: true
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_onboarding_requests: {
         Row: {
           approved_at: string | null

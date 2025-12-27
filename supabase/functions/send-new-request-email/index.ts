@@ -9,7 +9,7 @@ const corsHeaders = {
 
 interface EmailRequest {
   requestId: string;
-  buyerId: string;
+  supplierId: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -34,26 +34,26 @@ const handler = async (req: Request): Promise<Response> => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const resend = new Resend(resendApiKey);
 
-    const { requestId, buyerId }: EmailRequest = await req.json();
+    const { requestId, supplierId }: EmailRequest = await req.json();
 
-    console.log("Processing new request email notification:", { requestId, buyerId });
+    console.log("Processing new request email notification for SUPPLIER:", { requestId, supplierId });
 
-    // Step 1: Check if buyer has email notifications enabled
+    // Step 1: Check if supplier has email notifications enabled
     const { data: notificationSettings } = await supabase
-      .from("buyer_notification_settings")
+      .from("supplier_notification_settings")
       .select("new_request_email_enabled")
-      .eq("buyer_id", buyerId)
+      .eq("supplier_id", supplierId)
       .maybeSingle();
 
     if (!notificationSettings?.new_request_email_enabled) {
-      console.log("Email notifications disabled for buyer:", buyerId);
+      console.log("Email notifications disabled for supplier:", supplierId);
       return new Response(
         JSON.stringify({ success: true, message: "Email notifications disabled" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Step 2: Get the document request details
+    // Step 2: Get the document request details with buyer info
     const { data: request, error: requestError } = await supabase
       .from("document_requests")
       .select(`
@@ -65,8 +65,9 @@ const handler = async (req: Request): Promise<Response> => {
         priority,
         due_date,
         branch_id,
+        supplier_branch_id,
         buyer_id,
-        suppliers (
+        buyers (
           company_name
         )
       `)
@@ -81,31 +82,31 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Step 3: Get buyer company details
-    const { data: buyer } = await supabase
-      .from("buyers")
+    // Step 3: Get supplier company details
+    const { data: supplier } = await supabase
+      .from("suppliers")
       .select("id, company_name, profile_id")
-      .eq("id", buyerId)
+      .eq("id", supplierId)
       .single();
 
-    if (!buyer) {
-      console.error("Buyer not found:", buyerId);
+    if (!supplier) {
+      console.error("Supplier not found:", supplierId);
       return new Response(
-        JSON.stringify({ error: "Buyer not found" }),
+        JSON.stringify({ error: "Supplier not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Step 4: Collect all recipient emails
+    // Step 4: Collect all SUPPLIER recipient emails
     const recipientEmails: Set<string> = new Set();
     const recipientNames: Map<string, string> = new Map();
 
-    // Get buyer owner's email
-    if (buyer.profile_id) {
+    // Get supplier owner's email
+    if (supplier.profile_id) {
       const { data: ownerProfile } = await supabase
         .from("profiles")
         .select("email, full_name")
-        .eq("id", buyer.profile_id)
+        .eq("id", supplier.profile_id)
         .single();
 
       if (ownerProfile?.email) {
@@ -114,7 +115,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Get company admins
+    // Get supplier company admins
     const { data: companyAdmins } = await supabase
       .from("company_users")
       .select(`
@@ -124,8 +125,8 @@ const handler = async (req: Request): Promise<Response> => {
           full_name
         )
       `)
-      .eq("company_id", buyerId)
-      .eq("company_type", "buyer")
+      .eq("company_id", supplierId)
+      .eq("company_type", "supplier")
       .eq("status", "active")
       .eq("role", "company_admin");
 
@@ -139,8 +140,8 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Get branch users if request is branch-specific
-    if (request.branch_id) {
+    // Get supplier branch users if request targets a specific supplier branch
+    if (request.supplier_branch_id) {
       const { data: branchUsers } = await supabase
         .from("company_users")
         .select(`
@@ -150,9 +151,9 @@ const handler = async (req: Request): Promise<Response> => {
             full_name
           )
         `)
-        .eq("company_id", buyerId)
-        .eq("company_type", "buyer")
-        .eq("branch_id", request.branch_id)
+        .eq("company_id", supplierId)
+        .eq("company_type", "supplier")
+        .eq("branch_id", request.supplier_branch_id)
         .eq("status", "active");
 
       if (branchUsers) {
@@ -169,11 +170,11 @@ const handler = async (req: Request): Promise<Response> => {
       const { data: branch } = await supabase
         .from("company_branches")
         .select("branch_name")
-        .eq("id", request.branch_id)
+        .eq("id", request.supplier_branch_id)
         .single();
 
       if (branch) {
-        (request as any).branch_name = branch.branch_name;
+        (request as any).target_branch_name = branch.branch_name;
       }
     }
 
@@ -185,10 +186,10 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Sending email to ${recipientEmails.size} recipients:`, Array.from(recipientEmails));
+    console.log(`Sending email to ${recipientEmails.size} supplier recipients:`, Array.from(recipientEmails));
 
     // Step 5: Send emails
-    const supplierName = (request.suppliers as any)?.company_name || "Unknown Supplier";
+    const buyerName = (request.buyers as any)?.company_name || "A Buyer";
     const priorityColors: Record<string, string> = {
       urgent: "#dc2626",
       high: "#ea580c",
@@ -215,7 +216,7 @@ const handler = async (req: Request): Promise<Response> => {
           <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
             <p style="font-size: 16px; margin-bottom: 20px;">Hi ${recipientName},</p>
             
-            <p style="font-size: 16px; margin-bottom: 20px;">A new document request has been created for your attention:</p>
+            <p style="font-size: 16px; margin-bottom: 20px;"><strong>${buyerName}</strong> has requested a document from you:</p>
             
             <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
               <table style="width: 100%; border-collapse: collapse;">
@@ -224,8 +225,8 @@ const handler = async (req: Request): Promise<Response> => {
                   <td style="padding: 8px 0; font-weight: 600;">${request.title}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 8px 0; color: #6b7280;">🏢 Supplier:</td>
-                  <td style="padding: 8px 0;">${supplierName}</td>
+                  <td style="padding: 8px 0; color: #6b7280;">🏢 From:</td>
+                  <td style="padding: 8px 0;">${buyerName}</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; color: #6b7280;">📁 Category:</td>
@@ -245,10 +246,10 @@ const handler = async (req: Request): Promise<Response> => {
                   <td style="padding: 8px 0;">${new Date(request.due_date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</td>
                 </tr>
                 ` : ''}
-                ${(request as any).branch_name ? `
+                ${(request as any).target_branch_name ? `
                 <tr>
-                  <td style="padding: 8px 0; color: #6b7280;">🏢 Branch:</td>
-                  <td style="padding: 8px 0;">${(request as any).branch_name}</td>
+                  <td style="padding: 8px 0; color: #6b7280;">🏢 Your Branch:</td>
+                  <td style="padding: 8px 0;">${(request as any).target_branch_name}</td>
                 </tr>
                 ` : ''}
               </table>
@@ -263,7 +264,7 @@ const handler = async (req: Request): Promise<Response> => {
             <div style="text-align: center; margin: 30px 0;">
               <a href="https://compliance.tracer2c.com/dashboard" 
                  style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">
-                View Request
+                View & Respond
               </a>
             </div>
             
@@ -271,7 +272,7 @@ const handler = async (req: Request): Promise<Response> => {
             
             <p style="font-size: 14px; color: #6b7280; margin: 0;">
               Best regards,<br>
-              <strong>${buyer.company_name}</strong> via Compliance Compass
+              <strong>Compliance Compass</strong>
             </p>
           </div>
           
@@ -287,7 +288,7 @@ const handler = async (req: Request): Promise<Response> => {
         const result = await resend.emails.send({
           from: "Compliance Compass <notifications@tracer2c.com>",
           to: [email],
-          subject: `New Document Request: ${request.title}`,
+          subject: `New Document Request from ${buyerName}: ${request.title}`,
           html: emailHtml,
         });
         console.log(`Email sent to ${email}:`, result);
@@ -307,7 +308,7 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Sent ${successCount} emails`,
+        message: `Sent ${successCount} emails to supplier`,
         details: { sent: successCount, failed: failureCount }
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

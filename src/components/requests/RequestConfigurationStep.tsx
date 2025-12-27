@@ -154,11 +154,11 @@ const RequestConfigurationStep = ({
               <Badge 
                 key={doc.id} 
                 variant="secondary" 
-                className="flex items-center gap-1.5 bg-background border border-border/50 shadow-sm px-3 py-1.5"
+                className="flex items-center gap-1.5 bg-primary/10 text-primary border border-primary/20 shadow-sm px-3 py-1.5"
               >
-                <FileText className="h-3 w-3 text-muted-foreground" />
+                <FileText className="h-3 w-3" />
                 <span className="font-medium">{doc.title}</span>
-                <span className="text-xs text-muted-foreground">({doc.category})</span>
+                <span className="text-xs opacity-80">({doc.category})</span>
               </Badge>
             ))}
           </div>
@@ -195,11 +195,11 @@ const RequestConfigurationStep = ({
                       <Badge 
                         key={supplierId} 
                         variant="secondary" 
-                        className="flex items-center gap-1.5 bg-background border shadow-sm"
+                        className="flex items-center gap-1.5 bg-primary text-primary-foreground shadow-sm"
                       >
                         {supplier.company_name}
                         <X 
-                          className="h-3 w-3 cursor-pointer hover:text-destructive transition-colors" 
+                          className="h-3 w-3 cursor-pointer hover:opacity-70 transition-opacity" 
                           onClick={() => handleRemoveSupplier(supplierId)}
                         />
                       </Badge>

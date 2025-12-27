@@ -60,23 +60,33 @@ interface AIInsight {
   urgency: 'low' | 'medium' | 'high' | 'critical';
 }
 
+interface InitialDashboardData {
+  metrics: ComplianceMetrics;
+  supplier_metrics: SupplierMetric[];
+  ai_insights: AIInsight[];
+}
+
 interface AdvancedComplianceInsightsDashboardProps {
   companyId: string;
   companyType: string;
   className?: string;
+  initialData?: InitialDashboardData;
+  timeframe?: '7D' | '30D' | '90D' | '1Y';
 }
 
 const AdvancedComplianceInsightsDashboard: React.FC<AdvancedComplianceInsightsDashboardProps> = ({
   companyId,
   companyType,
-  className = ''
+  className = '',
+  initialData,
+  timeframe: initialTimeframe
 }) => {
   const { user } = useAuth();
-  const [metrics, setMetrics] = useState<ComplianceMetrics | null>(null);
-  const [supplierMetrics, setSupplierMetrics] = useState<SupplierMetric[]>([]);
-  const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedTimeframe, setSelectedTimeframe] = useState<'7D' | '30D' | '90D' | '1Y'>('30D');
+  const [metrics, setMetrics] = useState<ComplianceMetrics | null>(initialData?.metrics || null);
+  const [supplierMetrics, setSupplierMetrics] = useState<SupplierMetric[]>(initialData?.supplier_metrics || []);
+  const [aiInsights, setAiInsights] = useState<AIInsight[]>(initialData?.ai_insights || []);
+  const [loading, setLoading] = useState(!initialData);
+  const [selectedTimeframe, setSelectedTimeframe] = useState<'7D' | '30D' | '90D' | '1Y'>(initialTimeframe || '30D');
 
   // Animation variants
   const containerVariants = {
@@ -101,13 +111,23 @@ const AdvancedComplianceInsightsDashboard: React.FC<AdvancedComplianceInsightsDa
     }
   };
 
+  // If initialData is provided, use it directly without fetching
   useEffect(() => {
+    if (initialData) {
+      setMetrics(initialData.metrics);
+      setSupplierMetrics(initialData.supplier_metrics || []);
+      setAiInsights(initialData.ai_insights || []);
+      setLoading(false);
+      return;
+    }
+    
+    // Only fetch if no initialData and we have companyId
     if (companyId && companyType === 'buyer') {
       loadAdvancedMetrics();
       loadSupplierMetrics();
       generateAIInsights();
     }
-  }, [companyId, companyType, selectedTimeframe]);
+  }, [companyId, companyType, selectedTimeframe, initialData]);
 
   const loadAdvancedMetrics = async () => {
     try {

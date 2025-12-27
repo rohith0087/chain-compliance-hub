@@ -121,7 +121,7 @@ const SupplierDiscovery = () => {
           .select(`
             *,
             suppliers (
-              id, company_name, contact_email, industry, phone, address, description,
+              id, company_name, contact_email, industry, phone, address, description, company_logo_url,
               supplier_items (id, item_name, item_category)
             )
           `)

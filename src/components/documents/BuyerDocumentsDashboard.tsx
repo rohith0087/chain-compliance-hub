@@ -30,7 +30,7 @@ const BuyerDocumentsDashboard = () => {
   const [declineLoading, setDeclineLoading] = useState<string | null>(null);
   const [withdrawLoading, setWithdrawLoading] = useState<string | null>(null);
   const [buyerId, setBuyerId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("documents");
   const [highlightedDocId, setHighlightedDocId] = useState<string | null>(null);
   const [declineDialog, setDeclineDialog] = useState<{
     isOpen: boolean;
@@ -88,7 +88,7 @@ const BuyerDocumentsDashboard = () => {
     if (highlightId && documents.length > 0) {
       setHighlightedDocId(highlightId);
       sessionStorage.removeItem('highlight_document_request_id');
-      setActiveTab('overview');
+      setActiveTab('documents');
       
       // Scroll to highlighted document after render
       setTimeout(() => {
@@ -931,111 +931,9 @@ if (user?.id && latest.id) {
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="documents">Document Manager</TabsTrigger>
           <TabsTrigger value="timeline">Activity</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="overview" className="space-y-6">
-          {/* Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Documents</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.total}</div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Awaiting Review</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{stats.submitted}</div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Approved</CardTitle>
-                <CheckCircle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Rejected</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
-              </CardContent>
-            </Card>
-          </div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Document Requests ({documents.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {documents.length > 0 ? (
-                <div className="grid gap-6">
-                  {documents.slice(0, 5).map(doc => (
-                    <DocumentCard
-                      key={doc.id}
-                      document={{
-                        ...doc,
-                        supplier: doc.suppliers,
-                        branch: doc.branches,
-                        ...(doc.document_uploads?.[0] && {
-                          file_name: doc.document_uploads[0].file_name,
-                          file_size: doc.document_uploads[0].file_size,
-                          expiration_date: doc.document_uploads[0].expiration_date,
-                          uploader: doc.document_uploads[0].uploader
-                        })
-                      }}
-                      userRole="buyer"
-                      onView={() => handleViewDocumentFile(doc)}
-                      onDownload={() => handleDownloadDocumentFile(doc)}
-                      onApprove={() => handleApproveDocument(doc.id)}
-                      onDecline={() => openDeclineDialog(doc.id, doc.document_type)}
-                      approveLoading={approveLoading === doc.id}
-                      declineLoading={declineLoading === doc.id}
-                      showActions={true}
-                      isHighlighted={highlightedDocId === doc.id}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Documents Found</h3>
-                  <p className="text-gray-500">
-                    {Object.values(filters).some(f => f !== '') 
-                      ? "No documents match your current filters." 
-                      : "You haven't requested any documents yet."}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="documents">
           <BuyerDocumentsManager 

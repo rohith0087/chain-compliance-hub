@@ -150,7 +150,11 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
     }
   };
 
-  const getBranchName = (branchId: string) => {
+  const getBranchName = (branchId: string | null | undefined, role?: string) => {
+    // If no branch ID, check if user is company_admin (they have access to all branches)
+    if (!branchId) {
+      return role === 'company_admin' ? 'All Branches' : 'Unknown Branch';
+    }
     const branch = branches.find(b => b.id === branchId);
     return branch?.branch_name || 'Unknown Branch';
   };
@@ -487,7 +491,9 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
                   
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Branch</Label>
-                    <p className="text-sm">{getBranchName(selectedUser.branch_id || '')}</p>
+                    <p className={`text-sm ${!selectedUser.branch_id && selectedUser.role === 'company_admin' ? 'text-primary font-medium' : ''}`}>
+                      {getBranchName(selectedUser.branch_id, selectedUser.role)}
+                    </p>
                   </div>
                   
                   <div className="space-y-2">
@@ -633,7 +639,9 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
                         </div>
                         <div className="flex items-center space-x-2">
                           <Building className="h-3 w-3" />
-                          <span>{getBranchName(user.branch_id || '')}</span>
+                          <span className={!user.branch_id && user.role === 'company_admin' ? 'text-primary font-medium' : ''}>
+                            {getBranchName(user.branch_id, user.role)}
+                          </span>
                           <span>•</span>
                           <Shield className="h-3 w-3" />
                           <span>{getRoleDisplay(user.role)}</span>

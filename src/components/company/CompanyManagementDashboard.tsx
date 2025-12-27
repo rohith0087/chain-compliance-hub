@@ -211,14 +211,21 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {companyUsers.slice(0, 3).map((user) => (
-                    <div key={user.id} className="flex items-center space-x-3 text-sm">
-                      <div className="h-2 w-2 bg-green-500 rounded-full" />
-                      <span className="text-muted-foreground">
-                        User joined {branches.find(b => b.id === user.branch_id)?.branch_name || 'Unknown Branch'}
-                      </span>
-                    </div>
-                  ))}
+                  {companyUsers.slice(0, 3).map((user) => {
+                    const isAllBranches = !user.branch_id && user.role === 'company_admin';
+                    const branchDisplay = isAllBranches
+                      ? 'All Branches'
+                      : branches.find(b => b.id === user.branch_id)?.branch_name || 'Unknown Branch';
+                    
+                    return (
+                      <div key={user.id} className="flex items-center space-x-3 text-sm">
+                        <div className="h-2 w-2 bg-green-500 rounded-full" />
+                        <span className="text-muted-foreground">
+                          User joined <span className={isAllBranches ? 'text-primary font-medium' : ''}>{branchDisplay}</span>
+                        </span>
+                      </div>
+                    );
+                  })}
                   {companyUsers.length === 0 && (
                     <p className="text-sm text-muted-foreground">No recent activity</p>
                   )}

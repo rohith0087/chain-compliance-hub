@@ -18,6 +18,7 @@ import ResponseActionButtons from "@/components/chat/ResponseActionButtons";
 import ShareDialog from "@/components/chat/ShareDialog";
 import { CodeVisualizationRenderer } from "@/components/chat/CodeVisualizationRenderer";
 import AdvancedComplianceInsightsDashboard from "@/components/chat/AdvancedComplianceInsightsDashboard";
+import ComplianceEmailComposer from "@/components/chat/ComplianceEmailComposer";
 import {
   MessageSquare,
   Send,
@@ -144,6 +145,13 @@ interface StructuredResponse {
   supplier_metrics?: any[];     // Supplier performance data
   ai_insights?: any[];          // AI-generated insights
   timeframe?: string;           // Dashboard timeframe
+  
+  // Email composer
+  drafts?: any[];               // Email drafts for composer
+  action_type?: string;         // Email action type
+  total_suppliers?: number;     // Number of suppliers
+  total_documents?: number;     // Number of documents
+  buyer_id?: string;            // Buyer ID for emails
 }
 
 type CompanyInfo = { id: string; type: "buyer" | "supplier"; industry?: string } | null;
@@ -981,7 +989,21 @@ const ChatPage: React.FC = () => {
           </div>
         )}
 
-        {/* Generated image */}
+        {/* Email Composer - Compliance Follow-up Emails */}
+        {!isError && parsed.type === 'email_composer' && parsed.drafts && companyInfo && (
+          <ComplianceEmailComposer
+            drafts={parsed.drafts}
+            actionType={parsed.action_type || 'general_followup'}
+            buyerId={companyInfo.id}
+            onClose={() => {}}
+            onSent={(results) => {
+              toast({
+                title: "Emails Sent",
+                description: `Successfully sent ${results.total_emails_sent} email(s).`,
+              });
+            }}
+          />
+        )}
         {!isError && imgB64 && renderGeneratedImage(imgB64)}
 
         {/* Client-side chart fallback */}

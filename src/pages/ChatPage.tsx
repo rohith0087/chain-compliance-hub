@@ -1563,9 +1563,9 @@ const ChatPage: React.FC = () => {
                 </Button>
                 <span className="text-sm font-medium text-muted-foreground">Compliance Compass</span>
               </div>
-              <div className="space-y-1 px-6 py-6 max-w-4xl mx-auto w-full">
+              <div className="space-y-1 px-6 py-6 max-w-4xl mx-auto w-full bg-white">
                 {messages.map((m) => (
-                  <div key={m.id} className="flex items-start gap-4 p-6 hover:bg-accent/30 transition-colors group">
+                  <div key={m.id} className="flex items-start gap-4 p-6 transition-colors group">
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                         m.role === "user"
@@ -1695,7 +1695,7 @@ const ChatPage: React.FC = () => {
                   onClick={sendMessage} 
                   disabled={isLoading || !inputMessage.trim()} 
                   size="icon"
-                  className="rounded-full h-10 w-10 shadow-sm"
+                  className="rounded-full h-10 w-10 shadow-sm bg-black hover:bg-gray-800 text-white"
                 >
                   {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 </Button>

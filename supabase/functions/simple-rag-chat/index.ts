@@ -699,6 +699,166 @@ function getRelevantChunks(content: string, question: string, maxChars: number =
   return result.trim();
 }
 
+// ============= INLINE DOCUMENT CONTENT EXTRACTION =============
+
+/**
+ * Extract text content from a document using OpenAI Vision API
+ * Supports PDFs (as images) and image files
+ */
+async function extractDocumentContentInline(filePath: string, fileName: string): Promise<string> {
+  console.log(`Starting inline extraction for: ${filePath}`);
+  
+  // Download the file from Supabase storage
+  const bucketName = 'documents';
+  const cleanPath = filePath.replace(/^documents\//, '');
+  
+  const { data: fileData, error: downloadError } = await supabase.storage
+    .from(bucketName)
+    .download(cleanPath);
+  
+  if (downloadError || !fileData) {
+    console.error('Failed to download document:', downloadError);
+    throw new Error(`Failed to download document: ${downloadError?.message || 'Unknown error'}`);
+  }
+  
+  // Convert to base64
+  const arrayBuffer = await fileData.arrayBuffer();
+  const base64Data = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+  
+  // Determine MIME type
+  const extension = fileName.split('.').pop()?.toLowerCase() || '';
+  let mimeType = 'application/octet-stream';
+  if (extension === 'pdf') mimeType = 'application/pdf';
+  else if (extension === 'png') mimeType = 'image/png';
+  else if (extension === 'jpg' || extension === 'jpeg') mimeType = 'image/jpeg';
+  else if (extension === 'gif') mimeType = 'image/gif';
+  else if (extension === 'webp') mimeType = 'image/webp';
+  
+  console.log(`File type: ${mimeType}, size: ${arrayBuffer.byteLength} bytes`);
+  
+  // For PDFs, we need to note that OpenAI Vision can process PDF pages as images
+  // We'll send as-is and let OpenAI handle it, or for PDFs we use base64
+  const dataUrl = `data:${mimeType};base64,${base64Data}`;
+  
+  // Call OpenAI Vision API to extract text
+  const extractionPrompt = `You are a document text extraction assistant. Extract ALL text content from this document image/file.
+
+INSTRUCTIONS:
+1. Extract every piece of readable text from the document
+2. Preserve the document structure (headings, paragraphs, lists, tables)
+3. For tables, format them clearly with | separators
+4. Include all dates, numbers, names, and specific details
+5. If this is a certificate or compliance document, pay special attention to:
+   - Certificate/document type and number
+   - Issuing organization
+   - Issue date and expiration date
+   - Scope of certification
+   - Standards referenced (ISO, HACCP, etc.)
+   - Company/supplier name
+   - Any conditions or limitations
+
+Output the extracted text in a clean, readable format. Do not summarize - extract the FULL text content.`;
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini', // Vision-capable model
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: extractionPrompt },
+            { 
+              type: 'image_url', 
+              image_url: { 
+                url: dataUrl,
+                detail: 'high' // Use high detail for better text extraction
+              } 
+            }
+          ]
+        }
+      ],
+      max_tokens: 4000,
+      temperature: 0.1, // Low temperature for accurate extraction
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('OpenAI Vision API error:', errorText);
+    throw new Error(`OpenAI Vision API error: ${response.status}`);
+  }
+
+  const result = await response.json();
+  const extractedText = result.choices?.[0]?.message?.content || '';
+  
+  console.log(`Extracted ${extractedText.length} characters from document`);
+  
+  return extractedText;
+}
+
+/**
+ * Cache extracted content for future use
+ */
+async function cacheExtractedContent(documentId: string, content: string, documentType: string | null): Promise<void> {
+  try {
+    // Get the document's buyer_id for the knowledge entry
+    const { data: doc } = await supabase
+      .from('document_uploads')
+      .select(`
+        document_requests!inner(
+          buyer_id,
+          suppliers(company_name)
+        )
+      `)
+      .eq('id', documentId)
+      .single();
+    
+    if (!doc?.document_requests) {
+      console.warn('Could not find document for caching');
+      return;
+    }
+    
+    const buyerId = doc.document_requests.buyer_id;
+    const supplierName = (doc.document_requests as any).suppliers?.company_name || 'Unknown Supplier';
+    
+    // Upsert to ai_knowledge_entries
+    const { error } = await supabase
+      .from('ai_knowledge_entries')
+      .upsert({
+        id: crypto.randomUUID(),
+        company_id: buyerId,
+        company_type: 'buyer',
+        entry_type: 'document',
+        title: `${documentType || 'Document'} - ${supplierName}`,
+        content: content,
+        source_reference: documentId,
+        relevance_tags: [documentType, 'extracted', 'compliance'].filter(Boolean),
+        metadata: {
+          extraction_method: 'inline_vision',
+          extracted_at: new Date().toISOString(),
+          supplier_name: supplierName
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'source_reference'
+      });
+    
+    if (error) {
+      console.error('Failed to cache extracted content:', error);
+    } else {
+      console.log(`Cached extracted content for document ${documentId}`);
+    }
+  } catch (err) {
+    console.error('Error caching extracted content:', err);
+  }
+}
+
 // ============= FIX #4: CONFIRMATION TOKEN MANAGEMENT =============
 async function storeComparisonPending(
   sessionId: string,
@@ -1056,34 +1216,64 @@ async function executeDocumentComparison(
       }
     }
     
-    // FIX #5: Get document contents with smart chunking
+    // FIX #5: Get document contents with smart chunking + INLINE EXTRACTION
     const tokenBudgetPerDoc = Math.floor(6000 / documents.length); // ~6000 chars total budget
     
     const documentContents = await Promise.all(documents.map(async (doc: any) => {
       let content = '';
+      let extractionMethod = 'none';
       
-      // Try ai_knowledge_entries first
+      // Try ai_knowledge_entries first (cached extraction)
       const { data: knowledge } = await supabase
         .from('ai_knowledge_entries')
         .select('content, metadata')
         .eq('source_reference', doc.id)
         .maybeSingle();
       
-      if (knowledge?.content) {
-        // FIX #5: Use semantic chunking instead of simple truncation
+      if (knowledge?.content && knowledge.content.length > 50) {
+        // Use cached content with semantic chunking
         content = getRelevantChunks(knowledge.content, params.comparison_question, tokenBudgetPerDoc);
+        extractionMethod = 'cached_knowledge';
+        console.log(`Document ${doc.id}: Using cached content (${knowledge.content.length} chars)`);
       } else {
-        // Fallback: Try supplier_document_library
+        // Try supplier_document_library
         const { data: supplierDoc } = await supabase
           .from('supplier_document_library')
           .select('content_extracted')
           .eq('id', doc.id)
           .maybeSingle();
         
-        if (supplierDoc?.content_extracted) {
+        if (supplierDoc?.content_extracted && supplierDoc.content_extracted.length > 50) {
           content = getRelevantChunks(supplierDoc.content_extracted, params.comparison_question, tokenBudgetPerDoc);
+          extractionMethod = 'supplier_library';
+          console.log(`Document ${doc.id}: Using supplier library content (${supplierDoc.content_extracted.length} chars)`);
+        } else if (doc.file_path) {
+          // INLINE EXTRACTION: Download and extract content using OpenAI Vision API
+          console.log(`Document ${doc.id}: No cached content, attempting inline extraction from ${doc.file_path}`);
+          try {
+            const extractedContent = await extractDocumentContentInline(doc.file_path, doc.file_name);
+            if (extractedContent && extractedContent.length > 50) {
+              content = getRelevantChunks(extractedContent, params.comparison_question, tokenBudgetPerDoc);
+              extractionMethod = 'inline_vision';
+              console.log(`Document ${doc.id}: Inline extraction successful (${extractedContent.length} chars)`);
+              
+              // Cache the extracted content for future use (fire and forget)
+              cacheExtractedContent(doc.id, extractedContent, doc.document_requests?.document_type).catch(err => 
+                console.error('Failed to cache extracted content:', err)
+              );
+            } else {
+              console.log(`Document ${doc.id}: Inline extraction returned insufficient content`);
+              extractionMethod = 'metadata_only';
+              content = `Document: ${doc.document_requests?.document_type} from ${doc.document_requests?.suppliers?.company_name}. File: ${doc.file_name}. Status: ${doc.status}. Created: ${doc.created_at}. Expires: ${doc.expiration_date || 'No expiration'}. Note: Could not extract text content from this document.`;
+            }
+          } catch (extractError: any) {
+            console.error(`Document ${doc.id}: Inline extraction failed:`, extractError.message);
+            extractionMethod = 'metadata_only';
+            content = `Document: ${doc.document_requests?.document_type} from ${doc.document_requests?.suppliers?.company_name}. File: ${doc.file_name}. Status: ${doc.status}. Created: ${doc.created_at}. Expires: ${doc.expiration_date || 'No expiration'}. Note: Could not extract text content from this document.`;
+          }
         } else {
-          // Final fallback - basic metadata
+          // No file path available
+          extractionMethod = 'metadata_only';
           content = `Document: ${doc.document_requests?.document_type} from ${doc.document_requests?.suppliers?.company_name}. File: ${doc.file_name}. Status: ${doc.status}. Created: ${doc.created_at}. Expires: ${doc.expiration_date || 'No expiration'}.`;
         }
       }
@@ -1094,7 +1284,8 @@ async function executeDocumentComparison(
         supplier_name: doc.document_requests?.suppliers?.company_name,
         file_name: doc.file_name,
         content: content,
-        has_full_content: !!knowledge?.content || false
+        has_full_content: extractionMethod !== 'metadata_only',
+        extraction_method: extractionMethod
       };
     }));
     
@@ -1165,6 +1356,7 @@ CRITICAL RULES:
     // Log the comparison for audit
     console.log('Document comparison completed:', {
       documents_analyzed: documents.length,
+      extraction_methods: documentContents.map(d => d.extraction_method),
       summaries_count: comparison.summaries?.length || 0,
       similarities_count: comparison.similarities?.length || 0,
       differences_count: comparison.differences?.length || 0
@@ -1178,7 +1370,8 @@ CRITICAL RULES:
         id: d.id,
         document_type: d.document_type,
         supplier_name: d.supplier_name,
-        has_full_content: d.has_full_content
+        has_full_content: d.has_full_content,
+        extraction_method: d.extraction_method
       })),
       ...comparison
     };

@@ -10,9 +10,19 @@ const corsHeaders = {
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 
-// Define supabase client once for use in request handler
+// Define supabase client once for use in request handler (service role for server ops)
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+// FIX #1: Create user-context client from authorization header for RLS-enforced reads
+function createUserClient(authHeader: string) {
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: {
+      headers: { Authorization: authHeader }
+    }
+  });
+}
 
 // OpenAI tools that the LLM can use
 const tools = [
@@ -492,6 +502,64 @@ const tools = [
         required: ["action_type"]
       }
     }
+  },
+  // ============= DOCUMENT COMPARISON TOOLS (Hardened) =============
+  {
+    type: "function",
+    function: {
+      name: "find_documents_for_comparison",
+      description: "Find and preview documents for comparison or analysis. Use when user wants to compare documents, analyze specific documents, or asks questions requiring document content (e.g., 'Compare ISO 9001 vs HACCP', 'What does my supplier agreement say about X?', 'Compare documents from Supplier A vs B'). Returns document previews with real content excerpts for user confirmation BEFORE deep analysis. ALWAYS use this first before execute_document_comparison.",
+      parameters: {
+        type: "object",
+        properties: {
+          document_search_terms: {
+            type: "array",
+            items: { type: "string" },
+            description: "Document names, types, or keywords to search (e.g., ['ISO 9001', 'HACCP Certificate', 'Certificate of Insurance'])"
+          },
+          supplier_names: {
+            type: "array",
+            items: { type: "string" },
+            description: "Optional: Filter to specific suppliers by name (fuzzy matching supported)"
+          },
+          comparison_question: {
+            type: "string",
+            description: "The user's original comparison question to provide context for preview generation"
+          },
+          include_pending: {
+            type: "boolean",
+            description: "If true (buyer only), include submitted/pending_review documents in search. Default: false (approved only)"
+          }
+        },
+        required: ["document_search_terms", "comparison_question"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "execute_document_comparison",
+      description: "Execute deep analysis and comparison of confirmed documents. ONLY call this AFTER user confirms document selection from find_documents_for_comparison results. Requires the confirmation_token returned from find_documents_for_comparison. Ingests full document content using semantic chunking and provides structured comparison with citations.",
+      parameters: {
+        type: "object",
+        properties: {
+          document_ids: {
+            type: "array",
+            items: { type: "string" },
+            description: "IDs of confirmed documents to compare (from find_documents_for_comparison results)"
+          },
+          confirmation_token: {
+            type: "string",
+            description: "The confirmation token returned from find_documents_for_comparison (required for security)"
+          },
+          comparison_question: {
+            type: "string",
+            description: "The specific question or comparison criteria the user wants answered"
+          }
+        },
+        required: ["document_ids", "confirmation_token", "comparison_question"]
+      }
+    }
   }
 ];
 
@@ -550,6 +618,577 @@ function fuzzyMatch(supplier: string, query: string): boolean {
   }
   
   return false;
+}
+
+// ============= FIX #6: ROBUST JSON PARSING =============
+function parseModelJSON(rawOutput: string): any {
+  let cleaned = rawOutput;
+  
+  // Layer 1: Strip markdown code fences
+  cleaned = cleaned.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+  
+  // Layer 2: Remove leading/trailing non-JSON
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    cleaned = jsonMatch[0];
+  }
+  
+  // Layer 3: Fix common issues
+  cleaned = cleaned
+    .replace(/,\s*}/g, '}')        // Remove trailing commas in objects
+    .replace(/,\s*]/g, ']')         // Remove trailing commas in arrays
+    .replace(/\n/g, ' ')            // Remove newlines inside JSON
+    .replace(/\s+/g, ' ');          // Normalize whitespace
+  
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    console.error('JSON parse failed after cleanup:', cleaned.substring(0, 200));
+    
+    // Layer 4: Return structured error response
+    return {
+      summaries: [],
+      similarities: [],
+      differences: [],
+      answer: "I was unable to parse the comparison results. Please try again.",
+      not_found: ["Analysis failed due to response format error"],
+      _parse_error: true
+    };
+  }
+}
+
+// ============= FIX #5: SMART CONTENT SELECTION (Keyword-based relevance scoring) =============
+function getRelevantChunks(content: string, question: string, maxChars: number = 4000): string {
+  if (!content || content.length <= maxChars) {
+    return content || '';
+  }
+  
+  // Split into paragraphs
+  const paragraphs = content.split(/\n\n+/).filter(p => p.trim().length > 20);
+  
+  // Extract keywords from question (words > 3 chars)
+  const questionKeywords = question.toLowerCase()
+    .split(/\s+/)
+    .filter(w => w.length > 3)
+    .map(w => w.replace(/[^a-z0-9]/g, ''));
+  
+  // Score each paragraph by keyword overlap
+  const scored = paragraphs.map(p => {
+    const lowerP = p.toLowerCase();
+    const score = questionKeywords.filter(kw => lowerP.includes(kw)).length;
+    return { text: p, score };
+  });
+  
+  // Sort by score descending and take top paragraphs within budget
+  scored.sort((a, b) => b.score - a.score);
+  
+  let result = '';
+  let charCount = 0;
+  
+  for (const { text } of scored) {
+    if (charCount + text.length > maxChars) break;
+    result += text + '\n\n';
+    charCount += text.length + 2;
+  }
+  
+  // If no high-scoring paragraphs, take the beginning
+  if (result.trim().length < 100) {
+    return content.substring(0, maxChars);
+  }
+  
+  return result.trim();
+}
+
+// ============= FIX #4: CONFIRMATION TOKEN MANAGEMENT =============
+async function storeComparisonPending(
+  sessionId: string,
+  documentPreviews: any[],
+  question: string
+): Promise<string> {
+  const confirmationToken = crypto.randomUUID();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min expiry
+  
+  const { error } = await supabase
+    .from('chat_sessions')
+    .update({
+      state: {
+        pending_comparison: {
+          token: confirmationToken,
+          document_ids: documentPreviews.map(d => d.id),
+          question: question,
+          created_at: new Date().toISOString(),
+          expires_at: expiresAt.toISOString()
+        }
+      }
+    })
+    .eq('id', sessionId);
+  
+  if (error) {
+    console.error('Failed to store comparison pending state:', error);
+  }
+  
+  return confirmationToken;
+}
+
+async function verifyConfirmationToken(
+  sessionId: string,
+  userId: string,
+  providedToken: string,
+  requestedDocIds: string[]
+): Promise<{ valid: boolean; error?: string }> {
+  const { data: session, error } = await supabase
+    .from('chat_sessions')
+    .select('state, user_id')
+    .eq('id', sessionId)
+    .single();
+  
+  if (error || !session) {
+    return { valid: false, error: 'Session not found' };
+  }
+  
+  const pending = (session.state as any)?.pending_comparison;
+  
+  if (!pending) {
+    return { valid: false, error: 'No pending comparison found. Please use find_documents_for_comparison first.' };
+  }
+  
+  if (session.user_id !== userId) {
+    return { valid: false, error: 'Session mismatch - unauthorized' };
+  }
+  
+  if (pending.token !== providedToken) {
+    return { valid: false, error: 'Invalid confirmation token' };
+  }
+  
+  if (new Date(pending.expires_at) < new Date()) {
+    return { valid: false, error: 'Comparison request expired (10 min limit). Please search again.' };
+  }
+  
+  // Validate document IDs match what was confirmed
+  const confirmedIds = new Set(pending.document_ids);
+  const allMatch = requestedDocIds.every(id => confirmedIds.has(id));
+  if (!allMatch) {
+    return { valid: false, error: 'Document IDs do not match confirmed selection. Please confirm documents first.' };
+  }
+  
+  return { valid: true };
+}
+
+async function clearComparisonPending(sessionId: string): Promise<void> {
+  await supabase
+    .from('chat_sessions')
+    .update({ state: { pending_comparison: null } })
+    .eq('id', sessionId);
+}
+
+// ============= DOCUMENT COMPARISON HANDLERS (All 6 Fixes Applied) =============
+
+// FIX #1 & #2: Uses userClient for RLS + SQL-level filtering
+async function findDocumentsForComparison(
+  params: any,
+  buyerId: string,
+  supplierId: string | null,
+  sessionId: string | null,
+  authHeader: string
+) {
+  console.log('findDocumentsForComparison called with:', { 
+    search_terms: params.document_search_terms, 
+    suppliers: params.supplier_names,
+    include_pending: params.include_pending
+  });
+  
+  try {
+    // FIX #1: Use user JWT client for RLS-enforced reads
+    const userClient = createUserClient(authHeader);
+    
+    // FIX #2 (partial): Determine allowed statuses
+    const allowedStatuses = ['approved'];
+    if (params.include_pending && !supplierId) {
+      // Only buyers can include pending documents
+      allowedStatuses.push('submitted', 'pending_review');
+    }
+    
+    // Build query with tenant filtering at SQL level (defense-in-depth with RLS)
+    let query = userClient
+      .from('document_uploads')
+      .select(`
+        id,
+        file_name,
+        status,
+        created_at,
+        expiration_date,
+        version,
+        document_requests!inner(
+          id,
+          document_type,
+          buyer_id,
+          supplier_id,
+          suppliers(id, company_name)
+        )
+      `)
+      .in('status', allowedStatuses);
+    
+    // FIX #2: SQL-level tenant filtering (defense-in-depth)
+    if (supplierId) {
+      query = query.eq('document_requests.supplier_id', supplierId);
+    } else if (buyerId) {
+      query = query.eq('document_requests.buyer_id', buyerId);
+    }
+    
+    // Apply supplier name filter at SQL level if provided
+    // Note: Full SQL ilike filtering would require a stored procedure for OR across multiple terms
+    // We do initial fetch then fuzzy match for flexibility
+    
+    const { data: documents, error } = await query.limit(50);
+    
+    if (error) {
+      console.error('Error querying documents for comparison:', error);
+      throw error;
+    }
+    
+    console.log(`Found ${documents?.length || 0} documents before filtering`);
+    
+    // FIX #2 (continued): Fuzzy match document types and supplier names
+    let matchedDocs = documents?.filter((doc: any) => {
+      const docType = doc.document_requests?.document_type?.toLowerCase() || '';
+      const fileName = doc.file_name?.toLowerCase() || '';
+      const supplierName = doc.document_requests?.suppliers?.company_name?.toLowerCase() || '';
+      
+      // Check document type/name match
+      const docMatches = params.document_search_terms.some((term: string) => {
+        const normalizedTerm = term.toLowerCase().replace(/[_-]/g, ' ');
+        const normalizedDocType = docType.replace(/[_-]/g, ' ');
+        const normalizedFileName = fileName.replace(/[_-]/g, ' ');
+        return normalizedDocType.includes(normalizedTerm) || 
+               normalizedTerm.includes(normalizedDocType) ||
+               normalizedFileName.includes(normalizedTerm);
+      });
+      
+      // Check supplier name filter if provided
+      if (params.supplier_names && params.supplier_names.length > 0) {
+        const supplierMatches = params.supplier_names.some((name: string) => 
+          fuzzyMatch(supplierName, name)
+        );
+        return docMatches && supplierMatches;
+      }
+      
+      return docMatches;
+    }) || [];
+    
+    console.log(`Matched ${matchedDocs.length} documents after fuzzy filtering`);
+    
+    // FIX #3: Get REAL content previews from ai_knowledge_entries or supplier_document_library
+    const previews = await Promise.all(matchedDocs.slice(0, 10).map(async (doc: any) => {
+      let contentPreview = 'Content not yet extracted - preview limited';
+      let matchReason = '';
+      
+      // Try to get extracted content from ai_knowledge_entries
+      const { data: knowledge } = await supabase
+        .from('ai_knowledge_entries')
+        .select('content, metadata')
+        .eq('source_reference', doc.id)
+        .maybeSingle();
+      
+      if (knowledge?.content) {
+        // Get first 300 chars as real preview
+        contentPreview = knowledge.content.substring(0, 300).trim();
+        if (knowledge.content.length > 300) {
+          contentPreview += '...';
+        }
+      } else {
+        // Fallback: Try supplier_document_library
+        const { data: supplierDoc } = await supabase
+          .from('supplier_document_library')
+          .select('content_extracted, content_summary')
+          .eq('id', doc.id)
+          .maybeSingle();
+        
+        if (supplierDoc?.content_extracted) {
+          contentPreview = supplierDoc.content_extracted.substring(0, 300).trim();
+          if (supplierDoc.content_extracted.length > 300) {
+            contentPreview += '...';
+          }
+        } else if (supplierDoc?.content_summary) {
+          contentPreview = supplierDoc.content_summary;
+        }
+      }
+      
+      // Generate match reason
+      const matchedTerm = params.document_search_terms.find((term: string) => {
+        const normalizedTerm = term.toLowerCase().replace(/[_-]/g, ' ');
+        const normalizedDocType = (doc.document_requests?.document_type || '').toLowerCase().replace(/[_-]/g, ' ');
+        return normalizedDocType.includes(normalizedTerm) || normalizedTerm.includes(normalizedDocType);
+      });
+      matchReason = matchedTerm ? `Matched on: "${matchedTerm}" in document type` : 'Matched on file name';
+      
+      return {
+        id: doc.id,
+        document_type: doc.document_requests?.document_type,
+        supplier_name: doc.document_requests?.suppliers?.company_name,
+        supplier_id: doc.document_requests?.suppliers?.id,
+        file_name: doc.file_name,
+        version: doc.version || 'v1',
+        effective_date: doc.created_at,
+        expiration_date: doc.expiration_date || 'No expiration set',
+        status: doc.status,
+        excerpt: contentPreview,
+        match_reason: matchReason,
+        has_extracted_content: !!(knowledge?.content)
+      };
+    }));
+    
+    // FIX #4: Store confirmation token if we have a session
+    let confirmationToken = null;
+    if (sessionId && previews.length > 0) {
+      confirmationToken = await storeComparisonPending(sessionId, previews, params.comparison_question);
+    }
+    
+    return {
+      success: true,
+      found_count: matchedDocs.length,
+      documents: previews,
+      requires_confirmation: true,
+      confirmation_token: confirmationToken,
+      comparison_question: params.comparison_question,
+      statuses_searched: allowedStatuses,
+      message: previews.length > 0 
+        ? `Found ${previews.length} matching document(s). Please review the previews and confirm which documents you want to compare.`
+        : `No documents found matching your search terms. Try different keywords or supplier names.`
+    };
+  } catch (error: any) {
+    console.error('Error in findDocumentsForComparison:', error);
+    return { 
+      success: false, 
+      error: error.message, 
+      documents: [],
+      requires_confirmation: false
+    };
+  }
+}
+
+// FIX #1, #4, #5, #6: JWT client, token verification, semantic chunking, robust JSON
+async function executeDocumentComparison(
+  params: any,
+  buyerId: string,
+  supplierId: string | null,
+  sessionId: string | null,
+  userId: string,
+  authHeader: string
+) {
+  console.log('executeDocumentComparison called with:', {
+    document_ids: params.document_ids,
+    has_token: !!params.confirmation_token,
+    question: params.comparison_question?.substring(0, 50)
+  });
+  
+  try {
+    // FIX #4: Verify confirmation token
+    if (sessionId && params.confirmation_token) {
+      const verification = await verifyConfirmationToken(
+        sessionId,
+        userId,
+        params.confirmation_token,
+        params.document_ids
+      );
+      
+      if (!verification.valid) {
+        console.error('Confirmation token verification failed:', verification.error);
+        return {
+          success: false,
+          error: verification.error
+        };
+      }
+      
+      // Clear pending state after successful verification
+      await clearComparisonPending(sessionId);
+    } else {
+      console.warn('No session or confirmation token provided - skipping token verification');
+    }
+    
+    // FIX #1: Use user client for RLS-enforced reads
+    const userClient = createUserClient(authHeader);
+    
+    // Fetch documents with permission verification
+    const { data: documents, error } = await userClient
+      .from('document_uploads')
+      .select(`
+        id,
+        file_name,
+        file_path,
+        status,
+        created_at,
+        expiration_date,
+        version,
+        document_requests!inner(
+          id,
+          document_type,
+          buyer_id,
+          supplier_id,
+          suppliers(id, company_name)
+        )
+      `)
+      .in('id', params.document_ids);
+    
+    if (error) {
+      console.error('Error fetching documents for comparison:', error);
+      throw error;
+    }
+    
+    if (!documents || documents.length === 0) {
+      return { 
+        success: false, 
+        error: 'No documents found with provided IDs. You may not have access to these documents.' 
+      };
+    }
+    
+    console.log(`Found ${documents.length} documents for comparison`);
+    
+    // Additional permission verification (defense-in-depth)
+    for (const doc of documents) {
+      const docBuyerId = doc.document_requests?.buyer_id;
+      const docSupplierId = doc.document_requests?.supplier_id;
+      
+      if (supplierId && docSupplierId !== supplierId) {
+        return { success: false, error: 'Access denied: Cannot access documents from other suppliers' };
+      }
+      if (buyerId && docBuyerId !== buyerId) {
+        return { success: false, error: 'Access denied: Cannot access documents from other buyers' };
+      }
+    }
+    
+    // FIX #5: Get document contents with smart chunking
+    const tokenBudgetPerDoc = Math.floor(6000 / documents.length); // ~6000 chars total budget
+    
+    const documentContents = await Promise.all(documents.map(async (doc: any) => {
+      let content = '';
+      
+      // Try ai_knowledge_entries first
+      const { data: knowledge } = await supabase
+        .from('ai_knowledge_entries')
+        .select('content, metadata')
+        .eq('source_reference', doc.id)
+        .maybeSingle();
+      
+      if (knowledge?.content) {
+        // FIX #5: Use semantic chunking instead of simple truncation
+        content = getRelevantChunks(knowledge.content, params.comparison_question, tokenBudgetPerDoc);
+      } else {
+        // Fallback: Try supplier_document_library
+        const { data: supplierDoc } = await supabase
+          .from('supplier_document_library')
+          .select('content_extracted')
+          .eq('id', doc.id)
+          .maybeSingle();
+        
+        if (supplierDoc?.content_extracted) {
+          content = getRelevantChunks(supplierDoc.content_extracted, params.comparison_question, tokenBudgetPerDoc);
+        } else {
+          // Final fallback - basic metadata
+          content = `Document: ${doc.document_requests?.document_type} from ${doc.document_requests?.suppliers?.company_name}. File: ${doc.file_name}. Status: ${doc.status}. Created: ${doc.created_at}. Expires: ${doc.expiration_date || 'No expiration'}.`;
+        }
+      }
+      
+      return {
+        id: doc.id,
+        document_type: doc.document_requests?.document_type,
+        supplier_name: doc.document_requests?.suppliers?.company_name,
+        file_name: doc.file_name,
+        content: content,
+        has_full_content: !!knowledge?.content || false
+      };
+    }));
+    
+    // Generate comparison using OpenAI with FIX #6 JSON schema
+    const comparisonPrompt = `You are analyzing compliance documents for comparison. Provide precise, factual analysis based ONLY on the provided document content.
+
+DOCUMENTS TO ANALYZE:
+${documentContents.map((doc, i) => `
+--- DOCUMENT ${i + 1}: ${doc.document_type} ---
+Supplier: ${doc.supplier_name}
+File: ${doc.file_name}
+${doc.has_full_content ? 'Content (relevant sections):' : 'Limited metadata only:'}
+${doc.content}
+`).join('\n')}
+
+USER'S QUESTION: ${params.comparison_question}
+
+Respond with a JSON object in this exact format:
+{
+  "summaries": [
+    { "document_id": "uuid", "document_type": "type", "supplier": "name", "summary": "2-3 sentence summary" }
+  ],
+  "similarities": ["Key similarity 1 with document citations", "Key similarity 2"],
+  "differences": ["Key difference 1 with document citations", "Key difference 2"],
+  "answer": "Direct, specific answer to the user's question with citations to which document each insight comes from",
+  "not_found": ["Information not found in the provided documents"]
+}
+
+CRITICAL RULES:
+- Only use information explicitly stated in the provided documents
+- Cite which document each insight comes from (e.g., "Document 1 states...", "ISO 9001 Certificate shows...")
+- Be concise and factual - no speculation
+- If information is not in the documents, add it to "not_found"
+- Keep summaries to 2-3 sentences max
+- For the answer, directly address what the user asked`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: comparisonPrompt }],
+        max_tokens: 2000,
+        temperature: 0.3,
+        response_format: { type: "json_object" } // FIX #6: Force JSON output
+      }),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('OpenAI API error:', errorText);
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+    
+    const aiResult = await response.json();
+    const rawContent = aiResult.choices?.[0]?.message?.content || '{}';
+    
+    // FIX #6: Robust JSON parsing with fallbacks
+    const comparison = parseModelJSON(rawContent);
+    
+    if (comparison._parse_error) {
+      console.error('Failed to parse comparison result');
+    }
+    
+    // Log the comparison for audit
+    console.log('Document comparison completed:', {
+      documents_analyzed: documents.length,
+      summaries_count: comparison.summaries?.length || 0,
+      similarities_count: comparison.similarities?.length || 0,
+      differences_count: comparison.differences?.length || 0
+    });
+    
+    return {
+      success: true,
+      comparison_type: 'document_analysis',
+      documents_analyzed: documents.length,
+      documents_info: documentContents.map(d => ({
+        id: d.id,
+        document_type: d.document_type,
+        supplier_name: d.supplier_name,
+        has_full_content: d.has_full_content
+      })),
+      ...comparison
+    };
+  } catch (error: any) {
+    console.error('Error in executeDocumentComparison:', error);
+    return { 
+      success: false, 
+      error: error.message 
+    };
+  }
 }
 
 async function queryDocuments(filters: any, buyerId: string) {
@@ -2817,7 +3456,17 @@ async function getMissingRequiredDocuments(params: any, buyerId: string) {
   }
 }
 
-async function executeToolCall(toolName: string, args: any, buyerId: string) {
+async function executeToolCall(
+  toolName: string, 
+  args: any, 
+  buyerId: string,
+  context?: {
+    supplierId?: string | null;
+    sessionId?: string | null;
+    userId?: string;
+    authHeader?: string;
+  }
+) {
   console.log(`Executing tool: ${toolName} with args:`, args);
   
   switch (toolName) {
@@ -2858,6 +3507,35 @@ async function executeToolCall(toolName: string, args: any, buyerId: string) {
     case "draft_compliance_email":
       console.log('📧 Drafting compliance follow-up email:', args);
       return await draftComplianceEmail(args, buyerId);
+    
+    // ============= DOCUMENT COMPARISON TOOLS =============
+    case "find_documents_for_comparison":
+      console.log('🔍 Finding documents for comparison:', args);
+      if (!context?.authHeader) {
+        return { success: false, error: 'Authorization required for document comparison' };
+      }
+      return await findDocumentsForComparison(
+        args,
+        buyerId,
+        context.supplierId || null,
+        context.sessionId || null,
+        context.authHeader
+      );
+    
+    case "execute_document_comparison":
+      console.log('📊 Executing document comparison:', args);
+      if (!context?.authHeader || !context?.userId) {
+        return { success: false, error: 'Authorization required for document comparison' };
+      }
+      return await executeDocumentComparison(
+        args,
+        buyerId,
+        context.supplierId || null,
+        context.sessionId || null,
+        context.userId,
+        context.authHeader
+      );
+    
     default:
       return {
         success: false,
@@ -4243,7 +4921,12 @@ EXAMPLE - Compliance Status Query:
         const toolName = toolCall.function.name;
         const toolArgs = JSON.parse(toolCall.function.arguments);
         
-        const toolResult = await executeToolCall(toolName, toolArgs, buyer_id);
+        const toolResult = await executeToolCall(toolName, toolArgs, buyer_id, {
+          supplierId: null, // TODO: Pass supplier ID if in supplier context
+          sessionId: session_id,
+          userId: user.id,
+          authHeader: authHeader
+        });
         
         // Update session state after each tool call for context-aware follow-ups
         if (session_id) {

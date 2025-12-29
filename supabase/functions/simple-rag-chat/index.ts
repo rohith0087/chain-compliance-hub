@@ -564,8 +564,17 @@ const tools = [
   {
     type: "function",
     function: {
-      name: "send_generic_email",
-      description: "Send a custom email to any email address. Use this when user wants to send a test email, send a message to someone not in the supplier list, or compose a general email. For compliance follow-ups with existing suppliers, prefer draft_compliance_email instead.",
+      name: "draft_generic_email",
+      description: `Draft a custom email to any email address. Use this when user wants to send an email to someone not in the supplier list, send a test email, or compose a general email.
+
+CRITICAL WORKFLOW:
+1. When user only provides email address, ASK "What would you like this email to be about?"
+2. When user provides topic, ASK for body content if not clear
+3. Once you have to_email, subject, and body - create the draft and SHOW IT to user for review
+4. NEVER send immediately - always show draft first and ask for confirmation
+5. After user confirms ("yes", "send it", "looks good"), use confirm_send_email tool to actually send
+
+This tool creates a DRAFT that the user MUST review before sending. For compliance follow-ups with existing suppliers, prefer draft_compliance_email instead.`,
       parameters: {
         type: "object",
         properties: {
@@ -579,18 +588,35 @@ const tools = [
           },
           subject: {
             type: "string",
-            description: "Email subject line"
+            description: "Email subject line. If user hasn't specified, ASK them what the email is about."
           },
           body: {
             type: "string",
-            description: "Email body content (plain text, will be formatted)"
+            description: "Email body content (plain text). If user hasn't specified, ASK them for the message content."
           },
           sender_context: {
             type: "string",
             description: "Optional context about who is sending (e.g., 'Compliance Team', 'Test Email')"
           }
         },
-        required: ["to_email", "subject", "body"]
+        required: ["to_email"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "confirm_send_email",
+      description: "Send a previously drafted email after user explicitly confirms. ONLY call this when user says things like 'yes send it', 'looks good send it', 'confirm', 'send now', 'yes', 'go ahead'. Requires the draft_id from a previous draft_generic_email call.",
+      parameters: {
+        type: "object",
+        properties: {
+          draft_id: {
+            type: "string",
+            description: "The draft ID returned from draft_generic_email"
+          }
+        },
+        required: ["draft_id"]
       }
     }
   }
@@ -3206,32 +3232,39 @@ function generateFallbackInsights(metrics: any, supplierMetrics: any[]) {
   return insights.slice(0, 4);
 }
 
-// ============= SEND GENERIC EMAIL =============
-// Sends custom emails to any email address (not just suppliers)
-async function sendGenericEmail(params: any, authHeader: string) {
+// ============= DRAFT GENERIC EMAIL =============
+// Creates a draft email for user review before sending
+async function draftGenericEmail(params: any, authHeader: string) {
   try {
     const { to_email, to_name, subject, body, sender_context } = params;
     
-    // Validate required fields
-    if (!to_email || !subject || !body) {
-      return {
-        success: false,
-        error: 'Missing required fields: to_email, subject, and body are required.'
-      };
-    }
-    
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(to_email)) {
+    if (!to_email || !emailRegex.test(to_email)) {
       return {
         success: false,
-        error: `Invalid email address format: ${to_email}`
+        error: `Invalid email address format: ${to_email}`,
+        needs_info: false
       };
     }
     
-    console.log(`📧 Sending generic email to: ${to_email}`);
+    // If subject or body is missing, tell AI to ask user
+    if (!subject || !body) {
+      return {
+        success: false,
+        needs_info: true,
+        to_email,
+        to_name,
+        missing_fields: [!subject ? 'subject' : null, !body ? 'body' : null].filter(Boolean),
+        message: !subject 
+          ? `I have the email address (${to_email}). What would you like this email to be about?`
+          : `Got the subject "${subject}". What message would you like me to include in the body?`
+      };
+    }
     
-    // Call the edge function to send email
+    console.log(`📧 Creating email draft for: ${to_email}`);
+    
+    // Call the edge function in draft mode
     const response = await fetch(`${SUPABASE_URL}/functions/v1/send-generic-email`, {
       method: 'POST',
       headers: {
@@ -3239,11 +3272,76 @@ async function sendGenericEmail(params: any, authHeader: string) {
         'Authorization': authHeader,
       },
       body: JSON.stringify({
+        mode: 'draft',
         to_email,
         to_name: to_name || undefined,
         subject,
         body,
         sender_context: sender_context || 'Sent via Compliance Compass'
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      console.error('❌ Draft creation failed:', result);
+      return {
+        success: false,
+        error: result.error || 'Failed to create draft'
+      };
+    }
+    
+    console.log('✅ Email draft created:', result);
+    
+    return {
+      success: true,
+      type: 'email_draft',
+      draft_id: result.draft_id,
+      requires_confirmation: true,
+      draft: {
+        to_email,
+        to_name: to_name || 'Recipient',
+        subject,
+        body,
+        sender_name: result.sender_name,
+        sender_company: result.sender_company
+      },
+      message: `Here's your draft email. Please review and confirm to send, or let me know if you'd like any changes.`
+    };
+  } catch (error: any) {
+    console.error('❌ Error creating email draft:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to create draft'
+    };
+  }
+}
+
+// ============= CONFIRM SEND EMAIL =============
+// Sends a previously drafted email after user confirmation
+async function confirmSendEmail(params: any, authHeader: string) {
+  try {
+    const { draft_id } = params;
+    
+    if (!draft_id) {
+      return {
+        success: false,
+        error: 'No draft_id provided. Please create a draft first using draft_generic_email.'
+      };
+    }
+    
+    console.log(`📧 Confirming and sending email draft: ${draft_id}`);
+    
+    // Call the edge function in send mode
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/send-generic-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader,
+      },
+      body: JSON.stringify({
+        mode: 'send',
+        draft_id
       })
     });
     
@@ -3261,16 +3359,16 @@ async function sendGenericEmail(params: any, authHeader: string) {
     
     return {
       success: true,
-      message: `Email sent successfully to ${to_email}`,
+      message: `Email sent successfully to ${result.to_email}!`,
       email_id: result.email_id,
       recipient: {
-        email: to_email,
-        name: to_name || 'Recipient'
+        email: result.to_email,
+        name: result.to_name || 'Recipient'
       },
-      subject
+      subject: result.subject
     };
   } catch (error: any) {
-    console.error('❌ Error sending generic email:', error);
+    console.error('❌ Error sending email:', error);
     return {
       success: false,
       error: error.message || 'Failed to send email'
@@ -3805,9 +3903,12 @@ async function executeToolCall(
     case "draft_compliance_email":
       console.log('📧 Drafting compliance follow-up email:', args);
       return await draftComplianceEmail(args, buyerId);
-    case "send_generic_email":
-      console.log('📧 Sending generic email:', args);
-      return await sendGenericEmail(args, context?.authHeader || '');
+    case "draft_generic_email":
+      console.log('📧 Creating generic email draft:', args);
+      return await draftGenericEmail(args, context?.authHeader || '');
+    case "confirm_send_email":
+      console.log('📧 Confirming and sending email:', args);
+      return await confirmSendEmail(args, context?.authHeader || '');
     
     // ============= DOCUMENT COMPARISON TOOLS =============
     case "find_documents_for_comparison":
@@ -4787,6 +4888,80 @@ Example flow:
 User: "Hey send an email to Test Supplier about expired documents"
 AI: [IMMEDIATELY calls draft_compliance_email({ action_type: "expired_documents", supplier_names: ["Test Supplier"] })]
 → Returns email composer with drafted email showing all expired docs from Test Supplier
+
+GENERIC EMAIL HANDLING - draft_generic_email & confirm_send_email:
+
+Use these tools for emails to ANY email address (not just existing suppliers in the system).
+For compliance-related emails to existing suppliers, prefer draft_compliance_email instead.
+
+CONVERSATIONAL FLOW (CRITICAL - FOLLOW THIS EXACTLY):
+
+Phase 1 - GATHER EMAIL ADDRESS:
+User says: "send an email to john@example.com" or "email rcrohith017@gmail.com"
+AI response: "Sure! What would you like this email to be about?"
+[DO NOT call draft_generic_email yet - wait for subject/content]
+
+Phase 2 - GATHER CONTENT:
+User provides topic: "just say hey this is a test"
+AI MUST call draft_generic_email with all gathered info:
+→ draft_generic_email({ to_email: "john@example.com", subject: "Test Email", body: "Hey, this is a test." })
+
+Phase 3 - PRESENT DRAFT FOR REVIEW:
+AI presents the draft in a clear format:
+"Here's your draft email:
+
+📧 **Draft Email**
+---
+**To:** john@example.com
+**Subject:** Test Email
+
+Hey, this is a test.
+
+Best regards,
+[Sender Name]
+[Company Name]
+---
+
+Would you like me to send this, or would you like to make any changes?"
+
+Phase 4 - HANDLE USER RESPONSE:
+- User says "send it", "yes", "looks good", "go ahead" → IMMEDIATELY call confirm_send_email({ draft_id: "[draft_id from previous response]" })
+- User says "change the subject to X" → Create new draft with updated content and present again
+- User says "add Y to the body" → Create new draft with updated content and present again
+- User says "no" or "cancel" → "No problem! Let me know if you'd like to draft another email."
+
+EXAMPLE COMPLETE FLOW:
+User: "can you send an email to rcrohith017@gmail.com"
+AI: "Sure! What would you like this email to be about?"
+
+User: "saying hey this is a test email"
+AI: [calls draft_generic_email({ to_email: "rcrohith017@gmail.com", subject: "Test Email", body: "Hey, this is a test email." })]
+"Here's your draft email:
+
+📧 **Draft Email**
+---
+**To:** rcrohith017@gmail.com
+**Subject:** Test Email
+
+Hey, this is a test email.
+
+Best regards,
+[User Name]
+[Company Name]
+---
+
+Would you like me to send this, or would you like to make any changes?"
+
+User: "yes send it"
+AI: [calls confirm_send_email({ draft_id: "..." })]
+"Done! Your email has been sent to rcrohith017@gmail.com."
+
+NEVER SEND EMAIL WITHOUT:
+1. Getting email address (to_email)
+2. Getting subject/topic from user
+3. Getting body content from user
+4. Showing draft for review
+5. Getting explicit confirmation from user
 
 CRITICAL - READ vs WRITE OPERATIONS:
 

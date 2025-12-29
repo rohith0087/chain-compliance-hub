@@ -560,6 +560,39 @@ const tools = [
         required: ["document_ids", "confirmation_token", "comparison_question"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "send_generic_email",
+      description: "Send a custom email to any email address. Use this when user wants to send a test email, send a message to someone not in the supplier list, or compose a general email. For compliance follow-ups with existing suppliers, prefer draft_compliance_email instead.",
+      parameters: {
+        type: "object",
+        properties: {
+          to_email: {
+            type: "string",
+            description: "Recipient email address"
+          },
+          to_name: {
+            type: "string",
+            description: "Recipient name (optional, for personalization)"
+          },
+          subject: {
+            type: "string",
+            description: "Email subject line"
+          },
+          body: {
+            type: "string",
+            description: "Email body content (plain text, will be formatted)"
+          },
+          sender_context: {
+            type: "string",
+            description: "Optional context about who is sending (e.g., 'Compliance Team', 'Test Email')"
+          }
+        },
+        required: ["to_email", "subject", "body"]
+      }
+    }
   }
 ];
 
@@ -3173,6 +3206,78 @@ function generateFallbackInsights(metrics: any, supplierMetrics: any[]) {
   return insights.slice(0, 4);
 }
 
+// ============= SEND GENERIC EMAIL =============
+// Sends custom emails to any email address (not just suppliers)
+async function sendGenericEmail(params: any, authHeader: string) {
+  try {
+    const { to_email, to_name, subject, body, sender_context } = params;
+    
+    // Validate required fields
+    if (!to_email || !subject || !body) {
+      return {
+        success: false,
+        error: 'Missing required fields: to_email, subject, and body are required.'
+      };
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(to_email)) {
+      return {
+        success: false,
+        error: `Invalid email address format: ${to_email}`
+      };
+    }
+    
+    console.log(`📧 Sending generic email to: ${to_email}`);
+    
+    // Call the edge function to send email
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/send-generic-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader,
+      },
+      body: JSON.stringify({
+        to_email,
+        to_name: to_name || undefined,
+        subject,
+        body,
+        sender_context: sender_context || 'Sent via Compliance Compass'
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      console.error('❌ Email send failed:', result);
+      return {
+        success: false,
+        error: result.error || 'Failed to send email'
+      };
+    }
+    
+    console.log('✅ Email sent successfully:', result);
+    
+    return {
+      success: true,
+      message: `Email sent successfully to ${to_email}`,
+      email_id: result.email_id,
+      recipient: {
+        email: to_email,
+        name: to_name || 'Recipient'
+      },
+      subject
+    };
+  } catch (error: any) {
+    console.error('❌ Error sending generic email:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to send email'
+    };
+  }
+}
+
 // ============= DRAFT COMPLIANCE EMAIL =============
 // Drafts context-aware follow-up emails grouped by supplier
 async function draftComplianceEmail(params: any, buyerId: string) {
@@ -3700,6 +3805,9 @@ async function executeToolCall(
     case "draft_compliance_email":
       console.log('📧 Drafting compliance follow-up email:', args);
       return await draftComplianceEmail(args, buyerId);
+    case "send_generic_email":
+      console.log('📧 Sending generic email:', args);
+      return await sendGenericEmail(args, context?.authHeader || '');
     
     // ============= DOCUMENT COMPARISON TOOLS =============
     case "find_documents_for_comparison":

@@ -1,23 +1,23 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useTranslation } from 'react-i18next';
 import { 
-  Shield, 
-  Users, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
-  TrendingUp,
   Building2,
-  FileCheck,
-  Eye,
   Download,
-  MousePointer
+  RefreshCcw,
+  ArrowUpRight,
+  ArrowDownRight,
+  Check,
+  Clock,
+  AlertCircle,
+  ChevronRight,
+  TrendingUp,
+  TrendingDown,
+  Minus
 } from 'lucide-react';
 import ComplianceDashboard from './ComplianceDashboard';
 import SupplierInsightsModal from '../supplier/SupplierInsightsModal';
@@ -34,9 +34,43 @@ import { canGenerateReport, getReportCreditCost } from '@/utils/subscriptionGuar
 import { ComplianceFilters } from '../compliance/ComplianceFilters';
 import { useBranchContext } from '@/contexts/BranchContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { RefreshCcw } from 'lucide-react';
 import BuyerCorporateDocuments from '../buyer/BuyerCorporateDocuments';
 import ExpiryNotificationLog from '../compliance/ExpiryNotificationLog';
+import { format, differenceInDays } from 'date-fns';
+
+// Risk level indicator component
+const RiskIndicator = ({ level }: { level: 'high' | 'medium' | 'low' }) => {
+  const colors = {
+    high: 'bg-[hsl(0,72%,40%)]',
+    medium: 'bg-[hsl(45,93%,38%)]',
+    low: 'bg-[hsl(142,71%,32%)]'
+  };
+  const labels = {
+    high: 'High',
+    medium: 'Medium',
+    low: 'Low'
+  };
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className={`w-2 h-2 rounded-full ${colors[level]}`} />
+      <span className="text-sm text-foreground">{labels[level]}</span>
+    </div>
+  );
+};
+
+// Status indicator for activity timeline
+const ActivityIcon = ({ status }: { status: string }) => {
+  switch (status) {
+    case 'approved':
+      return <Check className="w-3.5 h-3.5 text-[hsl(142,71%,32%)]" />;
+    case 'pending':
+      return <Clock className="w-3.5 h-3.5 text-[hsl(45,93%,38%)]" />;
+    case 'rejected':
+      return <AlertCircle className="w-3.5 h-3.5 text-[hsl(0,72%,40%)]" />;
+    default:
+      return <Minus className="w-3.5 h-3.5 text-muted-foreground" />;
+  }
+};
 
 const BuyerComplianceDashboard = () => {
   const { currentBranch, allBranchesView } = useBranchContext();
@@ -49,7 +83,6 @@ const BuyerComplianceDashboard = () => {
   const [buyerData, setBuyerData] = useState<any>(null);
   const [buyerId, setBuyerId] = useState<string>('');
   
-  // Filter states
   const [filters, setFilters] = useState({
     searchQuery: '',
     industries: [] as string[],
@@ -75,7 +108,6 @@ const BuyerComplianceDashboard = () => {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      // Step 1: Check if user is a team member
       const { data: teamMember } = await supabase
         .from('company_users')
         .select('company_id')
@@ -84,10 +116,8 @@ const BuyerComplianceDashboard = () => {
         .eq('status', 'active')
         .maybeSingle();
 
-      // Step 2: Resolve buyer ID
       const buyerId = teamMember?.company_id || user?.id;
 
-      // Step 3: Get buyer profile using resolved ID
       const { data: buyerProfile, error: buyerError } = await supabase
         .from('buyers')
         .select('id')
@@ -102,7 +132,6 @@ const BuyerComplianceDashboard = () => {
         setBuyerId(buyerProfile.id);
         setBuyerData(buyerProfile);
         
-        // Step 1: Fetch ALL approved connections for this buyer
         let connectionsQuery = supabase
           .from('buyer_supplier_connections')
           .select(`
@@ -119,14 +148,12 @@ const BuyerComplianceDashboard = () => {
           .eq('buyer_id', buyerProfile.id)
           .eq('status', 'approved');
 
-        // Apply branch filter if specific branch selected
         if (currentBranch && !allBranchesView) {
           connectionsQuery = connectionsQuery.or(`branch_id.eq.${currentBranch.id},branch_id.is.null`);
         }
 
         const { data: connections } = await connectionsQuery;
 
-        // Step 2: Initialize supplier stats from ALL connections
         const supplierMap = new Map();
         connections?.forEach(conn => {
           if (conn.suppliers) {
@@ -141,7 +168,6 @@ const BuyerComplianceDashboard = () => {
           }
         });
 
-        // Step 3: Load document requests with supplier info and branch filter
         let requestsQuery = supabase
           .from('document_requests')
           .select(`
@@ -155,7 +181,6 @@ const BuyerComplianceDashboard = () => {
           `)
           .eq('buyer_id', buyerProfile.id);
 
-        // Apply branch filter if specific branch selected
         if (currentBranch && !allBranchesView) {
           requestsQuery = requestsQuery.eq('branch_id', currentBranch.id);
         }
@@ -164,7 +189,6 @@ const BuyerComplianceDashboard = () => {
 
         setDocumentRequests(requests || []);
 
-        // Step 4: Overlay document request data onto supplier stats
         requests?.forEach(request => {
           if (request.suppliers) {
             const supplierId = request.suppliers.id;
@@ -186,7 +210,6 @@ const BuyerComplianceDashboard = () => {
             : 0
         }));
 
-        // Load supplier items for category filtering
         const supplierIds = Array.from(supplierMap.keys());
         const { data: supplierItems } = supplierIds.length > 0 
           ? await supabase
@@ -195,7 +218,6 @@ const BuyerComplianceDashboard = () => {
               .in('supplier_id', supplierIds)
           : { data: [] };
 
-        // Create mapping of supplier -> item categories
         const itemsMap = new Map<string, Set<string>>();
         supplierItems?.forEach(item => {
           if (!itemsMap.has(item.supplier_id)) {
@@ -219,7 +241,6 @@ const BuyerComplianceDashboard = () => {
     }
   };
 
-  // Apply filters whenever data or filters change
   React.useEffect(() => {
     applyFilters();
   }, [supplierStats, documentRequests, filters]);
@@ -227,7 +248,6 @@ const BuyerComplianceDashboard = () => {
   const applyFilters = () => {
     let filtered = [...supplierStats];
 
-    // Search filter
     if (filters.searchQuery) {
       const query = filters.searchQuery.toLowerCase();
       filtered = filtered.filter(s =>
@@ -237,14 +257,12 @@ const BuyerComplianceDashboard = () => {
       );
     }
 
-    // Industry filter
     if (filters.industries.length > 0) {
       filtered = filtered.filter(s =>
         s.industry && filters.industries.includes(s.industry)
       );
     }
 
-    // Item category filter
     if (filters.itemCategories.length > 0) {
       filtered = filtered.filter(s => {
         const supplierCategories = supplierItemsMap.get(s.id);
@@ -253,7 +271,6 @@ const BuyerComplianceDashboard = () => {
       });
     }
 
-    // Risk level filter
     if (filters.riskLevels.length > 0) {
       filtered = filtered.filter(s => {
         const score = s.complianceScore || 0;
@@ -266,10 +283,8 @@ const BuyerComplianceDashboard = () => {
 
     setFilteredSuppliers(filtered);
 
-    // Filter document requests
     let filteredReqs = [...documentRequests];
 
-    // Search filter
     if (filters.searchQuery) {
       const query = filters.searchQuery.toLowerCase();
       filteredReqs = filteredReqs.filter(r =>
@@ -278,14 +293,12 @@ const BuyerComplianceDashboard = () => {
       );
     }
 
-    // Status filter
     if (filters.statuses.length > 0) {
       filteredReqs = filteredReqs.filter(r =>
         r.status && filters.statuses.includes(r.status)
       );
     }
 
-    // Industry filter (via supplier)
     if (filters.industries.length > 0) {
       filteredReqs = filteredReqs.filter(r =>
         r.suppliers?.industry && filters.industries.includes(r.suppliers.industry)
@@ -295,7 +308,6 @@ const BuyerComplianceDashboard = () => {
     setFilteredRequests(filteredReqs);
   };
 
-  // Get unique industries and item categories for filters
   const availableIndustries = Array.from(new Set(
     supplierStats.map(s => s.industry).filter(Boolean)
   )).sort();
@@ -319,10 +331,25 @@ const BuyerComplianceDashboard = () => {
     highRiskSuppliers: filteredSuppliers.filter(s => (s.complianceScore || 0) < 70).length
   };
 
+  // Get attention required items (pending/overdue in next 7 days)
+  const attentionItems = filteredRequests
+    .filter(r => r.status === 'pending' && r.due_date)
+    .map(r => {
+      const daysUntil = differenceInDays(new Date(r.due_date), new Date());
+      return { ...r, daysUntil };
+    })
+    .filter(r => r.daysUntil <= 7)
+    .sort((a, b) => a.daysUntil - b.daysUntil)
+    .slice(0, 5);
+
+  const getRiskLevel = (score: number): 'high' | 'medium' | 'low' => {
+    if (score < 70) return 'high';
+    if (score < 85) return 'medium';
+    return 'low';
+  };
+
   const handleViewDocument = async (request: any) => {
-    console.log('Viewing document for request:', request.id);
     try {
-      // Fetch latest document upload for this request
       const { data: uploads, error: uploadsError } = await supabase
         .from('document_uploads')
         .select('*')
@@ -334,12 +361,9 @@ const BuyerComplianceDashboard = () => {
         console.error('Error fetching uploads:', uploadsError);
       }
 
-      console.log('Fetched uploads:', uploads);
       const upload = uploads?.[0];
-      console.log('Upload data:', upload);
       
       if (!upload?.file_path) {
-        console.log('No file_path found:', upload);
         toast({
           title: "Error",
           description: "No file available for viewing",
@@ -348,29 +372,22 @@ const BuyerComplianceDashboard = () => {
         return;
       }
 
-      console.log('Attempting to access file_path:', upload.file_path);
       const isViewable = upload.mime_type?.startsWith('image/') || upload.mime_type === 'application/pdf';
 
       if (isViewable) {
-        // Pre-open a new tab to avoid popup blockers
         const newTab = window.open('', '_blank');
         if (newTab) newTab.document.write('Loading document...');
         const { data, error } = await supabase.storage
           .from('compliance-documents')
           .createSignedUrl(upload.file_path, 60);
 
-        if (error) {
-          console.error('Signed URL error:', error);
-          throw error;
-        }
-        console.log('Opening signed URL:', data.signedUrl);
+        if (error) throw error;
         if (newTab) {
           newTab.location.href = data.signedUrl;
         } else {
           window.open(data.signedUrl, '_blank');
         }
       } else {
-        // Prefer signed URL download
         const { data: signed, error: signedErr } = await supabase.storage
           .from('compliance-documents')
           .createSignedUrl(upload.file_path, 60, { download: upload.file_name });
@@ -389,17 +406,12 @@ const BuyerComplianceDashboard = () => {
           return;
         }
 
-        // Fallback to blob download
         const { data: blob, error } = await supabase.storage
           .from('compliance-documents')
           .download(upload.file_path);
 
-        if (error) {
-          console.error('Storage download error:', error);
-          throw error;
-        }
+        if (error) throw error;
 
-        console.log('Download successful, creating blob URL');
         const url = URL.createObjectURL(blob);
         const a = window.document.createElement('a');
         a.href = url;
@@ -423,10 +435,11 @@ const BuyerComplianceDashboard = () => {
       });
     }
   };
+
   const handleSupplierClick = (supplier: any) => {
     setSelectedSupplier({
       ...supplier,
-      buyerId: buyerData?.buyer_id_number || buyerData?.id // Use human-readable ID
+      buyerId: buyerData?.buyer_id_number || buyerData?.id
     });
     setShowInsightsModal(true);
   };
@@ -441,28 +454,22 @@ const BuyerComplianceDashboard = () => {
       const pdfService = new AdvancedPDFExportService();
 
       if (selectedSupplierIds.length === 1) {
-        // Single supplier report
         const supplierData = await ComplianceDataService.getSupplierComplianceData(
           selectedSupplierIds[0],
           buyerId,
           dateRange.from && dateRange.to ? { from: dateRange.from, to: dateRange.to } : undefined
         );
 
-        // Get AI insights (will fallback to static if no API key)
         const aiInsights = await AIInsightsService.generateSupplierInsights(supplierData);
-
         await pdfService.generateSingleSupplierReport(supplierData, aiInsights, options);
       } else {
-        // Multi-supplier comparison report
         const comparisonData = await ComplianceDataService.getMultiSupplierComparisonData(
           selectedSupplierIds,
           buyerId,
           dateRange.from && dateRange.to ? { from: dateRange.from, to: dateRange.to } : undefined
         );
 
-        // Get AI insights for comparison
         const aiInsights = await AIInsightsService.generateComparisonInsights(comparisonData);
-
         await pdfService.generateComparisonReport(comparisonData, aiInsights, options);
       }
     } catch (error) {
@@ -472,17 +479,20 @@ const BuyerComplianceDashboard = () => {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center py-8">{t('common:messages.loading')}</div>;
+    return <div className="flex items-center justify-center py-8 text-muted-foreground">{t('common:messages.loading')}</div>;
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Header - Minimal, Executive-style */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">{t('dashboard:compliance.title')}</h2>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={loadDashboardData}>
-            <RefreshCcw className="w-4 h-4 mr-2" />
-            {t('common:buttons.refresh')}
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Compliance Overview</h1>
+          <p className="text-sm text-muted-foreground">Supplier & Document Status</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={loadDashboardData} className="text-muted-foreground">
+            Refresh
           </Button>
           <SubscriptionGuard
             checkResult={canGenerateReport(subscriptionData, 'detailed')}
@@ -490,18 +500,12 @@ const BuyerComplianceDashboard = () => {
             description="Generate detailed compliance reports and analytics for your suppliers."
           >
             <Button 
-              variant="default" 
+              variant="outline" 
+              size="sm"
               onClick={() => setShowExportModal(true)}
-              className="flex items-center gap-2"
               disabled={!hasEnoughCredits(getReportCreditCost('standard'))}
             >
-              <Download className="w-4 h-4" />
-              Export Reports
-              {subscriptionData && (
-                <span className="text-xs opacity-75 ml-1">
-                  ({subscriptionData.credits} credits)
-                </span>
-              )}
+              Export
             </Button>
           </SubscriptionGuard>
         </div>
@@ -509,14 +513,45 @@ const BuyerComplianceDashboard = () => {
 
       {/* Branch indicator */}
       {currentBranch && !allBranchesView && (
-        <Alert>
+        <Alert className="border-border bg-muted/30">
           <Building2 className="h-4 w-4" />
-          <AlertTitle>Branch View</AlertTitle>
-          <AlertDescription>
-            Showing compliance data for: <strong>{currentBranch.branch_name}</strong> ({currentBranch.location})
+          <AlertTitle className="text-sm font-medium">Branch View</AlertTitle>
+          <AlertDescription className="text-sm text-muted-foreground">
+            Showing data for: <span className="font-medium text-foreground">{currentBranch.branch_name}</span>
           </AlertDescription>
         </Alert>
       )}
+
+      {/* Risk Summary Bar - Horizontal, muted */}
+      <div className="flex items-center gap-6 px-4 py-3 bg-muted/50 rounded-lg border border-border">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Suppliers:</span>
+          <span className="text-sm font-semibold text-foreground">{overallStats.totalSuppliers}</span>
+        </div>
+        <div className="h-4 w-px bg-border" />
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Documents:</span>
+          <span className="text-sm font-semibold text-foreground">{overallStats.totalRequests}</span>
+        </div>
+        <div className="h-4 w-px bg-border" />
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Open Items:</span>
+          <span className="text-sm font-semibold text-foreground">{overallStats.pendingRequests}</span>
+        </div>
+        <div className="h-4 w-px bg-border" />
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Risk: High</span>
+          <span className={`text-sm font-semibold ${overallStats.highRiskSuppliers > 0 ? 'text-[hsl(0,72%,40%)]' : 'text-foreground'}`}>
+            ({overallStats.highRiskSuppliers})
+          </span>
+        </div>
+        <div className="flex-1" />
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Compliance Coverage:</span>
+          <span className="text-sm font-semibold text-foreground">{overallStats.avgComplianceScore}%</span>
+          <Progress value={overallStats.avgComplianceScore} className="w-16 h-1.5" />
+        </div>
+      </div>
 
       {/* Filters */}
       <ComplianceFilters
@@ -529,243 +564,126 @@ const BuyerComplianceDashboard = () => {
         totalSuppliers={supplierStats.length}
       />
 
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="suppliers">Supplier Compliance</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="corporate">Corporate Documents</TabsTrigger>
-          <TabsTrigger value="communication">Communication Log</TabsTrigger>
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList className="bg-muted/50 p-1">
+          <TabsTrigger value="overview" className="text-sm">Overview</TabsTrigger>
+          <TabsTrigger value="suppliers" className="text-sm">Supplier Compliance</TabsTrigger>
+          <TabsTrigger value="analytics" className="text-sm">Analytics</TabsTrigger>
+          <TabsTrigger value="corporate" className="text-sm">Corporate Documents</TabsTrigger>
+          <TabsTrigger value="communication" className="text-sm">Communication Log</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6 animate-fade-in">
-          {/* Key Metrics - Modern Card Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-            {/* Total Suppliers - Featured Card */}
-            <Card className="group relative overflow-hidden border-0 bg-white shadow-subtle hover:shadow-elegant transition-all duration-500 hover:-translate-y-1 md:col-span-2">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-primary" />
+        <TabsContent value="overview" className="space-y-4">
+          {/* Attention Required Table */}
+          {attentionItems.length > 0 && (
+            <Card className="border-border shadow-none">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/10 blur-xl group-hover:blur-2xl transition-all" />
-                    <div className="relative h-14 w-14 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-modern">
-                      <Building2 className="h-7 w-7 text-white" />
-                    </div>
-                  </div>
-                  <Badge variant="secondary" className="rounded-full px-3 py-1.5">
-                    Active
-                  </Badge>
+                  <CardTitle className="text-base font-medium">Attention Required (Next 7 Days)</CardTitle>
+                  <Button variant="ghost" size="sm" className="text-xs text-muted-foreground">
+                    View All <ChevronRight className="w-3 h-3 ml-1" />
+                  </Button>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <p className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                    {overallStats.totalSuppliers}
-                  </p>
-                  <p className="text-sm font-medium text-muted-foreground">{t('dashboard:compliance.totalSuppliers')}</p>
-                </div>
-                <div className="mt-4 flex items-center gap-2 text-sm">
-                  <TrendingUp className="h-4 w-4 text-success" />
-                  <span className="text-success font-medium">Active</span>
-                  <span className="text-muted-foreground">connections</span>
-                </div>
+              <CardContent className="pt-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-border hover:bg-transparent">
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Supplier</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Document</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Category</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Due</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {attentionItems.map((item) => (
+                      <TableRow key={item.id} className="border-border">
+                        <TableCell className="text-sm font-medium">{item.suppliers?.company_name}</TableCell>
+                        <TableCell className="text-sm">{item.title}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{item.category}</TableCell>
+                        <TableCell className="text-sm">
+                          {item.daysUntil < 0 ? (
+                            <span className="text-[hsl(0,72%,40%)]">Overdue {Math.abs(item.daysUntil)}d</span>
+                          ) : item.daysUntil === 0 ? (
+                            <span className="text-[hsl(0,72%,40%)]">Today</span>
+                          ) : (
+                            <span className={item.daysUntil <= 3 ? 'text-[hsl(45,93%,38%)]' : 'text-foreground'}>
+                              {item.daysUntil}d
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm capitalize">{item.status}</span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-xs text-primary hover:text-primary"
+                            onClick={() => handleViewDocument(item)}
+                          >
+                            Review
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
+          )}
 
-            {/* Avg Compliance Score */}
-            <Card className="group relative overflow-hidden border-0 bg-white shadow-subtle hover:shadow-modern transition-all duration-300">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-success to-success/50" />
-              <CardHeader className="pb-3">
-                <div className="h-10 w-10 rounded-xl bg-success/10 flex items-center justify-center">
-                  <Shield className="h-5 w-5 text-success" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-1">
-                  <p className="text-3xl font-bold">{overallStats.avgComplianceScore}%</p>
-                  <p className="text-sm font-medium text-muted-foreground">{t('dashboard:compliance.overallScore')}</p>
-                </div>
-                <Progress value={overallStats.avgComplianceScore} className="mt-3 h-2" />
-              </CardContent>
-            </Card>
-
-            {/* Pending Requests */}
-            <Card className="group relative overflow-hidden border-0 bg-white shadow-subtle hover:shadow-modern transition-all duration-300">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-warning to-warning/50" />
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="h-10 w-10 rounded-xl bg-warning/10 flex items-center justify-center">
-                    <Clock className="h-5 w-5 text-warning" />
-                  </div>
-                  {overallStats.pendingRequests > 5 && (
-                    <Badge variant="warning" className="animate-pulse">
-                      Urgent
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-1">
-                  <p className="text-3xl font-bold">{overallStats.pendingRequests}</p>
-                  <p className="text-sm font-medium text-muted-foreground">{t('dashboard:compliance.pendingRequests')}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* High Risk Suppliers */}
-            <Card className="group relative overflow-hidden border-0 bg-white shadow-subtle hover:shadow-modern transition-all duration-300">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-danger to-danger/50" />
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="h-10 w-10 rounded-xl bg-danger/10 flex items-center justify-center">
-                    <AlertTriangle className="h-5 w-5 text-danger" />
-                  </div>
-                  {overallStats.highRiskSuppliers > 0 && (
-                    <Badge variant="danger">
-                      High Risk
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-1">
-                  <p className="text-3xl font-bold text-danger">{overallStats.highRiskSuppliers}</p>
-                  <p className="text-sm font-medium text-muted-foreground">{t('dashboard:compliance.highRisk')}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Total Requests */}
-            <Card className="group relative overflow-hidden border-0 bg-white shadow-subtle hover:shadow-modern transition-all duration-300">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent to-accent/50" />
-              <CardHeader className="pb-3">
-                <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center">
-                  <FileCheck className="h-5 w-5 text-accent" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-1">
-                  <p className="text-3xl font-bold">{overallStats.totalRequests}</p>
-                  <p className="text-sm font-medium text-muted-foreground">{t('dashboard:compliance.totalRequests')}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Recent Activity */}
-          <Card className="border-0 shadow-subtle">
-            <CardHeader>
-              <CardTitle className="text-xl font-semibold">
-                {t('dashboard:compliance.recentActivity')}
-              </CardTitle>
+          {/* Supplier Compliance Table */}
+          <Card className="border-border shadow-none">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-medium">Supplier Compliance</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {filteredRequests.slice(0, 5).map((request) => (
-                  <div key={request.id} className="group flex items-center justify-between p-4 border border-border/50 rounded-xl hover:bg-accent/5 hover:border-primary/20 transition-all">
-                    <div className="flex items-center space-x-4">
-                      <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                        request.status === 'approved' ? 'bg-success/10' :
-                        request.status === 'pending' ? 'bg-warning/10' : 'bg-danger/10'
-                      }`}>
-                        <FileCheck className={`w-5 h-5 ${
-                          request.status === 'approved' ? 'text-success' :
-                          request.status === 'pending' ? 'text-warning' : 'text-danger'
-                        }`} />
-                      </div>
-                      <div>
-                        <p className="font-medium">{request.title}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {request.suppliers?.company_name} • {request.document_type}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Badge 
-                        variant={
-                          request.status === 'approved' ? 'approved' :
-                          request.status === 'pending' ? 'pending' : 'rejected'
-                        }
-                      >
-                        {request.status === 'approved' && <CheckCircle className="h-3 w-3 mr-1.5" />}
-                        {request.status === 'pending' && <Clock className="h-3 w-3 mr-1.5" />}
-                        {request.status === 'rejected' && <AlertTriangle className="h-3 w-3 mr-1.5" />}
-                        {t(`common:buttons.${request.status}`)}
-                      </Badge>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleViewDocument(request)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="suppliers">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('dashboard:compliance.supplierCompliance')}</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               {filteredSuppliers.length > 0 ? (
-                <div className="space-y-4">
-                  {filteredSuppliers.map((supplier) => (
-                    <div 
-                      key={supplier.id} 
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                      onClick={() => handleSupplierClick(supplier)}
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center overflow-hidden">
-                          {supplier.company_logo_url ? (
-                            <img 
-                              src={supplier.company_logo_url} 
-                              alt={`${supplier.company_name} logo`}
-                              className="w-full h-full object-cover rounded-lg"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = 'none';
-                                target.nextElementSibling?.classList.remove('hidden');
-                              }}
-                            />
-                          ) : null}
-                          <Building2 className={`w-6 h-6 text-blue-600 ${supplier.company_logo_url ? 'hidden' : ''}`} />
-                        </div>
-                        <div>
-                          <h3 className="font-medium flex items-center gap-2">
-                            {supplier.company_name}
-                            <MousePointer className="w-3 h-3 text-muted-foreground" />
-                          </h3>
-                          <p className="text-sm text-gray-500">{supplier.industry}</p>
-                          <p className="text-xs text-gray-400">
-                            {supplier.totalRequests} requests • {supplier.approvedRequests} approved
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className={`text-lg font-bold ${
-                          supplier.complianceScore >= 90 ? 'text-green-600' :
-                          supplier.complianceScore >= 70 ? 'text-yellow-600' : 'text-red-600'
-                        }`}>
-                          {supplier.complianceScore}%
-                        </div>
-                        <Progress value={supplier.complianceScore} className="w-24 mt-1" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-border hover:bg-transparent">
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Supplier</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Industry</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-center">Docs</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-center">Approved</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-center">Open</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Risk</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredSuppliers.map((supplier) => (
+                      <TableRow 
+                        key={supplier.id} 
+                        className="border-border cursor-pointer hover:bg-muted/30"
+                        onClick={() => handleSupplierClick(supplier)}
+                      >
+                        <TableCell className="text-sm font-medium">{supplier.company_name}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{supplier.industry || '—'}</TableCell>
+                        <TableCell className="text-sm text-center">{supplier.totalRequests}</TableCell>
+                        <TableCell className="text-sm text-center">{supplier.approvedRequests}</TableCell>
+                        <TableCell className="text-sm text-center">{supplier.pendingRequests}</TableCell>
+                        <TableCell>
+                          <RiskIndicator level={getRiskLevel(supplier.complianceScore)} />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground">
+                            View <ChevronRight className="w-3 h-3 ml-1" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               ) : (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground mb-4">No suppliers match your current filters</p>
+                <div className="text-center py-8">
+                  <p className="text-sm text-muted-foreground mb-3">No suppliers match your current filters</p>
                   <Button 
                     variant="outline" 
+                    size="sm"
                     onClick={() => setFilters({
                       searchQuery: '',
                       industries: [],
@@ -779,18 +697,115 @@ const BuyerComplianceDashboard = () => {
                 </div>
               )}
             </CardContent>
-            </Card>
+          </Card>
+
+          {/* Recent Activity Timeline */}
+          <Card className="border-border shadow-none">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-medium">Recent Activity</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-0">
+                {filteredRequests.slice(0, 8).map((request, index) => (
+                  <div 
+                    key={request.id} 
+                    className={`flex items-center gap-3 py-2.5 ${index !== 0 ? 'border-t border-border' : ''}`}
+                  >
+                    <ActivityIcon status={request.status} />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm">
+                        <span className="font-medium">{request.title}</span>
+                        <span className="text-muted-foreground"> — {request.suppliers?.company_name}</span>
+                      </span>
+                    </div>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {format(new Date(request.updated_at || request.created_at), 'MMM d')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="suppliers">
+          <Card className="border-border shadow-none">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-medium">All Suppliers</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {filteredSuppliers.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-border hover:bg-transparent">
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Supplier</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Industry</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-center">Total Docs</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-center">Approved</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-center">Pending</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-center">Compliance</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Risk</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredSuppliers.map((supplier) => (
+                      <TableRow 
+                        key={supplier.id} 
+                        className="border-border cursor-pointer hover:bg-muted/30"
+                        onClick={() => handleSupplierClick(supplier)}
+                      >
+                        <TableCell className="text-sm font-medium">{supplier.company_name}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{supplier.industry || '—'}</TableCell>
+                        <TableCell className="text-sm text-center">{supplier.totalRequests}</TableCell>
+                        <TableCell className="text-sm text-center">{supplier.approvedRequests}</TableCell>
+                        <TableCell className="text-sm text-center">{supplier.pendingRequests}</TableCell>
+                        <TableCell className="text-center">
+                          <span className="text-sm font-medium">{supplier.complianceScore}%</span>
+                        </TableCell>
+                        <TableCell>
+                          <RiskIndicator level={getRiskLevel(supplier.complianceScore)} />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground">
+                            Details <ChevronRight className="w-3 h-3 ml-1" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-sm text-muted-foreground mb-3">No suppliers match your current filters</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setFilters({
+                      searchQuery: '',
+                      industries: [],
+                      itemCategories: [],
+                      statuses: [],
+                      riskLevels: []
+                    })}
+                  >
+                    Clear All Filters
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="analytics">
           <ComplianceDashboard userRole="buyer" data={{ documentRequests }} />
         </TabsContent>
 
-        <TabsContent value="corporate" className="space-y-6 animate-fade-in">
+        <TabsContent value="corporate" className="space-y-4">
           <BuyerCorporateDocuments buyerId={buyerId} />
         </TabsContent>
 
-        <TabsContent value="communication" className="space-y-6 animate-fade-in">
+        <TabsContent value="communication" className="space-y-4">
           <ExpiryNotificationLog buyerId={buyerId} />
         </TabsContent>
       </Tabs>

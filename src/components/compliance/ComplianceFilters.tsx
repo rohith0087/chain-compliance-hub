@@ -1,15 +1,8 @@
 import React from 'react';
-import { Search, X } from 'lucide-react';
+import { Search, X, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Popover,
   PopoverContent,
@@ -35,9 +28,9 @@ interface ComplianceFiltersProps {
 }
 
 const RISK_LEVELS = [
-  { value: 'high', label: 'High Risk (<70%)', color: 'destructive' },
-  { value: 'medium', label: 'Medium Risk (70-85%)', color: 'warning' },
-  { value: 'good', label: 'Good (>85%)', color: 'success' }
+  { value: 'high', label: 'High Risk (<70%)' },
+  { value: 'medium', label: 'Medium Risk (70-85%)' },
+  { value: 'good', label: 'Low Risk (>85%)' }
 ];
 
 export function ComplianceFilters({
@@ -87,35 +80,38 @@ export function ComplianceFilters({
     filters.riskLevels.length > 0;
 
   return (
-    <div className="space-y-4 mb-6">
-      {/* Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search suppliers or documents..."
-          value={filters.searchQuery}
-          onChange={(e) => updateFilter('searchQuery', e.target.value)}
-          className="pl-10"
-        />
-      </div>
+    <div className="space-y-3 mb-4">
+      {/* Search and Filters Row */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Search Input */}
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search suppliers..."
+            value={filters.searchQuery}
+            onChange={(e) => updateFilter('searchQuery', e.target.value)}
+            className="pl-8 h-8 text-sm bg-background border-border"
+          />
+        </div>
 
-      {/* Filter Buttons */}
-      <div className="flex flex-wrap gap-2">
+        <div className="h-6 w-px bg-border mx-1" />
+
         {/* Industry Filter */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-9">
-              🏭 Industry
+            <Button variant="outline" size="sm" className="h-8 text-sm font-normal">
+              Industry
               {filters.industries.length > 0 && (
-                <Badge variant="secondary" className="ml-2 h-5 px-1.5">
+                <span className="ml-1.5 text-xs bg-muted px-1.5 py-0.5 rounded">
                   {filters.industries.length}
-                </Badge>
+                </span>
               )}
+              <ChevronDown className="ml-1 h-3 w-3 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-64 p-4 bg-popover z-50">
+          <PopoverContent className="w-56 p-3 bg-popover z-50">
             <div className="space-y-2">
-              <h4 className="font-medium text-sm mb-3">Filter by Industry</h4>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Filter by Industry</p>
               {availableIndustries.length > 0 ? (
                 availableIndustries.map((industry) => (
                   <div key={industry} className="flex items-center space-x-2">
@@ -139,21 +135,22 @@ export function ComplianceFilters({
           </PopoverContent>
         </Popover>
 
-        {/* Item Category Filter */}
+        {/* Category Filter */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-9">
-              📦 Item Category
+            <Button variant="outline" size="sm" className="h-8 text-sm font-normal">
+              Category
               {filters.itemCategories.length > 0 && (
-                <Badge variant="secondary" className="ml-2 h-5 px-1.5">
+                <span className="ml-1.5 text-xs bg-muted px-1.5 py-0.5 rounded">
                   {filters.itemCategories.length}
-                </Badge>
+                </span>
               )}
+              <ChevronDown className="ml-1 h-3 w-3 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-64 p-4 bg-popover z-50">
+          <PopoverContent className="w-56 p-3 bg-popover z-50">
             <div className="space-y-2">
-              <h4 className="font-medium text-sm mb-3">Filter by Item Category</h4>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Filter by Category</p>
               {availableItemCategories.length > 0 ? (
                 availableItemCategories.map((category) => (
                   <div key={category} className="flex items-center space-x-2">
@@ -180,18 +177,19 @@ export function ComplianceFilters({
         {/* Status Filter */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-9">
-              📊 Status
+            <Button variant="outline" size="sm" className="h-8 text-sm font-normal">
+              Status
               {filters.statuses.length > 0 && (
-                <Badge variant="secondary" className="ml-2 h-5 px-1.5">
+                <span className="ml-1.5 text-xs bg-muted px-1.5 py-0.5 rounded">
                   {filters.statuses.length}
-                </Badge>
+                </span>
               )}
+              <ChevronDown className="ml-1 h-3 w-3 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-64 p-4 bg-popover z-50">
+          <PopoverContent className="w-56 p-3 bg-popover z-50">
             <div className="space-y-2">
-              <h4 className="font-medium text-sm mb-3">Filter by Status</h4>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Filter by Status</p>
               {availableStatuses.map((status) => (
                 <div key={status} className="flex items-center space-x-2">
                   <Checkbox
@@ -214,18 +212,19 @@ export function ComplianceFilters({
         {/* Risk Level Filter */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-9">
-              🎯 Risk Level
+            <Button variant="outline" size="sm" className="h-8 text-sm font-normal">
+              Risk Level
               {filters.riskLevels.length > 0 && (
-                <Badge variant="secondary" className="ml-2 h-5 px-1.5">
+                <span className="ml-1.5 text-xs bg-muted px-1.5 py-0.5 rounded">
                   {filters.riskLevels.length}
-                </Badge>
+                </span>
               )}
+              <ChevronDown className="ml-1 h-3 w-3 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-64 p-4 bg-popover z-50">
+          <PopoverContent className="w-56 p-3 bg-popover z-50">
             <div className="space-y-2">
-              <h4 className="font-medium text-sm mb-3">Filter by Risk Level</h4>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Filter by Risk</p>
               {RISK_LEVELS.map((risk) => (
                 <div key={risk.value} className="flex items-center space-x-2">
                   <Checkbox
@@ -245,69 +244,70 @@ export function ComplianceFilters({
           </PopoverContent>
         </Popover>
 
-        {/* Clear All Button */}
+        {/* Clear All */}
         {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearAllFilters}
-            className="h-9"
-          >
-            🔄 Clear All
-          </Button>
+          <>
+            <div className="h-6 w-px bg-border mx-1" />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearAllFilters}
+              className="h-8 text-sm text-muted-foreground hover:text-foreground"
+            >
+              Clear all
+            </Button>
+          </>
         )}
       </div>
 
       {/* Active Filter Chips */}
       {hasActiveFilters && (
-        <div className="flex flex-wrap gap-2 items-center">
-          <span className="text-sm text-muted-foreground">Active filters:</span>
-          
+        <div className="flex flex-wrap gap-1.5 items-center">
           {filters.searchQuery && (
-            <Badge variant="secondary" className="gap-1">
-              Search: {filters.searchQuery}
+            <Badge variant="secondary" className="gap-1 text-xs font-normal px-2 py-0.5">
+              "{filters.searchQuery}"
               <X
-                className="h-3 w-3 cursor-pointer"
+                className="h-3 w-3 cursor-pointer opacity-60 hover:opacity-100"
                 onClick={() => removeFilter('searchQuery')}
               />
             </Badge>
           )}
           
           {filters.industries.map((industry) => (
-            <Badge key={industry} variant="secondary" className="gap-1">
+            <Badge key={industry} variant="secondary" className="gap-1 text-xs font-normal px-2 py-0.5">
               {industry}
               <X
-                className="h-3 w-3 cursor-pointer"
+                className="h-3 w-3 cursor-pointer opacity-60 hover:opacity-100"
                 onClick={() => removeFilter('industries', industry)}
               />
             </Badge>
           ))}
           
           {filters.itemCategories.map((category) => (
-            <Badge key={category} variant="secondary" className="gap-1">
+            <Badge key={category} variant="secondary" className="gap-1 text-xs font-normal px-2 py-0.5">
               {category}
               <X
-                className="h-3 w-3 cursor-pointer"
+                className="h-3 w-3 cursor-pointer opacity-60 hover:opacity-100"
                 onClick={() => removeFilter('itemCategories', category)}
               />
             </Badge>
           ))}
           
           {filters.statuses.map((status) => (
-            <Badge key={status} variant="secondary" className="gap-1 capitalize">
+            <Badge key={status} variant="secondary" className="gap-1 text-xs font-normal px-2 py-0.5 capitalize">
               {status}
               <X
-                className="h-3 w-3 cursor-pointer"
+                className="h-3 w-3 cursor-pointer opacity-60 hover:opacity-100"
                 onClick={() => removeFilter('statuses', status)}
               />
             </Badge>
           ))}
           
           {filters.riskLevels.map((risk) => (
-            <Badge key={risk} variant="secondary" className="gap-1 capitalize">
+            <Badge key={risk} variant="secondary" className="gap-1 text-xs font-normal px-2 py-0.5 capitalize">
               {risk} risk
               <X
-                className="h-3 w-3 cursor-pointer"
+                className="h-3 w-3 cursor-pointer opacity-60 hover:opacity-100"
                 onClick={() => removeFilter('riskLevels', risk)}
               />
             </Badge>
@@ -316,7 +316,7 @@ export function ComplianceFilters({
       )}
 
       {/* Results Count */}
-      <div className="text-sm text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         Showing <span className="font-medium text-foreground">{supplierCount}</span> of{' '}
         <span className="font-medium text-foreground">{totalSuppliers}</span> suppliers
       </div>

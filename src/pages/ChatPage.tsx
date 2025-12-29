@@ -1452,7 +1452,7 @@ const ChatPage: React.FC = () => {
               </div>
 
               {/* Centered Content */}
-              <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+              <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 bg-white">
                 <div className="w-full max-w-2xl space-y-8">
                   {/* Discovery Headline */}
                   <div className="text-center space-y-2">
@@ -1550,7 +1550,7 @@ const ChatPage: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col">
+            <div className="flex flex-col flex-1 bg-white">
               {/* Header with Menu Button for Chat View */}
               <div className="flex items-center gap-3 p-4 border-b border-border sticky top-0 bg-background z-10">
                 <Button 

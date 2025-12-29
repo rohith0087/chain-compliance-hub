@@ -2209,6 +2209,54 @@ export type Database = {
           },
         ]
       }
+      email_drafts: {
+        Row: {
+          body: string
+          created_at: string
+          expires_at: string
+          id: string
+          sender_company: string | null
+          sender_context: string | null
+          sender_name: string | null
+          sent_at: string | null
+          status: string
+          subject: string
+          to_email: string
+          to_name: string | null
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          sender_company?: string | null
+          sender_context?: string | null
+          sender_name?: string | null
+          sent_at?: string | null
+          status?: string
+          subject: string
+          to_email: string
+          to_name?: string | null
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          sender_company?: string | null
+          sender_context?: string | null
+          sender_name?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          to_email?: string
+          to_name?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       item_facility_mappings: {
         Row: {
           certifications: Json | null

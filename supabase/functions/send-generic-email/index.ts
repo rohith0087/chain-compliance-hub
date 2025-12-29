@@ -11,26 +11,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// In-memory draft storage (for short-lived drafts - expires after 30 min)
-const emailDrafts = new Map<string, { 
-  draft: any; 
-  userId: string; 
-  createdAt: number;
-  senderName: string;
-  senderCompany: string;
-}>();
-
-// Clean up expired drafts (older than 30 minutes)
-function cleanupExpiredDrafts() {
-  const now = Date.now();
-  const thirtyMinutes = 30 * 60 * 1000;
-  for (const [id, data] of emailDrafts.entries()) {
-    if (now - data.createdAt > thirtyMinutes) {
-      emailDrafts.delete(id);
-    }
-  }
-}
-
 interface GenericEmailRequest {
   mode?: 'draft' | 'send';
   draft_id?: string;
@@ -41,6 +21,12 @@ interface GenericEmailRequest {
   sender_name?: string;
   sender_company?: string;
   sender_context?: string;
+}
+
+// Helper to check if a string is a valid UUID
+function isValidUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -84,9 +70,6 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("[send-generic-email] Request body:", JSON.stringify(requestBody, null, 2));
     
     const mode = requestBody.mode || 'send'; // Default to 'send' for backward compatibility
-    
-    // Clean up old drafts periodically
-    cleanupExpiredDrafts();
 
     // ============= DRAFT MODE =============
     if (mode === 'draft') {
@@ -152,28 +135,41 @@ const handler = async (req: Request): Promise<Response> => {
         }
       }
 
-      // Generate draft ID and store
-      const draftId = crypto.randomUUID();
-      emailDrafts.set(draftId, {
-        draft: {
+      // Store draft in database (persistent across Edge Function instances)
+      const { data: draft, error: insertError } = await supabase
+        .from("email_drafts")
+        .insert({
+          user_id: user.id,
           to_email,
           to_name: to_name || 'there',
           subject,
           body,
-          sender_context: sender_context || 'Sent via Compliance Compass'
-        },
-        userId: user.id,
-        createdAt: Date.now(),
-        senderName: senderName!,
-        senderCompany: senderCompany!
-      });
+          sender_context: sender_context || 'Sent via Compliance Compass',
+          sender_name: senderName,
+          sender_company: senderCompany,
+          status: 'draft',
+          expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString() // 30 min expiry
+        })
+        .select('id')
+        .single();
 
-      console.log(`[send-generic-email] Draft created: ${draftId}`);
+      if (insertError || !draft) {
+        console.error("[send-generic-email] Failed to create draft:", insertError);
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: "Failed to create draft: " + (insertError?.message || "Unknown error")
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      console.log(`[send-generic-email] Draft created in DB: ${draft.id}`);
 
       return new Response(
         JSON.stringify({
           success: true,
-          draft_id: draftId,
+          draft_id: draft.id,
           sender_name: senderName,
           sender_company: senderCompany,
           message: "Draft created successfully. User must confirm to send."
@@ -186,34 +182,61 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // ============= SEND MODE =============
-    if (mode === 'send' && requestBody.draft_id) {
-      const draftData = emailDrafts.get(requestBody.draft_id);
+    if (mode === 'send') {
+      let draftData = null;
+      const providedDraftId = requestBody.draft_id;
+      
+      // Try to find draft: first by ID, then fallback to most recent
+      if (providedDraftId && isValidUUID(providedDraftId)) {
+        // Try to get specific draft by ID
+        const { data, error } = await supabase
+          .from("email_drafts")
+          .select("*")
+          .eq("id", providedDraftId)
+          .eq("user_id", user.id)
+          .eq("status", "draft")
+          .gt("expires_at", new Date().toISOString())
+          .single();
+        
+        if (!error && data) {
+          draftData = data;
+          console.log(`[send-generic-email] Found draft by ID: ${providedDraftId}`);
+        } else {
+          console.log(`[send-generic-email] Draft not found by ID (${providedDraftId}), trying fallback...`);
+        }
+      }
+      
+      // Fallback: get most recent valid draft for this user
+      if (!draftData) {
+        console.log(`[send-generic-email] Looking for most recent draft for user: ${user.id}`);
+        const { data, error } = await supabase
+          .from("email_drafts")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("status", "draft")
+          .gt("expires_at", new Date().toISOString())
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (!error && data) {
+          draftData = data;
+          console.log(`[send-generic-email] Found most recent draft: ${draftData.id}`);
+        }
+      }
       
       if (!draftData) {
-        console.error("[send-generic-email] Draft not found:", requestBody.draft_id);
+        console.error("[send-generic-email] No valid draft found for user");
         return new Response(JSON.stringify({ 
           success: false, 
-          error: "Draft not found or expired. Please create a new draft." 
+          error: "No draft found or all drafts have expired. Please create a new draft." 
         }), {
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // Verify user owns this draft
-      if (draftData.userId !== user.id) {
-        console.error("[send-generic-email] User doesn't own this draft");
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: "Unauthorized to send this draft" 
-        }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const { draft, senderName, senderCompany } = draftData;
-      const { to_email, to_name, subject, body, sender_context } = draft;
+      const { to_email, to_name, subject, body, sender_context, sender_name: senderName, sender_company: senderCompany } = draftData;
 
       // Check if RESEND_API_KEY is set
       const resendApiKey = Deno.env.get("RESEND_API_KEY");
@@ -282,6 +305,15 @@ const handler = async (req: Request): Promise<Response> => {
 
       console.log(`[send-generic-email] ✓ Email sent:`, JSON.stringify(emailResponse));
 
+      // Update draft status to 'sent'
+      await supabase
+        .from("email_drafts")
+        .update({ 
+          status: 'sent',
+          sent_at: new Date().toISOString()
+        })
+        .eq("id", draftData.id);
+
       // Log to auth_audit_logs for tracking
       await supabase.from("auth_audit_logs").insert({
         user_id: user.id,
@@ -294,12 +326,9 @@ const handler = async (req: Request): Promise<Response> => {
           sender_name: senderName,
           sender_company: senderCompany,
           email_id: emailResponse?.data?.id,
-          draft_id: requestBody.draft_id
+          draft_id: draftData.id
         },
       });
-
-      // Delete the draft after successful send
-      emailDrafts.delete(requestBody.draft_id);
 
       return new Response(
         JSON.stringify({

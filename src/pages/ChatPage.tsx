@@ -48,7 +48,9 @@ import {
   Search,
   Users,
   TrendingUp,
+  Home,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 
 // Charts (client-side fallback)
@@ -216,6 +218,7 @@ function extractImageB64(obj?: any): string | null {
 const ChatPage: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -1439,16 +1442,27 @@ const ChatPage: React.FC = () => {
             /* Discovery Landing Page */
             <div className="flex flex-col min-h-full">
               {/* Header with Menu Button */}
-              <div className="flex items-center gap-3 p-4 border-b border-border">
+              <div className="flex items-center justify-between gap-3 py-2 px-4 border-b border-border">
+                <div className="flex items-center gap-3">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="rounded-lg"
+                    onClick={() => setShowHistory(true)}
+                  >
+                    <Menu className="w-5 h-5" />
+                  </Button>
+                  <span className="text-sm font-medium text-muted-foreground">Discovery</span>
+                </div>
                 <Button 
                   variant="ghost" 
                   size="icon" 
                   className="rounded-lg"
-                  onClick={() => setShowHistory(true)}
+                  onClick={() => navigate('/dashboard')}
+                  title="Go to Dashboard"
                 >
-                  <Menu className="w-5 h-5" />
+                  <Home className="w-5 h-5" />
                 </Button>
-                <span className="text-sm font-medium text-muted-foreground">Discovery</span>
               </div>
 
               {/* Centered Content */}
@@ -1552,16 +1566,27 @@ const ChatPage: React.FC = () => {
           ) : (
             <div className="flex flex-col flex-1 bg-white">
               {/* Header with Menu Button for Chat View */}
-              <div className="flex items-center gap-3 p-4 border-b border-border sticky top-0 bg-background z-10">
+              <div className="flex items-center justify-between gap-3 py-2 px-4 border-b border-border sticky top-0 bg-background z-10">
+                <div className="flex items-center gap-3">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="rounded-lg"
+                    onClick={() => setShowHistory(true)}
+                  >
+                    <Menu className="w-5 h-5" />
+                  </Button>
+                  <span className="text-sm font-medium text-muted-foreground">Compliance Compass</span>
+                </div>
                 <Button 
                   variant="ghost" 
                   size="icon" 
                   className="rounded-lg"
-                  onClick={() => setShowHistory(true)}
+                  onClick={() => navigate('/dashboard')}
+                  title="Go to Dashboard"
                 >
-                  <Menu className="w-5 h-5" />
+                  <Home className="w-5 h-5" />
                 </Button>
-                <span className="text-sm font-medium text-muted-foreground">Compliance Compass</span>
               </div>
               <div className="space-y-1 px-6 py-6 max-w-4xl mx-auto w-full bg-white">
                 {messages.map((m) => (

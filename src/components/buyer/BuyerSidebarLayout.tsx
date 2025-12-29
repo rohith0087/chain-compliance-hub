@@ -453,16 +453,16 @@ export function BuyerSidebarLayout({
           <div className="flex items-center gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-auto p-2 w-full justify-start" data-guide-id="profile-dropdown">
+                <Button variant="ghost" className="h-auto p-2 w-full justify-start hover:bg-muted focus:bg-muted" data-guide-id="profile-dropdown">
                   <Avatar className="h-6 w-6">
                     <AvatarImage src={profile?.avatar_url} />
-                    <AvatarFallback>
+                    <AvatarFallback className="bg-muted text-muted-foreground text-xs">
                       {user.name?.charAt(0)?.toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   {!collapsed && (
                     <div className="flex flex-col items-start ml-2 flex-1">
-                      <span className="text-sm font-medium truncate">
+                      <span className="text-sm font-medium truncate text-foreground">
                         {user.name}
                       </span>
                       <span className="text-xs text-muted-foreground">
@@ -475,19 +475,19 @@ export function BuyerSidebarLayout({
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={onShowSettings} data-guide-id="settings-menu-item">
+              <DropdownMenuContent align="end" className="w-56 bg-popover">
+                <DropdownMenuItem onClick={onShowSettings} className="hover:bg-muted focus:bg-muted" data-guide-id="settings-menu-item">
                   <Settings className="mr-2 h-4 w-4" />
                   Settings
                 </DropdownMenuItem>
                 {hasRole('supplier') && (
-                  <DropdownMenuItem onClick={() => onRoleSwitch('supplier')}>
+                  <DropdownMenuItem onClick={() => onRoleSwitch('supplier')} className="hover:bg-muted focus:bg-muted">
                     <User className="mr-2 h-4 w-4" />
                     {t('common:navigation.switchTo', { role: 'supplier' })}
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={onLogout} className="text-destructive">
+                <DropdownMenuItem onClick={onLogout} className="text-destructive hover:bg-destructive/10 focus:bg-destructive/10 focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
                   {t('common:navigation.logout')}
                 </DropdownMenuItem>

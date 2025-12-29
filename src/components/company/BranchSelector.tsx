@@ -83,10 +83,10 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
           <>
             <DropdownMenuItem
               onClick={handleAllBranchesToggle}
-              className="flex items-center justify-between p-3"
+              className="flex items-center justify-between p-3 hover:bg-muted focus:bg-muted"
             >
               <div className="flex items-center space-x-3">
-                <Globe className="h-4 w-4" />
+                <Globe className="h-4 w-4 text-muted-foreground" />
                 <span className="font-medium">All Branches</span>
               </div>
               {allBranchesView && (
@@ -101,12 +101,12 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
           <DropdownMenuItem
             key={branch.id}
             onClick={() => handleBranchSelect(branch)}
-            className="flex items-center justify-between p-3"
+            className="flex items-center justify-between p-3 hover:bg-muted focus:bg-muted"
           >
             <div className="flex items-center space-x-3 flex-1">
               <Building2 className="h-4 w-4 text-muted-foreground" />
               <div className="flex-1">
-                <div className="font-medium">{branch.branch_name}</div>
+                <div className="font-medium text-foreground">{branch.branch_name}</div>
                 {branch.location && (
                   <div className="text-xs text-muted-foreground flex items-center mt-1">
                     <MapPin className="h-3 w-3 mr-1" />

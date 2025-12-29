@@ -213,3 +213,7 @@ verify_jwt = true
 # New request email notifications - requires authentication
 [functions.send-new-request-email]
 verify_jwt = true
+
+# Generic email sending - requires authentication
+[functions.send-generic-email]
+verify_jwt = true

@@ -56,6 +56,12 @@
     --status-medium-risk: 38 92% 55%;
     --status-low-risk: 152 76% 45%;
     
+    /* Enterprise Status Colors (muted, professional) */
+    --enterprise-high-risk: 0 72% 40%;
+    --enterprise-medium-risk: 45 93% 38%;
+    --enterprise-low-risk: 142 71% 32%;
+    --enterprise-surface: 210 40% 96%;
+    
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(230 60% 50%), hsl(280 70% 60%));
     --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.6));

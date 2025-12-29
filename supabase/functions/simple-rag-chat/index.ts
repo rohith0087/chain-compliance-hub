@@ -3319,20 +3319,18 @@ async function draftGenericEmail(params: any, authHeader: string) {
 
 // ============= CONFIRM SEND EMAIL =============
 // Sends a previously drafted email after user confirmation
+// Now more robust: if draft_id is missing/invalid, falls back to most recent draft
 async function confirmSendEmail(params: any, authHeader: string) {
   try {
     const { draft_id } = params;
     
-    if (!draft_id) {
-      return {
-        success: false,
-        error: 'No draft_id provided. Please create a draft first using draft_generic_email.'
-      };
-    }
-    
-    console.log(`📧 Confirming and sending email draft: ${draft_id}`);
+    // Log what we received - the edge function will handle fallback if needed
+    console.log(`📧 Confirming and sending email. Draft ID received: ${draft_id || '(none/invalid)'}`);
     
     // Call the edge function in send mode
+    // The edge function will:
+    // 1. Try to find the draft by ID if valid UUID
+    // 2. Fall back to most recent draft for this user if not found
     const response = await fetch(`${SUPABASE_URL}/functions/v1/send-generic-email`, {
       method: 'POST',
       headers: {
@@ -3341,7 +3339,7 @@ async function confirmSendEmail(params: any, authHeader: string) {
       },
       body: JSON.stringify({
         mode: 'send',
-        draft_id
+        draft_id: draft_id || null // Pass null if missing, edge function handles fallback
       })
     });
     

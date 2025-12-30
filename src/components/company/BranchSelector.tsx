@@ -18,6 +18,7 @@ interface BranchSelectorProps {
   onBranchChange: (branch: CompanyBranch | null) => void;
   loading?: boolean;
   showAllBranchesOption?: boolean;
+  compact?: boolean;
 }
 
 export const BranchSelector: React.FC<BranchSelectorProps> = ({ 
@@ -25,7 +26,8 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
   currentBranch, 
   onBranchChange, 
   loading = false,
-  showAllBranchesOption = false
+  showAllBranchesOption = false,
+  compact = false
 }) => {
   const { allBranchesView, setAllBranchesView } = useBranchContext();
 
@@ -61,7 +63,7 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8">
+        <Button variant={compact ? "ghost" : "outline"} size="sm" className={compact ? "h-7 text-xs text-primary px-2" : "h-8"}>
           {allBranchesView ? (
             <>
               <Globe className="h-4 w-4 mr-2" />

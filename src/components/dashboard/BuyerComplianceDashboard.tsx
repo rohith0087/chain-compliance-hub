@@ -565,12 +565,37 @@ const BuyerComplianceDashboard = () => {
       />
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="bg-muted/50 p-1">
-          <TabsTrigger value="overview" className="text-sm">Overview</TabsTrigger>
-          <TabsTrigger value="suppliers" className="text-sm">Supplier Compliance</TabsTrigger>
-          <TabsTrigger value="analytics" className="text-sm">Analytics</TabsTrigger>
-          <TabsTrigger value="corporate" className="text-sm">Corporate Documents</TabsTrigger>
-          <TabsTrigger value="communication" className="text-sm">Communication Log</TabsTrigger>
+        <TabsList className="bg-white dark:bg-card border border-border shadow-sm p-1.5 rounded-lg">
+          <TabsTrigger 
+            value="overview" 
+            className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/70 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm px-4 py-2 rounded-md transition-all"
+          >
+            Overview
+          </TabsTrigger>
+          <TabsTrigger 
+            value="suppliers" 
+            className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/70 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm px-4 py-2 rounded-md transition-all"
+          >
+            Supplier Compliance
+          </TabsTrigger>
+          <TabsTrigger 
+            value="analytics" 
+            className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/70 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm px-4 py-2 rounded-md transition-all"
+          >
+            Analytics
+          </TabsTrigger>
+          <TabsTrigger 
+            value="corporate" 
+            className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/70 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm px-4 py-2 rounded-md transition-all"
+          >
+            Corporate Documents
+          </TabsTrigger>
+          <TabsTrigger 
+            value="communication" 
+            className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/70 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm px-4 py-2 rounded-md transition-all"
+          >
+            Communication Log
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">

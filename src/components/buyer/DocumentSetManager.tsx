@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Package, Edit2, Trash2, Copy, FileText, X, Plus, Search } from 'lucide-react';
+import { Package, Edit2, Trash2, Copy, FileText, X, Plus, Search, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -25,6 +25,75 @@ interface FormData {
   is_default: boolean;
 }
 
+interface FormErrors {
+  set_name?: string;
+  description?: string;
+  documents?: string;
+}
+
+// Category groups for better organization
+const categoryGroups: Record<string, string[]> = {
+  'Poultry / Egg Processing': [
+    'Egg Processing Documentation',
+    'Egg Processing Food Safety',
+    'Egg Processing Certification',
+    'Egg Processing Compliance',
+    'Egg Processing Quality',
+    'Egg Processing Testing',
+    'Egg Processing Traceability',
+    'Egg Processing Logistics',
+    'Egg Processing Packaging',
+    'Egg Processing Insurance',
+    'Egg Processing Ethics',
+    'Egg Processing Security',
+    'Egg Processing Risk',
+    'Egg Processing Health',
+    'Egg Processing Ingredients',
+    'Egg Processing Religious',
+    'Egg Processing Safety',
+    'Egg Processing Legal',
+    'Egg Supplier Documentation',
+    'Egg Supplier Food Safety',
+    'Egg Supplier Quality',
+    'Egg Supplier Certification',
+    'Egg Supplier Compliance',
+    'Egg Supplier Traceability',
+    'Egg Supplier Insurance',
+    'Egg Supplier Testing',
+    'Egg Supplier Ethics'
+  ],
+  'Food Safety': [
+    'Food Safety',
+    'Seafood Safety',
+    'Allergen Management'
+  ],
+  'Financial Compliance': [
+    'Financial Compliance'
+  ],
+  'Regulatory Compliance': [
+    'Regulatory Compliance'
+  ],
+  'Quality Management': [
+    'Quality Management',
+    'Quality Control'
+  ],
+  'Legal & Corporate': [
+    'Legal & Corporate',
+    'Legal Compliance'
+  ],
+  'Insurance': [
+    'Insurance'
+  ],
+  'Traceability': [
+    'Traceability'
+  ],
+  'Packaging & Logistics': [
+    'Packaging Supplier',
+    'Logistics'
+  ],
+  'Other': [] // Will catch uncategorized docs
+};
+
 export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
   const { documentSets, deleteSet, updateSet, duplicateSet, isDeleting, isUpdating } = useDocumentSets(buyerId);
   const [editingSet, setEditingSet] = useState<DocumentSet | null>(null);
@@ -35,6 +104,7 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
     document_ids: [],
     is_default: false
   });
+  const [errors, setErrors] = useState<FormErrors>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
@@ -64,11 +134,40 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
     
     return allDocs;
   }, []);
-  
-  // Get unique categories
-  const categories = useMemo(() => {
-    const cats = new Set(allDocuments.map(d => d.category));
-    return Array.from(cats).sort();
+
+  // Get parent category for a document category
+  const getParentCategory = (category: string): string => {
+    for (const [parent, children] of Object.entries(categoryGroups)) {
+      if (children.includes(category)) {
+        return parent;
+      }
+    }
+    return 'Other';
+  };
+
+  // Get grouped categories with document counts
+  const groupedCategories = useMemo(() => {
+    const groups: Record<string, { count: number; categories: Set<string> }> = {};
+    
+    // Initialize groups
+    Object.keys(categoryGroups).forEach(group => {
+      groups[group] = { count: 0, categories: new Set() };
+    });
+    
+    // Count documents per group
+    allDocuments.forEach(doc => {
+      const parent = getParentCategory(doc.category);
+      if (!groups[parent]) {
+        groups[parent] = { count: 0, categories: new Set() };
+      }
+      groups[parent].count++;
+      groups[parent].categories.add(doc.category);
+    });
+    
+    // Filter out empty groups
+    return Object.entries(groups)
+      .filter(([_, data]) => data.count > 0)
+      .sort((a, b) => b[1].count - a[1].count);
   }, [allDocuments]);
 
   // Get selected documents - include fallback for unknown IDs
@@ -90,14 +189,62 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
     });
   }, [allDocuments, formData.document_ids]);
 
-  const availableDocs = useMemo(() => 
-    allDocuments.filter(d => 
-      !formData.document_ids.includes(d.id) &&
-      d.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (categoryFilter === 'all' || d.category === categoryFilter)
-    ),
-    [allDocuments, formData.document_ids, searchTerm, categoryFilter]
-  );
+  const availableDocs = useMemo(() => {
+    return allDocuments.filter(d => {
+      // Not already selected
+      if (formData.document_ids.includes(d.id)) return false;
+      
+      // Match search term
+      if (searchTerm && !d.title.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+      
+      // Match category filter
+      if (categoryFilter !== 'all') {
+        const parentCategory = getParentCategory(d.category);
+        if (parentCategory !== categoryFilter) return false;
+      }
+      
+      return true;
+    });
+  }, [allDocuments, formData.document_ids, searchTerm, categoryFilter]);
+
+  // Validation function
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+    
+    // Set name validation
+    const trimmedName = formData.set_name.trim();
+    if (!trimmedName) {
+      newErrors.set_name = 'Set name is required';
+    } else if (trimmedName.length < 2) {
+      newErrors.set_name = 'Set name must be at least 2 characters';
+    } else if (trimmedName.length > 100) {
+      newErrors.set_name = 'Set name must be less than 100 characters';
+    }
+    
+    // Description validation
+    if (formData.description.length > 500) {
+      newErrors.description = 'Description must be less than 500 characters';
+    }
+    
+    // Document validation
+    if (formData.document_ids.length === 0) {
+      newErrors.documents = 'At least one document is required';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Check if form is valid for button state
+  const isFormValid = useMemo(() => {
+    const trimmedName = formData.set_name.trim();
+    return (
+      trimmedName.length >= 2 &&
+      trimmedName.length <= 100 &&
+      formData.description.length <= 500 &&
+      formData.document_ids.length > 0
+    );
+  }, [formData]);
 
   const handleEdit = (set: DocumentSet) => {
     setEditingSet(set);
@@ -107,18 +254,19 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
       document_ids: set.document_ids || [],
       is_default: set.is_default || false
     });
+    setErrors({});
     setSearchTerm('');
     setCategoryFilter('all');
     setIsEditDialogOpen(true);
   };
 
   const handleSaveEdit = () => {
-    if (!editingSet) return;
+    if (!editingSet || !validateForm()) return;
     updateSet({
       id: editingSet.id,
       updates: {
-        set_name: formData.set_name,
-        description: formData.description || undefined,
+        set_name: formData.set_name.trim(),
+        description: formData.description.trim() || undefined,
         document_ids: formData.document_ids,
         is_default: formData.is_default
       },
@@ -132,6 +280,10 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
       ...prev,
       document_ids: [...prev.document_ids, docId]
     }));
+    // Clear document error when adding
+    if (errors.documents) {
+      setErrors(prev => ({ ...prev, documents: undefined }));
+    }
   };
 
   const removeDocument = (docId: string) => {
@@ -139,6 +291,22 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
       ...prev,
       document_ids: prev.document_ids.filter(id => id !== docId)
     }));
+  };
+
+  const handleSetNameChange = (value: string) => {
+    setFormData(prev => ({ ...prev, set_name: value }));
+    // Clear error when user starts typing
+    if (errors.set_name) {
+      setErrors(prev => ({ ...prev, set_name: undefined }));
+    }
+  };
+
+  const handleDescriptionChange = (value: string) => {
+    setFormData(prev => ({ ...prev, description: value }));
+    // Clear error when user is within limit
+    if (value.length <= 500 && errors.description) {
+      setErrors(prev => ({ ...prev, description: undefined }));
+    }
   };
 
   const getDocumentNames = (documentIds: string[]) => {
@@ -262,19 +430,49 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
                 <Input
                   id="set_name"
                   value={formData.set_name}
-                  onChange={(e) => setFormData({ ...formData, set_name: e.target.value })}
+                  onChange={(e) => handleSetNameChange(e.target.value)}
                   placeholder="e.g., Food Safety Package"
+                  className={errors.set_name ? 'border-destructive focus-visible:ring-destructive' : ''}
+                  maxLength={100}
                 />
+                <div className="flex justify-between items-center">
+                  {errors.set_name ? (
+                    <p className="text-sm text-destructive flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {errors.set_name}
+                    </p>
+                  ) : (
+                    <span />
+                  )}
+                  <span className="text-xs text-muted-foreground">
+                    {formData.set_name.length}/100
+                  </span>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Description (Optional)</Label>
                 <Textarea
                   id="description"
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={(e) => handleDescriptionChange(e.target.value)}
                   placeholder="Describe what this set is used for..."
                   rows={2}
+                  className={errors.description ? 'border-destructive focus-visible:ring-destructive' : ''}
+                  maxLength={500}
                 />
+                <div className="flex justify-between items-center">
+                  {errors.description ? (
+                    <p className="text-sm text-destructive flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {errors.description}
+                    </p>
+                  ) : (
+                    <span />
+                  )}
+                  <span className={`text-xs ${formData.description.length > 450 ? 'text-warning' : 'text-muted-foreground'}`}>
+                    {formData.description.length}/500
+                  </span>
+                </div>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -299,8 +497,14 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
               </div>
               
               {selectedDocs.length === 0 ? (
-                <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-4 text-center">
-                  No documents selected. Add documents from the list below.
+                <div className={`text-sm bg-muted/50 rounded-lg p-4 text-center ${errors.documents ? 'border border-destructive' : ''}`}>
+                  <div className="text-muted-foreground">No documents selected. Add documents from the list below.</div>
+                  {errors.documents && (
+                    <p className="text-sm text-destructive flex items-center justify-center gap-1 mt-2">
+                      <AlertCircle className="h-3 w-3" />
+                      {errors.documents}
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
@@ -342,13 +546,15 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
                   />
                 </div>
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-[220px]">
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    {groupedCategories.map(([group, data]) => (
+                      <SelectItem key={group} value={group}>
+                        {group} ({data.count})
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -372,7 +578,7 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
                         <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium truncate">{doc.title}</div>
-                          <div className="text-xs text-muted-foreground">{doc.category}</div>
+                          <div className="text-xs text-muted-foreground">{getParentCategory(doc.category)}</div>
                         </div>
                       </button>
                     ))
@@ -388,7 +594,7 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
             </Button>
             <Button 
               onClick={handleSaveEdit} 
-              disabled={!formData.set_name.trim() || formData.document_ids.length === 0 || isUpdating}
+              disabled={!isFormValid || isUpdating}
             >
               {isUpdating ? 'Saving...' : 'Save Changes'}
             </Button>

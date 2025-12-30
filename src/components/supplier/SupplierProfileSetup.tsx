@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { VALID_INDUSTRIES } from '@/config/industries';
+import { AddressFields, AddressData, emptyAddressData } from '@/components/shared/AddressFields';
 
 interface SupplierProfileSetupProps {
   onProfileCreated?: () => void;
@@ -21,9 +21,9 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
   const [companyName, setCompanyName] = useState('');
   const [industry, setIndustry] = useState('');
   const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
   const [description, setDescription] = useState('');
   const [autoApproveConnections, setAutoApproveConnections] = useState(false);
+  const [addressData, setAddressData] = useState<AddressData>(emptyAddressData());
   const [existingProfile, setExistingProfile] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -72,9 +72,16 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
         setCompanyName(supplier.company_name || '');
         setIndustry(supplier.industry || '');
         setPhone(supplier.phone || '');
-        setAddress(supplier.address || '');
         setDescription(supplier.description || '');
         setAutoApproveConnections(supplier.auto_approve_connections || false);
+        setAddressData({
+          address_line1: supplier.address_line1 || '',
+          address_line2: supplier.address_line2 || '',
+          city: supplier.city || '',
+          state: supplier.state || '',
+          postal_code: supplier.postal_code || '',
+          country: supplier.country || '',
+        });
       } else {
         // Pre-fill with profile data if available
         setCompanyName(profile?.company_name || '');
@@ -99,9 +106,14 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
             company_name: companyName,
             industry,
             phone,
-            address,
             description,
             auto_approve_connections: autoApproveConnections,
+            address_line1: addressData.address_line1,
+            address_line2: addressData.address_line2,
+            city: addressData.city,
+            state: addressData.state,
+            postal_code: addressData.postal_code,
+            country: addressData.country,
             updated_at: new Date().toISOString()
           })
           .eq('id', existingProfile.id);
@@ -122,9 +134,14 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
             contact_email: profile?.email || user?.email,
             industry,
             phone,
-            address,
             description,
-            auto_approve_connections: autoApproveConnections
+            auto_approve_connections: autoApproveConnections,
+            address_line1: addressData.address_line1,
+            address_line2: addressData.address_line2,
+            city: addressData.city,
+            state: addressData.state,
+            postal_code: addressData.postal_code,
+            country: addressData.country,
           });
 
         if (error) throw error;
@@ -217,13 +234,11 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
             />
           </div>
 
-          <div>
-            <Label htmlFor="address">Address</Label>
-            <Textarea
-              id="address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              rows={3}
+          <div className="space-y-2">
+            <Label className="text-base font-medium">Address</Label>
+            <AddressFields
+              data={addressData}
+              onChange={(field, value) => setAddressData(prev => ({ ...prev, [field]: value }))}
             />
           </div>
 

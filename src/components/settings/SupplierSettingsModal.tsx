@@ -17,6 +17,7 @@ import { SafeSelect, SafeSelectItem } from '@/components/ui/SafeSelect';
 import { VALID_INDUSTRIES } from '@/config/industries';
 import { useSupplierNotificationSettings } from '@/hooks/useSupplierNotificationSettings';
 import { Bell, Mail, MessageSquare } from 'lucide-react';
+import { AddressFields, AddressData, emptyAddressData } from '@/components/shared/AddressFields';
 
 interface SupplierSettingsModalProps {
   isOpen: boolean;
@@ -30,10 +31,15 @@ interface SupplierData {
   contact_email: string;
   industry?: string;
   phone?: string;
-  address?: string;
   description?: string;
   auto_approve_connections: boolean;
   company_logo_url?: string;
+  address_line1: string;
+  address_line2: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  country: string;
 }
 
 export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
@@ -49,10 +55,10 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
     contact_email: '',
     industry: '',
     phone: '',
-    address: '',
     description: '',
     auto_approve_connections: false,
-    company_logo_url: ''
+    company_logo_url: '',
+    ...emptyAddressData(),
   });
   
   const [loading, setLoading] = useState(false);
@@ -116,10 +122,15 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
             contact_email: data.contact_email || '',
             industry: data.industry || '',
             phone: data.phone || '',
-            address: data.address || '',
             description: data.description || '',
             auto_approve_connections: data.auto_approve_connections || false,
-            company_logo_url: data.company_logo_url || ''
+            company_logo_url: data.company_logo_url || '',
+            address_line1: data.address_line1 || '',
+            address_line2: data.address_line2 || '',
+            city: data.city || '',
+            state: data.state || '',
+            postal_code: data.postal_code || '',
+            country: data.country || '',
           });
         }
       } else {
@@ -141,10 +152,15 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
             contact_email: data.contact_email || '',
             industry: data.industry || '',
             phone: data.phone || '',
-            address: data.address || '',
             description: data.description || '',
             auto_approve_connections: data.auto_approve_connections || false,
-            company_logo_url: data.company_logo_url || ''
+            company_logo_url: data.company_logo_url || '',
+            address_line1: data.address_line1 || '',
+            address_line2: data.address_line2 || '',
+            city: data.city || '',
+            state: data.state || '',
+            postal_code: data.postal_code || '',
+            country: data.country || '',
           });
         }
       }
@@ -168,10 +184,15 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
         contact_email: supplierData.contact_email,
         industry: supplierData.industry,
         phone: supplierData.phone,
-        address: supplierData.address,
         description: supplierData.description,
         auto_approve_connections: supplierData.auto_approve_connections,
         company_logo_url: supplierData.company_logo_url,
+        address_line1: supplierData.address_line1,
+        address_line2: supplierData.address_line2,
+        city: supplierData.city,
+        state: supplierData.state,
+        postal_code: supplierData.postal_code,
+        country: supplierData.country,
         updated_at: new Date().toISOString()
       };
 
@@ -325,11 +346,17 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="address">Address</Label>
-                      <Input
-                        id="address"
-                        value={supplierData.address || ''}
-                        onChange={(e) => handleInputChange('address', e.target.value)}
+                      <Label className="text-base font-medium">Address</Label>
+                      <AddressFields
+                        data={{
+                          address_line1: supplierData.address_line1,
+                          address_line2: supplierData.address_line2,
+                          city: supplierData.city,
+                          state: supplierData.state,
+                          postal_code: supplierData.postal_code,
+                          country: supplierData.country,
+                        }}
+                        onChange={(field, value) => handleInputChange(field as keyof SupplierData, value)}
                       />
                     </div>
                     

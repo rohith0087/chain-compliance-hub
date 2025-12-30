@@ -846,41 +846,59 @@ export type Database = {
       buyers: {
         Row: {
           address: string | null
+          address_line1: string | null
+          address_line2: string | null
           buyer_id_number: string | null
+          city: string | null
           company_logo_url: string | null
           company_name: string
           contact_email: string
+          country: string | null
           created_at: string | null
           id: string
           industry: string | null
           phone: string | null
+          postal_code: string | null
           profile_id: string | null
+          state: string | null
           updated_at: string | null
         }
         Insert: {
           address?: string | null
+          address_line1?: string | null
+          address_line2?: string | null
           buyer_id_number?: string | null
+          city?: string | null
           company_logo_url?: string | null
           company_name: string
           contact_email: string
+          country?: string | null
           created_at?: string | null
           id?: string
           industry?: string | null
           phone?: string | null
+          postal_code?: string | null
           profile_id?: string | null
+          state?: string | null
           updated_at?: string | null
         }
         Update: {
           address?: string | null
+          address_line1?: string | null
+          address_line2?: string | null
           buyer_id_number?: string | null
+          city?: string | null
           company_logo_url?: string | null
           company_name?: string
           contact_email?: string
+          country?: string | null
           created_at?: string | null
           id?: string
           industry?: string | null
           phone?: string | null
+          postal_code?: string | null
           profile_id?: string | null
+          state?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -3411,44 +3429,62 @@ export type Database = {
       suppliers: {
         Row: {
           address: string | null
+          address_line1: string | null
+          address_line2: string | null
           auto_approve_connections: boolean | null
+          city: string | null
           company_logo_url: string | null
           company_name: string
           contact_email: string
+          country: string | null
           created_at: string | null
           description: string | null
           id: string
           industry: string | null
           phone: string | null
+          postal_code: string | null
           profile_id: string | null
+          state: string | null
           updated_at: string | null
         }
         Insert: {
           address?: string | null
+          address_line1?: string | null
+          address_line2?: string | null
           auto_approve_connections?: boolean | null
+          city?: string | null
           company_logo_url?: string | null
           company_name: string
           contact_email: string
+          country?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           industry?: string | null
           phone?: string | null
+          postal_code?: string | null
           profile_id?: string | null
+          state?: string | null
           updated_at?: string | null
         }
         Update: {
           address?: string | null
+          address_line1?: string | null
+          address_line2?: string | null
           auto_approve_connections?: boolean | null
+          city?: string | null
           company_logo_url?: string | null
           company_name?: string
           contact_email?: string
+          country?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           industry?: string | null
           phone?: string | null
+          postal_code?: string | null
           profile_id?: string | null
+          state?: string | null
           updated_at?: string | null
         }
         Relationships: [

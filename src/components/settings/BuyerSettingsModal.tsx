@@ -4,7 +4,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,6 +15,7 @@ import { PasswordChangeForm } from './PasswordChangeForm';
 import { LogoUploadWidget } from './LogoUploadWidget';
 import { DefaultOnboardingSettings } from './DefaultOnboardingSettings';
 import { NotificationSettingsForm } from './NotificationSettingsForm';
+import { AddressFields, AddressData, emptyAddressData } from '@/components/shared/AddressFields';
 
 interface BuyerSettingsModalProps {
   open: boolean;
@@ -33,8 +33,8 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
     industry: '',
     contact_email: '',
     phone: '',
-    address: '',
     company_logo_url: '',
+    ...emptyAddressData(),
   });
   const [loading, setLoading] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
@@ -115,8 +115,13 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
           industry: buyerData.industry || '',
           contact_email: buyerData.contact_email || '',
           phone: buyerData.phone || '',
-          address: buyerData.address || '',
           company_logo_url: buyerData.company_logo_url || '',
+          address_line1: buyerData.address_line1 || '',
+          address_line2: buyerData.address_line2 || '',
+          city: buyerData.city || '',
+          state: buyerData.state || '',
+          postal_code: buyerData.postal_code || '',
+          country: buyerData.country || '',
         });
       }
     } catch (error: any) {
@@ -143,8 +148,13 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
           industry: buyerData.industry,
           contact_email: buyerData.contact_email,
           phone: buyerData.phone,
-          address: buyerData.address,
           company_logo_url: buyerData.company_logo_url,
+          address_line1: buyerData.address_line1,
+          address_line2: buyerData.address_line2,
+          city: buyerData.city,
+          state: buyerData.state,
+          postal_code: buyerData.postal_code,
+          country: buyerData.country,
         })
         .eq('id', companyId);
 
@@ -316,12 +326,17 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="address">Address</Label>
-                          <Textarea
-                            id="address"
-                            value={buyerData.address}
-                            onChange={(e) => setBuyerData(prev => ({ ...prev, address: e.target.value }))}
-                            rows={3}
+                          <Label className="text-base font-medium">Address</Label>
+                          <AddressFields
+                            data={{
+                              address_line1: buyerData.address_line1,
+                              address_line2: buyerData.address_line2,
+                              city: buyerData.city,
+                              state: buyerData.state,
+                              postal_code: buyerData.postal_code,
+                              country: buyerData.country,
+                            }}
+                            onChange={(field, value) => setBuyerData(prev => ({ ...prev, [field]: value }))}
                           />
                         </div>
 

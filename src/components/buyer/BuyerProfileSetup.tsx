@@ -11,6 +11,7 @@ import { Building2 } from 'lucide-react';
 import { VALID_INDUSTRIES } from '@/config/industries';
 import { SafeSelect, SafeSelectItem } from '@/components/ui/SafeSelect';
 import { createSafeSelectValue } from '@/utils/selectValidation';
+import { AddressFields, emptyAddressData } from '@/components/shared/AddressFields';
 
 interface BuyerProfileSetupProps {
   onProfileCreated: () => void;
@@ -25,8 +26,8 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
     industry: 'Technology',
     contactEmail: '',
     phone: '',
-    address: '',
-    description: ''
+    description: '',
+    ...emptyAddressData(),
   });
 
   // Pre-populate form with user data from signup
@@ -72,7 +73,12 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
             industry: formData.industry,
             contact_email: formData.contactEmail,
             phone: formData.phone,
-            address: formData.address,
+            address_line1: formData.address_line1,
+            address_line2: formData.address_line2,
+            city: formData.city,
+            state: formData.state,
+            postal_code: formData.postal_code,
+            country: formData.country,
             updated_at: new Date().toISOString()
           })
           .eq('id', existingBuyer.id)
@@ -93,7 +99,12 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
             industry: formData.industry,
             contact_email: formData.contactEmail,
             phone: formData.phone,
-            address: formData.address
+            address_line1: formData.address_line1,
+            address_line2: formData.address_line2,
+            city: formData.city,
+            state: formData.state,
+            postal_code: formData.postal_code,
+            country: formData.country,
           })
           .select()
           .single();
@@ -272,13 +283,18 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="address">Business Address</Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) => setFormData({...formData, address: e.target.value})}
-                placeholder="Enter your business address"
+            <div className="space-y-2">
+              <Label className="text-base font-medium">Business Address</Label>
+              <AddressFields
+                data={{
+                  address_line1: formData.address_line1,
+                  address_line2: formData.address_line2,
+                  city: formData.city,
+                  state: formData.state,
+                  postal_code: formData.postal_code,
+                  country: formData.country,
+                }}
+                onChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
               />
             </div>
 

@@ -246,12 +246,11 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className={`grid w-full ${isOwner ? 'grid-cols-5' : 'grid-cols-3'} flex-shrink-0 sticky top-0 z-10 bg-background`}>
+          <TabsList className={`grid w-full ${isOwner ? 'grid-cols-4' : 'grid-cols-3'} flex-shrink-0 sticky top-0 z-10 bg-background`}>
             {isOwner && <TabsTrigger value="company">Company</TabsTrigger>}
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="password">Password</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            {isOwner && <TabsTrigger value="logo">Logo</TabsTrigger>}
           </TabsList>
           
           <div className="flex-1 overflow-y-auto mt-4">
@@ -264,7 +263,19 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
                     Manage your company details and preferences
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-6">
+                  {/* Company Logo Section */}
+                  <div className="space-y-2">
+                    <Label>Company Logo</Label>
+                    <LogoUploadWidget
+                      currentLogoUrl={supplierData.company_logo_url}
+                      onLogoUpdate={handleLogoUpdate}
+                      embedded
+                    />
+                  </div>
+
+                  <div className="border-t pt-6" />
+
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -431,14 +442,6 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
               </CardContent>
             </Card>
           </TabsContent>
-          {isOwner && (
-            <TabsContent value="logo" className="space-y-4 mt-0">
-              <LogoUploadWidget
-                currentLogoUrl={supplierData.company_logo_url}
-                onLogoUpdate={handleLogoUpdate}
-              />
-            </TabsContent>
-          )}
           </div>
         </Tabs>
       </DialogContent>

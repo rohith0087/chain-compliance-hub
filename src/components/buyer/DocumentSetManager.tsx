@@ -38,8 +38,32 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
-  // Get all available documents
-  const allDocuments = useMemo(() => getComplianceDocuments('Auditor'), []);
+  // Get all available documents from all known types
+  const allDocuments = useMemo(() => {
+    const docTypes = [
+      'Auditor', 
+      'Egg Processing', 
+      'Sushi Company',
+      'Poultry - Egg Supplier',
+      'Poultry - Ingredient Supplier',
+      'Poultry - Packaging Supplier',
+      'Poultry - Gas/Lube Supplier',
+      'Chicken Processor Co'
+    ];
+    const allDocs: ComplianceDocument[] = [];
+    const seenIds = new Set<string>();
+    
+    docTypes.forEach(type => {
+      getComplianceDocuments(type).forEach(doc => {
+        if (!seenIds.has(doc.id)) {
+          seenIds.add(doc.id);
+          allDocs.push(doc);
+        }
+      });
+    });
+    
+    return allDocs;
+  }, []);
   
   // Get unique categories
   const categories = useMemo(() => {
@@ -47,11 +71,24 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
     return Array.from(cats).sort();
   }, [allDocuments]);
 
-  // Filter documents
-  const selectedDocs = useMemo(() => 
-    allDocuments.filter(d => formData.document_ids.includes(d.id)),
-    [allDocuments, formData.document_ids]
-  );
+  // Get selected documents - include fallback for unknown IDs
+  const selectedDocs = useMemo(() => {
+    return formData.document_ids.map(id => {
+      const knownDoc = allDocuments.find(d => d.id === id);
+      if (knownDoc) return knownDoc;
+      // Return a placeholder for unknown documents
+      return {
+        id,
+        title: id.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+        category: 'Custom',
+        description: 'Custom document',
+        icon: FileText,
+        required: false,
+        regulatoryBody: 'Custom',
+        template: { sections: [] }
+      } as ComplianceDocument;
+    });
+  }, [allDocuments, formData.document_ids]);
 
   const availableDocs = useMemo(() => 
     allDocuments.filter(d => 

@@ -212,12 +212,12 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
   };
 
   // Determine default tab and grid columns based on ownership/admin status
-  // Owner tabs: Company, Onboarding, Notifications, Account, Password, Logo (6 tabs)
+  // Owner tabs: Company, Onboarding, Notifications, Account, Password (5 tabs - Logo is now in Company)
   // Admin tabs: Onboarding, Account, Password (3 tabs)
   // Other team members: Account, Password (2 tabs)
   const canAccessOnboarding = isOwner || isAdmin;
   const defaultTab = isOwner ? 'company' : (isAdmin ? 'defaults' : 'account');
-  const gridCols = isOwner ? 'grid-cols-6' : (isAdmin ? 'grid-cols-3' : 'grid-cols-2');
+  const gridCols = isOwner ? 'grid-cols-5' : (isAdmin ? 'grid-cols-3' : 'grid-cols-2');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -241,9 +241,6 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
             )}
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="password">Password</TabsTrigger>
-            {isOwner && (
-              <TabsTrigger value="logo">Logo</TabsTrigger>
-            )}
           </TabsList>
 
           <div className="flex-1 overflow-y-auto mt-4">
@@ -255,7 +252,19 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
                     <CardHeader>
                       <CardTitle>Company Information</CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="space-y-6">
+                      {/* Company Logo Section */}
+                      <div className="space-y-2">
+                        <Label>Company Logo</Label>
+                        <LogoUploadWidget
+                          currentLogoUrl={buyerData.company_logo_url}
+                          onLogoUpdate={canEdit ? handleLogoUpdate : () => {}}
+                          embedded
+                        />
+                      </div>
+
+                      <div className="border-t pt-6" />
+
                       <form onSubmit={handleCompanySubmit} className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
@@ -326,13 +335,6 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
 
                 <TabsContent value="notifications" className="mt-0">
                   <NotificationSettingsForm />
-                </TabsContent>
-
-                <TabsContent value="logo" className="mt-0">
-                  <LogoUploadWidget
-                    currentLogoUrl={buyerData.company_logo_url}
-                    onLogoUpdate={canEdit ? handleLogoUpdate : () => {}}
-                  />
                 </TabsContent>
               </>
             )}

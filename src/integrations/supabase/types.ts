@@ -1885,6 +1885,7 @@ export type Database = {
           document_ids: Json
           id: string
           is_default: boolean | null
+          last_used_at: string | null
           set_name: string
           updated_at: string | null
           usage_count: number | null
@@ -1897,6 +1898,7 @@ export type Database = {
           document_ids?: Json
           id?: string
           is_default?: boolean | null
+          last_used_at?: string | null
           set_name: string
           updated_at?: string | null
           usage_count?: number | null
@@ -1909,6 +1911,7 @@ export type Database = {
           document_ids?: Json
           id?: string
           is_default?: boolean | null
+          last_used_at?: string | null
           set_name?: string
           updated_at?: string | null
           usage_count?: number | null

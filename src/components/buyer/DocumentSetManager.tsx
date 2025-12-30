@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
-import { Package, Edit2, Trash2, Copy, FileText, X, Plus, Search, AlertCircle } from 'lucide-react';
+import { Package, Edit2, Trash2, Copy, FileText, X, Plus, Search, AlertCircle, TrendingUp, ChevronRight, Sparkles } from 'lucide-react';
+import { formatDistanceToNow, differenceInDays } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDocumentSets, DocumentSet } from '@/hooks/useDocumentSets';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getComplianceDocuments, ComplianceDocument } from '@/components/requests/ComplianceDocuments';
 
 interface DocumentSetManagerProps {
@@ -107,6 +109,31 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
   const [errors, setErrors] = useState<FormErrors>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('recent');
+
+  // Sort document sets based on selected sort option
+  const sortedDocumentSets = useMemo(() => {
+    const sets = [...documentSets];
+    switch (sortBy) {
+      case 'most-used':
+        return sets.sort((a, b) => (b.usage_count || 0) - (a.usage_count || 0));
+      case 'alphabetical':
+        return sets.sort((a, b) => a.set_name.localeCompare(b.set_name));
+      case 'newest':
+        return sets.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      case 'recent':
+      default:
+        return sets.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+    }
+  }, [documentSets, sortBy]);
+
+  // Helper to check if a set is new (created within last 7 days)
+  const isNewSet = (createdAt: string) => {
+    return differenceInDays(new Date(), new Date(createdAt)) <= 7;
+  };
+
+  // Helper to check if a set is popular (5+ uses)
+  const isPopularSet = (usageCount: number) => usageCount >= 5;
 
   // Get all available documents from all known types
   const allDocuments = useMemo(() => {
@@ -317,98 +344,194 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Document Sets</h2>
-          <p className="text-muted-foreground">
-            Manage your reusable document collections
-          </p>
-        </div>
-      </div>
-
-      {documentSets.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Package className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No document sets yet</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              Create document sets from the "New Request" page by selecting documents and clicking "Save as Set"
+    <TooltipProvider>
+      <div className="space-y-6">
+        {/* Header with intro and sorting */}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold">Document Sets</h2>
+            <p className="text-muted-foreground">
+              Reusable document collections for faster supplier onboarding
             </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {documentSets.map((set) => (
-            <Card key={set.id} className="group hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    <Package className="h-5 w-5 text-primary" />
-                    <CardTitle className="text-lg">{set.set_name}</CardTitle>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-background border-border">
-                      <DropdownMenuItem onClick={() => handleEdit(set)}>
-                        <Edit2 className="h-4 w-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => duplicateSet(set.id)}>
-                        <Copy className="h-4 w-4 mr-2" />
-                        Duplicate
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => deleteSet(set.id)}
-                        disabled={isDeleting}
-                        className="text-danger"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                <CardDescription className="line-clamp-2">
-                  {set.description || 'No description'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <FileText className="h-4 w-4" />
-                  <span>{set.document_ids.length} documents</span>
-                  {set.is_default && (
-                    <Badge variant="outline" className="ml-auto">Default</Badge>
-                  )}
-                </div>
-
-                <div className="space-y-1">
-                  {getDocumentNames(set.document_ids).map((name, idx) => (
-                    <div key={idx} className="text-sm text-muted-foreground flex items-center gap-2">
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      {name}
-                    </div>
-                  ))}
-                  {set.document_ids.length > 3 && (
-                    <div className="text-sm text-muted-foreground pl-3.5">
-                      + {set.document_ids.length - 3} more...
-                    </div>
-                  )}
-                </div>
-
-                <div className="pt-2 border-t text-xs text-muted-foreground">
-                  Used {set.usage_count} {set.usage_count === 1 ? 'time' : 'times'}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          </div>
+          
+          {documentSets.length > 0 && (
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Sort by..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">Recently Modified</SelectItem>
+                <SelectItem value="most-used">Most Used</SelectItem>
+                <SelectItem value="alphabetical">Alphabetical</SelectItem>
+                <SelectItem value="newest">Newest First</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
-      )}
+
+        {/* Enhanced Empty State */}
+        {documentSets.length === 0 ? (
+          <Card className="border-dashed border-2">
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <div className="rounded-full bg-primary/10 p-4 mb-4">
+                <Package className="h-10 w-10 text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Create Your First Document Set</h3>
+              <p className="text-muted-foreground text-center max-w-md mb-6">
+                Document Sets let you reuse the same documents across multiple supplier requests. 
+                Save time by creating templates for common compliance packages.
+              </p>
+              
+              {/* Example use cases */}
+              <div className="flex flex-wrap gap-2 justify-center mb-6">
+                <Badge variant="outline" className="text-xs">Food Safety Package</Badge>
+                <Badge variant="outline" className="text-xs">ESG Compliance</Badge>
+                <Badge variant="outline" className="text-xs">Insurance Bundle</Badge>
+                <Badge variant="outline" className="text-xs">Quality Certifications</Badge>
+              </div>
+              
+              <p className="text-sm text-muted-foreground text-center">
+                Create a set from the "New Request" page by selecting documents and clicking "Save as Set"
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {sortedDocumentSets.map((set) => (
+              <Card 
+                key={set.id} 
+                className="group cursor-pointer hover:shadow-lg hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-200"
+                onClick={() => handleEdit(set)}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Package className="h-5 w-5 text-primary flex-shrink-0" />
+                      <CardTitle className="text-lg truncate">{set.set_name}</CardTitle>
+                    </div>
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span className="sr-only">Open menu</span>
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit</TooltipContent>
+                        </Tooltip>
+                        <DropdownMenuContent align="end" className="bg-background border-border">
+                          <DropdownMenuItem onClick={() => handleEdit(set)}>
+                            <Edit2 className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => duplicateSet(set.id)}>
+                            <Copy className="h-4 w-4 mr-2" />
+                            Duplicate
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => deleteSet(set.id)}
+                            disabled={isDeleting}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                  
+                  {/* Badges row */}
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {set.is_default && (
+                      <Badge variant="outline" className="text-xs">Default</Badge>
+                    )}
+                    {isPopularSet(set.usage_count || 0) && (
+                      <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-600 border-green-500/20">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        Popular
+                      </Badge>
+                    )}
+                    {isNewSet(set.created_at) && !isPopularSet(set.usage_count || 0) && (
+                      <Badge variant="secondary" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/20">
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        New
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Description - show helper if empty */}
+                  {set.description ? (
+                    <CardDescription className="line-clamp-2 mt-2">
+                      {set.description}
+                    </CardDescription>
+                  ) : (
+                    <CardDescription className="text-muted-foreground/50 italic text-xs mt-2">
+                      Add a description to help teammates understand this set
+                    </CardDescription>
+                  )}
+                </CardHeader>
+                
+                <CardContent className="space-y-3 pt-0">
+                  {/* Document count - clickable */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEdit(set);
+                    }}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <FileText className="h-4 w-4" />
+                    <span className="underline-offset-2 hover:underline">
+                      {set.document_ids.length} {set.document_ids.length === 1 ? 'document' : 'documents'}
+                    </span>
+                  </button>
+
+                  {/* Document preview list */}
+                  <div className="space-y-1">
+                    {getDocumentNames(set.document_ids).map((name, idx) => (
+                      <div key={idx} className="text-sm text-muted-foreground flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
+                        <span className="truncate">{name}</span>
+                      </div>
+                    ))}
+                    {set.document_ids.length > 3 && (
+                      <div className="text-sm text-muted-foreground pl-3.5">
+                        + {set.document_ids.length - 3} more...
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+
+                {/* Footer with usage stats */}
+                <CardFooter className="pt-3 border-t flex flex-col gap-2">
+                  <div className="w-full flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Used in {set.usage_count || 0} {(set.usage_count || 0) === 1 ? 'request' : 'requests'}</span>
+                    {set.last_used_at && (
+                      <span>Last used {formatDistanceToNow(new Date(set.last_used_at), { addSuffix: true })}</span>
+                    )}
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="w-full text-primary hover:text-primary hover:bg-primary/10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEdit(set);
+                    }}
+                  >
+                    View Documents
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
@@ -601,6 +724,7 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }

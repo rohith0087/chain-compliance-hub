@@ -13,6 +13,7 @@ export interface DocumentSet {
   created_by: string;
   created_at: string;
   updated_at: string;
+  last_used_at?: string;
 }
 
 interface CreateDocumentSetInput {
@@ -144,7 +145,7 @@ export function useDocumentSets(buyerId?: string) {
     },
   });
 
-  // Increment usage count
+  // Increment usage count and update last_used_at
   const incrementUsage = useMutation({
     mutationFn: async (id: string) => {
       const set = documentSets.find(s => s.id === id);
@@ -152,7 +153,10 @@ export function useDocumentSets(buyerId?: string) {
       
       const { error } = await supabase
         .from('document_sets')
-        .update({ usage_count: set.usage_count + 1 })
+        .update({ 
+          usage_count: set.usage_count + 1,
+          last_used_at: new Date().toISOString()
+        })
         .eq('id', id);
       
       if (error) throw error;

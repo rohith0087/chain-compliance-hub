@@ -217,3 +217,7 @@ verify_jwt = true
 # Generic email sending - requires authentication
 [functions.send-generic-email]
 verify_jwt = true
+
+# ElevenLabs TTS for simulation narration - public for demo purposes
+[functions.elevenlabs-tts]
+verify_jwt = false

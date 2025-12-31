@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -45,6 +45,8 @@ import { SimulationDocumentUploadModal } from './modals/SimulationDocumentUpload
 import { SimulationLibraryUploadModal } from './modals/SimulationLibraryUploadModal';
 import { SimulationOnboardingUploadModal } from './modals/SimulationOnboardingUploadModal';
 import { SimulationRenewalUploadModal } from './modals/SimulationRenewalUploadModal';
+import { useSimulationNarration } from '@/hooks/useSimulationNarration';
+import { SimulationNarrationControls } from './SimulationNarrationControls';
 
 interface NavigationItem {
   title: string;
@@ -66,6 +68,9 @@ export const SupplierSimulationDashboard = () => {
     currentStep,
   } = useSimulation();
   
+  const narration = useSimulationNarration();
+  const previousStepRef = useRef<string | null>(null);
+  
   const supplierProfile = getSupplierProfile();
   
   const pendingRequests = documentRequests.filter(r => r.status === 'pending').length;
@@ -73,6 +78,37 @@ export const SupplierSimulationDashboard = () => {
 
   // Determine if help button should pulse
   const shouldPulseHelp = currentStep === 'explore-help';
+
+  // Auto-play narration when step changes
+  useEffect(() => {
+    if (currentStep && currentStep !== previousStepRef.current && currentStep !== 'intro') {
+      previousStepRef.current = currentStep;
+      // Small delay for smoother transition
+      const timer = setTimeout(() => {
+        narration.playNarration(currentStep);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [currentStep]);
+
+  const handlePlayPause = () => {
+    if (narration.isPlaying) {
+      narration.pauseNarration();
+    } else {
+      narration.resumeNarration();
+    }
+  };
+
+  const handleExitSimulation = () => {
+    narration.stopNarration();
+    exitSimulation();
+    navigate('/dashboard');
+  };
+
+  const handleResetSimulation = () => {
+    narration.stopNarration();
+    resetSimulation();
+  };
 
   const navigationItems: NavigationItem[] = [
     { title: 'Overview', icon: Home, value: 'overview' },
@@ -82,11 +118,6 @@ export const SupplierSimulationDashboard = () => {
     { title: 'Buyer Connections', icon: Users, value: 'connections', badge: pendingConnections > 0 ? pendingConnections : undefined },
     { title: 'Compliance', icon: BarChart3, value: 'compliance' },
   ];
-
-  const handleExitSimulation = () => {
-    exitSimulation();
-    navigate('/dashboard');
-  };
 
   const renderTabContent = () => {
     switch (currentTab) {
@@ -136,7 +167,7 @@ export const SupplierSimulationDashboard = () => {
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <SidebarMenuButton 
-                      onClick={resetSimulation}
+                      onClick={handleResetSimulation}
                       className="text-amber-600 hover:text-amber-600 hover:bg-amber-50"
                     >
                       <RotateCcw className="h-4 w-4" />
@@ -241,6 +272,16 @@ export const SupplierSimulationDashboard = () => {
 
       {/* Floating Help Button - Bottom Right */}
       <SimulationHelpButton shouldPulse={shouldPulseHelp} />
+
+      {/* Narration Controls - Bottom Left */}
+      <SimulationNarrationControls
+        isPlaying={narration.isPlaying}
+        isLoading={narration.isLoading}
+        isMuted={narration.isMuted}
+        onToggleMute={narration.toggleMute}
+        onPlayPause={handlePlayPause}
+        onReplay={narration.replayCurrentNarration}
+      />
 
       {/* All Simulation Modals */}
       <SimulationConnectWithBuyerModal />

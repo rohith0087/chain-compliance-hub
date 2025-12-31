@@ -49,24 +49,25 @@ export const useSimulationNarration = (): UseSimulationNarrationReturn => {
       return audioCache.current.get(cacheKey)!;
     }
 
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ text }),
-      }
-    );
+    const { data, error } = await supabase.functions.invoke('text-to-voice', {
+      body: { text, voice: 'nova' }
+    });
 
-    if (!response.ok) {
-      throw new Error(`TTS request failed: ${response.status}`);
+    if (error) {
+      throw new Error(`TTS request failed: ${error.message}`);
     }
 
-    const audioBlob = await response.blob();
+    if (!data?.audioContent) {
+      throw new Error('No audio content received');
+    }
+
+    // Convert base64 to blob URL
+    const binaryString = atob(data.audioContent);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    const audioBlob = new Blob([bytes], { type: 'audio/mp3' });
     const audioUrl = URL.createObjectURL(audioBlob);
     
     // Cache the URL

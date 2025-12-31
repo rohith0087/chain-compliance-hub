@@ -198,26 +198,6 @@ verify_jwt = true
 [functions.voice-to-text]
 verify_jwt = true
 
-# Text-to-voice synthesis using OpenAI TTS
+# Text-to-voice synthesis using OpenAI TTS (public for simulation narration)
 [functions.text-to-voice]
-verify_jwt = true
-
-# Turnstile validation - public (used before user is authenticated)
-[functions.validate-turnstile]
-verify_jwt = false
-
-# Compliance follow-up email sending - requires authentication
-[functions.send-compliance-followup]
-verify_jwt = true
-
-# New request email notifications - requires authentication
-[functions.send-new-request-email]
-verify_jwt = true
-
-# Generic email sending - requires authentication
-[functions.send-generic-email]
-verify_jwt = true
-
-# ElevenLabs TTS for simulation narration - public for demo purposes
-[functions.elevenlabs-tts]
 verify_jwt = false

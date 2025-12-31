@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   Building2, 
   CheckCircle2,
@@ -16,7 +17,10 @@ import {
   Send,
   Upload,
   FileText,
-  AlertCircle
+  AlertCircle,
+  Download,
+  Info,
+  ArrowRight
 } from 'lucide-react';
 import { useSimulation } from '@/contexts/SimulationContext';
 import { formatDistanceToNow } from 'date-fns';
@@ -27,19 +31,19 @@ export const SimulationConnectionsPage = () => {
     pendingConnectionRequest,
     connectedBuyers,
     acceptConnection,
-    connectionStatus,
     onboardingStatus,
-    getOnboardingRequest,
     getDocumentRequirements,
     getFormFields,
-    uploadOnboardingDocument,
     completeFormField,
     submitOnboarding,
     uploadedOnboardingDocs,
     completedFormFields,
+    pendingOutgoingRequests,
+    setShowConnectModal,
+    openOnboardingUploadModal,
+    downloadTemplate,
   } = useSimulation();
 
-  const onboardingRequest = getOnboardingRequest();
   const documentRequirements = getDocumentRequirements();
   const formFields = getFormFields();
 
@@ -54,6 +58,8 @@ export const SimulationConnectionsPage = () => {
   const allFieldsCompleted = completedFormFields.length >= formFields.length;
   const canSubmitOnboarding = allDocsUploaded && allFieldsCompleted;
 
+  const pendingOutgoingCount = pendingOutgoingRequests.filter(r => r.status === 'pending').length;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -65,7 +71,11 @@ export const SimulationConnectionsPage = () => {
           </h1>
           <p className="text-muted-foreground">Manage your buyer relationships</p>
         </div>
-        <Button variant="outline" className="gap-2">
+        <Button 
+          variant="outline" 
+          className="gap-2"
+          onClick={() => setShowConnectModal(true)}
+        >
           <UserPlus className="h-4 w-4" />
           Request Connection
         </Button>
@@ -75,10 +85,18 @@ export const SimulationConnectionsPage = () => {
         <TabsList>
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="pending">
-            Pending
+            Incoming
             {pendingConnectionRequest && (
               <Badge variant="destructive" className="ml-2 h-5 w-5 p-0 justify-center">
                 1
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="outgoing">
+            Outgoing
+            {pendingOutgoingCount > 0 && (
+              <Badge variant="secondary" className="ml-2 h-5 w-5 p-0 justify-center">
+                {pendingOutgoingCount}
               </Badge>
             )}
           </TabsTrigger>
@@ -155,8 +173,64 @@ export const SimulationConnectionsPage = () => {
             </motion.div>
           )}
 
+          {/* Pending Outgoing Requests */}
+          {(activeTab === 'all' || activeTab === 'outgoing') && pendingOutgoingRequests.map((request, index) => (
+            <motion.div
+              key={request.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <Card className={
+                request.status === 'approved' 
+                  ? 'border-green-200 bg-gradient-to-r from-green-50/50 to-emerald-50/50'
+                  : 'border-purple-200 bg-gradient-to-r from-purple-50/50 to-indigo-50/50'
+              }>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`p-3 rounded-lg ${request.status === 'approved' ? 'bg-green-100' : 'bg-purple-100'}`}>
+                        <Building2 className={`h-6 w-6 ${request.status === 'approved' ? 'text-green-600' : 'text-purple-600'}`} />
+                      </div>
+                      <div>
+                        <p className="font-semibold flex items-center gap-2">
+                          {request.buyer_name}
+                          {request.status === 'approved' ? (
+                            <Badge className="bg-green-100 text-green-700 border-green-200">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Approved
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-purple-100 text-purple-700 border-purple-200">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Awaiting Response
+                            </Badge>
+                          )}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Sent {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
+                        </p>
+                      </div>
+                    </div>
+                    {request.status === 'approved' && (
+                      <Button size="sm" className="gap-2">
+                        Start Onboarding
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  {request.notes && (
+                    <p className="mt-3 text-sm text-muted-foreground italic pl-16">
+                      "{request.notes}"
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+
           {/* Connected Buyers with Onboarding */}
-          {connectedBuyers.map((connection, index) => (
+          {(activeTab === 'all' || activeTab === 'connected') && connectedBuyers.map((connection, index) => (
             <motion.div
               key={connection.id}
               initial={{ opacity: 0, y: 20 }}
@@ -239,20 +313,59 @@ export const SimulationConnectionsPage = () => {
                                   <Clock className="h-5 w-5 text-muted-foreground" />
                                 )}
                                 <div>
-                                  <p className="font-medium text-sm">{doc.document_name}</p>
+                                  <p className="font-medium text-sm flex items-center gap-2">
+                                    {doc.document_name}
+                                    {doc.has_template && (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger>
+                                            <Badge variant="outline" className="text-xs gap-1">
+                                              <FileText className="h-3 w-3" />
+                                              Template
+                                            </Badge>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>Download the template, fill it in, and re-upload</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    )}
+                                  </p>
                                   <p className="text-xs text-muted-foreground">{doc.description}</p>
                                 </div>
                               </div>
                               {!isUploaded && (
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  onClick={() => uploadOnboardingDocument(doc.id)}
-                                  className="gap-1"
-                                >
-                                  <Upload className="h-3 w-3" />
-                                  Upload
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                  {doc.has_template && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button 
+                                            size="sm" 
+                                            variant="ghost"
+                                            onClick={() => downloadTemplate(doc.id)}
+                                            className="gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                          >
+                                            <Download className="h-3 w-3" />
+                                            Template
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Download template to fill out</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => openOnboardingUploadModal(doc)}
+                                    className="gap-1"
+                                  >
+                                    <Upload className="h-3 w-3" />
+                                    Upload
+                                  </Button>
+                                </div>
                               )}
                             </div>
                           );
@@ -350,14 +463,18 @@ export const SimulationConnectionsPage = () => {
           ))}
 
           {/* Empty State */}
-          {!pendingConnectionRequest && connectedBuyers.length === 0 && (
+          {!pendingConnectionRequest && connectedBuyers.length === 0 && pendingOutgoingRequests.length === 0 && (
             <Card className="border-dashed">
               <CardContent className="py-12 text-center">
                 <Building2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No Connections Yet</h3>
-                <p className="text-muted-foreground max-w-md mx-auto">
+                <p className="text-muted-foreground max-w-md mx-auto mb-4">
                   You don't have any buyer connections. Request a connection or wait for buyers to reach out.
                 </p>
+                <Button onClick={() => setShowConnectModal(true)} className="gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  Request Connection
+                </Button>
               </CardContent>
             </Card>
           )}

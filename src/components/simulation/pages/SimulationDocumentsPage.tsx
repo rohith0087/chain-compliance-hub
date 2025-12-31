@@ -16,7 +16,8 @@ import {
   Search,
   Eye,
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  Info
 } from 'lucide-react';
 import { useSimulation } from '@/contexts/SimulationContext';
 import { format, formatDistanceToNow, differenceInDays, isPast } from 'date-fns';
@@ -24,7 +25,13 @@ import { format, formatDistanceToNow, differenceInDays, isPast } from 'date-fns'
 export const SimulationDocumentsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
-  const { documentUploads, connectionStatus, getExpiringDocuments, renewDocument } = useSimulation();
+  const { 
+    documentUploads, 
+    connectionStatus, 
+    getExpiringDocuments, 
+    openRenewalModal,
+    currentStep 
+  } = useSimulation();
 
   const expiringDocuments = getExpiringDocuments();
 
@@ -44,6 +51,8 @@ export const SimulationDocumentsPage = () => {
   const approvedCount = documentUploads.filter(d => d.status === 'approved').length;
   const rejectedCount = documentUploads.filter(d => d.status === 'rejected').length;
   const expiringCount = expiringDocuments.length;
+
+  const isRenewStep = currentStep === 'renew-document';
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -148,7 +157,7 @@ export const SimulationDocumentsPage = () => {
           <div className="text-sm text-red-600">Rejected</div>
           <div className="text-2xl font-bold text-red-600">{rejectedCount}</div>
         </Card>
-        <Card className="p-4">
+        <Card className={`p-4 ${isRenewStep ? 'ring-2 ring-amber-400' : ''}`}>
           <div className="text-sm text-orange-600 flex items-center gap-1">
             <AlertTriangle className="h-3 w-3" />
             Expiring
@@ -165,7 +174,10 @@ export const SimulationDocumentsPage = () => {
             <TabsTrigger value="pending">Pending</TabsTrigger>
             <TabsTrigger value="submitted">Submitted</TabsTrigger>
             <TabsTrigger value="approved">Approved</TabsTrigger>
-            <TabsTrigger value="expiring" className="gap-1">
+            <TabsTrigger 
+              value="expiring" 
+              className={`gap-1 ${isRenewStep ? 'ring-2 ring-amber-400' : ''}`}
+            >
               Expiring
               {expiringCount > 0 && (
                 <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 justify-center">
@@ -214,7 +226,14 @@ export const SimulationDocumentsPage = () => {
                               }`} />
                             </div>
                             <div>
-                              <p className="font-medium">{doc.file_name}</p>
+                              <p className="font-medium flex items-center gap-2">
+                                {doc.file_name}
+                                {(doc as any).version && (doc as any).version > 1 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    V{(doc as any).version}
+                                  </Badge>
+                                )}
+                              </p>
                               <p className="text-sm text-muted-foreground flex items-center gap-2">
                                 <Building2 className="h-3 w-3" />
                                 {doc.document_requests?.buyers?.company_name || 'Unknown Buyer'}
@@ -286,6 +305,17 @@ export const SimulationDocumentsPage = () => {
               </div>
             </div>
 
+            {/* Version info card */}
+            <div className="flex items-start gap-2 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <Info className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+              <div>
+                <h4 className="font-medium text-blue-800">Document Versioning</h4>
+                <p className="text-sm text-blue-700">
+                  When you renew a document, a new version (V2, V3, etc.) is created. The old version is archived and the new one becomes active.
+                </p>
+              </div>
+            </div>
+
             {expiringDocuments.length > 0 ? (
               <div className="grid gap-4">
                 {expiringDocuments.map((doc, index) => {
@@ -297,7 +327,7 @@ export const SimulationDocumentsPage = () => {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
                     >
-                      <Card className={expiryStatus.isExpired ? 'border-red-200' : 'border-amber-200'}>
+                      <Card className={`${expiryStatus.isExpired ? 'border-red-200' : 'border-amber-200'} ${isRenewStep ? 'ring-2 ring-amber-400' : ''}`}>
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between gap-4">
                             <div className="flex items-center gap-3">
@@ -307,6 +337,9 @@ export const SimulationDocumentsPage = () => {
                               <div>
                                 <p className="font-medium flex items-center gap-2">
                                   {doc.title}
+                                  <Badge variant="outline" className="text-xs">
+                                    V{doc.version || 1}
+                                  </Badge>
                                   <Badge className={expiryStatus.className}>
                                     {expiryStatus.isExpired ? 'Expired' : 'Expiring Soon'}
                                   </Badge>
@@ -337,7 +370,7 @@ export const SimulationDocumentsPage = () => {
                               <Button 
                                 size="sm"
                                 variant={expiryStatus.isExpired ? "destructive" : "outline"}
-                                onClick={() => renewDocument(doc.id)}
+                                onClick={() => openRenewalModal(doc)}
                                 className="gap-1"
                               >
                                 <RefreshCw className="h-3 w-3" />

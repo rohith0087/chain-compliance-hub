@@ -12,6 +12,7 @@ import {
   Home,
   ListChecks,
   BarChart3,
+  Shield,
 } from 'lucide-react';
 import { 
   Sidebar,
@@ -38,11 +39,12 @@ import { SimulationLibraryPage } from './pages/SimulationLibraryPage';
 import { SimulationConnectionsPage } from './pages/SimulationConnectionsPage';
 import { SimulationCompliancePage } from './pages/SimulationCompliancePage';
 import { SimulationNotificationCenter } from './SimulationNotificationCenter';
+import { SimulationHelpButton } from './SimulationHelpButton';
 import { SimulationConnectWithBuyerModal } from './modals/SimulationConnectWithBuyerModal';
 import { SimulationDocumentUploadModal } from './modals/SimulationDocumentUploadModal';
 import { SimulationLibraryUploadModal } from './modals/SimulationLibraryUploadModal';
 import { SimulationOnboardingUploadModal } from './modals/SimulationOnboardingUploadModal';
-import { Shield } from 'lucide-react';
+import { SimulationRenewalUploadModal } from './modals/SimulationRenewalUploadModal';
 
 interface NavigationItem {
   title: string;
@@ -61,12 +63,16 @@ export const SupplierSimulationDashboard = () => {
     getSupplierProfile,
     documentRequests,
     pendingConnectionRequest,
+    currentStep,
   } = useSimulation();
   
   const supplierProfile = getSupplierProfile();
   
   const pendingRequests = documentRequests.filter(r => r.status === 'pending').length;
   const pendingConnections = pendingConnectionRequest ? 1 : 0;
+
+  // Determine if help button should pulse
+  const shouldPulseHelp = currentStep === 'explore-help';
 
   const navigationItems: NavigationItem[] = [
     { title: 'Overview', icon: Home, value: 'overview' },
@@ -209,6 +215,7 @@ export const SupplierSimulationDashboard = () => {
               
               <div className="flex items-center gap-2">
                 <SimulationNotificationCenter />
+                <SimulationHelpButton shouldPulse={shouldPulseHelp} />
               </div>
             </div>
           </header>
@@ -238,6 +245,7 @@ export const SupplierSimulationDashboard = () => {
       <SimulationDocumentUploadModal />
       <SimulationLibraryUploadModal />
       <SimulationOnboardingUploadModal />
+      <SimulationRenewalUploadModal />
     </SidebarProvider>
   );
 };

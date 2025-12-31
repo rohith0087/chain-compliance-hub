@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { 
   FileText, 
   Upload, 
@@ -10,11 +12,12 @@ import {
   CheckCircle2,
   Send,
   Calendar,
-  Building2
+  Building2,
+  Search,
+  Filter
 } from 'lucide-react';
 import { useSimulation } from '@/contexts/SimulationContext';
 import { formatDistanceToNow, format } from 'date-fns';
-import { motion } from 'framer-motion';
 
 const getPriorityColor = (priority: string) => {
   switch (priority) {
@@ -64,39 +67,94 @@ const getStatusBadge = (status: string) => {
   }
 };
 
-export const SimulationDocumentRequests = () => {
+export const SimulationRequestsPage = () => {
+  const [searchTerm, setSearchTerm] = useState('');
   const { 
-    connectionStatus,
     documentRequests, 
     submitDocumentForRequest,
-    submittedDocuments,
+    connectionStatus,
   } = useSimulation();
 
-  // Only show after onboarding is complete
-  if (connectionStatus !== 'active') {
-    return null;
+  // Filter requests based on search
+  const filteredRequests = documentRequests.filter(request =>
+    request.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    request.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    request.buyers?.company_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const pendingCount = documentRequests.filter(r => r.status === 'pending').length;
+  const submittedCount = documentRequests.filter(r => r.status === 'submitted').length;
+  const approvedCount = documentRequests.filter(r => r.status === 'approved').length;
+
+  // Show message if connection not yet active
+  if (connectionStatus === 'pending') {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">Document Requests</h1>
+          <p className="text-muted-foreground">Requests from your connected buyers</p>
+        </div>
+        
+        <Card className="border-dashed">
+          <CardContent className="py-12 text-center">
+            <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Requests Yet</h3>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              You'll see document requests here once you accept a buyer connection and complete onboarding.
+              Check the Connections tab to get started!
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-4 simulation-requests-list"
-    >
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Document Requests</h2>
-          <p className="text-sm text-muted-foreground">
-            Requests from your connected buyers
-          </p>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            Document Requests
+            <Badge variant="outline" className="text-xs">Demo Data</Badge>
+          </h1>
+          <p className="text-muted-foreground">Requests from your connected buyers</p>
         </div>
-        <Badge variant="outline">
-          {documentRequests.filter(r => r.status === 'pending').length} pending
-        </Badge>
+        <div className="flex gap-2">
+          <Badge variant="secondary" className="gap-1">
+            <Clock className="h-3 w-3" />
+            {pendingCount} pending
+          </Badge>
+          <Badge variant="secondary" className="gap-1">
+            <Send className="h-3 w-3" />
+            {submittedCount} submitted
+          </Badge>
+          <Badge variant="secondary" className="gap-1">
+            <CheckCircle2 className="h-3 w-3" />
+            {approvedCount} approved
+          </Badge>
+        </div>
       </div>
 
+      {/* Search and Filters */}
+      <div className="flex gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search requests..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Button variant="outline" size="icon">
+          <Filter className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Requests List */}
       <div className="grid gap-4">
-        {documentRequests.map((request, index) => {
+        {filteredRequests.map((request, index) => {
           const isPending = request.status === 'pending';
           const dueDate = new Date(request.due_date);
           const isOverdue = dueDate < new Date() && isPending;
@@ -106,9 +164,9 @@ export const SimulationDocumentRequests = () => {
               key={request.id}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.05 }}
             >
-              <Card className={`simulation-request-card ${isPending ? 'border-primary/20' : ''}`}>
+              <Card className={isPending ? 'border-primary/20' : ''}>
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-3">
@@ -130,9 +188,6 @@ export const SimulationDocumentRequests = () => {
                       <div>
                         <CardTitle className="text-base flex items-center gap-2">
                           {request.title}
-                          <Badge variant="secondary" className="text-xs">
-                            DEMO
-                          </Badge>
                         </CardTitle>
                         <CardDescription className="flex items-center gap-2 mt-1">
                           <Building2 className="h-3 w-3" />
@@ -172,7 +227,7 @@ export const SimulationDocumentRequests = () => {
                   {isPending && (
                     <Button
                       onClick={() => submitDocumentForRequest(request.id)}
-                      className="w-full gap-2 simulation-upload-button"
+                      className="w-full gap-2"
                     >
                       <Upload className="h-4 w-4" />
                       Upload & Submit Document
@@ -198,6 +253,18 @@ export const SimulationDocumentRequests = () => {
           );
         })}
       </div>
-    </motion.div>
+
+      {filteredRequests.length === 0 && (
+        <Card className="border-dashed">
+          <CardContent className="py-12 text-center">
+            <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Requests Found</h3>
+            <p className="text-muted-foreground">
+              {searchTerm ? 'Try adjusting your search terms' : 'No document requests yet'}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 };

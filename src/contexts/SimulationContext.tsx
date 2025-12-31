@@ -8,6 +8,12 @@ import {
   simulationDocumentRequests,
   simulationSteps,
   simulationComplianceStats,
+  simulationSupplierProfile,
+  simulationDocumentUploads,
+  simulationLibraryDocuments,
+  simulationConnectedBuyers,
+  simulationExpiringDocuments,
+  simulationActivityTrend,
 } from '@/data/supplierSimulationData';
 import { toast } from 'sonner';
 
@@ -25,6 +31,8 @@ export type SimulationStep =
 export type ConnectionStatus = 'pending' | 'approved' | 'onboarding' | 'active';
 export type OnboardingStatus = 'pending' | 'in_progress' | 'submitted' | 'approved';
 
+export type SimulationTab = 'overview' | 'requests' | 'documents' | 'library' | 'connections' | 'compliance';
+
 interface DocumentRequest {
   id: string;
   title: string;
@@ -37,20 +45,25 @@ interface DocumentRequest {
   created_at: string;
   buyer_id: string;
   supplier_id: string;
-  buyer: typeof simulationBuyer;
+  buyers: typeof simulationBuyer;
 }
 
 interface SimulationState {
   isActive: boolean;
   currentStep: SimulationStep;
+  currentTab: SimulationTab;
   completedSteps: string[];
   connectionStatus: ConnectionStatus;
   onboardingStatus: OnboardingStatus;
   documentRequests: DocumentRequest[];
+  documentUploads: typeof simulationDocumentUploads;
+  libraryDocuments: typeof simulationLibraryDocuments;
+  connectedBuyers: typeof simulationConnectedBuyers;
   uploadedOnboardingDocs: string[];
   completedFormFields: string[];
   submittedDocuments: string[];
   showTour: boolean;
+  pendingConnectionRequest: typeof simulationConnectionRequest | null;
 }
 
 interface SimulationContextType extends SimulationState {
@@ -58,6 +71,9 @@ interface SimulationContextType extends SimulationState {
   startSimulation: () => void;
   exitSimulation: () => void;
   resetSimulation: () => void;
+  
+  // Tab navigation
+  setActiveTab: (tab: SimulationTab) => void;
   
   // Connection actions
   acceptConnection: () => void;
@@ -78,26 +94,34 @@ interface SimulationContextType extends SimulationState {
   setShowTour: (show: boolean) => void;
   
   // Data getters
-  getConnectionRequest: () => typeof simulationConnectionRequest;
+  getConnectionRequest: () => typeof simulationConnectionRequest | null;
   getOnboardingRequest: () => typeof simulationOnboardingRequest;
   getDocumentRequirements: () => typeof simulationDocumentRequirements;
   getFormFields: () => typeof simulationFormFields;
   getBuyer: () => typeof simulationBuyer;
+  getSupplierProfile: () => typeof simulationSupplierProfile;
   getSteps: () => typeof simulationSteps;
   getComplianceStats: () => typeof simulationComplianceStats;
+  getExpiringDocuments: () => typeof simulationExpiringDocuments;
+  getActivityTrend: () => typeof simulationActivityTrend;
 }
 
 const initialState: SimulationState = {
   isActive: false,
   currentStep: 'intro',
+  currentTab: 'overview',
   completedSteps: [],
   connectionStatus: 'pending',
   onboardingStatus: 'pending',
   documentRequests: [...simulationDocumentRequests],
+  documentUploads: [...simulationDocumentUploads],
+  libraryDocuments: [...simulationLibraryDocuments],
+  connectedBuyers: [],
   uploadedOnboardingDocs: [],
   completedFormFields: [],
   submittedDocuments: [],
   showTour: true,
+  pendingConnectionRequest: { ...simulationConnectionRequest },
 };
 
 const SimulationContext = createContext<SimulationContextType | undefined>(undefined);
@@ -110,7 +134,9 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
       ...initialState,
       isActive: true,
       currentStep: 'connect',
+      currentTab: 'overview',
       showTour: true,
+      pendingConnectionRequest: { ...simulationConnectionRequest },
     });
     toast.success('Simulation started! Follow the guided steps to learn the platform.');
   }, []);
@@ -125,9 +151,15 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
       ...initialState,
       isActive: true,
       currentStep: 'connect',
+      currentTab: 'overview',
       showTour: true,
+      pendingConnectionRequest: { ...simulationConnectionRequest },
     });
     toast.info('Simulation reset. Starting from the beginning.');
+  }, []);
+
+  const setActiveTab = useCallback((tab: SimulationTab) => {
+    setState(prev => ({ ...prev, currentTab: tab }));
   }, []);
 
   const acceptConnection = useCallback(() => {
@@ -136,6 +168,22 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
       connectionStatus: 'onboarding',
       completedSteps: [...prev.completedSteps, 'connect'],
       currentStep: 'onboarding-docs',
+      pendingConnectionRequest: null,
+      connectedBuyers: [{
+        id: 'sim-connection-001',
+        buyer_id: 'sim-buyer-001',
+        supplier_id: 'sim-supplier-001',
+        status: 'approved',
+        requested_at: simulationConnectionRequest.requested_at,
+        responded_at: new Date().toISOString(),
+        buyers: simulationBuyer,
+        unifiedStatus: 'onboardingPending',
+        supplier_onboarding_requests: [{
+          id: 'sim-onboarding-001',
+          status: 'pending',
+          approved_at: null,
+        }],
+      }],
     }));
     toast.success('Connection accepted! Now complete your onboarding.');
   }, []);
@@ -148,6 +196,7 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
       return {
         ...prev,
         uploadedOnboardingDocs: newUploadedDocs,
+        onboardingStatus: 'in_progress',
         completedSteps: allDocsUploaded 
           ? [...prev.completedSteps, 'onboarding-docs']
           : prev.completedSteps,
@@ -177,9 +226,16 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
     setState(prev => ({
       ...prev,
       onboardingStatus: 'submitted',
-      connectionStatus: 'active',
       completedSteps: [...prev.completedSteps, 'submit-onboarding'],
       currentStep: 'view-requests',
+      connectedBuyers: prev.connectedBuyers.map(conn => ({
+        ...conn,
+        unifiedStatus: 'onboardingPending',
+        supplier_onboarding_requests: [{
+          ...conn.supplier_onboarding_requests?.[0],
+          status: 'submitted',
+        }],
+      })),
     }));
     toast.success('Onboarding submitted! The buyer will review your submission.');
     
@@ -188,6 +244,16 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
       setState(prev => ({
         ...prev,
         onboardingStatus: 'approved',
+        connectionStatus: 'active',
+        connectedBuyers: prev.connectedBuyers.map(conn => ({
+          ...conn,
+          unifiedStatus: 'fullyConnected',
+          supplier_onboarding_requests: [{
+            ...conn.supplier_onboarding_requests?.[0],
+            status: 'approved',
+            approved_at: new Date().toISOString(),
+          }],
+        })),
       }));
       toast.success('🎉 Your onboarding has been approved by Acme Fresh Foods!');
     }, 3000);
@@ -199,12 +265,34 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
         req.id === requestId ? { ...req, status: 'submitted' } : req
       );
       
+      // Add a new upload entry
+      const request = prev.documentRequests.find(r => r.id === requestId);
+      const newUpload = {
+        id: `sim-upload-${Date.now()}`,
+        request_id: requestId,
+        file_name: `${request?.document_type || 'document'}_upload.pdf`,
+        file_path: `/uploads/sim/${request?.document_type || 'document'}_upload.pdf`,
+        file_size: 125000,
+        mime_type: 'application/pdf',
+        status: 'submitted',
+        expiration_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        created_at: new Date().toISOString(),
+        document_requests: {
+          id: requestId,
+          title: request?.title || 'Document',
+          document_type: request?.document_type || 'document',
+          category: request?.category || 'General',
+          buyers: simulationBuyer,
+        },
+      };
+      
       const newSubmittedDocs = [...prev.submittedDocuments, requestId];
       const isFirstSubmission = prev.submittedDocuments.length === 0;
       
       return {
         ...prev,
         documentRequests: updatedRequests,
+        documentUploads: [...prev.documentUploads, newUpload],
         submittedDocuments: newSubmittedDocs,
         completedSteps: isFirstSubmission 
           ? [...prev.completedSteps, 'submit-document']
@@ -221,11 +309,16 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
           req.id === requestId ? { ...req, status: 'approved' } : req
         );
         
+        const updatedUploads = prev.documentUploads.map(upload =>
+          upload.request_id === requestId ? { ...upload, status: 'approved', approved_at: new Date().toISOString() } : upload
+        );
+        
         const wasWaitingForApproval = prev.currentStep === 'approval';
         
         return {
           ...prev,
           documentRequests: updatedRequests,
+          documentUploads: updatedUploads,
           completedSteps: wasWaitingForApproval 
             ? [...prev.completedSteps, 'approval']
             : prev.completedSteps,
@@ -252,10 +345,7 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   // Data getters
-  const getConnectionRequest = useCallback(() => ({
-    ...simulationConnectionRequest,
-    status: state.connectionStatus,
-  }), [state.connectionStatus]);
+  const getConnectionRequest = useCallback(() => state.pendingConnectionRequest, [state.pendingConnectionRequest]);
 
   const getOnboardingRequest = useCallback(() => ({
     ...simulationOnboardingRequest,
@@ -277,6 +367,8 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
   , [state.completedFormFields]);
 
   const getBuyer = useCallback(() => simulationBuyer, []);
+  
+  const getSupplierProfile = useCallback(() => simulationSupplierProfile, []);
 
   const getSteps = useCallback(() => 
     simulationSteps.map(step => ({
@@ -295,15 +387,23 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
       approved,
       submitted,
       pending,
-      complianceRate: Math.round((approved / state.documentRequests.length) * 100),
+      complianceRate: state.documentRequests.length > 0 
+        ? Math.round((approved / state.documentRequests.length) * 100)
+        : 0,
+      connectedBuyers: state.connectedBuyers.length,
     };
-  }, [state.documentRequests]);
+  }, [state.documentRequests, state.connectedBuyers]);
+
+  const getExpiringDocuments = useCallback(() => simulationExpiringDocuments, []);
+  
+  const getActivityTrend = useCallback(() => simulationActivityTrend, []);
 
   const value: SimulationContextType = {
     ...state,
     startSimulation,
     exitSimulation,
     resetSimulation,
+    setActiveTab,
     acceptConnection,
     uploadOnboardingDocument,
     completeFormField,
@@ -317,8 +417,11 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
     getDocumentRequirements,
     getFormFields,
     getBuyer,
+    getSupplierProfile,
     getSteps,
     getComplianceStats,
+    getExpiringDocuments,
+    getActivityTrend,
   };
 
   return (

@@ -730,14 +730,14 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                         </div>
                       ))}
                       {actionItems.length > 3 && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="w-full mt-2"
-                          onClick={() => setActiveTab('requests')}
-                        >
-                          View {actionItems.length - 3} more
-                        </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full mt-2 text-primary border-primary/30 hover:bg-primary/5 hover:text-primary"
+                        onClick={() => setActiveTab('requests')}
+                      >
+                        View {actionItems.length - 3} more
+                      </Button>
                       )}
                     </div>
                   ) : (

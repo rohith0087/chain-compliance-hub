@@ -26,6 +26,7 @@ import SharedDocumentViewer from "./components/shared/SharedDocumentViewer";
 import NotFound from "./pages/NotFound";
 import SubscriptionPage from "./pages/SubscriptionPage";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
+import SupplierSimulation from "./pages/SupplierSimulation";
 import "./i18n";
 import { BranchProvider } from "@/contexts/BranchContext";
 

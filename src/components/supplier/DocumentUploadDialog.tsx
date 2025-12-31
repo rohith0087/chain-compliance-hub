@@ -368,7 +368,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
-      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0">
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
         <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4 border-b bg-gradient-to-r from-primary/5 to-transparent">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -385,7 +385,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
           </div>
         </DialogHeader>
         
-        <ScrollArea className="flex-1 min-h-0">
+        <ScrollArea className="flex-1 min-h-0 max-h-[calc(90vh-180px)]">
           <div className="px-6 py-5">
             {/* Two-column grid layout for desktop */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -19,7 +19,7 @@ export const SimulationBanner = ({ onExit }: SimulationBannerProps) => {
   };
 
   return (
-    <div className="simulation-banner bg-amber-500/90 text-amber-950 px-4 py-2 flex items-center justify-between sticky top-0 z-50 backdrop-blur-sm">
+    <div className="simulation-banner bg-amber-500/90 text-amber-950 px-4 py-2 flex items-center justify-between z-50 backdrop-blur-sm">
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 bg-amber-600/30 px-3 py-1 rounded-full">
           <AlertTriangle className="h-4 w-4" />

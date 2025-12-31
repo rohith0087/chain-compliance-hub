@@ -35,10 +35,10 @@ export const SimulationProgress = () => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 100 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 100 }}
-      className="simulation-progress fixed right-4 top-20 z-40 w-72"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      className="simulation-progress w-full"
     >
       <Card className="shadow-lg border-primary/20">
         <CardHeader className="py-3 px-4">

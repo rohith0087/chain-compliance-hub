@@ -214,8 +214,7 @@ export const SupplierSimulationDashboard = () => {
               </div>
               
               <div className="flex items-center gap-2">
-                <SimulationNotificationCenter />
-                <SimulationHelpButton shouldPulse={shouldPulseHelp} />
+              <SimulationNotificationCenter />
               </div>
             </div>
           </header>
@@ -239,6 +238,9 @@ export const SupplierSimulationDashboard = () => {
           </main>
         </div>
       </div>
+
+      {/* Floating Help Button - Bottom Right */}
+      <SimulationHelpButton shouldPulse={shouldPulseHelp} />
 
       {/* All Simulation Modals */}
       <SimulationConnectWithBuyerModal />

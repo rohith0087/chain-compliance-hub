@@ -7,9 +7,11 @@ import { useSimulation } from '@/contexts/SimulationContext';
 
 export const SimulationComplete = () => {
   const navigate = useNavigate();
-  const { resetSimulation, exitSimulation, setActiveTab } = useSimulation();
+  const { resetSimulation, exitSimulation, setActiveTab, goToStep } = useSimulation();
 
   const handleExploreApplication = () => {
+    // Go back to intro step (which renders the dashboard) and set overview tab
+    goToStep('intro');
     setActiveTab('overview');
   };
 

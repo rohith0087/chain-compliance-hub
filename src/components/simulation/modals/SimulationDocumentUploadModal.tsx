@@ -83,17 +83,17 @@ export const SimulationDocumentUploadModal = () => {
                     <p className="text-xs text-muted-foreground mt-1">
                       The buyer uploaded this sample for your reference
                     </p>
-                    <div className="mt-3 p-2 bg-white rounded border flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-blue-500" />
-                        <div>
-                          <p className="text-sm font-medium">{request.sample_file_name}</p>
+                    <div className="mt-3 p-2 bg-white rounded border flex items-center justify-between gap-2 overflow-hidden">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <FileText className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{request.sample_file_name}</p>
                           <p className="text-xs text-muted-foreground">
                             {formatFileSize(request.sample_file_size || 0)}
                           </p>
                         </div>
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 flex-shrink-0">
                         <Button variant="ghost" size="icon" className="h-7 w-7">
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -103,7 +103,7 @@ export const SimulationDocumentUploadModal = () => {
                       </div>
                     </div>
                     {request.sample_notes && (
-                      <p className="text-xs text-blue-700 mt-2 italic">
+                      <p className="text-xs text-blue-700 mt-2 italic break-words">
                         "{request.sample_notes}"
                       </p>
                     )}

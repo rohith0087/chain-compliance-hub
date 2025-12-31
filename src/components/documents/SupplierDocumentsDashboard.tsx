@@ -23,7 +23,7 @@ import { useBranchContext } from '@/contexts/BranchContext';
 import DocumentCard from './DocumentCard';
 import DocumentTimeline from './DocumentTimeline';
 import DocumentUploadDialog from '@/components/supplier/DocumentUploadDialog';
-
+import { useToast } from '@/hooks/use-toast';
 
 // Helper to get the latest upload from an array (sorted by created_at descending)
 const getLatestUpload = (uploads: any[]) => {
@@ -41,6 +41,7 @@ const SupplierDocumentsDashboard = () => {
   const [highlightedDocId, setHighlightedDocId] = useState<string | null>(null);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [uploadDialogDoc, setUploadDialogDoc] = useState<any>(null);
+  const { toast } = useToast();
   const [filters, setFilters] = useState({
     search: '',
     status: '',
@@ -450,6 +451,40 @@ const SupplierDocumentsDashboard = () => {
     setUploadDialogDoc(doc);
   };
 
+  // Handle view document - open in new tab using secure URL
+  const handleViewDocument = async (doc: any) => {
+    const latestUpload = getLatestUpload(doc.document_uploads);
+    if (!latestUpload?.file_path) {
+      toast({
+        title: "No Document",
+        description: "No document file available to view.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('secure-document-url', {
+        body: { 
+          file_path: latestUpload.file_path,
+          bucket: 'compliance-documents'
+        }
+      });
+      
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (error) {
+      console.error('Error viewing document:', error);
+      toast({
+        title: "Error",
+        description: "Failed to open document. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-64">Loading documents...</div>;
   }
@@ -791,8 +826,8 @@ const SupplierDocumentsDashboard = () => {
                           })
                         }}
                         userRole="supplier"
-                        onView={() => console.log('View document:', doc.id)}
-                        onDownload={() => console.log('Download document:', doc.id)}
+                        onView={() => handleViewDocument(doc)}
+                        onDownload={() => handleViewDocument(doc)}
                         onUpload={() => handleUpload(doc)}
                         onRenewalSuccess={loadDocuments}
                       />
@@ -866,8 +901,8 @@ const SupplierDocumentsDashboard = () => {
                               })
                             }}
                             userRole="supplier"
-                            onView={() => console.log('View document:', doc.id)}
-                            onDownload={() => console.log('Download document:', doc.id)}
+                            onView={() => handleViewDocument(doc)}
+                            onDownload={() => handleViewDocument(doc)}
                             onUpload={() => handleUpload(doc)}
                             onRenewalSuccess={loadDocuments}
                           />

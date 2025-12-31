@@ -16,21 +16,26 @@ import {
   simulationActivityTrend,
   simulationNotifications,
   simulationAvailableBuyers,
+  demoBuyerId,
 } from '@/data/supplierSimulationData';
 import { toast } from 'sonner';
 
 export type SimulationStep = 
   | 'intro'
-  | 'connect'
+  | 'request-connection'
+  | 'wait-approval'
   | 'onboarding-docs'
   | 'onboarding-form'
   | 'submit-onboarding'
-  | 'view-requests'
-  | 'submit-document'
-  | 'approval'
+  | 'check-request-notification'
+  | 'upload-document'
+  | 'document-approved'
+  | 'check-expiry-notification'
+  | 'renew-document'
+  | 'explore-help'
   | 'complete';
 
-export type ConnectionStatus = 'pending' | 'approved' | 'onboarding' | 'active';
+export type ConnectionStatus = 'none' | 'pending' | 'approved' | 'onboarding' | 'active';
 export type OnboardingStatus = 'pending' | 'in_progress' | 'submitted' | 'approved';
 
 export type SimulationTab = 'overview' | 'requests' | 'documents' | 'library' | 'connections' | 'compliance';
@@ -62,6 +67,7 @@ interface SimulationNotification {
   read: boolean;
   created_at: string;
   action_url?: string;
+  stepTrigger?: SimulationStep; // Which step this notification advances
 }
 
 interface PendingOutgoingRequest {
@@ -71,6 +77,21 @@ interface PendingOutgoingRequest {
   notes?: string;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
+}
+
+interface ExpiringDocument {
+  id: string;
+  title: string;
+  buyer_name: string;
+  expiration_date: string;
+  days_until_expiry: number;
+  is_expired: boolean;
+  request_id: string;
+  document_type: string;
+  category: string;
+  file_name: string;
+  status: string;
+  version: number;
 }
 
 interface SimulationState {
@@ -89,7 +110,7 @@ interface SimulationState {
   submittedDocuments: string[];
   showTour: boolean;
   pendingConnectionRequest: typeof simulationConnectionRequest | null;
-  // New state for enhanced simulation
+  // Enhanced simulation state
   notifications: SimulationNotification[];
   pendingOutgoingRequests: PendingOutgoingRequest[];
   showConnectModal: boolean;
@@ -99,6 +120,11 @@ interface SimulationState {
   showLibraryUploadModal: boolean;
   showOnboardingUploadModal: boolean;
   selectedOnboardingDoc: typeof simulationDocumentRequirements[0] | null;
+  showRenewalUploadModal: boolean;
+  selectedExpiringDoc: ExpiringDocument | null;
+  expiringDocuments: ExpiringDocument[];
+  showHelpCenter: boolean;
+  enteredBuyerId: string;
 }
 
 interface SimulationContextType extends SimulationState {
@@ -114,6 +140,7 @@ interface SimulationContextType extends SimulationState {
   acceptConnection: () => void;
   sendConnectionRequest: (buyerId: string, notes?: string) => void;
   setShowConnectModal: (show: boolean) => void;
+  setEnteredBuyerId: (id: string) => void;
   
   // Onboarding actions
   uploadOnboardingDocument: (docId: string) => void;
@@ -138,9 +165,17 @@ interface SimulationContextType extends SimulationState {
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   getUnreadNotificationCount: () => number;
+  handleNotificationClick: (notification: SimulationNotification) => void;
   
   // Expiring documents actions
   renewDocument: (docId: string) => void;
+  openRenewalModal: (doc: ExpiringDocument) => void;
+  closeRenewalModal: () => void;
+  submitRenewal: (docId: string, fileName: string) => void;
+  
+  // Help center actions
+  setShowHelpCenter: (show: boolean) => void;
+  completeHelpExploration: () => void;
   
   // Navigation
   goToStep: (step: SimulationStep) => void;
@@ -158,9 +193,10 @@ interface SimulationContextType extends SimulationState {
   getSupplierProfile: () => typeof simulationSupplierProfile;
   getSteps: () => typeof simulationSteps;
   getComplianceStats: () => typeof simulationComplianceStats;
-  getExpiringDocuments: () => typeof simulationExpiringDocuments;
+  getExpiringDocuments: () => ExpiringDocument[];
   getActivityTrend: () => typeof simulationActivityTrend;
   getAvailableBuyers: () => typeof simulationAvailableBuyers;
+  getDemoBuyerId: () => string;
 }
 
 const initialState: SimulationState = {
@@ -168,19 +204,19 @@ const initialState: SimulationState = {
   currentStep: 'intro',
   currentTab: 'overview',
   completedSteps: [],
-  connectionStatus: 'pending',
+  connectionStatus: 'none',
   onboardingStatus: 'pending',
-  documentRequests: [...simulationDocumentRequests],
-  documentUploads: [...simulationDocumentUploads],
+  documentRequests: [],
+  documentUploads: [],
   libraryDocuments: [...simulationLibraryDocuments],
   connectedBuyers: [],
   uploadedOnboardingDocs: [],
   completedFormFields: [],
   submittedDocuments: [],
   showTour: true,
-  pendingConnectionRequest: { ...simulationConnectionRequest },
-  // New state
-  notifications: [...simulationNotifications],
+  pendingConnectionRequest: null,
+  // Enhanced state
+  notifications: [],
   pendingOutgoingRequests: [],
   showConnectModal: false,
   showUploadModal: false,
@@ -189,6 +225,11 @@ const initialState: SimulationState = {
   showLibraryUploadModal: false,
   showOnboardingUploadModal: false,
   selectedOnboardingDoc: null,
+  showRenewalUploadModal: false,
+  selectedExpiringDoc: null,
+  expiringDocuments: [...simulationExpiringDocuments],
+  showHelpCenter: false,
+  enteredBuyerId: '',
 };
 
 const SimulationContext = createContext<SimulationContextType | undefined>(undefined);
@@ -200,13 +241,17 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
     setState({
       ...initialState,
       isActive: true,
-      currentStep: 'connect',
-      currentTab: 'overview',
+      currentStep: 'request-connection',
+      currentTab: 'connections',
       showTour: true,
-      pendingConnectionRequest: { ...simulationConnectionRequest },
-      notifications: [...simulationNotifications],
+      pendingConnectionRequest: null,
+      notifications: [],
+      connectionStatus: 'none',
+      documentRequests: [],
+      documentUploads: [],
+      expiringDocuments: [...simulationExpiringDocuments],
     });
-    toast.success('Simulation started! Follow the guided steps to learn the platform.');
+    toast.success('Simulation started! Begin by connecting with a buyer.');
   }, []);
 
   const exitSimulation = useCallback(() => {
@@ -218,11 +263,15 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
     setState({
       ...initialState,
       isActive: true,
-      currentStep: 'connect',
-      currentTab: 'overview',
+      currentStep: 'request-connection',
+      currentTab: 'connections',
       showTour: true,
-      pendingConnectionRequest: { ...simulationConnectionRequest },
-      notifications: [...simulationNotifications],
+      pendingConnectionRequest: null,
+      notifications: [],
+      connectionStatus: 'none',
+      documentRequests: [],
+      documentUploads: [],
+      expiringDocuments: [...simulationExpiringDocuments],
     });
     toast.info('Simulation reset. Starting from the beginning.');
   }, []);
@@ -231,11 +280,16 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
     setState(prev => ({ ...prev, currentTab: tab }));
   }, []);
 
+  const setEnteredBuyerId = useCallback((id: string) => {
+    setState(prev => ({ ...prev, enteredBuyerId: id }));
+  }, []);
+
   const acceptConnection = useCallback(() => {
+    // Legacy function - kept for compatibility
     setState(prev => ({
       ...prev,
       connectionStatus: 'onboarding',
-      completedSteps: [...prev.completedSteps, 'connect'],
+      completedSteps: [...prev.completedSteps, 'request-connection', 'wait-approval'],
       currentStep: 'onboarding-docs',
       pendingConnectionRequest: null,
       connectedBuyers: [{
@@ -243,7 +297,7 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
         buyer_id: 'sim-buyer-001',
         supplier_id: 'sim-supplier-001',
         status: 'approved',
-        requested_at: simulationConnectionRequest.requested_at,
+        requested_at: new Date().toISOString(),
         responded_at: new Date().toISOString(),
         buyers: simulationBuyer,
         unifiedStatus: 'onboardingPending',
@@ -253,22 +307,21 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
           approved_at: null,
         }],
       }],
-      notifications: prev.notifications.filter(n => n.type !== 'connection_request'),
     }));
     toast.success('Connection accepted! Now complete your onboarding.');
   }, []);
 
   const sendConnectionRequest = useCallback((buyerId: string, notes?: string) => {
-    const buyer = simulationAvailableBuyers.find(b => b.id === buyerId);
-    if (!buyer) {
-      toast.error('Buyer not found');
+    // Validate buyer ID
+    if (buyerId.toUpperCase() !== demoBuyerId) {
+      toast.error(`Invalid Buyer ID. Try: ${demoBuyerId}`);
       return;
     }
     
     const newRequest: PendingOutgoingRequest = {
       id: `sim-outgoing-${Date.now()}`,
       buyer_id: buyerId,
-      buyer_name: buyer.company_name,
+      buyer_name: simulationBuyer.company_name,
       notes,
       status: 'pending',
       created_at: new Date().toISOString(),
@@ -276,25 +329,46 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
     
     setState(prev => ({
       ...prev,
-      pendingOutgoingRequests: [...prev.pendingOutgoingRequests, newRequest],
-      showConnectModal: false,
+      pendingOutgoingRequests: [newRequest],
+      connectionStatus: 'pending',
+      completedSteps: [...prev.completedSteps, 'request-connection'],
+      currentStep: 'wait-approval',
+      enteredBuyerId: buyerId,
     }));
     
-    toast.success(`Connection request sent to ${buyer.company_name}!`);
+    toast.success(`Connection request sent to ${simulationBuyer.company_name}! Wait for approval...`);
     
-    // Simulate approval after 5 seconds
+    // Simulate approval after 4 seconds
     setTimeout(() => {
       setState(prev => ({
         ...prev,
         pendingOutgoingRequests: prev.pendingOutgoingRequests.map(r =>
           r.id === newRequest.id ? { ...r, status: 'approved' } : r
         ),
+        connectionStatus: 'onboarding',
+        completedSteps: [...prev.completedSteps, 'wait-approval'],
+        currentStep: 'onboarding-docs',
+        connectedBuyers: [{
+          id: 'sim-connection-001',
+          buyer_id: 'sim-buyer-001',
+          supplier_id: 'sim-supplier-001',
+          status: 'approved',
+          requested_at: newRequest.created_at,
+          responded_at: new Date().toISOString(),
+          buyers: simulationBuyer,
+          unifiedStatus: 'onboardingPending',
+          supplier_onboarding_requests: [{
+            id: 'sim-onboarding-001',
+            status: 'pending',
+            approved_at: null,
+          }],
+        }],
         notifications: [
           {
             id: `sim-notif-${Date.now()}`,
             type: 'connection_approved',
             title: 'Connection Approved!',
-            message: `${buyer.company_name} has approved your connection request`,
+            message: `${simulationBuyer.company_name} has approved your connection request. Complete your onboarding now!`,
             read: false,
             created_at: new Date().toISOString(),
             action_url: '/connections',
@@ -302,8 +376,8 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
           ...prev.notifications,
         ],
       }));
-      toast.success(`🎉 ${buyer.company_name} accepted your connection request!`);
-    }, 5000);
+      toast.success(`🎉 ${simulationBuyer.company_name} approved your request! Complete onboarding now.`);
+    }, 4000);
   }, []);
 
   const setShowConnectModal = useCallback((show: boolean) => {
@@ -370,8 +444,6 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
     setState(prev => ({
       ...prev,
       onboardingStatus: 'submitted',
-      completedSteps: [...prev.completedSteps, 'submit-onboarding'],
-      currentStep: 'view-requests',
       connectedBuyers: prev.connectedBuyers.map(conn => ({
         ...conn,
         unifiedStatus: 'onboardingPending',
@@ -383,12 +455,14 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
     }));
     toast.success('Onboarding submitted! The buyer will review your submission.');
     
-    // Auto-approve after 3 seconds
+    // Auto-approve after 3 seconds and add document request notification
     setTimeout(() => {
       setState(prev => ({
         ...prev,
         onboardingStatus: 'approved',
         connectionStatus: 'active',
+        completedSteps: [...prev.completedSteps, 'submit-onboarding'],
+        currentStep: 'check-request-notification',
         connectedBuyers: prev.connectedBuyers.map(conn => ({
           ...conn,
           unifiedStatus: 'fullyConnected',
@@ -398,12 +472,24 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
             approved_at: new Date().toISOString(),
           }],
         })),
+        // Add document requests now that onboarding is complete
+        documentRequests: [...simulationDocumentRequests.slice(0, 2)],
         notifications: [
+          {
+            id: `sim-notif-doc-request-${Date.now()}`,
+            type: 'new_document_request',
+            title: '📋 New Document Request',
+            message: `${simulationBuyer.company_name} has requested a Food Handler Certificate. Click to view.`,
+            read: false,
+            created_at: new Date().toISOString(),
+            action_url: '/requests',
+            stepTrigger: 'check-request-notification',
+          },
           {
             id: `sim-notif-${Date.now()}`,
             type: 'onboarding_approved',
             title: 'Onboarding Approved!',
-            message: 'Acme Fresh Foods has approved your onboarding',
+            message: `${simulationBuyer.company_name} has approved your onboarding`,
             read: false,
             created_at: new Date().toISOString(),
             action_url: '/connections',
@@ -411,7 +497,7 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
           ...prev.notifications,
         ],
       }));
-      toast.success('🎉 Your onboarding has been approved by Acme Fresh Foods!');
+      toast.success('🎉 Onboarding approved! Check your notifications for a new document request.');
     }, 3000);
   }, []);
 
@@ -466,16 +552,16 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
         documentUploads: [...prev.documentUploads, newUpload],
         submittedDocuments: newSubmittedDocs,
         completedSteps: isFirstSubmission 
-          ? [...prev.completedSteps, 'submit-document']
+          ? [...prev.completedSteps, 'upload-document']
           : prev.completedSteps,
-        currentStep: isFirstSubmission ? 'approval' : prev.currentStep,
+        currentStep: isFirstSubmission ? 'document-approved' : prev.currentStep,
         showUploadModal: false,
         selectedRequestForUpload: null,
       };
     });
     toast.success('Document submitted for review!');
     
-    // Auto-approve after 3 seconds
+    // Auto-approve and trigger expiry notification
     setTimeout(() => {
       setState(prev => {
         const updatedRequests = prev.documentRequests.map(req =>
@@ -486,19 +572,25 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
           upload.request_id === requestId ? { ...upload, status: 'approved', approved_at: new Date().toISOString() } : upload
         );
         
-        const wasWaitingForApproval = prev.currentStep === 'approval';
-        
         return {
           ...prev,
           documentRequests: updatedRequests,
           documentUploads: updatedUploads,
-          completedSteps: wasWaitingForApproval 
-            ? [...prev.completedSteps, 'approval']
-            : prev.completedSteps,
-          currentStep: wasWaitingForApproval ? 'complete' : prev.currentStep,
+          completedSteps: [...prev.completedSteps, 'document-approved'],
+          currentStep: 'check-expiry-notification',
           notifications: [
             {
-              id: `sim-notif-${Date.now()}`,
+              id: `sim-notif-expiry-${Date.now()}`,
+              type: 'document_expiring',
+              title: '⚠️ Document Expired',
+              message: 'Workers Compensation Insurance has expired and needs renewal. Click to view.',
+              read: false,
+              created_at: new Date().toISOString(),
+              action_url: '/documents',
+              stepTrigger: 'check-expiry-notification',
+            },
+            {
+              id: `sim-notif-approved-${Date.now()}`,
               type: 'document_approved',
               title: 'Document Approved!',
               message: `Your ${prev.documentRequests.find(r => r.id === requestId)?.title} has been approved`,
@@ -510,12 +602,11 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
           ],
         };
       });
-      toast.success('🎉 Your document has been approved!');
+      toast.success('🎉 Document approved! Check notifications for an expiring document alert.');
     }, 3000);
   }, []);
 
   const submitDocumentForRequest = useCallback((requestId: string) => {
-    // Open the upload modal instead of instant submit
     const request = state.documentRequests.find(r => r.id === requestId);
     if (request) {
       setState(prev => ({
@@ -580,9 +671,122 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
     return state.notifications.filter(n => !n.read).length;
   }, [state.notifications]);
 
+  const handleNotificationClick = useCallback((notification: SimulationNotification) => {
+    setState(prev => {
+      const updates: Partial<SimulationState> = {
+        notifications: prev.notifications.map(n =>
+          n.id === notification.id ? { ...n, read: true } : n
+        ),
+        showNotificationCenter: false,
+      };
+      
+      // Navigate based on notification type
+      if (notification.type === 'new_document_request') {
+        updates.currentTab = 'requests';
+        if (prev.currentStep === 'check-request-notification') {
+          updates.completedSteps = [...prev.completedSteps, 'check-request-notification'];
+          updates.currentStep = 'upload-document';
+        }
+      } else if (notification.type === 'document_expiring' || notification.type === 'document_expired') {
+        updates.currentTab = 'documents';
+        if (prev.currentStep === 'check-expiry-notification') {
+          updates.completedSteps = [...prev.completedSteps, 'check-expiry-notification'];
+          updates.currentStep = 'renew-document';
+        }
+      } else if (notification.type === 'connection_approved' || notification.type === 'onboarding_approved') {
+        updates.currentTab = 'connections';
+      } else if (notification.type === 'document_approved') {
+        updates.currentTab = 'documents';
+      }
+      
+      return { ...prev, ...updates };
+    });
+    
+    toast.info(`Navigating to ${notification.action_url?.replace('/', '') || 'page'}...`);
+  }, []);
+
+  const openRenewalModal = useCallback((doc: ExpiringDocument) => {
+    setState(prev => ({
+      ...prev,
+      showRenewalUploadModal: true,
+      selectedExpiringDoc: doc,
+    }));
+  }, []);
+
+  const closeRenewalModal = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      showRenewalUploadModal: false,
+      selectedExpiringDoc: null,
+    }));
+  }, []);
+
   const renewDocument = useCallback((docId: string) => {
-    toast.success('Renewal request submitted. Upload your updated document.');
-    // In a real scenario, this would open an upload modal
+    const doc = state.expiringDocuments.find(d => d.id === docId);
+    if (doc) {
+      setState(prev => ({
+        ...prev,
+        showRenewalUploadModal: true,
+        selectedExpiringDoc: doc,
+      }));
+    }
+  }, [state.expiringDocuments]);
+
+  const submitRenewal = useCallback((docId: string, fileName: string) => {
+    setState(prev => {
+      // Remove from expiring documents
+      const updatedExpiring = prev.expiringDocuments.filter(d => d.id !== docId);
+      const renewedDoc = prev.expiringDocuments.find(d => d.id === docId);
+      
+      // Add to document uploads as V2
+      const newUpload = {
+        id: `sim-upload-renewal-${Date.now()}`,
+        request_id: renewedDoc?.request_id || docId,
+        file_name: fileName || `${renewedDoc?.document_type || 'document'}_v2.pdf`,
+        file_path: `/uploads/sim/${renewedDoc?.document_type || 'document'}_v2.pdf`,
+        file_size: 125000,
+        mime_type: 'application/pdf',
+        status: 'approved',
+        expiration_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        created_at: new Date().toISOString(),
+        version: 2,
+        document_requests: {
+          id: renewedDoc?.request_id || docId,
+          title: renewedDoc?.title || 'Renewed Document',
+          document_type: renewedDoc?.document_type || 'document',
+          category: renewedDoc?.category || 'General',
+          buyers: simulationBuyer,
+        },
+      };
+      
+      const isRenewalStep = prev.currentStep === 'renew-document';
+      
+      return {
+        ...prev,
+        expiringDocuments: updatedExpiring,
+        documentUploads: [...prev.documentUploads, newUpload],
+        showRenewalUploadModal: false,
+        selectedExpiringDoc: null,
+        completedSteps: isRenewalStep ? [...prev.completedSteps, 'renew-document'] : prev.completedSteps,
+        currentStep: isRenewalStep ? 'explore-help' : prev.currentStep,
+      };
+    });
+    
+    toast.success('🎉 Document renewed! Version 2 uploaded successfully. Now explore the Help Center!');
+  }, []);
+
+  const setShowHelpCenter = useCallback((show: boolean) => {
+    setState(prev => ({ ...prev, showHelpCenter: show }));
+  }, []);
+
+  const completeHelpExploration = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      completedSteps: [...prev.completedSteps, 'explore-help'],
+      currentStep: 'complete',
+      showHelpCenter: false,
+    }));
+    toast.success('🎉 Congratulations! You\'ve completed the simulation!');
   }, []);
 
   const goToStep = useCallback((step: SimulationStep) => {
@@ -652,11 +856,13 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [state.documentRequests, state.connectedBuyers, state.documentUploads]);
 
-  const getExpiringDocuments = useCallback(() => simulationExpiringDocuments, []);
+  const getExpiringDocuments = useCallback(() => state.expiringDocuments, [state.expiringDocuments]);
   
   const getActivityTrend = useCallback(() => simulationActivityTrend, []);
 
   const getAvailableBuyers = useCallback(() => simulationAvailableBuyers, []);
+
+  const getDemoBuyerId = useCallback(() => demoBuyerId, []);
 
   const value: SimulationContextType = {
     ...state,
@@ -667,6 +873,7 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
     acceptConnection,
     sendConnectionRequest,
     setShowConnectModal,
+    setEnteredBuyerId,
     uploadOnboardingDocument,
     completeFormField,
     submitOnboarding,
@@ -683,7 +890,13 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
     markNotificationRead,
     markAllNotificationsRead,
     getUnreadNotificationCount,
+    handleNotificationClick,
     renewDocument,
+    openRenewalModal,
+    closeRenewalModal,
+    submitRenewal,
+    setShowHelpCenter,
+    completeHelpExploration,
     goToStep,
     completeCurrentStep,
     setShowTour,
@@ -698,6 +911,7 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
     getExpiringDocuments,
     getActivityTrend,
     getAvailableBuyers,
+    getDemoBuyerId,
   };
 
   return (

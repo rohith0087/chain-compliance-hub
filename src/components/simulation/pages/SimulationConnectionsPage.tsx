@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -20,14 +21,17 @@ import {
   AlertCircle,
   Download,
   Info,
-  ArrowRight
+  ArrowRight,
+  Loader2
 } from 'lucide-react';
 import { useSimulation } from '@/contexts/SimulationContext';
 import { formatDistanceToNow } from 'date-fns';
 
 export const SimulationConnectionsPage = () => {
   const [activeTab, setActiveTab] = useState('all');
+  const [buyerIdInput, setBuyerIdInput] = useState('');
   const { 
+    currentStep,
     pendingConnectionRequest,
     connectedBuyers,
     acceptConnection,
@@ -42,6 +46,8 @@ export const SimulationConnectionsPage = () => {
     setShowConnectModal,
     openOnboardingUploadModal,
     downloadTemplate,
+    sendConnectionRequest,
+    connectionStatus,
   } = useSimulation();
 
   const documentRequirements = getDocumentRequirements();
@@ -59,6 +65,15 @@ export const SimulationConnectionsPage = () => {
   const canSubmitOnboarding = allDocsUploaded && allFieldsCompleted;
 
   const pendingOutgoingCount = pendingOutgoingRequests.filter(r => r.status === 'pending').length;
+  const isWaitingForApproval = currentStep === 'wait-approval';
+  const isRequestConnectionStep = currentStep === 'request-connection';
+
+  const handleSendConnectionRequest = () => {
+    if (buyerIdInput.trim()) {
+      sendConnectionRequest(buyerIdInput.trim());
+      setBuyerIdInput('');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -71,15 +86,90 @@ export const SimulationConnectionsPage = () => {
           </h1>
           <p className="text-muted-foreground">Manage your buyer relationships</p>
         </div>
-        <Button 
-          variant="outline" 
-          className="gap-2"
-          onClick={() => setShowConnectModal(true)}
-        >
-          <UserPlus className="h-4 w-4" />
-          Request Connection
-        </Button>
       </div>
+
+      {/* Get Started Card - Show when no connection exists */}
+      {(isRequestConnectionStep || isWaitingForApproval) && connectionStatus !== 'active' && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Card className={`border-2 ${isRequestConnectionStep ? 'border-primary/50 bg-gradient-to-r from-primary/5 to-primary/10' : 'border-amber-200 bg-gradient-to-r from-amber-50/50 to-orange-50/50'}`}>
+            <CardHeader>
+              <div className="flex items-start gap-4">
+                <div className={`p-3 rounded-lg ${isRequestConnectionStep ? 'bg-primary/10' : 'bg-amber-100'}`}>
+                  {isWaitingForApproval ? (
+                    <Loader2 className="h-6 w-6 text-amber-600 animate-spin" />
+                  ) : (
+                    <UserPlus className="h-6 w-6 text-primary" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <CardTitle className="flex items-center gap-2">
+                    {isWaitingForApproval ? 'Waiting for Buyer Approval' : 'Get Started - Connect with a Buyer'}
+                    {isRequestConnectionStep && (
+                      <Badge className="bg-primary/20 text-primary border-primary/30">
+                        Current Step
+                      </Badge>
+                    )}
+                    {isWaitingForApproval && (
+                      <Badge className="bg-amber-100 text-amber-700 border-amber-200">
+                        <Clock className="h-3 w-3 mr-1" />
+                        Pending
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    {isWaitingForApproval 
+                      ? 'Your connection request has been sent. The buyer is reviewing your request...'
+                      : 'Enter a Buyer ID to send a connection request. In the real app, buyers will share their ID with you.'}
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isRequestConnectionStep && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+                    <Info className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <p className="text-sm text-muted-foreground">
+                      For this simulation, use the demo Buyer ID: <code className="font-mono bg-primary/10 px-1.5 py-0.5 rounded text-primary font-semibold">BUY-DEMO-2024</code>
+                    </p>
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <Input
+                      placeholder="Enter Buyer ID (e.g., BUY-XXXX-XXXX)"
+                      value={buyerIdInput}
+                      onChange={(e) => setBuyerIdInput(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button 
+                      onClick={handleSendConnectionRequest}
+                      disabled={!buyerIdInput.trim()}
+                      className="gap-2"
+                    >
+                      <Send className="h-4 w-4" />
+                      Send Request
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              {isWaitingForApproval && (
+                <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                    <span className="text-sm text-amber-700">
+                      Processing request... The buyer will approve shortly.
+                    </span>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
@@ -104,8 +194,8 @@ export const SimulationConnectionsPage = () => {
         </TabsList>
 
         <TabsContent value={activeTab} className="mt-6 space-y-4">
-          {/* Pending Connection Request */}
-          {pendingConnectionRequest && (activeTab === 'all' || activeTab === 'pending') && (
+          {/* Pending Connection Request - Only show if NOT in request/wait steps */}
+          {pendingConnectionRequest && !isRequestConnectionStep && !isWaitingForApproval && (activeTab === 'all' || activeTab === 'pending') && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -397,7 +487,7 @@ export const SimulationConnectionsPage = () => {
                                 )}
                                 <div>
                                   <p className="font-medium text-sm">{field.field_label}</p>
-                                  <p className="text-xs text-muted-foreground">{field.field_description}</p>
+                                  <p className="text-xs text-muted-foreground">{field.field_type}</p>
                                 </div>
                               </div>
                               {!isCompleted && (
@@ -405,8 +495,9 @@ export const SimulationConnectionsPage = () => {
                                   size="sm" 
                                   variant="outline"
                                   onClick={() => completeFormField(field.id)}
+                                  className="gap-1"
                                 >
-                                  Fill
+                                  Complete
                                 </Button>
                               )}
                             </div>
@@ -415,18 +506,8 @@ export const SimulationConnectionsPage = () => {
                       </div>
                     </div>
 
-                    {/* Submit Button */}
-                    {onboardingStatus === 'submitted' ? (
-                      <div className="text-center py-4">
-                        <Send className="h-8 w-8 mx-auto text-blue-500 animate-pulse mb-2" />
-                        <p className="text-muted-foreground">Waiting for buyer approval...</p>
-                      </div>
-                    ) : onboardingStatus === 'approved' ? (
-                      <div className="text-center py-4">
-                        <CheckCircle2 className="h-8 w-8 mx-auto text-green-500 mb-2" />
-                        <p className="text-green-600 font-medium">Onboarding Approved!</p>
-                      </div>
-                    ) : (
+                    {/* Submit Onboarding */}
+                    <div className="pt-4 border-t">
                       <Button 
                         onClick={submitOnboarding}
                         disabled={!canSubmitOnboarding}
@@ -435,26 +516,11 @@ export const SimulationConnectionsPage = () => {
                         <Send className="h-4 w-4" />
                         Submit Onboarding
                       </Button>
-                    )}
-                  </CardContent>
-                )}
-                
-                {/* Fully Connected */}
-                {connection.unifiedStatus === 'fullyConnected' && (
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Mail className="h-4 w-4" />
-                        {connection.buyers.contact_email}
-                      </div>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Phone className="h-4 w-4" />
-                        {connection.buyers.phone}
-                      </div>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <MapPin className="h-4 w-4" />
-                        {connection.buyers.city}, {connection.buyers.state}
-                      </div>
+                      {!canSubmitOnboarding && (
+                        <p className="text-xs text-muted-foreground text-center mt-2">
+                          Complete all documents and form fields to submit
+                        </p>
+                      )}
                     </div>
                   </CardContent>
                 )}
@@ -463,18 +529,18 @@ export const SimulationConnectionsPage = () => {
           ))}
 
           {/* Empty State */}
-          {!pendingConnectionRequest && connectedBuyers.length === 0 && pendingOutgoingRequests.length === 0 && (
+          {!pendingConnectionRequest && 
+           pendingOutgoingRequests.length === 0 && 
+           connectedBuyers.length === 0 && 
+           !isRequestConnectionStep && 
+           !isWaitingForApproval && (
             <Card className="border-dashed">
               <CardContent className="py-12 text-center">
                 <Building2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No Connections Yet</h3>
                 <p className="text-muted-foreground max-w-md mx-auto mb-4">
-                  You don't have any buyer connections. Request a connection or wait for buyers to reach out.
+                  Start by connecting with a buyer to begin your supplier journey.
                 </p>
-                <Button onClick={() => setShowConnectModal(true)} className="gap-2">
-                  <UserPlus className="h-4 w-4" />
-                  Request Connection
-                </Button>
               </CardContent>
             </Card>
           )}

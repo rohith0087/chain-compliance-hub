@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useSimulation } from '@/contexts/SimulationContext';
 import { motion } from 'framer-motion';
 
-export const SimulationHelpButton = () => {
+export const SimulationHelpButton = ({ shouldPulse = false }: { shouldPulse?: boolean }) => {
   const [activeTab, setActiveTab] = useState('guides');
   const [ticketSubject, setTicketSubject] = useState('');
   const [ticketDescription, setTicketDescription] = useState('');

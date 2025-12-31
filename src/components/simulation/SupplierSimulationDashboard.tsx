@@ -1,32 +1,18 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
   FileCheck, 
   Building2,
-  TrendingUp,
   FileText,
   Play,
   X,
   RotateCcw,
-  ArrowRight,
   Users,
   Home,
   ListChecks,
   BarChart3,
-  Bell
 } from 'lucide-react';
-import { ComplianceRing } from '@/components/dashboard/ComplianceRing';
-import { MetricChip } from '@/components/dashboard/MetricChip';
-import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { 
   Sidebar,
   SidebarContent,
@@ -51,6 +37,11 @@ import { SimulationDocumentsPage } from './pages/SimulationDocumentsPage';
 import { SimulationLibraryPage } from './pages/SimulationLibraryPage';
 import { SimulationConnectionsPage } from './pages/SimulationConnectionsPage';
 import { SimulationCompliancePage } from './pages/SimulationCompliancePage';
+import { SimulationNotificationCenter } from './SimulationNotificationCenter';
+import { SimulationConnectWithBuyerModal } from './modals/SimulationConnectWithBuyerModal';
+import { SimulationDocumentUploadModal } from './modals/SimulationDocumentUploadModal';
+import { SimulationLibraryUploadModal } from './modals/SimulationLibraryUploadModal';
+import { SimulationOnboardingUploadModal } from './modals/SimulationOnboardingUploadModal';
 import { Shield } from 'lucide-react';
 
 interface NavigationItem {
@@ -68,14 +59,11 @@ export const SupplierSimulationDashboard = () => {
     exitSimulation, 
     resetSimulation,
     getSupplierProfile,
-    getComplianceStats,
     documentRequests,
-    connectedBuyers,
     pendingConnectionRequest,
   } = useSimulation();
   
   const supplierProfile = getSupplierProfile();
-  const stats = getComplianceStats();
   
   const pendingRequests = documentRequests.filter(r => r.status === 'pending').length;
   const pendingConnections = pendingConnectionRequest ? 1 : 0;
@@ -220,14 +208,7 @@ export const SupplierSimulationDashboard = () => {
               </div>
               
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-5 w-5" />
-                  {pendingConnections > 0 && (
-                    <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] text-white flex items-center justify-center">
-                      {pendingConnections}
-                    </span>
-                  )}
-                </Button>
+                <SimulationNotificationCenter />
               </div>
             </div>
           </header>
@@ -251,6 +232,12 @@ export const SupplierSimulationDashboard = () => {
           </main>
         </div>
       </div>
+
+      {/* All Simulation Modals */}
+      <SimulationConnectWithBuyerModal />
+      <SimulationDocumentUploadModal />
+      <SimulationLibraryUploadModal />
+      <SimulationOnboardingUploadModal />
     </SidebarProvider>
   );
 };

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { 
   PlayCircle, 
@@ -7,9 +7,13 @@ import {
   ClipboardCheck, 
   CheckCircle2,
   ArrowRight,
-  Info
+  Info,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useSimulationNarration } from '@/hooks/useSimulationNarration';
+import { SimulationNarrationControls } from './SimulationNarrationControls';
 
 interface SimulationIntroProps {
   onStart: () => void;
@@ -17,6 +21,9 @@ interface SimulationIntroProps {
 }
 
 export const SimulationIntro = ({ onStart, onSkip }: SimulationIntroProps) => {
+  const narration = useSimulationNarration();
+  const [hasPlayedIntro, setHasPlayedIntro] = useState(false);
+
   const steps = [
     {
       icon: Link,
@@ -44,6 +51,30 @@ export const SimulationIntro = ({ onStart, onSkip }: SimulationIntroProps) => {
     },
   ];
 
+  // Auto-play intro narration when component mounts
+  useEffect(() => {
+    if (!hasPlayedIntro && !narration.isMuted) {
+      const timer = setTimeout(() => {
+        narration.playNarration('intro');
+        setHasPlayedIntro(true);
+      }, 800); // Small delay for smoother experience
+      return () => clearTimeout(timer);
+    }
+  }, [hasPlayedIntro, narration.isMuted]);
+
+  const handleStart = () => {
+    narration.stopNarration();
+    onStart();
+  };
+
+  const handlePlayPause = () => {
+    if (narration.isPlaying) {
+      narration.pauseNarration();
+    } else {
+      narration.resumeNarration();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 md:p-8">
       <motion.div
@@ -69,6 +100,23 @@ export const SimulationIntro = ({ onStart, onSkip }: SimulationIntroProps) => {
           <p className="text-lg text-muted-foreground max-w-md mx-auto">
             A guided walkthrough to help you understand how everything works
           </p>
+
+          {/* Voice guidance indicator */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="mt-4 inline-flex items-center gap-2 text-sm text-muted-foreground"
+          >
+            {narration.isMuted ? (
+              <VolumeX className="h-4 w-4" />
+            ) : (
+              <Volume2 className="h-4 w-4 text-primary" />
+            )}
+            <span>
+              {narration.isMuted ? 'Voice guidance disabled' : 'Voice guidance enabled'}
+            </span>
+          </motion.div>
         </div>
 
         <div className="space-y-3 mb-8">
@@ -114,7 +162,7 @@ export const SimulationIntro = ({ onStart, onSkip }: SimulationIntroProps) => {
         >
           <Button
             size="lg"
-            onClick={onStart}
+            onClick={handleStart}
             className="flex-1 gap-2 h-12 text-base"
           >
             <PlayCircle className="h-5 w-5" />
@@ -135,6 +183,16 @@ export const SimulationIntro = ({ onStart, onSkip }: SimulationIntroProps) => {
           Takes about 5-10 minutes
         </p>
       </motion.div>
+
+      {/* Narration Controls */}
+      <SimulationNarrationControls
+        isPlaying={narration.isPlaying}
+        isLoading={narration.isLoading}
+        isMuted={narration.isMuted}
+        onToggleMute={narration.toggleMute}
+        onPlayPause={handlePlayPause}
+        onReplay={narration.replayCurrentNarration}
+      />
     </div>
   );
 };

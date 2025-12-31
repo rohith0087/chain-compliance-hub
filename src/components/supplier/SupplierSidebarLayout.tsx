@@ -364,7 +364,7 @@ export function SupplierSidebarLayout({
                     className="text-amber-600 hover:text-amber-600 hover:bg-amber-50"
                   >
                     <Play className="h-4 w-4" />
-                    <span>Practice Mode</span>
+                    <span>Simulation Mode</span>
                     <Badge variant="outline" className="ml-auto text-xs bg-amber-50 border-amber-200 text-amber-700">
                       New
                     </Badge>

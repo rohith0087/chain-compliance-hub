@@ -3,7 +3,7 @@ import { Step } from 'react-joyride';
 export const simulationTourSteps: Step[] = [
   {
     target: '.simulation-banner',
-    content: 'Welcome to the simulation! This yellow banner indicates you\'re in practice mode. All data here is fake and won\'t affect your real account.',
+    content: 'Welcome to the simulation! This yellow banner indicates you\'re in simulation mode. All data here is fake and won\'t affect your real account.',
     placement: 'bottom',
     disableBeacon: true,
   },

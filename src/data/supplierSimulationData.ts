@@ -351,7 +351,7 @@ export const simulationConnectedBuyers = [
   },
 ];
 
-// Expiring documents for the overview
+// Expiring documents for the overview (with version tracking)
 export const simulationExpiringDocuments = [
   {
     id: 'sim-expiring-001',
@@ -365,6 +365,7 @@ export const simulationExpiringDocuments = [
     category: 'Insurance',
     file_name: 'workers_comp_2023.pdf',
     status: 'approved',
+    version: 1,
   },
   {
     id: 'sim-expiring-002',
@@ -378,6 +379,7 @@ export const simulationExpiringDocuments = [
     category: 'Permits',
     file_name: 'health_permit_2024.pdf',
     status: 'approved',
+    version: 1,
   },
   {
     id: 'sim-expiring-003',
@@ -391,6 +393,7 @@ export const simulationExpiringDocuments = [
     category: 'Certifications',
     file_name: 'organic_cert_2024.pdf',
     status: 'approved',
+    version: 1,
   },
   {
     id: 'sim-expiring-004',
@@ -404,6 +407,7 @@ export const simulationExpiringDocuments = [
     category: 'Audits',
     file_name: 'food_safety_audit_2024.pdf',
     status: 'approved',
+    version: 1,
   },
 ];
 
@@ -429,63 +433,16 @@ export const simulationComplianceStats = {
   totalUploads: 11,
 };
 
-// Notifications for the notification center
-export const simulationNotifications = [
-  {
-    id: 'sim-notif-001',
-    type: 'connection_request',
-    title: 'New Connection Request',
-    message: 'Acme Fresh Foods Inc. wants to connect with you',
-    read: false,
-    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-    action_url: '/connections',
-  },
-  {
-    id: 'sim-notif-002',
-    type: 'new_document_request',
-    title: 'New Document Request',
-    message: 'Food Handler Certificate requested by Acme Fresh Foods',
-    read: false,
-    created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-    action_url: '/requests',
-  },
-  {
-    id: 'sim-notif-003',
-    type: 'document_approved',
-    title: 'Document Approved',
-    message: 'Your Quality Assurance Certificate has been approved',
-    read: true,
-    created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    action_url: '/documents',
-  },
-  {
-    id: 'sim-notif-004',
-    type: 'document_expiring',
-    title: 'Document Expiring Soon',
-    message: 'Health Department Permit expires in 5 days',
-    read: false,
-    created_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-    action_url: '/documents',
-  },
-  {
-    id: 'sim-notif-005',
-    type: 'document_expired',
-    title: 'Document Expired',
-    message: 'Workers Compensation Insurance has expired',
-    read: false,
-    created_at: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
-    action_url: '/documents',
-  },
-  {
-    id: 'sim-notif-006',
-    type: 'onboarding_reminder',
-    title: 'Complete Onboarding',
-    message: 'You have pending onboarding requirements for Acme Fresh Foods',
-    read: true,
-    created_at: new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(),
-    action_url: '/connections',
-  },
-];
+// Notifications for the notification center (start empty, add as simulation progresses)
+export const simulationNotifications: Array<{
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  read: boolean;
+  created_at: string;
+  action_url?: string;
+}> = [];
 
 // Available demo buyers for connection search
 export const simulationAvailableBuyers = [
@@ -512,11 +469,20 @@ export const simulationAvailableBuyers = [
   },
 ];
 
+// Demo buyer ID for pasting
+export const demoBuyerId = 'BUY-ACME-2024';
+
 export const simulationSteps = [
   {
-    id: 'connect',
-    title: 'Accept Connection',
-    description: 'Accept the incoming connection request from Acme Fresh Foods',
+    id: 'request-connection',
+    title: 'Request Connection',
+    description: 'Paste a Buyer ID to send a connection request',
+    completed: false,
+  },
+  {
+    id: 'wait-approval',
+    title: 'Wait for Buyer Approval',
+    description: 'The buyer will review and approve your request',
     completed: false,
   },
   {
@@ -538,21 +504,39 @@ export const simulationSteps = [
     completed: false,
   },
   {
-    id: 'view-requests',
-    title: 'View Document Requests',
-    description: 'Review incoming document requests from the buyer',
+    id: 'check-request-notification',
+    title: 'Check New Request Notification',
+    description: 'A new document request has arrived - click the notification',
     completed: false,
   },
   {
-    id: 'submit-document',
-    title: 'Submit a Document',
-    description: 'Upload and submit a document for one of the requests',
+    id: 'upload-document',
+    title: 'Upload Requested Document',
+    description: 'View and upload the requested document',
     completed: false,
   },
   {
-    id: 'approval',
+    id: 'document-approved',
     title: 'Document Approved',
-    description: 'See your document get approved by the buyer',
+    description: 'See your document get approved',
+    completed: false,
+  },
+  {
+    id: 'check-expiry-notification',
+    title: 'Check Expiry Notification',
+    description: 'A document expiry notification has arrived',
+    completed: false,
+  },
+  {
+    id: 'renew-document',
+    title: 'Renew Expired Document',
+    description: 'Upload V2 of the expired document',
+    completed: false,
+  },
+  {
+    id: 'explore-help',
+    title: 'Explore Help Center',
+    description: 'Learn about guided tours and support tickets',
     completed: false,
   },
 ];

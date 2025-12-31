@@ -29,8 +29,11 @@ import {
   UserCog,
   TrendingUp,
   ArrowRight,
-  RefreshCw
+  RefreshCw,
+  Play,
+  X
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { ComplianceRing } from '@/components/dashboard/ComplianceRing';
 import { MetricChip } from '@/components/dashboard/MetricChip';
 import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
@@ -71,6 +74,7 @@ interface SupplierDashboardProps {
 
 const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardProps) => {
   const { t } = useTranslation(['supplier', 'common']);
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('supplierDashboard_activeTab') || 'overview';
   });
@@ -83,6 +87,9 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [highlightedTab, setHighlightedTab] = useState<string | null>(null);
   const [onboardingRequests, setOnboardingRequests] = useState<any[]>([]);
+  const [showSimulationBanner, setShowSimulationBanner] = useState(() => {
+    return localStorage.getItem('supplierSimulationBannerDismissed') !== 'true';
+  });
   
   // Filter state for document requests
   const [filters, setFilters] = useState({
@@ -560,8 +567,57 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
 
         const COLORS = ['hsl(142, 76%, 36%)', 'hsl(38, 92%, 50%)', 'hsl(221, 83%, 53%)'];
 
+        // Check if supplier is new (no connections and no document requests)
+        const isNewSupplier = connectedBuyers.length === 0 && documentRequests.length === 0;
+
         return (
           <div className="space-y-6">
+            {/* Simulation Banner for New Suppliers */}
+            {showSimulationBanner && isNewSupplier && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <Card className="bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
+                  <CardContent className="py-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="p-2 bg-amber-100 rounded-lg">
+                          <Play className="h-5 w-5 text-amber-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-amber-900">New here? Try our Interactive Simulation</h3>
+                          <p className="text-sm text-amber-700">Learn how to connect with buyers, complete onboarding, and submit documents - all with practice data.</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            localStorage.setItem('supplierSimulationBannerDismissed', 'true');
+                            setShowSimulationBanner(false);
+                          }}
+                          className="border-amber-300 text-amber-700 hover:bg-amber-100"
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Maybe Later
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          className="bg-amber-600 hover:bg-amber-700 text-white"
+                          onClick={() => navigate('/supplier-simulation')}
+                        >
+                          <Play className="h-4 w-4 mr-1" />
+                          Start Simulation
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
             {/* Hero Section */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}

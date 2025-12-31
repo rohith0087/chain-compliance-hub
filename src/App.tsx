@@ -201,6 +201,7 @@ const AppRoutes = () => {
               <Route path="/platform-admin/dashboard" element={<PlatformAdminDashboard />} />
               
               <Route path="/shared-document/:token" element={<SharedDocumentViewer />} />
+              <Route path="/supplier-simulation" element={<SupplierSimulation />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             </TourProvider>

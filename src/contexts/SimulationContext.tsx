@@ -14,6 +14,8 @@ import {
   simulationConnectedBuyers,
   simulationExpiringDocuments,
   simulationActivityTrend,
+  simulationNotifications,
+  simulationAvailableBuyers,
 } from '@/data/supplierSimulationData';
 import { toast } from 'sonner';
 
@@ -46,6 +48,29 @@ interface DocumentRequest {
   buyer_id: string;
   supplier_id: string;
   buyers: typeof simulationBuyer;
+  has_sample?: boolean;
+  sample_file_name?: string;
+  sample_file_size?: number;
+  sample_notes?: string;
+}
+
+interface SimulationNotification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  read: boolean;
+  created_at: string;
+  action_url?: string;
+}
+
+interface PendingOutgoingRequest {
+  id: string;
+  buyer_id: string;
+  buyer_name: string;
+  notes?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
 }
 
 interface SimulationState {
@@ -64,6 +89,16 @@ interface SimulationState {
   submittedDocuments: string[];
   showTour: boolean;
   pendingConnectionRequest: typeof simulationConnectionRequest | null;
+  // New state for enhanced simulation
+  notifications: SimulationNotification[];
+  pendingOutgoingRequests: PendingOutgoingRequest[];
+  showConnectModal: boolean;
+  showUploadModal: boolean;
+  selectedRequestForUpload: DocumentRequest | null;
+  showNotificationCenter: boolean;
+  showLibraryUploadModal: boolean;
+  showOnboardingUploadModal: boolean;
+  selectedOnboardingDoc: typeof simulationDocumentRequirements[0] | null;
 }
 
 interface SimulationContextType extends SimulationState {
@@ -77,14 +112,35 @@ interface SimulationContextType extends SimulationState {
   
   // Connection actions
   acceptConnection: () => void;
+  sendConnectionRequest: (buyerId: string, notes?: string) => void;
+  setShowConnectModal: (show: boolean) => void;
   
   // Onboarding actions
   uploadOnboardingDocument: (docId: string) => void;
   completeFormField: (fieldId: string) => void;
   submitOnboarding: () => void;
+  openOnboardingUploadModal: (doc: typeof simulationDocumentRequirements[0]) => void;
+  closeOnboardingUploadModal: () => void;
+  downloadTemplate: (docId: string) => void;
   
   // Document request actions
   submitDocumentForRequest: (requestId: string) => void;
+  openUploadModal: (request: DocumentRequest) => void;
+  closeUploadModal: () => void;
+  submitDocumentWithDetails: (requestId: string, details: { fileName: string; expirationDate?: string; notes?: string }) => void;
+  
+  // Library actions
+  setShowLibraryUploadModal: (show: boolean) => void;
+  uploadToLibrary: (details: { name: string; category: string; tags: string[]; expirationDate?: string }) => void;
+  
+  // Notification actions
+  setShowNotificationCenter: (show: boolean) => void;
+  markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: () => void;
+  getUnreadNotificationCount: () => number;
+  
+  // Expiring documents actions
+  renewDocument: (docId: string) => void;
   
   // Navigation
   goToStep: (step: SimulationStep) => void;
@@ -104,6 +160,7 @@ interface SimulationContextType extends SimulationState {
   getComplianceStats: () => typeof simulationComplianceStats;
   getExpiringDocuments: () => typeof simulationExpiringDocuments;
   getActivityTrend: () => typeof simulationActivityTrend;
+  getAvailableBuyers: () => typeof simulationAvailableBuyers;
 }
 
 const initialState: SimulationState = {
@@ -122,6 +179,16 @@ const initialState: SimulationState = {
   submittedDocuments: [],
   showTour: true,
   pendingConnectionRequest: { ...simulationConnectionRequest },
+  // New state
+  notifications: [...simulationNotifications],
+  pendingOutgoingRequests: [],
+  showConnectModal: false,
+  showUploadModal: false,
+  selectedRequestForUpload: null,
+  showNotificationCenter: false,
+  showLibraryUploadModal: false,
+  showOnboardingUploadModal: false,
+  selectedOnboardingDoc: null,
 };
 
 const SimulationContext = createContext<SimulationContextType | undefined>(undefined);
@@ -137,6 +204,7 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
       currentTab: 'overview',
       showTour: true,
       pendingConnectionRequest: { ...simulationConnectionRequest },
+      notifications: [...simulationNotifications],
     });
     toast.success('Simulation started! Follow the guided steps to learn the platform.');
   }, []);
@@ -154,6 +222,7 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
       currentTab: 'overview',
       showTour: true,
       pendingConnectionRequest: { ...simulationConnectionRequest },
+      notifications: [...simulationNotifications],
     });
     toast.info('Simulation reset. Starting from the beginning.');
   }, []);
@@ -184,8 +253,81 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
           approved_at: null,
         }],
       }],
+      notifications: prev.notifications.filter(n => n.type !== 'connection_request'),
     }));
     toast.success('Connection accepted! Now complete your onboarding.');
+  }, []);
+
+  const sendConnectionRequest = useCallback((buyerId: string, notes?: string) => {
+    const buyer = simulationAvailableBuyers.find(b => b.id === buyerId);
+    if (!buyer) {
+      toast.error('Buyer not found');
+      return;
+    }
+    
+    const newRequest: PendingOutgoingRequest = {
+      id: `sim-outgoing-${Date.now()}`,
+      buyer_id: buyerId,
+      buyer_name: buyer.company_name,
+      notes,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+    };
+    
+    setState(prev => ({
+      ...prev,
+      pendingOutgoingRequests: [...prev.pendingOutgoingRequests, newRequest],
+      showConnectModal: false,
+    }));
+    
+    toast.success(`Connection request sent to ${buyer.company_name}!`);
+    
+    // Simulate approval after 5 seconds
+    setTimeout(() => {
+      setState(prev => ({
+        ...prev,
+        pendingOutgoingRequests: prev.pendingOutgoingRequests.map(r =>
+          r.id === newRequest.id ? { ...r, status: 'approved' } : r
+        ),
+        notifications: [
+          {
+            id: `sim-notif-${Date.now()}`,
+            type: 'connection_approved',
+            title: 'Connection Approved!',
+            message: `${buyer.company_name} has approved your connection request`,
+            read: false,
+            created_at: new Date().toISOString(),
+            action_url: '/connections',
+          },
+          ...prev.notifications,
+        ],
+      }));
+      toast.success(`🎉 ${buyer.company_name} accepted your connection request!`);
+    }, 5000);
+  }, []);
+
+  const setShowConnectModal = useCallback((show: boolean) => {
+    setState(prev => ({ ...prev, showConnectModal: show }));
+  }, []);
+
+  const openOnboardingUploadModal = useCallback((doc: typeof simulationDocumentRequirements[0]) => {
+    setState(prev => ({
+      ...prev,
+      showOnboardingUploadModal: true,
+      selectedOnboardingDoc: doc,
+    }));
+  }, []);
+
+  const closeOnboardingUploadModal = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      showOnboardingUploadModal: false,
+      selectedOnboardingDoc: null,
+    }));
+  }, []);
+
+  const downloadTemplate = useCallback((docId: string) => {
+    toast.success('Template downloaded! Fill in your details and re-upload.');
   }, []);
 
   const uploadOnboardingDocument = useCallback((docId: string) => {
@@ -201,6 +343,8 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
           ? [...prev.completedSteps, 'onboarding-docs']
           : prev.completedSteps,
         currentStep: allDocsUploaded ? 'onboarding-form' : prev.currentStep,
+        showOnboardingUploadModal: false,
+        selectedOnboardingDoc: null,
       };
     });
     toast.success('Document uploaded successfully!');
@@ -254,28 +398,55 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
             approved_at: new Date().toISOString(),
           }],
         })),
+        notifications: [
+          {
+            id: `sim-notif-${Date.now()}`,
+            type: 'onboarding_approved',
+            title: 'Onboarding Approved!',
+            message: 'Acme Fresh Foods has approved your onboarding',
+            read: false,
+            created_at: new Date().toISOString(),
+            action_url: '/connections',
+          },
+          ...prev.notifications,
+        ],
       }));
       toast.success('🎉 Your onboarding has been approved by Acme Fresh Foods!');
     }, 3000);
   }, []);
 
-  const submitDocumentForRequest = useCallback((requestId: string) => {
+  const openUploadModal = useCallback((request: DocumentRequest) => {
+    setState(prev => ({
+      ...prev,
+      showUploadModal: true,
+      selectedRequestForUpload: request,
+    }));
+  }, []);
+
+  const closeUploadModal = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      showUploadModal: false,
+      selectedRequestForUpload: null,
+    }));
+  }, []);
+
+  const submitDocumentWithDetails = useCallback((requestId: string, details: { fileName: string; expirationDate?: string; notes?: string }) => {
     setState(prev => {
       const updatedRequests = prev.documentRequests.map(req =>
         req.id === requestId ? { ...req, status: 'submitted' } : req
       );
       
-      // Add a new upload entry
       const request = prev.documentRequests.find(r => r.id === requestId);
       const newUpload = {
         id: `sim-upload-${Date.now()}`,
         request_id: requestId,
-        file_name: `${request?.document_type || 'document'}_upload.pdf`,
+        file_name: details.fileName || `${request?.document_type || 'document'}_upload.pdf`,
         file_path: `/uploads/sim/${request?.document_type || 'document'}_upload.pdf`,
         file_size: 125000,
         mime_type: 'application/pdf',
         status: 'submitted',
-        expiration_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        expiration_date: details.expirationDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
         created_at: new Date().toISOString(),
         document_requests: {
           id: requestId,
@@ -298,6 +469,8 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
           ? [...prev.completedSteps, 'submit-document']
           : prev.completedSteps,
         currentStep: isFirstSubmission ? 'approval' : prev.currentStep,
+        showUploadModal: false,
+        selectedRequestForUpload: null,
       };
     });
     toast.success('Document submitted for review!');
@@ -323,10 +496,93 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
             ? [...prev.completedSteps, 'approval']
             : prev.completedSteps,
           currentStep: wasWaitingForApproval ? 'complete' : prev.currentStep,
+          notifications: [
+            {
+              id: `sim-notif-${Date.now()}`,
+              type: 'document_approved',
+              title: 'Document Approved!',
+              message: `Your ${prev.documentRequests.find(r => r.id === requestId)?.title} has been approved`,
+              read: false,
+              created_at: new Date().toISOString(),
+              action_url: '/documents',
+            },
+            ...prev.notifications,
+          ],
         };
       });
       toast.success('🎉 Your document has been approved!');
     }, 3000);
+  }, []);
+
+  const submitDocumentForRequest = useCallback((requestId: string) => {
+    // Open the upload modal instead of instant submit
+    const request = state.documentRequests.find(r => r.id === requestId);
+    if (request) {
+      setState(prev => ({
+        ...prev,
+        showUploadModal: true,
+        selectedRequestForUpload: request,
+      }));
+    }
+  }, [state.documentRequests]);
+
+  const setShowLibraryUploadModal = useCallback((show: boolean) => {
+    setState(prev => ({ ...prev, showLibraryUploadModal: show }));
+  }, []);
+
+  const uploadToLibrary = useCallback((details: { name: string; category: string; tags: string[]; expirationDate?: string }) => {
+    const newDoc = {
+      id: `sim-lib-${Date.now()}`,
+      document_name: details.name,
+      document_type: details.category.toLowerCase().replace(/ /g, '_'),
+      category: details.category,
+      file_path: `/library/sim/${details.name.replace(/ /g, '_').toLowerCase()}.pdf`,
+      file_size: Math.floor(Math.random() * 500000) + 100000,
+      mime_type: 'application/pdf',
+      expiration_date: details.expirationDate || null,
+      version: 1,
+      is_current_version: true,
+      created_at: new Date().toISOString(),
+      tags: details.tags,
+      description: '',
+    };
+    
+    setState(prev => ({
+      ...prev,
+      libraryDocuments: [newDoc, ...prev.libraryDocuments],
+      showLibraryUploadModal: false,
+    }));
+    
+    toast.success('Document added to library!');
+  }, []);
+
+  const setShowNotificationCenter = useCallback((show: boolean) => {
+    setState(prev => ({ ...prev, showNotificationCenter: show }));
+  }, []);
+
+  const markNotificationRead = useCallback((id: string) => {
+    setState(prev => ({
+      ...prev,
+      notifications: prev.notifications.map(n =>
+        n.id === id ? { ...n, read: true } : n
+      ),
+    }));
+  }, []);
+
+  const markAllNotificationsRead = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      notifications: prev.notifications.map(n => ({ ...n, read: true })),
+    }));
+  }, []);
+
+  const getUnreadNotificationCount = useCallback(() => {
+    return state.notifications.filter(n => !n.read).length;
+  }, [state.notifications]);
+
+  const renewDocument = useCallback((docId: string) => {
+    toast.success('Renewal request submitted. Upload your updated document.');
+    // In a real scenario, this would open an upload modal
   }, []);
 
   const goToStep = useCallback((step: SimulationStep) => {
@@ -387,16 +643,20 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
       approved,
       submitted,
       pending,
+      totalRequests: state.documentRequests.length,
       complianceRate: state.documentRequests.length > 0 
         ? Math.round((approved / state.documentRequests.length) * 100)
         : 0,
       connectedBuyers: state.connectedBuyers.length,
+      totalUploads: state.documentUploads.length,
     };
-  }, [state.documentRequests, state.connectedBuyers]);
+  }, [state.documentRequests, state.connectedBuyers, state.documentUploads]);
 
   const getExpiringDocuments = useCallback(() => simulationExpiringDocuments, []);
   
   const getActivityTrend = useCallback(() => simulationActivityTrend, []);
+
+  const getAvailableBuyers = useCallback(() => simulationAvailableBuyers, []);
 
   const value: SimulationContextType = {
     ...state,
@@ -405,10 +665,25 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
     resetSimulation,
     setActiveTab,
     acceptConnection,
+    sendConnectionRequest,
+    setShowConnectModal,
     uploadOnboardingDocument,
     completeFormField,
     submitOnboarding,
+    openOnboardingUploadModal,
+    closeOnboardingUploadModal,
+    downloadTemplate,
     submitDocumentForRequest,
+    openUploadModal,
+    closeUploadModal,
+    submitDocumentWithDetails,
+    setShowLibraryUploadModal,
+    uploadToLibrary,
+    setShowNotificationCenter,
+    markNotificationRead,
+    markAllNotificationsRead,
+    getUnreadNotificationCount,
+    renewDocument,
     goToStep,
     completeCurrentStep,
     setShowTour,
@@ -422,6 +697,7 @@ export const SimulationProvider = ({ children }: { children: ReactNode }) => {
     getComplianceStats,
     getExpiringDocuments,
     getActivityTrend,
+    getAvailableBuyers,
   };
 
   return (

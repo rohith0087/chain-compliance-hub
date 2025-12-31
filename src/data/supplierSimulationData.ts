@@ -14,6 +14,7 @@ export const simulationBuyer = {
   postal_code: '94102',
   company_logo_url: null,
   created_at: new Date().toISOString(),
+  buyer_id_number: 'BUY-ACME-2024',
 };
 
 export const simulationSupplierProfile = {
@@ -63,6 +64,7 @@ export const simulationDocumentRequirements = [
     is_required: true,
     display_order: 1,
     status: 'pending',
+    has_template: false,
   },
   {
     id: 'sim-doc-req-002',
@@ -73,16 +75,31 @@ export const simulationDocumentRequirements = [
     is_required: true,
     display_order: 2,
     status: 'pending',
+    has_template: false,
   },
   {
     id: 'sim-doc-req-003',
+    onboarding_request_id: 'sim-onboarding-001',
+    document_type: 'supplier_questionnaire',
+    document_name: 'Supplier Information Form',
+    description: 'Download our template, fill in your company details, and re-upload the completed form',
+    is_required: true,
+    display_order: 3,
+    status: 'pending',
+    has_template: true,
+    template_file_name: 'Supplier_Information_Template.docx',
+    template_file_size: 45678,
+  },
+  {
+    id: 'sim-doc-req-004',
     onboarding_request_id: 'sim-onboarding-001',
     document_type: 'food_safety_cert',
     document_name: 'Food Safety Certification',
     description: 'HACCP or equivalent food safety certification',
     is_required: true,
-    display_order: 3,
+    display_order: 4,
     status: 'pending',
+    has_template: false,
   },
 ];
 
@@ -122,13 +139,17 @@ export const simulationDocumentRequests = [
     buyer_id: 'sim-buyer-001',
     supplier_id: 'sim-supplier-001',
     buyers: simulationBuyer,
+    has_sample: true,
+    sample_file_name: 'Food_Handler_Cert_Sample.pdf',
+    sample_file_size: 256789,
+    sample_notes: 'Please ensure your certificate includes the certification number and expiration date as shown in this sample.',
   },
   {
     id: 'sim-request-002',
     title: 'Product Liability Insurance',
     document_type: 'insurance',
     category: 'Insurance',
-    description: 'Updated product liability insurance documentation',
+    description: 'Updated product liability insurance documentation with minimum $2M coverage',
     status: 'pending',
     priority: 'medium',
     due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
@@ -136,6 +157,10 @@ export const simulationDocumentRequests = [
     buyer_id: 'sim-buyer-001',
     supplier_id: 'sim-supplier-001',
     buyers: simulationBuyer,
+    has_sample: true,
+    sample_file_name: 'Insurance_Certificate_Sample.pdf',
+    sample_file_size: 189456,
+    sample_notes: 'Your certificate must list Acme Fresh Foods Inc. as an additional insured party.',
   },
   {
     id: 'sim-request-003',
@@ -150,6 +175,7 @@ export const simulationDocumentRequests = [
     buyer_id: 'sim-buyer-001',
     supplier_id: 'sim-supplier-001',
     buyers: simulationBuyer,
+    has_sample: false,
   },
   {
     id: 'sim-request-004',
@@ -164,6 +190,40 @@ export const simulationDocumentRequests = [
     buyer_id: 'sim-buyer-001',
     supplier_id: 'sim-supplier-001',
     buyers: simulationBuyer,
+    has_sample: false,
+  },
+  {
+    id: 'sim-request-005',
+    title: 'Organic Certification',
+    document_type: 'organic_cert',
+    category: 'Certifications',
+    description: 'USDA Organic certification for organic product lines',
+    status: 'pending',
+    priority: 'high',
+    due_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+    created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    buyer_id: 'sim-buyer-001',
+    supplier_id: 'sim-supplier-001',
+    buyers: simulationBuyer,
+    has_sample: true,
+    sample_file_name: 'Organic_Cert_Template.pdf',
+    sample_file_size: 312456,
+    sample_notes: 'Must include your USDA Organic certification number and product categories covered.',
+  },
+  {
+    id: 'sim-request-006',
+    title: 'Workers Compensation Insurance',
+    document_type: 'workers_comp',
+    category: 'Insurance',
+    description: 'Current workers compensation insurance certificate',
+    status: 'pending',
+    priority: 'medium',
+    due_date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    buyer_id: 'sim-buyer-001',
+    supplier_id: 'sim-supplier-001',
+    buyers: simulationBuyer,
+    has_sample: false,
   },
 ];
 
@@ -223,6 +283,7 @@ export const simulationLibraryDocuments = [
     is_current_version: true,
     created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
     tags: ['legal', 'annual'],
+    description: 'Current business license for operations in California',
   },
   {
     id: 'sim-lib-002',
@@ -237,6 +298,7 @@ export const simulationLibraryDocuments = [
     is_current_version: true,
     created_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
     tags: ['insurance', 'liability'],
+    description: '$2M general liability coverage',
   },
   {
     id: 'sim-lib-003',
@@ -251,6 +313,7 @@ export const simulationLibraryDocuments = [
     is_current_version: true,
     created_at: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
     tags: ['food-safety', 'haccp', 'certification'],
+    description: 'HACCP food safety management certification',
   },
   {
     id: 'sim-lib-004',
@@ -265,6 +328,7 @@ export const simulationLibraryDocuments = [
     is_current_version: true,
     created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
     tags: ['product', 'specifications'],
+    description: 'Complete product line specifications',
   },
 ];
 
@@ -297,6 +361,10 @@ export const simulationExpiringDocuments = [
     days_until_expiry: -2,
     is_expired: true,
     request_id: 'sim-request-expired-001',
+    document_type: 'workers_comp',
+    category: 'Insurance',
+    file_name: 'workers_comp_2023.pdf',
+    status: 'approved',
   },
   {
     id: 'sim-expiring-002',
@@ -306,6 +374,10 @@ export const simulationExpiringDocuments = [
     days_until_expiry: 5,
     is_expired: false,
     request_id: 'sim-request-expiring-002',
+    document_type: 'health_permit',
+    category: 'Permits',
+    file_name: 'health_permit_2024.pdf',
+    status: 'approved',
   },
   {
     id: 'sim-expiring-003',
@@ -315,6 +387,23 @@ export const simulationExpiringDocuments = [
     days_until_expiry: 15,
     is_expired: false,
     request_id: 'sim-request-expiring-003',
+    document_type: 'organic_cert',
+    category: 'Certifications',
+    file_name: 'organic_cert_2024.pdf',
+    status: 'approved',
+  },
+  {
+    id: 'sim-expiring-004',
+    title: 'Food Safety Audit Report',
+    buyer_name: 'Acme Fresh Foods Inc.',
+    expiration_date: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000).toISOString(),
+    days_until_expiry: 25,
+    is_expired: false,
+    request_id: 'sim-request-expiring-004',
+    document_type: 'audit_report',
+    category: 'Audits',
+    file_name: 'food_safety_audit_2024.pdf',
+    status: 'approved',
   },
 ];
 
@@ -330,15 +419,98 @@ export const simulationActivityTrend = [
 ];
 
 export const simulationComplianceStats = {
-  totalRequests: 4,
-  pending: 2,
+  totalRequests: 6,
+  pending: 4,
   approved: 1,
   submitted: 1,
   rejected: 0,
-  complianceRate: 75,
+  complianceRate: 47,
   connectedBuyers: 1,
-  totalUploads: 3,
+  totalUploads: 11,
 };
+
+// Notifications for the notification center
+export const simulationNotifications = [
+  {
+    id: 'sim-notif-001',
+    type: 'connection_request',
+    title: 'New Connection Request',
+    message: 'Acme Fresh Foods Inc. wants to connect with you',
+    read: false,
+    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+    action_url: '/connections',
+  },
+  {
+    id: 'sim-notif-002',
+    type: 'new_document_request',
+    title: 'New Document Request',
+    message: 'Food Handler Certificate requested by Acme Fresh Foods',
+    read: false,
+    created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+    action_url: '/requests',
+  },
+  {
+    id: 'sim-notif-003',
+    type: 'document_approved',
+    title: 'Document Approved',
+    message: 'Your Quality Assurance Certificate has been approved',
+    read: true,
+    created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    action_url: '/documents',
+  },
+  {
+    id: 'sim-notif-004',
+    type: 'document_expiring',
+    title: 'Document Expiring Soon',
+    message: 'Health Department Permit expires in 5 days',
+    read: false,
+    created_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+    action_url: '/documents',
+  },
+  {
+    id: 'sim-notif-005',
+    type: 'document_expired',
+    title: 'Document Expired',
+    message: 'Workers Compensation Insurance has expired',
+    read: false,
+    created_at: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
+    action_url: '/documents',
+  },
+  {
+    id: 'sim-notif-006',
+    type: 'onboarding_reminder',
+    title: 'Complete Onboarding',
+    message: 'You have pending onboarding requirements for Acme Fresh Foods',
+    read: true,
+    created_at: new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(),
+    action_url: '/connections',
+  },
+];
+
+// Available demo buyers for connection search
+export const simulationAvailableBuyers = [
+  {
+    id: 'BUY-FRESH-2024',
+    company_name: 'Fresh Market Distributors',
+    industry: 'Food Distribution',
+    city: 'New York',
+    state: 'NY',
+  },
+  {
+    id: 'BUY-ORGANIC-2024',
+    company_name: 'Organic Foods Co.',
+    industry: 'Organic Food Retail',
+    city: 'Portland',
+    state: 'OR',
+  },
+  {
+    id: 'BUY-GOURMET-2024',
+    company_name: 'Gourmet Supply Chain',
+    industry: 'Specialty Foods',
+    city: 'Chicago',
+    state: 'IL',
+  },
+];
 
 export const simulationSteps = [
   {

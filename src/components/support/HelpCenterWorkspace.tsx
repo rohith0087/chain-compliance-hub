@@ -145,7 +145,7 @@ export const HelpCenterWorkspace = ({ isOpen, onClose, source, user }: HelpCente
                     </TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="tickets" className="flex-1 flex flex-col mt-0 overflow-hidden">
+                  <TabsContent value="tickets" className="flex-1 flex flex-col mt-0 min-h-0">
                     <TicketListContent
                       tickets={displayTickets}
                       loading={loading}
@@ -225,7 +225,7 @@ const TicketListContent = ({
   onCreateNew,
   isLoggedIn,
 }: TicketListContentProps) => (
-  <div className="flex flex-col flex-1 overflow-hidden">
+  <div className="flex flex-col flex-1 min-h-0">
     {/* Filter row */}
     {isLoggedIn && (
       <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/30">
@@ -310,46 +310,48 @@ interface GuidedToursContentProps {
 }
 
 const GuidedToursContent = ({ tours, onStartTour }: GuidedToursContentProps) => (
-  <ScrollArea className="h-full flex-1">
-    <div className="p-4 space-y-3">
-      <p className="text-sm text-muted-foreground mb-4">
-        Select a guided tour to learn how to use different features.
-      </p>
-      {tours.length > 0 ? (
-        tours.map((tour) => (
-          <div
-            key={tour.id}
-            className="p-4 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors group"
-            onClick={() => onStartTour(tour.id)}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <h4 className="font-medium text-sm">{tour.name}</h4>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {tour.description}
-                </p>
-              </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <Play className="h-4 w-4 mr-1" />
-                Start
-              </Button>
-            </div>
-            <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-              <span className="bg-muted px-2 py-0.5 rounded">
-                {tour.steps.length} steps
-              </span>
-            </div>
-          </div>
-        ))
-      ) : (
-        <p className="text-sm text-muted-foreground text-center py-8">
-          No guided tours available for this section.
+  <div className="flex flex-col flex-1 min-h-0">
+    <ScrollArea className="flex-1">
+      <div className="p-4 space-y-3">
+        <p className="text-sm text-muted-foreground mb-4">
+          Select a guided tour to learn how to use different features.
         </p>
-      )}
-    </div>
-  </ScrollArea>
+        {tours.length > 0 ? (
+          tours.map((tour) => (
+            <div
+              key={tour.id}
+              className="p-4 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors group"
+              onClick={() => onStartTour(tour.id)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-sm">{tour.name}</h4>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {tour.description}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Play className="h-4 w-4 mr-1" />
+                  Start
+                </Button>
+              </div>
+              <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+                <span className="bg-muted px-2 py-0.5 rounded">
+                  {tour.steps.length} steps
+                </span>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            No guided tours available for this section.
+          </p>
+        )}
+      </div>
+    </ScrollArea>
+  </div>
 );

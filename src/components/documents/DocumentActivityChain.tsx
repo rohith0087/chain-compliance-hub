@@ -83,14 +83,24 @@ const DocumentActivityChain = ({
       }
 
       // Fetch activities linked to this request (directly or via upload)
-      const { data: activityData, error } = await supabase
+      const uploadIds = requestData?.document_uploads?.map((u: any) => u.id).filter(Boolean) || [];
+      
+      let query = supabase
         .from('document_activity_logs')
         .select(`
           *,
           user:profiles!document_activity_logs_user_id_fkey(full_name, email)
         `)
-        .or(`document_request_id.eq.${documentRequestId},document_upload_id.in.(${requestData?.document_uploads?.map((u: any) => u.id).join(',') || 'null'})`)
         .order('created_at', { ascending: true });
+
+      // Apply filter based on whether we have upload IDs
+      if (uploadIds.length > 0) {
+        query = query.or(`document_request_id.eq.${documentRequestId},document_upload_id.in.(${uploadIds.join(',')})`);
+      } else {
+        query = query.eq('document_request_id', documentRequestId);
+      }
+
+      const { data: activityData, error } = await query;
 
       if (error) {
         console.error('Error fetching activities:', error);

@@ -101,17 +101,17 @@ export function PlatformAdminDashboardContent() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 md:space-y-8">
       {error && (
         <div 
-          className="p-4 rounded-lg border"
+          className="p-3 md:p-4 rounded-lg border"
           style={{
             backgroundColor: 'hsl(var(--destructive) / 0.1)',
             borderColor: 'hsl(var(--destructive) / 0.3)',
             color: 'hsl(var(--destructive))'
           }}
         >
-          <p className="font-medium">Error loading dashboard data: {error}</p>
+          <p className="font-medium text-sm md:text-base">Error loading dashboard data: {error}</p>
           <button 
             onClick={fetchStats}
             className="mt-2 text-sm hover:underline font-medium"
@@ -123,16 +123,16 @@ export function PlatformAdminDashboardContent() {
 
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold mb-2" style={{ color: 'hsl(var(--admin-text))' }}>
+        <h1 className="text-2xl md:text-3xl font-bold mb-1 md:mb-2" style={{ color: 'hsl(var(--admin-text))' }}>
           Platform Overview
         </h1>
-        <p style={{ color: 'hsl(var(--admin-text-muted))' }}>
+        <p className="text-sm md:text-base" style={{ color: 'hsl(var(--admin-text-muted))' }}>
           Monitor your platform's performance and key metrics
         </p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         {statsCards.map((stat, index) => (
           <Card 
             key={index}
@@ -143,29 +143,29 @@ export function PlatformAdminDashboardContent() {
               boxShadow: 'var(--admin-shadow)'
             }}
           >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-6 pb-1 md:pb-2">
               <CardTitle 
-                className="text-sm font-medium"
+                className="text-xs md:text-sm font-medium"
                 style={{ color: 'hsl(var(--admin-text-muted))' }}
               >
                 {stat.title}
               </CardTitle>
               <div 
-                className="p-2 rounded-lg"
+                className="p-1.5 md:p-2 rounded-lg hidden sm:block"
                 style={{ backgroundColor: `${stat.color}20` }}
               >
-                <stat.icon className="h-4 w-4" style={{ color: stat.color }} />
+                <stat.icon className="h-3 w-3 md:h-4 md:w-4" style={{ color: stat.color }} />
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold mb-1" style={{ color: 'hsl(var(--admin-text))' }}>
+            <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
+              <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: 'hsl(var(--admin-text))' }}>
                 {stat.value.toLocaleString()}
               </div>
               <div className="flex items-center justify-between">
-                <p className="text-xs" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                <p className="text-[10px] md:text-xs truncate" style={{ color: 'hsl(var(--admin-text-muted))' }}>
                   {stat.description}
                 </p>
-                <div className="flex items-center space-x-1">
+                <div className="hidden md:flex items-center space-x-1">
                   <TrendingUp className="h-3 w-3" style={{ color: 'hsl(var(--admin-accent-green))' }} />
                   <span 
                     className="text-xs font-medium"
@@ -181,8 +181,8 @@ export function PlatformAdminDashboardContent() {
       </div>
 
       {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card style={{ 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <Card style={{
           backgroundColor: 'hsl(var(--admin-card))', 
           borderColor: 'hsl(var(--admin-border))' 
         }}>

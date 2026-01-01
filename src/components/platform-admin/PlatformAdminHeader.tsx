@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useSupportTickets } from '@/hooks/useSupportTickets';
 import { useNavigate } from 'react-router-dom';
+import { useSidebar } from '@/components/ui/sidebar';
 
 export function PlatformAdminHeader() {
   const { stats, newTicketCount, clearNewTicketCount } = useSupportTickets();
   const navigate = useNavigate();
+  const { toggleSidebar } = useSidebar();
   
   // Show open + urgent tickets in badge
   const badgeCount = (stats.open || 0) + (stats.urgent || 0);
@@ -19,7 +21,7 @@ export function PlatformAdminHeader() {
 
   return (
     <header 
-      className="border-b px-6 py-4"
+      className="border-b px-3 md:px-6 py-3 md:py-4"
       style={{
         backgroundColor: 'hsl(var(--admin-surface))',
         borderColor: 'hsl(var(--admin-border))'
@@ -27,6 +29,16 @@ export function PlatformAdminHeader() {
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
+          {/* Mobile hamburger menu - triggers sidebar */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="md:hidden h-9 w-9 p-0"
+            onClick={toggleSidebar}
+          >
+            <Menu className="h-5 w-5" style={{ color: 'hsl(var(--admin-text))' }} />
+          </Button>
+          
           <div className="hidden md:flex items-center space-x-2 text-sm">
             <span style={{ color: 'hsl(var(--admin-text-muted))' }}>Platform</span>
             <span style={{ color: 'hsl(var(--admin-text-muted))' }}>/</span>
@@ -34,8 +46,8 @@ export function PlatformAdminHeader() {
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
-          {/* Search */}
+        <div className="flex items-center space-x-2 md:space-x-4">
+          {/* Search - hidden on mobile */}
           <div className="relative hidden md:block">
             <Search 
               className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" 
@@ -72,15 +84,6 @@ export function PlatformAdminHeader() {
                 {badgeCount > 99 ? '99+' : badgeCount}
               </Badge>
             )}
-          </Button>
-
-          {/* Mobile menu */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="md:hidden h-9 w-9 p-0"
-          >
-            <Menu className="h-4 w-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
           </Button>
         </div>
       </div>

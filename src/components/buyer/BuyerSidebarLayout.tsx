@@ -125,6 +125,9 @@ export function BuyerSidebarLayout({
   const { hasRole } = useUserRoles();
   const sidebar = useSidebar();
   const collapsed = sidebar?.state === 'collapsed';
+  
+  // State to control Help Center from notifications
+  const [helpCenterOpen, setHelpCenterOpen] = useState(false);
 
   // Resolve company ID for team members vs owners
   const [resolvedCompanyId, setResolvedCompanyId] = useState<string | null>(null);
@@ -555,6 +558,7 @@ export function BuyerSidebarLayout({
                     sessionStorage.setItem('highlight_document_request_id', referenceId);
                   }
                 }}
+                onOpenHelpCenter={() => setHelpCenterOpen(true)}
               />
             </div>
           </div>
@@ -579,6 +583,8 @@ export function BuyerSidebarLayout({
           companyName: buyerProfile?.company_name,
           userType: 'buyer'
         }}
+        isOpen={helpCenterOpen}
+        onOpenChange={setHelpCenterOpen}
       />
     </div>
   );

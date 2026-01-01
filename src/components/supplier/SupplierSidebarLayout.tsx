@@ -128,6 +128,9 @@ export function SupplierSidebarLayout({
   const sidebar = useSidebar();
   const collapsed = sidebar?.state === 'collapsed';
   const { isEnabled, isUnlocked, toggleEnabled } = useNotificationSound();
+  
+  // State to control Help Center from notifications
+  const [helpCenterOpen, setHelpCenterOpen] = useState(false);
 
   // Resolve company ID for team members
   const [resolvedSupplierId, setResolvedSupplierId] = useState<string | null>(supplierProfile?.id || null);
@@ -529,6 +532,7 @@ export function SupplierSidebarLayout({
                     }
                   }
                 }}
+                onOpenHelpCenter={() => setHelpCenterOpen(true)}
               />
             </div>
           </div>
@@ -553,6 +557,8 @@ export function SupplierSidebarLayout({
           companyName: supplierProfile?.company_name,
           userType: 'supplier'
         }}
+        isOpen={helpCenterOpen}
+        onOpenChange={setHelpCenterOpen}
       />
     </div>
   );

@@ -480,31 +480,31 @@ export const SuperAdminClientSupport = () => {
               {/* Actions */}
               <div className="flex flex-wrap gap-2 pt-2 flex-shrink-0" style={{ borderTop: '1px solid hsl(var(--admin-border))' }}>
                 <Button 
-                  variant="outline" 
                   size="sm"
                   onClick={() => handleStatusChange('in_progress')}
                   disabled={selectedTicket.status === 'in_progress'}
-                  style={{ borderColor: NEON_COLORS.cyan, color: NEON_COLORS.cyan }}
+                  className="disabled:opacity-50"
+                  style={{ backgroundColor: NEON_COLORS.cyan, color: '#000', fontWeight: 600 }}
                 >
                   <Activity className="w-4 h-4 mr-1" />
                   Mark In Progress
                 </Button>
                 <Button 
-                  variant="outline" 
                   size="sm"
                   onClick={() => handleStatusChange('resolved')}
                   disabled={selectedTicket.status === 'resolved'}
-                  style={{ borderColor: NEON_COLORS.green, color: NEON_COLORS.green }}
+                  className="disabled:opacity-50"
+                  style={{ backgroundColor: NEON_COLORS.green, color: '#000', fontWeight: 600 }}
                 >
                   <CheckCircle className="w-4 h-4 mr-1" />
                   Resolve
                 </Button>
                 <Button 
-                  variant="outline" 
                   size="sm"
                   onClick={() => handleStatusChange('closed')}
                   disabled={selectedTicket.status === 'closed'}
-                  style={{ borderColor: NEON_COLORS.purple, color: NEON_COLORS.purple }}
+                  className="disabled:opacity-50"
+                  style={{ backgroundColor: NEON_COLORS.purple, color: '#fff', fontWeight: 600 }}
                 >
                   <XCircle className="w-4 h-4 mr-1" />
                   Close

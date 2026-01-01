@@ -70,7 +70,7 @@ export const HelpCenterWorkspace = ({ isOpen, onClose, source, user }: HelpCente
       <Sheet open={isOpen} onOpenChange={onClose}>
         <SheetContent 
           className={cn(
-            'p-0 flex flex-col',
+            'p-0 flex flex-col [&>button.absolute]:hidden',
             selectedTicket ? 'sm:max-w-3xl' : 'sm:max-w-md'
           )}
           style={{ width: selectedTicket ? '48rem' : '28rem', maxWidth: '100vw' }}
@@ -95,15 +95,25 @@ export const HelpCenterWorkspace = ({ isOpen, onClose, source, user }: HelpCente
               </Badge>
             </div>
             
-            {!selectedTicket && user?.id && (
+            <div className="flex items-center gap-2">
+              {!selectedTicket && user?.id && (
+                <Button
+                  size="sm"
+                  onClick={() => setIsTicketModalOpen(true)}
+                >
+                  <Plus className="h-4 w-4 mr-1.5" />
+                  New Ticket
+                </Button>
+              )}
               <Button
-                size="sm"
-                onClick={() => setIsTicketModalOpen(true)}
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={onClose}
               >
-                <Plus className="h-4 w-4 mr-1.5" />
-                New Ticket
+                <X className="h-4 w-4" />
               </Button>
-            )}
+            </div>
           </div>
 
           {/* Content */}
@@ -149,7 +159,7 @@ export const HelpCenterWorkspace = ({ isOpen, onClose, source, user }: HelpCente
                     />
                   </TabsContent>
 
-                  <TabsContent value="guides" className="flex-1 mt-0 overflow-hidden">
+                  <TabsContent value="guides" className="flex-1 flex flex-col mt-0 min-h-0">
                     <GuidedToursContent
                       tours={filteredTours}
                       onStartTour={handleStartTour}
@@ -303,7 +313,7 @@ interface GuidedToursContentProps {
 }
 
 const GuidedToursContent = ({ tours, onStartTour }: GuidedToursContentProps) => (
-  <ScrollArea className="flex-1">
+  <ScrollArea className="h-full flex-1">
     <div className="p-4 space-y-3">
       <p className="text-sm text-muted-foreground mb-4">
         Select a guided tour to learn how to use different features.

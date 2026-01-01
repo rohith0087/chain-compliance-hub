@@ -4,7 +4,6 @@ import { useSupportTickets, SupportTicket } from '@/hooks/useSupportTickets';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { AdminTicketConversation } from '@/components/support/AdminTicketConversation';
 import { 
   Search, UserCheck, AlertTriangle, MessageSquare, Eye, 
   HelpCircle, Activity, Clock, Globe, Monitor, MapPin,
@@ -54,7 +54,6 @@ export const SuperAdminClientSupport = () => {
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [isImpersonateDialogOpen, setIsImpersonateDialogOpen] = useState(false);
   const [isTicketDetailOpen, setIsTicketDetailOpen] = useState(false);
-  const [resolutionNotes, setResolutionNotes] = useState('');
 
   const filteredUsers = users.filter(user => 
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -82,14 +81,13 @@ export const SuperAdminClientSupport = () => {
 
   const viewTicketDetails = (ticket: SupportTicket) => {
     setSelectedTicket(ticket);
-    setResolutionNotes(ticket.resolution_notes || '');
     setIsTicketDetailOpen(true);
     if (newTicketCount > 0) clearNewTicketCount();
   };
 
   const handleStatusChange = async (status: SupportTicket['status']) => {
     if (!selectedTicket) return;
-    await updateTicketStatus(selectedTicket.id, status, resolutionNotes || undefined);
+    await updateTicketStatus(selectedTicket.id, status);
     setSelectedTicket(prev => prev ? { ...prev, status } : null);
   };
 
@@ -411,8 +409,8 @@ export const SuperAdminClientSupport = () => {
 
       {/* Ticket Detail Dialog */}
       <Dialog open={isTicketDetailOpen} onOpenChange={setIsTicketDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh]" style={{ backgroundColor: 'hsl(var(--admin-card))', borderColor: 'hsl(var(--admin-border))' }}>
-          <DialogHeader>
+        <DialogContent className="max-w-3xl h-[85vh] flex flex-col" style={{ backgroundColor: 'hsl(var(--admin-card))', borderColor: 'hsl(var(--admin-border))' }}>
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2" style={{ color: 'hsl(var(--admin-text))' }}>
               <span className="text-lg">{selectedTicket && getSourceIcon(selectedTicket.source)}</span>
               Ticket Details
@@ -423,129 +421,96 @@ export const SuperAdminClientSupport = () => {
           </DialogHeader>
           
           {selectedTicket && (
-            <ScrollArea className="max-h-[60vh]">
-              <div className="space-y-6 pr-4">
-                {/* Header Info */}
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold text-lg" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.subject}</h3>
-                    <p className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
-                      {formatDistanceToNow(new Date(selectedTicket.created_at), { addSuffix: true })}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Badge variant="outline" style={getPriorityStyle(selectedTicket.priority)}>
-                      {selectedTicket.priority}
-                    </Badge>
-                    <Badge variant="outline" style={getStatusStyle(selectedTicket.status)}>
-                      {selectedTicket.status.replace('_', ' ')}
-                    </Badge>
-                  </div>
+            <div className="flex-1 flex flex-col min-h-0 gap-4">
+              {/* Header Info */}
+              <div className="flex items-start justify-between flex-shrink-0">
+                <div>
+                  <h3 className="font-semibold text-lg" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.subject}</h3>
+                  <p className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                    {formatDistanceToNow(new Date(selectedTicket.created_at), { addSuffix: true })}
+                  </p>
                 </div>
+                <div className="flex gap-2">
+                  <Badge variant="outline" style={getPriorityStyle(selectedTicket.priority)}>
+                    {selectedTicket.priority}
+                  </Badge>
+                  <Badge variant="outline" style={getStatusStyle(selectedTicket.status)}>
+                    {selectedTicket.status.replace('_', ' ')}
+                  </Badge>
+                </div>
+              </div>
 
-                {/* User Info */}
-                <div className="p-4 rounded-lg space-y-2" style={{ backgroundColor: 'hsl(var(--admin-bg))', border: '1px solid hsl(var(--admin-border))' }}>
-                  <h4 className="font-medium text-sm" style={{ color: NEON_COLORS.cyan }}>User Information</h4>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+              {/* User Info - Collapsible/Compact */}
+              <div className="p-3 rounded-lg flex-shrink-0" style={{ backgroundColor: 'hsl(var(--admin-bg))', border: '1px solid hsl(var(--admin-border))' }}>
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <div className="flex items-center gap-4">
                     <div>
-                      <span style={{ color: 'hsl(var(--admin-text-muted))' }}>Name:</span>{' '}
+                      <span style={{ color: 'hsl(var(--admin-text-muted))' }}>User:</span>{' '}
                       <span className="font-medium" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.user_name || 'Anonymous'}</span>
                     </div>
                     <div>
                       <span style={{ color: 'hsl(var(--admin-text-muted))' }}>Email:</span>{' '}
-                      <span className="font-medium" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.user_email || 'Not provided'}</span>
+                      <span className="font-medium" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.user_email || 'N/A'}</span>
                     </div>
-                    <div>
-                      <span style={{ color: 'hsl(var(--admin-text-muted))' }}>Company:</span>{' '}
-                      <span className="font-medium" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.company_name || 'N/A'}</span>
-                    </div>
-                    <div>
-                      <span style={{ color: 'hsl(var(--admin-text-muted))' }}>User Type:</span>{' '}
-                      <span className="font-medium capitalize" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.user_type || 'Guest'}</span>
-                    </div>
+                    {selectedTicket.company_name && (
+                      <div>
+                        <span style={{ color: 'hsl(var(--admin-text-muted))' }}>Company:</span>{' '}
+                        <span className="font-medium" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.company_name}</span>
+                      </div>
+                    )}
                   </div>
-                </div>
-
-                {/* Description */}
-                <div>
-                  <Label className="text-sm font-medium" style={{ color: 'hsl(var(--admin-text))' }}>Description</Label>
-                  <div className="mt-2 p-4 rounded-lg whitespace-pre-wrap text-sm" style={{ backgroundColor: 'hsl(var(--admin-bg))', border: '1px solid hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}>
-                    {selectedTicket.description}
+                  <div className="flex items-center gap-2 text-xs" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                    <Globe className="w-3 h-3" />
+                    <span className="font-mono truncate max-w-[150px]">{selectedTicket.page_url || 'N/A'}</span>
                   </div>
-                </div>
-
-                {/* Context Info */}
-                <div className="p-4 rounded-lg space-y-2" style={{ backgroundColor: 'hsl(var(--admin-bg))', border: '1px solid hsl(var(--admin-border))' }}>
-                  <h4 className="font-medium text-sm" style={{ color: NEON_COLORS.cyan }}>Context (Auto-captured)</h4>
-                  <div className="grid grid-cols-1 gap-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Globe className="w-4 h-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
-                      <span style={{ color: 'hsl(var(--admin-text-muted))' }}>Page:</span>
-                      <span className="font-mono text-xs truncate" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.page_url || 'N/A'}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
-                      <span style={{ color: 'hsl(var(--admin-text-muted))' }}>IP:</span>
-                      <span className="font-mono text-xs" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.ip_address || 'N/A'}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Monitor className="w-4 h-4" style={{ color: 'hsl(var(--admin-text-muted))' }} />
-                      <span style={{ color: 'hsl(var(--admin-text-muted))' }}>Browser:</span>
-                      <span className="font-mono text-xs truncate max-w-[300px]" style={{ color: 'hsl(var(--admin-text))' }}>
-                        {selectedTicket.user_agent?.split(' ').slice(0, 3).join(' ') || 'N/A'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Resolution Notes */}
-                <div className="space-y-2">
-                  <Label htmlFor="resolution" style={{ color: 'hsl(var(--admin-text))' }}>Resolution Notes</Label>
-                  <Textarea
-                    id="resolution"
-                    value={resolutionNotes}
-                    onChange={(e) => setResolutionNotes(e.target.value)}
-                    placeholder="Add notes about resolution or response..."
-                    rows={3}
-                    style={{ backgroundColor: 'hsl(var(--admin-bg))', borderColor: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}
-                  />
-                </div>
-
-                {/* Actions */}
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleStatusChange('in_progress')}
-                    disabled={selectedTicket.status === 'in_progress'}
-                    style={{ borderColor: NEON_COLORS.cyan, color: NEON_COLORS.cyan }}
-                  >
-                    <Activity className="w-4 h-4 mr-1" />
-                    Mark In Progress
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleStatusChange('resolved')}
-                    disabled={selectedTicket.status === 'resolved'}
-                    style={{ borderColor: NEON_COLORS.green, color: NEON_COLORS.green }}
-                  >
-                    <CheckCircle className="w-4 h-4 mr-1" />
-                    Resolve
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleStatusChange('closed')}
-                    disabled={selectedTicket.status === 'closed'}
-                    style={{ borderColor: NEON_COLORS.purple, color: NEON_COLORS.purple }}
-                  >
-                    <XCircle className="w-4 h-4 mr-1" />
-                    Close
-                  </Button>
                 </div>
               </div>
-            </ScrollArea>
+
+              {/* Conversation Area - Takes remaining space */}
+              <div className="flex-1 min-h-0 flex flex-col">
+                <AdminTicketConversation
+                  ticketId={selectedTicket.id}
+                  ticketDescription={selectedTicket.description}
+                  ticketCreatedAt={selectedTicket.created_at}
+                  userName={selectedTicket.user_name || selectedTicket.user_email || 'Anonymous'}
+                  isClosed={selectedTicket.status === 'closed'}
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-wrap gap-2 pt-2 flex-shrink-0" style={{ borderTop: '1px solid hsl(var(--admin-border))' }}>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleStatusChange('in_progress')}
+                  disabled={selectedTicket.status === 'in_progress'}
+                  style={{ borderColor: NEON_COLORS.cyan, color: NEON_COLORS.cyan }}
+                >
+                  <Activity className="w-4 h-4 mr-1" />
+                  Mark In Progress
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleStatusChange('resolved')}
+                  disabled={selectedTicket.status === 'resolved'}
+                  style={{ borderColor: NEON_COLORS.green, color: NEON_COLORS.green }}
+                >
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  Resolve
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleStatusChange('closed')}
+                  disabled={selectedTicket.status === 'closed'}
+                  style={{ borderColor: NEON_COLORS.purple, color: NEON_COLORS.purple }}
+                >
+                  <XCircle className="w-4 h-4 mr-1" />
+                  Close
+                </Button>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>

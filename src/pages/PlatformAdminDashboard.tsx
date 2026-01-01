@@ -88,10 +88,10 @@ export default function PlatformAdminDashboard() {
         <div className="flex min-h-screen w-full">
           <PlatformAdminSidebar activeSection="dashboard" onSectionChange={() => {}} />
           
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col min-w-0">
             <PlatformAdminHeader />
             
-            <main className="flex-1 p-6">
+            <main className="flex-1 p-3 md:p-6 overflow-x-hidden">
               <PlatformAdminDashboardContent />
             </main>
           </div>

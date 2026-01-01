@@ -137,77 +137,77 @@ export const SuperAdminClientSupport = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+    <div className="space-y-4 md:space-y-6">
+      {/* Quick Stats - Mobile: 3 columns, Tablet: 4, Desktop: 6 */}
+      <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
         <Card style={cardStyle}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>Open</p>
-                <p className="text-2xl font-bold" style={{ color: NEON_COLORS.red }}>{stats.open}</p>
+          <CardContent className="p-2 md:p-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+              <div className="text-center md:text-left">
+                <p className="text-[10px] md:text-xs font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>Open</p>
+                <p className="text-lg md:text-2xl font-bold" style={{ color: NEON_COLORS.red }}>{stats.open}</p>
               </div>
-              <AlertTriangle className="w-6 h-6" style={{ color: NEON_COLORS.red }} />
+              <AlertTriangle className="hidden md:block w-6 h-6" style={{ color: NEON_COLORS.red }} />
             </div>
           </CardContent>
         </Card>
 
         <Card style={cardStyle}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>In Progress</p>
-                <p className="text-2xl font-bold" style={{ color: NEON_COLORS.cyan }}>{stats.inProgress}</p>
+          <CardContent className="p-2 md:p-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+              <div className="text-center md:text-left">
+                <p className="text-[10px] md:text-xs font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>In Progress</p>
+                <p className="text-lg md:text-2xl font-bold" style={{ color: NEON_COLORS.cyan }}>{stats.inProgress}</p>
               </div>
-              <Activity className="w-6 h-6" style={{ color: NEON_COLORS.cyan }} />
+              <Activity className="hidden md:block w-6 h-6" style={{ color: NEON_COLORS.cyan }} />
             </div>
           </CardContent>
         </Card>
 
         <Card style={cardStyle}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>Resolved</p>
-                <p className="text-2xl font-bold" style={{ color: NEON_COLORS.green }}>{stats.resolved}</p>
+          <CardContent className="p-2 md:p-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+              <div className="text-center md:text-left">
+                <p className="text-[10px] md:text-xs font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>Resolved</p>
+                <p className="text-lg md:text-2xl font-bold" style={{ color: NEON_COLORS.green }}>{stats.resolved}</p>
               </div>
-              <CheckCircle className="w-6 h-6" style={{ color: NEON_COLORS.green }} />
+              <CheckCircle className="hidden md:block w-6 h-6" style={{ color: NEON_COLORS.green }} />
             </div>
           </CardContent>
         </Card>
 
-        <Card style={cardStyle}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>Closed</p>
-                <p className="text-2xl font-bold" style={{ color: NEON_COLORS.purple }}>{stats.closed}</p>
+        <Card style={cardStyle} className="hidden md:block">
+          <CardContent className="p-2 md:p-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+              <div className="text-center md:text-left">
+                <p className="text-[10px] md:text-xs font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>Closed</p>
+                <p className="text-lg md:text-2xl font-bold" style={{ color: NEON_COLORS.purple }}>{stats.closed}</p>
               </div>
-              <XCircle className="w-6 h-6" style={{ color: NEON_COLORS.purple }} />
+              <XCircle className="hidden md:block w-6 h-6" style={{ color: NEON_COLORS.purple }} />
             </div>
           </CardContent>
         </Card>
 
-        <Card style={cardStyle}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>Urgent</p>
-                <p className="text-2xl font-bold" style={{ color: NEON_COLORS.amber }}>{stats.urgent}</p>
+        <Card style={cardStyle} className="hidden lg:block">
+          <CardContent className="p-2 md:p-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+              <div className="text-center md:text-left">
+                <p className="text-[10px] md:text-xs font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>Urgent</p>
+                <p className="text-lg md:text-2xl font-bold" style={{ color: NEON_COLORS.amber }}>{stats.urgent}</p>
               </div>
-              <Clock className="w-6 h-6" style={{ color: NEON_COLORS.amber }} />
+              <Clock className="hidden md:block w-6 h-6" style={{ color: NEON_COLORS.amber }} />
             </div>
           </CardContent>
         </Card>
 
-        <Card style={cardStyle}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>Total</p>
-                <p className="text-2xl font-bold" style={{ color: 'hsl(var(--admin-text))' }}>{stats.total}</p>
+        <Card style={cardStyle} className="hidden lg:block">
+          <CardContent className="p-2 md:p-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+              <div className="text-center md:text-left">
+                <p className="text-[10px] md:text-xs font-medium" style={{ color: 'hsl(var(--admin-text-muted))' }}>Total</p>
+                <p className="text-lg md:text-2xl font-bold" style={{ color: 'hsl(var(--admin-text))' }}>{stats.total}</p>
               </div>
-              <MessageSquare className="w-6 h-6" style={{ color: NEON_COLORS.blue }} />
+              <MessageSquare className="hidden md:block w-6 h-6" style={{ color: NEON_COLORS.blue }} />
             </div>
           </CardContent>
         </Card>
@@ -215,25 +215,25 @@ export const SuperAdminClientSupport = () => {
 
       {/* Support Tickets */}
       <Card style={cardStyle}>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="p-3 md:p-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div>
-              <CardTitle className="flex items-center gap-2" style={{ color: 'hsl(var(--admin-text))' }}>
-                <HelpCircle className="w-5 h-5" style={{ color: NEON_COLORS.cyan }} />
+              <CardTitle className="flex items-center gap-2 text-base md:text-lg" style={{ color: 'hsl(var(--admin-text))' }}>
+                <HelpCircle className="w-4 h-4 md:w-5 md:h-5" style={{ color: NEON_COLORS.cyan }} />
                 Support Tickets
                 {newTicketCount > 0 && (
-                  <Badge className="animate-pulse" style={{ backgroundColor: NEON_COLORS.red, color: '#fff' }}>
+                  <Badge className="animate-pulse text-xs" style={{ backgroundColor: NEON_COLORS.red, color: '#fff' }}>
                     {newTicketCount} new
                   </Badge>
                 )}
               </CardTitle>
-              <CardDescription style={{ color: 'hsl(var(--admin-text-muted))' }}>
+              <CardDescription className="text-xs md:text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
                 Real-time support requests from users
               </CardDescription>
             </div>
             <div className="flex gap-2">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-36 border" style={{ backgroundColor: 'hsl(var(--admin-card))', borderColor: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}>
+                <SelectTrigger className="w-full md:w-36 border text-sm" style={{ backgroundColor: 'hsl(var(--admin-card))', borderColor: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}>
                   <SelectValue placeholder="Filter status" />
                 </SelectTrigger>
                 <SelectContent style={{ backgroundColor: 'hsl(var(--admin-card))', borderColor: 'hsl(var(--admin-border))' }}>
@@ -244,93 +244,136 @@ export const SuperAdminClientSupport = () => {
                   <SelectItem value="closed">Closed</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="icon" onClick={refetch} style={{ borderColor: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}>
+              <Button variant="outline" size="icon" onClick={refetch} className="shrink-0" style={{ borderColor: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }}>
                 <RefreshCw className="w-4 h-4" />
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 md:p-6 pt-0">
           {filteredTickets.length === 0 ? (
-            <div className="text-center py-12" style={{ color: 'hsl(var(--admin-text-muted))' }}>
-              <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No support tickets yet</p>
-              <p className="text-sm">Tickets will appear here in real-time</p>
+            <div className="text-center py-8 md:py-12" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+              <MessageSquare className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-4 opacity-50" />
+              <p className="text-sm md:text-base">No support tickets yet</p>
+              <p className="text-xs md:text-sm">Tickets will appear here in real-time</p>
             </div>
           ) : (
-            <div className="rounded-md border" style={{ borderColor: 'hsl(var(--admin-border))' }}>
-              <Table>
-                <TableHeader>
-                  <TableRow style={{ borderColor: 'hsl(var(--admin-border))' }}>
-                    <TableHead style={{ color: 'hsl(var(--admin-text-muted))' }}>Source</TableHead>
-                    <TableHead style={{ color: 'hsl(var(--admin-text-muted))' }}>User</TableHead>
-                    <TableHead style={{ color: 'hsl(var(--admin-text-muted))' }}>Subject</TableHead>
-                    <TableHead style={{ color: 'hsl(var(--admin-text-muted))' }}>Priority</TableHead>
-                    <TableHead style={{ color: 'hsl(var(--admin-text-muted))' }}>Status</TableHead>
-                    <TableHead style={{ color: 'hsl(var(--admin-text-muted))' }}>Created</TableHead>
-                    <TableHead className="text-right" style={{ color: 'hsl(var(--admin-text-muted))' }}>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTickets.map((ticket) => (
-                    <TableRow 
-                      key={ticket.id} 
-                      className="cursor-pointer transition-colors" 
-                      style={{ borderColor: 'hsl(var(--admin-border))' }}
-                      onClick={() => viewTicketDetails(ticket)}
-                    >
-                      <TableCell>
-                        <span className="text-lg" title={ticket.source}>
-                          {getSourceIcon(ticket.source)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium text-sm" style={{ color: 'hsl(var(--admin-text))' }}>
-                            {ticket.user_name || ticket.user_email || 'Anonymous'}
-                          </p>
-                          {ticket.company_name && (
-                            <p className="text-xs" style={{ color: 'hsl(var(--admin-text-muted))' }}>{ticket.company_name}</p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <p className="font-medium truncate max-w-[200px]" style={{ color: 'hsl(var(--admin-text))' }}>{ticket.subject}</p>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" style={getPriorityStyle(ticket.priority)}>
+            <>
+              {/* Desktop Table */}
+              <div className="hidden md:block rounded-md border" style={{ borderColor: 'hsl(var(--admin-border))' }}>
+                <Table>
+                  <TableHeader>
+                    <TableRow style={{ borderColor: 'hsl(var(--admin-border))' }}>
+                      <TableHead className="hidden lg:table-cell" style={{ color: 'hsl(var(--admin-text-muted))' }}>Source</TableHead>
+                      <TableHead style={{ color: 'hsl(var(--admin-text-muted))' }}>User</TableHead>
+                      <TableHead style={{ color: 'hsl(var(--admin-text-muted))' }}>Subject</TableHead>
+                      <TableHead style={{ color: 'hsl(var(--admin-text-muted))' }}>Priority</TableHead>
+                      <TableHead style={{ color: 'hsl(var(--admin-text-muted))' }}>Status</TableHead>
+                      <TableHead className="hidden lg:table-cell" style={{ color: 'hsl(var(--admin-text-muted))' }}>Created</TableHead>
+                      <TableHead className="text-right" style={{ color: 'hsl(var(--admin-text-muted))' }}>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTickets.map((ticket) => (
+                      <TableRow 
+                        key={ticket.id} 
+                        className="cursor-pointer transition-colors" 
+                        style={{ borderColor: 'hsl(var(--admin-border))' }}
+                        onClick={() => viewTicketDetails(ticket)}
+                      >
+                        <TableCell className="hidden lg:table-cell">
+                          <span className="text-lg" title={ticket.source}>
+                            {getSourceIcon(ticket.source)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium text-sm" style={{ color: 'hsl(var(--admin-text))' }}>
+                              {ticket.user_name || ticket.user_email || 'Anonymous'}
+                            </p>
+                            {ticket.company_name && (
+                              <p className="text-xs" style={{ color: 'hsl(var(--admin-text-muted))' }}>{ticket.company_name}</p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <p className="font-medium truncate max-w-[200px]" style={{ color: 'hsl(var(--admin-text))' }}>{ticket.subject}</p>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" style={getPriorityStyle(ticket.priority)}>
+                            {ticket.priority}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" style={getStatusStyle(ticket.status)}>
+                            {ticket.status.replace('_', ' ')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                          {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true })}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={(e) => { e.stopPropagation(); viewTicketDetails(ticket); }}
+                            style={{ color: NEON_COLORS.cyan }}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="md:hidden space-y-3">
+                {filteredTickets.map((ticket) => (
+                  <button
+                    key={ticket.id}
+                    className="w-full p-3 rounded-lg border text-left transition-colors active:opacity-80"
+                    style={{ 
+                      backgroundColor: 'hsl(var(--admin-bg))',
+                      borderColor: 'hsl(var(--admin-border))'
+                    }}
+                    onClick={() => viewTicketDetails(ticket)}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate" style={{ color: 'hsl(var(--admin-text))' }}>
+                          {ticket.subject}
+                        </p>
+                        <p className="text-xs truncate" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                          {ticket.user_name || ticket.user_email || 'Anonymous'}
+                        </p>
+                      </div>
+                      <span className="text-base shrink-0">{getSourceIcon(ticket.source)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex gap-1.5">
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0" style={getPriorityStyle(ticket.priority)}>
                           {ticket.priority}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" style={getStatusStyle(ticket.status)}>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0" style={getStatusStyle(ticket.status)}>
                           {ticket.status.replace('_', ' ')}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                      </div>
+                      <span className="text-[10px]" style={{ color: 'hsl(var(--admin-text-muted))' }}>
                         {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true })}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={(e) => { e.stopPropagation(); viewTicketDetails(ticket); }}
-                          style={{ color: NEON_COLORS.cyan }}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
-      {/* User Impersonation */}
-      <Card style={cardStyle}>
+      {/* User Impersonation - Hidden on mobile */}
+      <Card style={cardStyle} className="hidden md:block">
         <CardHeader>
           <CardTitle className="flex items-center gap-2" style={{ color: 'hsl(var(--admin-text))' }}>
             <UserCheck className="w-5 h-5" style={{ color: NEON_COLORS.purple }} />
@@ -407,59 +450,62 @@ export const SuperAdminClientSupport = () => {
         </CardContent>
       </Card>
 
-      {/* Ticket Detail Dialog */}
+      {/* Ticket Detail Dialog - Full screen on mobile */}
       <Dialog open={isTicketDetailOpen} onOpenChange={setIsTicketDetailOpen}>
-        <DialogContent className="max-w-3xl h-[85vh] flex flex-col" style={{ backgroundColor: 'hsl(var(--admin-card))', borderColor: 'hsl(var(--admin-border))' }}>
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center gap-2" style={{ color: 'hsl(var(--admin-text))' }}>
+        <DialogContent 
+          className="w-full h-full md:max-w-3xl md:h-[85vh] flex flex-col p-0 md:p-6 gap-0" 
+          style={{ backgroundColor: 'hsl(var(--admin-card))', borderColor: 'hsl(var(--admin-border))' }}
+        >
+          <DialogHeader className="flex-shrink-0 p-4 md:p-0 border-b md:border-0" style={{ borderColor: 'hsl(var(--admin-border))' }}>
+            <DialogTitle className="flex items-center gap-2 text-base md:text-lg" style={{ color: 'hsl(var(--admin-text))' }}>
               <span className="text-lg">{selectedTicket && getSourceIcon(selectedTicket.source)}</span>
               Ticket Details
             </DialogTitle>
-            <DialogDescription style={{ color: 'hsl(var(--admin-text-muted))' }}>
+            <DialogDescription className="text-xs md:text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
               View and manage support ticket
             </DialogDescription>
           </DialogHeader>
           
           {selectedTicket && (
-            <div className="flex-1 flex flex-col min-h-0 gap-4">
-              {/* Header Info */}
-              <div className="flex items-start justify-between flex-shrink-0">
-                <div>
-                  <h3 className="font-semibold text-lg" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.subject}</h3>
-                  <p className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+            <div className="flex-1 flex flex-col min-h-0 gap-3 md:gap-4 p-4 md:p-0 overflow-hidden">
+              {/* Header Info - Stacked on mobile */}
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-2 flex-shrink-0">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-base md:text-lg truncate" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.subject}</h3>
+                  <p className="text-xs md:text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
                     {formatDistanceToNow(new Date(selectedTicket.created_at), { addSuffix: true })}
                   </p>
                 </div>
-                <div className="flex gap-2">
-                  <Badge variant="outline" style={getPriorityStyle(selectedTicket.priority)}>
+                <div className="flex gap-2 shrink-0">
+                  <Badge variant="outline" className="text-xs" style={getPriorityStyle(selectedTicket.priority)}>
                     {selectedTicket.priority}
                   </Badge>
-                  <Badge variant="outline" style={getStatusStyle(selectedTicket.status)}>
+                  <Badge variant="outline" className="text-xs" style={getStatusStyle(selectedTicket.status)}>
                     {selectedTicket.status.replace('_', ' ')}
                   </Badge>
                 </div>
               </div>
 
-              {/* User Info - Collapsible/Compact */}
-              <div className="p-3 rounded-lg flex-shrink-0" style={{ backgroundColor: 'hsl(var(--admin-bg))', border: '1px solid hsl(var(--admin-border))' }}>
-                <div className="flex items-center justify-between gap-4 text-sm">
-                  <div className="flex items-center gap-4">
+              {/* User Info - Stacked on mobile */}
+              <div className="p-2 md:p-3 rounded-lg flex-shrink-0" style={{ backgroundColor: 'hsl(var(--admin-bg))', border: '1px solid hsl(var(--admin-border))' }}>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 text-xs md:text-sm">
+                  <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4">
                     <div>
                       <span style={{ color: 'hsl(var(--admin-text-muted))' }}>User:</span>{' '}
                       <span className="font-medium" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.user_name || 'Anonymous'}</span>
                     </div>
-                    <div>
+                    <div className="truncate">
                       <span style={{ color: 'hsl(var(--admin-text-muted))' }}>Email:</span>{' '}
                       <span className="font-medium" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.user_email || 'N/A'}</span>
                     </div>
                     {selectedTicket.company_name && (
-                      <div>
+                      <div className="hidden md:block">
                         <span style={{ color: 'hsl(var(--admin-text-muted))' }}>Company:</span>{' '}
                         <span className="font-medium" style={{ color: 'hsl(var(--admin-text))' }}>{selectedTicket.company_name}</span>
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 text-xs" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                  <div className="hidden md:flex items-center gap-2 text-xs" style={{ color: 'hsl(var(--admin-text-muted))' }}>
                     <Globe className="w-3 h-3" />
                     <span className="font-mono truncate max-w-[150px]">{selectedTicket.page_url || 'N/A'}</span>
                   </div>
@@ -467,7 +513,7 @@ export const SuperAdminClientSupport = () => {
               </div>
 
               {/* Conversation Area - Takes remaining space */}
-              <div className="flex-1 min-h-0 flex flex-col">
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                 <AdminTicketConversation
                   ticketId={selectedTicket.id}
                   ticketDescription={selectedTicket.description}
@@ -477,13 +523,13 @@ export const SuperAdminClientSupport = () => {
                 />
               </div>
 
-              {/* Actions */}
-              <div className="flex flex-wrap gap-2 pt-2 flex-shrink-0" style={{ borderTop: '1px solid hsl(var(--admin-border))' }}>
+              {/* Actions - Full width buttons on mobile */}
+              <div className="flex flex-col md:flex-row gap-2 pt-2 flex-shrink-0" style={{ borderTop: '1px solid hsl(var(--admin-border))' }}>
                 <Button 
                   size="sm"
                   onClick={() => handleStatusChange('in_progress')}
                   disabled={selectedTicket.status === 'in_progress'}
-                  className="disabled:opacity-50"
+                  className="disabled:opacity-50 w-full md:w-auto"
                   style={{ backgroundColor: NEON_COLORS.cyan, color: '#000', fontWeight: 600 }}
                 >
                   <Activity className="w-4 h-4 mr-1" />
@@ -493,7 +539,7 @@ export const SuperAdminClientSupport = () => {
                   size="sm"
                   onClick={() => handleStatusChange('resolved')}
                   disabled={selectedTicket.status === 'resolved'}
-                  className="disabled:opacity-50"
+                  className="disabled:opacity-50 w-full md:w-auto"
                   style={{ backgroundColor: NEON_COLORS.green, color: '#000', fontWeight: 600 }}
                 >
                   <CheckCircle className="w-4 h-4 mr-1" />
@@ -503,7 +549,7 @@ export const SuperAdminClientSupport = () => {
                   size="sm"
                   onClick={() => handleStatusChange('closed')}
                   disabled={selectedTicket.status === 'closed'}
-                  className="disabled:opacity-50"
+                  className="disabled:opacity-50 w-full md:w-auto"
                   style={{ backgroundColor: NEON_COLORS.purple, color: '#fff', fontWeight: 600 }}
                 >
                   <XCircle className="w-4 h-4 mr-1" />

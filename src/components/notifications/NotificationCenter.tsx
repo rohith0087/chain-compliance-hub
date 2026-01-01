@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Bell, CheckCheck, FileText, Users, Upload, CheckCircle, AlertTriangle, Clock, RefreshCw } from 'lucide-react';
+import { Bell, CheckCheck, FileText, Users, Upload, CheckCircle, AlertTriangle, Clock, RefreshCw, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -13,9 +13,10 @@ import { formatDistanceToNow } from 'date-fns';
 
 interface NotificationCenterProps {
   onNavigate?: (tab: string, notificationId?: string) => void;
+  onOpenHelpCenter?: () => void;
 }
 
-const NotificationCenter = ({ onNavigate }: NotificationCenterProps) => {
+const NotificationCenter = ({ onNavigate, onOpenHelpCenter }: NotificationCenterProps) => {
   const { notifications, unreadCount, markAsRead, markAllAsRead, loading } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -42,6 +43,8 @@ const NotificationCenter = ({ onNavigate }: NotificationCenterProps) => {
         return <AlertTriangle className="w-5 h-5 text-amber-500" />;
       case 'document_expiry_overdue':
         return <AlertTriangle className="w-5 h-5 text-red-500" />;
+      case 'system_announcement':
+        return <HelpCircle className="w-5 h-5 text-primary" />;
       default:
         return <Bell className="w-5 h-5 text-muted-foreground" />;
     }
@@ -78,6 +81,8 @@ const NotificationCenter = ({ onNavigate }: NotificationCenterProps) => {
         return 'connections';
       case 'onboarding_request':
         return 'create-onboarding'; // Special value to trigger create onboarding form with pre-selected supplier
+      case 'system_announcement':
+        return 'help_center'; // Special marker for Help Center
       default:
         return 'overview';
     }
@@ -87,6 +92,13 @@ const NotificationCenter = ({ onNavigate }: NotificationCenterProps) => {
     markAsRead(notification.id);
     
     const targetTab = getNotificationTargetTab(notification.type);
+    
+    // Handle system_announcement - open Help Center
+    if (notification.type === 'system_announcement') {
+      onOpenHelpCenter?.();
+      setIsOpen(false);
+      return;
+    }
     
     // For onboarding_request, store connection ID for pre-selection in the create form
     if (notification.type === 'onboarding_request' && notification.reference_id) {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { HelpCenterWorkspace } from './HelpCenterWorkspace';
@@ -16,11 +16,24 @@ export interface HelpButtonUser {
 interface HelpButtonProps {
   source: 'buyer_portal' | 'supplier_portal' | 'login_page';
   user?: HelpButtonUser;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export const HelpButton = ({ source, user }: HelpButtonProps) => {
-  const [isOpen, setIsOpen] = useState(false);
+export const HelpButton = ({ source, user, isOpen: externalOpen, onOpenChange }: HelpButtonProps) => {
+  const [internalOpen, setInternalOpen] = useState(false);
   const { isRunning } = useTour();
+
+  // Use external state if provided, otherwise use internal state
+  const isOpen = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setIsOpen = onOpenChange || setInternalOpen;
+
+  // Sync internal state with external state
+  useEffect(() => {
+    if (externalOpen !== undefined && externalOpen !== internalOpen) {
+      setInternalOpen(externalOpen);
+    }
+  }, [externalOpen]);
 
   // Don't show button during tour
   if (isRunning) {

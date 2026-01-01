@@ -117,17 +117,17 @@ export const HelpCenterWorkspace = ({ isOpen, onClose, source, user }: HelpCente
           </div>
 
           {/* Content */}
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex overflow-hidden min-h-0">
             {/* Left panel: Ticket list */}
             <div className={cn(
-              'flex flex-col border-r transition-all duration-200',
+              'flex flex-col border-r transition-all duration-200 min-h-0',
               selectedTicket ? 'w-80 flex-shrink-0' : 'flex-1'
             )}>
               {showGuidedTours ? (
                 <Tabs 
                   value={activeTab} 
                   onValueChange={(v) => setActiveTab(v as 'tickets' | 'guides')}
-                  className="flex flex-col flex-1"
+                  className="flex flex-col flex-1 min-h-0"
                 >
                   <TabsList className="grid w-full grid-cols-2 mx-4 mt-3" style={{ width: 'calc(100% - 32px)' }}>
                     <TabsTrigger value="tickets" className="flex items-center gap-1.5 text-xs">

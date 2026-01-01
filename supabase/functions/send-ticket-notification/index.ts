@@ -63,14 +63,32 @@ const handler = async (req: Request): Promise<Response> => {
           urgent: '#ef4444'
         }[request.ticketPriority] || '#6b7280';
 
+        const isUrgent = request.ticketPriority === 'urgent' || request.ticketPriority === 'high';
+        const companyTypeDisplay = request.companyType === 'buyer' ? 'Buyer' : request.companyType === 'supplier' ? 'Supplier' : 'User';
+        const ticketRef = request.ticketId.slice(0, 8).toUpperCase();
+        const submittedAt = new Date().toLocaleString('en-US', { 
+          weekday: 'short', 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric', 
+          hour: '2-digit', 
+          minute: '2-digit',
+          timeZoneName: 'short'
+        });
+
         const emailHtml = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 30px; border-radius: 12px 12px 0 0;">
               <h1 style="color: #22d3ee; margin: 0; font-size: 24px;">🎫 New Support Ticket</h1>
+              ${isUrgent ? `
+                <div style="background: #ef4444; color: white; padding: 8px 16px; border-radius: 6px; margin-top: 16px; font-weight: bold; display: inline-block;">
+                  ⚠️ REQUIRES IMMEDIATE ATTENTION
+                </div>
+              ` : ''}
             </div>
             
             <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
-              <div style="margin-bottom: 20px;">
+              <div style="margin-bottom: 16px;">
                 <span style="background: ${priorityColor}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase;">
                   ${request.ticketPriority} Priority
                 </span>
@@ -79,27 +97,57 @@ const handler = async (req: Request): Promise<Response> => {
                 </span>
               </div>
               
-              <h2 style="color: #1e293b; margin: 0 0 20px 0; font-size: 20px;">${request.ticketSubject}</h2>
+              <p style="color: #64748b; margin: 0 0 8px 0; font-size: 13px;">
+                Ticket ID: <strong style="color: #1e293b;">#${ticketRef}</strong>
+              </p>
+              
+              <h2 style="color: #1e293b; margin: 0 0 20px 0; font-size: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px;">
+                ${request.ticketSubject}
+              </h2>
               
               ${request.ticketDescription ? `
                 <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
-                  <p style="color: #475569; margin: 0; white-space: pre-wrap;">${request.ticketDescription}</p>
+                  <h4 style="color: #64748b; margin: 0 0 8px 0; font-size: 12px; text-transform: uppercase;">Description</h4>
+                  <p style="color: #475569; margin: 0; white-space: pre-wrap; line-height: 1.6;">${request.ticketDescription}</p>
                 </div>
               ` : ''}
               
-              <div style="background: #f1f5f9; border-radius: 8px; padding: 16px;">
-                <h3 style="color: #64748b; margin: 0 0 12px 0; font-size: 14px; text-transform: uppercase;">Submitted By</h3>
-                <p style="color: #1e293b; margin: 0;">
-                  ${request.userName || 'Guest User'}<br/>
-                  <span style="color: #64748b;">${request.userEmail || 'No email provided'}</span>
-                  ${request.companyName ? `<br/><span style="color: #64748b;">${request.companyName}</span>` : ''}
-                </p>
+              <div style="background: #f1f5f9; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+                <h3 style="color: #64748b; margin: 0 0 12px 0; font-size: 12px; text-transform: uppercase;">Submitted By</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="color: #64748b; padding: 4px 0; width: 80px; font-size: 13px;">Name:</td>
+                    <td style="color: #1e293b; padding: 4px 0; font-weight: 500; font-size: 13px;">${request.userName || 'Guest User'}</td>
+                  </tr>
+                  <tr>
+                    <td style="color: #64748b; padding: 4px 0; font-size: 13px;">Email:</td>
+                    <td style="color: #1e293b; padding: 4px 0; font-size: 13px;">${request.userEmail || 'No email provided'}</td>
+                  </tr>
+                  <tr>
+                    <td style="color: #64748b; padding: 4px 0; font-size: 13px;">Type:</td>
+                    <td style="padding: 4px 0;">
+                      <span style="background: ${request.companyType === 'buyer' ? '#3b82f6' : '#10b981'}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500;">
+                        ${companyTypeDisplay}
+                      </span>
+                    </td>
+                  </tr>
+                  ${request.companyName ? `
+                    <tr>
+                      <td style="color: #64748b; padding: 4px 0; font-size: 13px;">Company:</td>
+                      <td style="color: #1e293b; padding: 4px 0; font-weight: 500; font-size: 13px;">${request.companyName}</td>
+                    </tr>
+                  ` : ''}
+                </table>
               </div>
               
-              <div style="margin-top: 24px; text-align: center;">
+              <p style="color: #94a3b8; font-size: 12px; margin: 0 0 20px 0;">
+                📅 Submitted: ${submittedAt}
+              </p>
+              
+              <div style="text-align: center;">
                 <a href="https://compliance.tracer2c.com/platform-admin/dashboard" 
-                   style="display: inline-block; background: #22d3ee; color: #1a1a2e; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
-                  View in Admin Portal →
+                   style="display: inline-block; background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%); color: #1a1a2e; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px;">
+                  Review & Respond →
                 </a>
               </div>
             </div>
@@ -111,10 +159,11 @@ const handler = async (req: Request): Promise<Response> => {
         `;
 
         try {
+          const urgentPrefix = isUrgent ? '🚨 ' : '';
           const result = await resend.emails.send({
             from: "Support <support@tracer2c.com>",
             to: [admin.email],
-            subject: `🎫 New Support Ticket: ${request.ticketSubject} (${request.ticketPriority.toUpperCase()})`,
+            subject: `${urgentPrefix}New Ticket #${ticketRef}: ${request.ticketSubject} [${request.ticketPriority.toUpperCase()}]`,
             html: emailHtml,
           });
           console.log(`Email sent to admin ${admin.email}:`, result);

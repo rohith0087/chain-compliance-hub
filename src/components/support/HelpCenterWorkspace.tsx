@@ -184,10 +184,7 @@ export const HelpCenterWorkspace = ({ isOpen, onClose, source, user }: HelpCente
             {/* Right panel: Ticket detail */}
             {selectedTicket && (
               <div className="flex-1 min-w-0">
-                <TicketDetailPanel
-                  ticket={selectedTicket}
-                  onClose={() => setSelectedTicket(null)}
-                />
+                <TicketDetailPanel ticket={selectedTicket} />
               </div>
             )}
           </div>

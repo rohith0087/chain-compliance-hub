@@ -3514,6 +3514,7 @@ export type Database = {
           company_name: string | null
           created_at: string | null
           description: string
+          has_unread_response: boolean | null
           id: string
           ip_address: string | null
           metadata: Json | null
@@ -3538,6 +3539,7 @@ export type Database = {
           company_name?: string | null
           created_at?: string | null
           description: string
+          has_unread_response?: boolean | null
           id?: string
           ip_address?: string | null
           metadata?: Json | null
@@ -3562,6 +3564,7 @@ export type Database = {
           company_name?: string | null
           created_at?: string | null
           description?: string
+          has_unread_response?: boolean | null
           id?: string
           ip_address?: string | null
           metadata?: Json | null
@@ -3742,6 +3745,50 @@ export type Database = {
             columns: ["onboarding_request_id"]
             isOneToOne: false
             referencedRelation: "supplier_onboarding_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_responses: {
+        Row: {
+          attachments: Json | null
+          author_id: string | null
+          author_name: string | null
+          author_type: string
+          content: string
+          created_at: string | null
+          id: string
+          is_internal: boolean | null
+          ticket_id: string
+        }
+        Insert: {
+          attachments?: Json | null
+          author_id?: string | null
+          author_name?: string | null
+          author_type: string
+          content: string
+          created_at?: string | null
+          id?: string
+          is_internal?: boolean | null
+          ticket_id: string
+        }
+        Update: {
+          attachments?: Json | null
+          author_id?: string | null
+          author_name?: string | null
+          author_type?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_internal?: boolean | null
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_responses_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
             referencedColumns: ["id"]
           },
         ]

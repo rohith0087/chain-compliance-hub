@@ -1,7 +1,8 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useNotificationSound } from './useNotificationSound';
 
 interface Notification {
   id: string;
@@ -17,6 +18,8 @@ export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { playNotificationSound } = useNotificationSound();
+  const initialLoadComplete = useRef(false);
 
   const fetchNotifications = async () => {
     if (!user) {
@@ -44,6 +47,7 @@ export const useNotifications = () => {
       setNotifications([]);
     } finally {
       setLoading(false);
+      initialLoadComplete.current = true;
     }
   };
 
@@ -76,7 +80,13 @@ export const useNotifications = () => {
             filter: `user_id=eq.${user.id}`
           },
           (payload) => {
-            setNotifications(prev => [payload.new as Notification, ...prev]);
+            const newNotification = payload.new as Notification;
+            setNotifications(prev => [newNotification, ...prev]);
+            
+            // Play notification sound for new notifications (not on initial load)
+            if (initialLoadComplete.current) {
+              playNotificationSound(newNotification.type);
+            }
           }
         )
         .on(

@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from './use-toast';
+import { useNotificationSound } from './useNotificationSound';
 
 export interface TicketResponse {
   id: string;
@@ -19,6 +20,8 @@ export const useTicketResponses = (ticketId: string | null) => {
   const { user } = useAuth();
   const [responses, setResponses] = useState<TicketResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const { playNotificationSound } = useNotificationSound();
+  const initialLoadComplete = useRef(false);
 
   const fetchResponses = useCallback(async () => {
     if (!ticketId) {
@@ -41,6 +44,7 @@ export const useTicketResponses = (ticketId: string | null) => {
       console.error('Error fetching responses:', error);
     } finally {
       setLoading(false);
+      initialLoadComplete.current = true;
     }
   }, [ticketId]);
 
@@ -106,6 +110,11 @@ export const useTicketResponses = (ticketId: string | null) => {
           // Only show non-internal responses
           if (!newResponse.is_internal) {
             setResponses(prev => [...prev, newResponse]);
+            
+            // Play sound for support responses (not user's own responses)
+            if (initialLoadComplete.current && newResponse.author_type === 'support') {
+              playNotificationSound('ticket_response');
+            }
           }
         }
       )

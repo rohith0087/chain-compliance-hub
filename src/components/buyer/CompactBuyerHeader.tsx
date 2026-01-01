@@ -21,7 +21,7 @@ export const CompactBuyerHeader = ({
   onBranchesClick,
   onQuickOnboardingClick,
 }: CompactBuyerHeaderProps) => {
-  const { isEnabled, toggleEnabled } = useNotificationSound();
+  const { isEnabled, isUnlocked, toggleEnabled } = useNotificationSound();
 
   return (
     <Card className="border-border/50">
@@ -42,14 +42,24 @@ export const CompactBuyerHeader = ({
                   className="h-8 w-8 p-0"
                 >
                   {isEnabled ? (
-                    <Volume2 className="h-4 w-4 text-muted-foreground" />
+                    <Volume2 
+                      className={`h-4 w-4 ${
+                        isUnlocked 
+                          ? 'text-primary' 
+                          : 'text-muted-foreground animate-pulse'
+                      }`} 
+                    />
                   ) : (
                     <VolumeX className="h-4 w-4 text-muted-foreground" />
                   )}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                {isEnabled ? 'Mute notification sounds' : 'Enable notification sounds'}
+                {!isEnabled 
+                  ? 'Enable notification sounds' 
+                  : !isUnlocked 
+                    ? 'Click anywhere to enable sounds' 
+                    : 'Mute notification sounds'}
               </TooltipContent>
             </Tooltip>
             <Button

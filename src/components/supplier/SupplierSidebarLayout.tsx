@@ -127,7 +127,7 @@ export function SupplierSidebarLayout({
   const { hasRole } = useUserRoles();
   const sidebar = useSidebar();
   const collapsed = sidebar?.state === 'collapsed';
-  const { isEnabled, toggleEnabled } = useNotificationSound();
+  const { isEnabled, isUnlocked, toggleEnabled } = useNotificationSound();
 
   // Resolve company ID for team members
   const [resolvedSupplierId, setResolvedSupplierId] = useState<string | null>(supplierProfile?.id || null);
@@ -481,14 +481,24 @@ export function SupplierSidebarLayout({
                     className="h-8 w-8 p-0"
                   >
                     {isEnabled ? (
-                      <Volume2 className="h-4 w-4 text-muted-foreground" />
+                      <Volume2 
+                        className={`h-4 w-4 ${
+                          isUnlocked 
+                            ? 'text-primary' 
+                            : 'text-muted-foreground animate-pulse'
+                        }`} 
+                      />
                     ) : (
                       <VolumeX className="h-4 w-4 text-muted-foreground" />
                     )}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {isEnabled ? 'Mute notification sounds' : 'Enable notification sounds'}
+                  {!isEnabled 
+                    ? 'Enable notification sounds' 
+                    : !isUnlocked 
+                      ? 'Click anywhere to enable sounds' 
+                      : 'Mute notification sounds'}
                 </TooltipContent>
               </Tooltip>
               <NotificationCenter

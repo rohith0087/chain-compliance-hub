@@ -26,7 +26,9 @@ import {
   CreditCard,
   Package,
   UserCog,
-  Play
+  Play,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
@@ -68,6 +70,8 @@ import NotificationCenter from '@/components/notifications/NotificationCenter';
 import { SubscriptionStatusWidget } from '@/components/subscription/SubscriptionStatusWidget';
 import { BranchSelector } from '@/components/company/BranchSelector';
 import { HelpButton } from '@/components/support/HelpButton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useNotificationSound } from '@/hooks/useNotificationSound';
 
 interface NavigationItem {
   title: string;
@@ -123,6 +127,7 @@ export function SupplierSidebarLayout({
   const { hasRole } = useUserRoles();
   const sidebar = useSidebar();
   const collapsed = sidebar?.state === 'collapsed';
+  const { isEnabled, toggleEnabled } = useNotificationSound();
 
   // Resolve company ID for team members
   const [resolvedSupplierId, setResolvedSupplierId] = useState<string | null>(supplierProfile?.id || null);
@@ -467,6 +472,25 @@ export function SupplierSidebarLayout({
             </div>
             
             <div className="flex items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleEnabled}
+                    className="h-8 w-8 p-0"
+                  >
+                    {isEnabled ? (
+                      <Volume2 className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <VolumeX className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isEnabled ? 'Mute notification sounds' : 'Enable notification sounds'}
+                </TooltipContent>
+              </Tooltip>
               <NotificationCenter
                 onNavigate={async (tab, referenceId) => {
                   onTabChange(tab);

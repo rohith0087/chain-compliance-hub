@@ -1,7 +1,9 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { UserCheck, Users, UserPlus, Zap } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { UserCheck, Users, UserPlus, Zap, Volume2, VolumeX } from 'lucide-react';
+import { useNotificationSound } from '@/hooks/useNotificationSound';
 
 interface CompactBuyerHeaderProps {
   buyerId: string;
@@ -19,6 +21,8 @@ export const CompactBuyerHeader = ({
   onBranchesClick,
   onQuickOnboardingClick,
 }: CompactBuyerHeaderProps) => {
+  const { isEnabled, toggleEnabled } = useNotificationSound();
+
   return (
     <Card className="border-border/50">
       <CardContent className="p-4">
@@ -29,6 +33,25 @@ export const CompactBuyerHeader = ({
 
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleEnabled}
+                  className="h-8 w-8 p-0"
+                >
+                  {isEnabled ? (
+                    <Volume2 className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <VolumeX className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isEnabled ? 'Mute notification sounds' : 'Enable notification sounds'}
+              </TooltipContent>
+            </Tooltip>
             <Button
               variant="default"
               size="sm"

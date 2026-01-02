@@ -316,7 +316,7 @@ export function SupplierSidebarLayout({
   };
 
   return (
-    <div className="flex min-h-screen w-full">
+    <div className={`flex w-full ${activeTab === 'messages' ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
       <Sidebar className="border-r bg-white/80 backdrop-blur-sm">
         <SidebarHeader className="border-b border-gray-200/50 px-3 py-4 bg-white/50">
           <div className="flex items-center gap-3">
@@ -473,7 +473,7 @@ export function SupplierSidebarLayout({
         </SidebarFooter>
       </Sidebar>
 
-      <div className="flex-1 flex flex-col">
+      <div className={`flex-1 flex flex-col ${activeTab === 'messages' ? 'overflow-hidden' : ''}`}>
         {/* Top Header */}
         <header className="h-14 border-b border-gray-200/50 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 sticky top-0 z-50">
           <div className="flex h-full items-center justify-between px-4">

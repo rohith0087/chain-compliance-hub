@@ -439,15 +439,6 @@ async function markRead(supabase: any, userId: string, params: any) {
 async function getTaggableDocuments(supabase: any, userId: string, params: any) {
   const { buyerId, supplierId, search } = params;
 
-  // Get document uploads from this supplier to this buyer
-  let uploadsQuery = supabase
-    .from('document_uploads')
-    .select(`
-      id, document_name, file_name, status, expiration_date, created_at, updated_at,
-      document_request:document_requests(id, title, document_type, category)
-    `)
-    .eq('supplier_id', supplierId);
-
   // Get document requests from this buyer to this supplier
   let requestsQuery = supabase
     .from('document_requests')
@@ -456,30 +447,59 @@ async function getTaggableDocuments(supabase: any, userId: string, params: any) 
     .eq('supplier_id', supplierId);
 
   if (search) {
-    uploadsQuery = uploadsQuery.ilike('document_name', `%${search}%`);
     requestsQuery = requestsQuery.ilike('title', `%${search}%`);
   }
 
-  const [uploadsResult, requestsResult] = await Promise.all([
-    uploadsQuery.order('created_at', { ascending: false }).limit(20),
-    requestsQuery.order('created_at', { ascending: false }).limit(20)
-  ]);
+  const { data: requests, error: requestsError } = await requestsQuery
+    .order('created_at', { ascending: false })
+    .limit(30);
 
-  if (uploadsResult.error) throw uploadsResult.error;
-  if (requestsResult.error) throw requestsResult.error;
+  if (requestsError) throw requestsError;
+
+  // Get request IDs to find uploads
+  const requestIds = (requests || []).map((r: any) => r.id);
+
+  // Get document uploads for these requests
+  let uploads: any[] = [];
+  if (requestIds.length > 0) {
+    let uploadsQuery = supabase
+      .from('document_uploads')
+      .select(`
+        id, document_name, file_name, status, expiration_date, created_at,
+        request_id
+      `)
+      .in('request_id', requestIds);
+
+    if (search) {
+      uploadsQuery = uploadsQuery.ilike('document_name', `%${search}%`);
+    }
+
+    const { data: uploadsData, error: uploadsError } = await uploadsQuery
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (uploadsError) throw uploadsError;
+    uploads = uploadsData || [];
+  }
+
+  // Create a map of requests for easy lookup
+  const requestMap = new Map((requests || []).map((r: any) => [r.id, r]));
 
   // Format documents for tagging
   const documents = [
-    ...(uploadsResult.data || []).map((doc: any) => ({
-      id: doc.id,
-      type: 'upload',
-      name: doc.document_name || doc.file_name,
-      status: doc.status,
-      expirationDate: doc.expiration_date,
-      category: doc.document_request?.category,
-      documentType: doc.document_request?.document_type
-    })),
-    ...(requestsResult.data || []).map((req: any) => ({
+    ...uploads.map((doc: any) => {
+      const request = requestMap.get(doc.request_id);
+      return {
+        id: doc.id,
+        type: 'upload',
+        name: doc.document_name || doc.file_name,
+        status: doc.status,
+        expirationDate: doc.expiration_date,
+        category: request?.category,
+        documentType: request?.document_type
+      };
+    }),
+    ...(requests || []).map((req: any) => ({
       id: req.id,
       type: 'request',
       name: req.title,

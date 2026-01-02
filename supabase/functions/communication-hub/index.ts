@@ -266,7 +266,8 @@ async function getMessages(supabase: any, userId: string, params: any) {
     .select(`
       *,
       sender:profiles!sender_id(id, full_name, avatar_url),
-      attachments:message_attachments(*)
+      attachments:message_attachments(*),
+      read_receipts:message_read_receipts(profile_id, read_at)
     `)
     .eq('thread_id', threadId)
     .is('deleted_at', null)
@@ -287,7 +288,9 @@ async function getMessages(supabase: any, userId: string, params: any) {
       id: msg.sender.id,
       name: msg.sender.full_name,
       avatar_url: msg.sender.avatar_url
-    } : null
+    } : null,
+    read_by: msg.read_receipts || [],
+    is_read_by_recipient: (msg.read_receipts || []).some((r: any) => r.profile_id !== msg.sender_id)
   }));
 
   return { messages: formattedMessages.reverse() };
@@ -421,6 +424,42 @@ async function markRead(supabase: any, userId: string, params: any) {
       });
     
     if (error && error.code !== '23505') throw error;
+  } else {
+    // Mark all unread messages in thread as read
+    // First get all messages in thread not sent by this user and not already read by them
+    const { data: messages } = await supabase
+      .from('communication_messages')
+      .select('id')
+      .eq('thread_id', threadId)
+      .neq('sender_id', userId)
+      .is('deleted_at', null);
+
+    if (messages && messages.length > 0) {
+      // Get messages already read by this user
+      const messageIds = messages.map((m: any) => m.id);
+      const { data: existingReceipts } = await supabase
+        .from('message_read_receipts')
+        .select('message_id')
+        .in('message_id', messageIds)
+        .eq('profile_id', userId);
+
+      const alreadyReadIds = new Set((existingReceipts || []).map((r: any) => r.message_id));
+      
+      // Insert read receipts for unread messages
+      const unreadMessages = messages.filter((m: any) => !alreadyReadIds.has(m.id));
+      
+      if (unreadMessages.length > 0) {
+        const receiptsToInsert = unreadMessages.map((m: any) => ({
+          message_id: m.id,
+          profile_id: userId,
+          read_at: new Date().toISOString()
+        }));
+
+        await supabase
+          .from('message_read_receipts')
+          .insert(receiptsToInsert);
+      }
+    }
   }
 
   // Update participant's unread count

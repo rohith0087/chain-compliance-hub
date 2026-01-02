@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { DocumentChip } from './DocumentChip';
 import { MentionBadge } from './MentionBadge';
-import { MoreHorizontal, Pencil, Trash2, Check } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, Check, CheckCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -173,12 +173,26 @@ export function MessageBubble({
           )}
         </div>
 
-        {/* Consecutive message time on hover */}
-        {isConsecutive && (
-          <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-0.5">
-            {format(new Date(message.created_at), 'h:mm a')}
-          </span>
-        )}
+        {/* Message status + time for consecutive messages */}
+        <div className={`flex items-center gap-1 ${isOwnMessage ? 'flex-row-reverse' : ''}`}>
+          {/* Consecutive message time on hover */}
+          {isConsecutive && (
+            <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-0.5">
+              {format(new Date(message.created_at), 'h:mm a')}
+            </span>
+          )}
+          
+          {/* Read receipt indicator for own messages */}
+          {isOwnMessage && !isConsecutive && (
+            <div className="flex items-center mt-0.5">
+              {message.is_read_by_recipient ? (
+                <CheckCheck className="h-3.5 w-3.5 text-blue-500" />
+              ) : (
+                <Check className="h-3.5 w-3.5 text-muted-foreground" />
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

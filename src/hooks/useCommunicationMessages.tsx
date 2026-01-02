@@ -27,6 +27,11 @@ export interface Mention {
   name: string;
 }
 
+export interface ReadReceipt {
+  profile_id: string;
+  read_at: string;
+}
+
 export interface CommunicationMessage {
   id: string;
   thread_id: string;
@@ -46,6 +51,8 @@ export interface CommunicationMessage {
     avatar_url: string | null;
   };
   attachments: MessageAttachment[];
+  read_by?: ReadReceipt[];
+  is_read_by_recipient?: boolean;
 }
 
 interface UseCommunicationMessagesResult {
@@ -132,7 +139,15 @@ export function useCommunicationMessages(
       if (sendError) throw sendError;
       if (data.error) throw new Error(data.error);
 
-      // Message will be added via realtime subscription
+      // Optimistic update - add message immediately for instant feedback
+      if (data.message) {
+        setMessages(prev => {
+          // Avoid duplicates (in case realtime already added it)
+          if (prev.some(m => m.id === data.message.id)) return prev;
+          return [...prev, { ...data.message, read_by: [], is_read_by_recipient: false }];
+        });
+      }
+
       return data.message;
     } catch (err: any) {
       console.error('Error sending message:', err);
@@ -234,7 +249,7 @@ export function useCommunicationMessages(
     }
   }, [threadId, messages.length, markAsRead]);
 
-  // Subscribe to real-time messages
+  // Subscribe to real-time messages and read receipts
   useEffect(() => {
     if (!threadId) return;
 
@@ -252,6 +267,11 @@ export function useCommunicationMessages(
           // Fetch the full message with sender info
           const newMsg = payload.new as any;
           
+          // Skip if this is our own message (already added optimistically)
+          if (user && newMsg.sender_id === user.id) {
+            return;
+          }
+          
           // Get sender profile - use full_name, not name
           const { data: sender } = await supabase
             .from('profiles')
@@ -268,7 +288,9 @@ export function useCommunicationMessages(
             } : { id: newMsg.sender_id, name: 'Unknown', avatar_url: null },
             attachments: [],
             mentions: newMsg.mentions || [],
-            document_tags: newMsg.document_tags || []
+            document_tags: newMsg.document_tags || [],
+            read_by: [],
+            is_read_by_recipient: false
           };
 
           setMessages(prev => {
@@ -278,9 +300,7 @@ export function useCommunicationMessages(
           });
 
           // Mark as read if we're viewing this thread
-          if (user && newMsg.sender_id !== user.id) {
-            markAsRead();
-          }
+          markAsRead();
         }
       )
       .on(
@@ -298,6 +318,31 @@ export function useCommunicationMessages(
               ? { ...msg, ...updated }
               : msg
           ));
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'message_read_receipts'
+        },
+        (payload) => {
+          const receipt = payload.new as any;
+          // Update the corresponding message's read status
+          setMessages(prev => prev.map(msg => {
+            if (msg.id === receipt.message_id) {
+              const newReadBy = [...(msg.read_by || []), { profile_id: receipt.profile_id, read_at: receipt.read_at }];
+              // Message is read by recipient if someone other than sender has read it
+              const isReadByRecipient = user ? receipt.profile_id !== msg.sender_id : false;
+              return {
+                ...msg,
+                read_by: newReadBy,
+                is_read_by_recipient: msg.is_read_by_recipient || isReadByRecipient
+              };
+            }
+            return msg;
+          }));
         }
       )
       .subscribe();

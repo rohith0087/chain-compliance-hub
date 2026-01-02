@@ -171,13 +171,14 @@ export function MessageBubble({
               {/* Document Tags */}
               {message.document_tags && message.document_tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {message.document_tags.map((doc, idx) => (
+                {message.document_tags.map((doc, idx) => (
                     <DocumentChip
                       key={idx}
                       document={doc}
                       buyerId={buyerId}
                       supplierId={supplierId}
                       onClick={() => handleDocumentClick(doc)}
+                      isOwnMessage={isOwnMessage}
                     />
                   ))}
                 </div>

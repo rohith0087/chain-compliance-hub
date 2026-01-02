@@ -77,10 +77,10 @@ export function CommunicationHub({
   };
 
   return (
-    <div className="h-full flex bg-background">
+    <div className="h-full flex bg-background overflow-hidden">
       {/* Thread List - Hidden on mobile when conversation is shown */}
       <div className={`
-        w-full md:w-80 lg:w-96 border-r border-border flex-shrink-0
+        w-full md:w-80 lg:w-96 border-r border-border flex-shrink-0 h-full overflow-hidden
         ${mobileShowConversation ? 'hidden md:flex' : 'flex'}
         flex-col
       `}>
@@ -97,7 +97,7 @@ export function CommunicationHub({
 
       {/* Conversation Pane */}
       <div className={`
-        flex-1 flex flex-col
+        flex-1 flex flex-col h-full overflow-hidden
         ${!mobileShowConversation ? 'hidden md:flex' : 'flex'}
       `}>
         {selectedThread ? (

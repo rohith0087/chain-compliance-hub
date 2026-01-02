@@ -201,3 +201,7 @@ verify_jwt = true
 # Text-to-voice synthesis using OpenAI TTS (public for simulation narration)
 [functions.text-to-voice]
 verify_jwt = false
+
+# Communication Hub - real-time messaging between buyers and suppliers
+[functions.communication-hub]
+verify_jwt = true

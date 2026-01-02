@@ -172,13 +172,30 @@ export const CustomTemplateManager = () => {
 
   const handleDeleteTemplate = async (templateId: string) => {
     try {
-      const { error } = await supabase
+      // Get the template's file path before deletion
+      const templateToDelete = templates.find(t => t.id === templateId);
+      
+      // Set custom_template_id to NULL in related document_requests
+      await supabase
+        .from('document_requests')
+        .update({ custom_template_id: null })
+        .eq('custom_template_id', templateId);
+
+      // Delete the template from the database
+      const { error: deleteError } = await supabase
         .from('custom_document_templates')
         .delete()
         .eq('id', templateId);
 
-      if (error) {
-        throw error;
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      // Delete the file from storage
+      if (templateToDelete?.file_path) {
+        await supabase.storage
+          .from('compliance-documents')
+          .remove([templateToDelete.file_path]);
       }
 
       toast.success('Template deleted successfully');

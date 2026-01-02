@@ -998,6 +998,228 @@ export type Database = {
         }
         Relationships: []
       }
+      communication_audit_logs: {
+        Row: {
+          action_type: string
+          attachment_id: string | null
+          created_at: string
+          id: string
+          ip_address: string | null
+          message_id: string | null
+          metadata: Json | null
+          thread_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_type: string
+          attachment_id?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          message_id?: string | null
+          metadata?: Json | null
+          thread_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          attachment_id?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          message_id?: string | null
+          metadata?: Json | null
+          thread_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_audit_logs_attachment_id_fkey"
+            columns: ["attachment_id"]
+            isOneToOne: false
+            referencedRelation: "message_attachments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_audit_logs_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "communication_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_audit_logs_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "communication_threads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      communication_messages: {
+        Row: {
+          content: string
+          created_at: string
+          deleted_at: string | null
+          document_tags: Json | null
+          edited_at: string | null
+          id: string
+          is_edited: boolean
+          is_system_message: boolean
+          mentions: Json | null
+          sender_company_id: string
+          sender_id: string
+          sender_type: Database["public"]["Enums"]["participant_type"]
+          thread_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          deleted_at?: string | null
+          document_tags?: Json | null
+          edited_at?: string | null
+          id?: string
+          is_edited?: boolean
+          is_system_message?: boolean
+          mentions?: Json | null
+          sender_company_id: string
+          sender_id: string
+          sender_type: Database["public"]["Enums"]["participant_type"]
+          thread_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          deleted_at?: string | null
+          document_tags?: Json | null
+          edited_at?: string | null
+          id?: string
+          is_edited?: boolean
+          is_system_message?: boolean
+          mentions?: Json | null
+          sender_company_id?: string
+          sender_id?: string
+          sender_type?: Database["public"]["Enums"]["participant_type"]
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "communication_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      communication_threads: {
+        Row: {
+          buyer_branch_id: string | null
+          buyer_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          last_message_at: string | null
+          last_message_preview: string | null
+          status: Database["public"]["Enums"]["thread_status"]
+          supplier_branch_id: string | null
+          supplier_id: string
+          thread_context: Database["public"]["Enums"]["thread_context_type"]
+          thread_title: string | null
+          updated_at: string
+        }
+        Insert: {
+          buyer_branch_id?: string | null
+          buyer_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          status?: Database["public"]["Enums"]["thread_status"]
+          supplier_branch_id?: string | null
+          supplier_id: string
+          thread_context?: Database["public"]["Enums"]["thread_context_type"]
+          thread_title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          buyer_branch_id?: string | null
+          buyer_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          status?: Database["public"]["Enums"]["thread_status"]
+          supplier_branch_id?: string | null
+          supplier_id?: string
+          thread_context?: Database["public"]["Enums"]["thread_context_type"]
+          thread_title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_threads_buyer_branch_id_fkey"
+            columns: ["buyer_branch_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_threads_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_threads_supplier_branch_id_fkey"
+            columns: ["supplier_branch_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_threads_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_branches: {
         Row: {
           address: string | null
@@ -2328,6 +2550,107 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "supplier_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_attachments: {
+        Row: {
+          created_at: string
+          download_count: number
+          file_name: string
+          file_path: string
+          file_size: number
+          id: string
+          message_id: string
+          mime_type: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          download_count?: number
+          file_name: string
+          file_path: string
+          file_size: number
+          id?: string
+          message_id: string
+          mime_type: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          download_count?: number
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          id?: string
+          message_id?: string
+          mime_type?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "communication_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_read_receipts: {
+        Row: {
+          id: string
+          message_id: string
+          profile_id: string
+          read_at: string
+        }
+        Insert: {
+          id?: string
+          message_id: string
+          profile_id: string
+          read_at?: string
+        }
+        Update: {
+          id?: string
+          message_id?: string
+          profile_id?: string
+          read_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_read_receipts_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "communication_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_read_receipts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_read_receipts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
             referencedColumns: ["id"]
           },
         ]
@@ -3749,6 +4072,80 @@ export type Database = {
           },
         ]
       }
+      thread_participants: {
+        Row: {
+          branch_id: string | null
+          company_id: string
+          id: string
+          is_active: boolean
+          joined_at: string
+          last_read_at: string | null
+          left_at: string | null
+          notifications_enabled: boolean
+          participant_type: Database["public"]["Enums"]["participant_type"]
+          profile_id: string
+          thread_id: string
+          unread_count: number
+        }
+        Insert: {
+          branch_id?: string | null
+          company_id: string
+          id?: string
+          is_active?: boolean
+          joined_at?: string
+          last_read_at?: string | null
+          left_at?: string | null
+          notifications_enabled?: boolean
+          participant_type: Database["public"]["Enums"]["participant_type"]
+          profile_id: string
+          thread_id: string
+          unread_count?: number
+        }
+        Update: {
+          branch_id?: string | null
+          company_id?: string
+          id?: string
+          is_active?: boolean
+          joined_at?: string
+          last_read_at?: string | null
+          left_at?: string | null
+          notifications_enabled?: boolean
+          participant_type?: Database["public"]["Enums"]["participant_type"]
+          profile_id?: string
+          thread_id?: string
+          unread_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "thread_participants_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "thread_participants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "thread_participants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "thread_participants_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "communication_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_responses: {
         Row: {
           attachments: Json | null
@@ -4533,6 +4930,7 @@ export type Database = {
         | "approver"
         | "viewer"
       contact_role: "recall" | "sales" | "quality" | "compliance" | "general"
+      participant_type: "buyer" | "supplier"
       permission_type:
         | "read"
         | "write"
@@ -4558,6 +4956,8 @@ export type Database = {
         | "supplier_starter"
         | "supplier_professional"
         | "supplier_enterprise"
+      thread_context_type: "general" | "compliance" | "onboarding" | "renewals"
+      thread_status: "active" | "archived"
       user_role:
         | "buyer"
         | "supplier"
@@ -4709,6 +5109,7 @@ export const Constants = {
         "viewer",
       ],
       contact_role: ["recall", "sales", "quality", "compliance", "general"],
+      participant_type: ["buyer", "supplier"],
       permission_type: [
         "read",
         "write",
@@ -4737,6 +5138,8 @@ export const Constants = {
         "supplier_professional",
         "supplier_enterprise",
       ],
+      thread_context_type: ["general", "compliance", "onboarding", "renewals"],
+      thread_status: ["active", "archived"],
       user_role: [
         "buyer",
         "supplier",

@@ -229,7 +229,7 @@ export function MessageBubble({
           )}
           
           {/* Read receipt indicator for own messages */}
-          {isOwnMessage && !isConsecutive && (
+          {isOwnMessage && (
             <div className="flex items-center mt-0.5">
               {message.is_read_by_recipient ? (
                 <CheckCheck className="h-3.5 w-3.5 text-blue-500" />

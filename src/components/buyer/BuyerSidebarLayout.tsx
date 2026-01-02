@@ -312,7 +312,7 @@ export function BuyerSidebarLayout({
   };
 
   return (
-    <div className="flex min-h-screen w-full">
+    <div className={`flex w-full ${activeTab === 'messages' ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
       <Sidebar className="border-r">
         <SidebarHeader className="border-b px-3 py-4">
           <div className="flex items-center gap-3">
@@ -521,7 +521,7 @@ export function BuyerSidebarLayout({
         </SidebarFooter>
       </Sidebar>
 
-      <div className="flex-1 flex flex-col">
+      <div className={`flex-1 flex flex-col ${activeTab === 'messages' ? 'overflow-hidden' : ''}`}>
         {/* Top Header */}
         <header className="h-16 border-t border-t-primary/10 bg-white/95 backdrop-blur-xl sticky top-0 z-50 shadow-sm">
           <div className="flex h-full items-center justify-between px-6">

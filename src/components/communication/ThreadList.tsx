@@ -3,7 +3,9 @@ import { CommunicationThread } from '@/hooks/useCommunicationThreads';
 import { ThreadListItem } from './ThreadListItem';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, MessageSquare, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Search, MessageSquare, Loader2, Plus } from 'lucide-react';
+import { NewConversationModal } from './NewConversationModal';
 
 interface ThreadListProps {
   threads: CommunicationThread[];
@@ -11,6 +13,8 @@ interface ThreadListProps {
   selectedThreadId?: string;
   onSelectThread: (thread: CommunicationThread) => void;
   companyType: 'buyer' | 'supplier';
+  companyId: string;
+  onStartConversation: (targetCompanyId: string) => void;
 }
 
 export function ThreadList({
@@ -18,9 +22,12 @@ export function ThreadList({
   loading,
   selectedThreadId,
   onSelectThread,
-  companyType
+  companyType,
+  companyId,
+  onStartConversation
 }: ThreadListProps) {
   const [search, setSearch] = useState('');
+  const [showNewConversation, setShowNewConversation] = useState(false);
 
   const filteredThreads = threads.filter(thread => {
     if (!search) return true;
@@ -36,7 +43,17 @@ export function ThreadList({
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="p-4 border-b border-border">
-        <h2 className="text-lg font-semibold mb-3">Messages</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold">Messages</h2>
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => setShowNewConversation(true)}
+            className="h-8 w-8"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -61,9 +78,19 @@ export function ThreadList({
               {search ? 'No conversations found' : 'No conversations yet'}
             </p>
             {!search && (
-              <p className="text-xs text-muted-foreground/70 mt-1">
-                Start a conversation with a {companyType === 'buyer' ? 'supplier' : 'buyer'}
-              </p>
+              <>
+                <p className="text-xs text-muted-foreground/70 mt-1 mb-4">
+                  Start a conversation with a {companyType === 'buyer' ? 'supplier' : 'buyer'}
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowNewConversation(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Conversation
+                </Button>
+              </>
             )}
           </div>
         ) : (
@@ -80,6 +107,14 @@ export function ThreadList({
           </div>
         )}
       </ScrollArea>
+
+      <NewConversationModal
+        open={showNewConversation}
+        onOpenChange={setShowNewConversation}
+        companyId={companyId}
+        companyType={companyType}
+        onSelectCompany={onStartConversation}
+      />
     </div>
   );
 }

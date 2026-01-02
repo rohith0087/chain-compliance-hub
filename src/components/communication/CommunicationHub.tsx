@@ -63,6 +63,19 @@ export function CommunicationHub({
     setMobileShowConversation(false);
   };
 
+  const handleStartConversation = async (targetCompanyId: string) => {
+    const thread = await getOrCreateThread({
+      buyerId: companyType === 'buyer' ? companyId : targetCompanyId,
+      supplierId: companyType === 'supplier' ? companyId : targetCompanyId,
+      participantType: companyType,
+      companyId
+    });
+    if (thread) {
+      setSelectedThread(thread);
+      setMobileShowConversation(true);
+    }
+  };
+
   return (
     <div className="h-full flex bg-background">
       {/* Thread List - Hidden on mobile when conversation is shown */}
@@ -77,6 +90,8 @@ export function CommunicationHub({
           selectedThreadId={selectedThread?.id}
           onSelectThread={handleSelectThread}
           companyType={companyType}
+          companyId={companyId}
+          onStartConversation={handleStartConversation}
         />
       </div>
 

@@ -20,6 +20,7 @@ export interface DocumentTag {
   dueDate?: string;
   category?: string;
   documentType?: string;
+  filePath?: string;
 }
 
 export interface Mention {

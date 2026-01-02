@@ -82,7 +82,7 @@ export function DocumentChip({
       <HoverCardTrigger asChild>
         <Badge 
           variant="outline" 
-          className={`flex items-center gap-1.5 cursor-pointer hover:bg-muted/50 transition-colors ${getStatusColor(document.status)}`}
+          className={`flex items-center gap-1.5 cursor-pointer hover:bg-muted/80 hover:scale-[1.02] active:scale-[0.98] transition-all ${getStatusColor(document.status)}`}
           onClick={onClick}
         >
           <FileText className="h-3.5 w-3.5" />

@@ -504,7 +504,7 @@ async function getTaggableDocuments(supabase: any, userId: string, params: any) 
     let uploadsQuery = supabase
       .from('document_uploads')
       .select(`
-        id, document_name, file_name, status, expiration_date, created_at,
+        id, document_name, file_name, file_path, status, expiration_date, created_at,
         request_id
       `)
       .in('request_id', requestIds);
@@ -534,6 +534,7 @@ async function getTaggableDocuments(supabase: any, userId: string, params: any) 
         name: doc.document_name || doc.file_name,
         status: doc.status,
         expirationDate: doc.expiration_date,
+        filePath: doc.file_path,
         category: request?.category,
         documentType: request?.document_type
       };

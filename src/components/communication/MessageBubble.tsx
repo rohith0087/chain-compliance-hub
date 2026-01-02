@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CommunicationMessage } from '@/hooks/useCommunicationMessages';
+import { CommunicationMessage, DocumentTag } from '@/hooks/useCommunicationMessages';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -8,6 +8,9 @@ import { MentionBadge } from './MentionBadge';
 import { MoreHorizontal, Pencil, Trash2, Check, CheckCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
+import { supabase } from '@/integrations/supabase/client';
+import { resolveStoragePath } from '@/utils/storagePath';
+import { toast } from '@/hooks/use-toast';
 
 interface MessageBubbleProps {
   message: CommunicationMessage;
@@ -54,6 +57,47 @@ export function MessageBubble({
 
   const handleDelete = async () => {
     await onDelete(message.id);
+  };
+
+  const handleDocumentClick = async (doc: DocumentTag) => {
+    // If it's a request (not an upload), show informative toast
+    if (doc.type === 'request') {
+      toast({
+        title: 'Document Request',
+        description: 'This is a document request, not an uploaded file.',
+      });
+      return;
+    }
+
+    // For uploads, open the document using signed URL
+    if (!doc.filePath) {
+      toast({
+        title: 'Cannot open document',
+        description: 'No file available for this document.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const pathInfo = resolveStoragePath(doc.filePath);
+      if (!pathInfo) throw new Error('Invalid file path');
+
+      const { data, error } = await supabase.storage
+        .from(pathInfo.bucket)
+        .createSignedUrl(pathInfo.key, 300); // 5 min expiry
+
+      if (error || !data?.signedUrl) throw error || new Error('Could not generate URL');
+
+      window.open(data.signedUrl, '_blank');
+    } catch (err) {
+      console.error('Error opening document:', err);
+      toast({
+        title: 'Error opening document',
+        description: 'Could not open the document. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   // Parse content for mentions and document tags to render inline
@@ -133,6 +177,7 @@ export function MessageBubble({
                       document={doc}
                       buyerId={buyerId}
                       supplierId={supplierId}
+                      onClick={() => handleDocumentClick(doc)}
                     />
                   ))}
                 </div>

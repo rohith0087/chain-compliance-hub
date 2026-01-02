@@ -116,7 +116,7 @@ async function getThreads(supabase: any, userId: string, params: any) {
       supplier:suppliers(id, company_name, company_logo_url),
       participants:thread_participants(
         id, profile_id, participant_type, unread_count, last_read_at,
-        profile:profiles(id, name, avatar_url)
+        profile:profiles(id, full_name, avatar_url)
       )
     `, { count: 'exact' })
     .in('id', threadIds)
@@ -142,7 +142,7 @@ async function getOrCreateThread(supabase: any, userId: string, params: any) {
       supplier:suppliers(id, company_name, company_logo_url),
       participants:thread_participants(
         id, profile_id, participant_type, unread_count,
-        profile:profiles(id, name, avatar_url)
+        profile:profiles(id, full_name, avatar_url)
       )
     `)
     .eq('buyer_id', buyerId)
@@ -211,7 +211,7 @@ async function getOrCreateThread(supabase: any, userId: string, params: any) {
       supplier:suppliers(id, company_name, company_logo_url),
       participants:thread_participants(
         id, profile_id, participant_type, unread_count,
-        profile:profiles(id, name, avatar_url)
+        profile:profiles(id, full_name, avatar_url)
       )
     `)
     .eq('id', newThread.id)
@@ -247,7 +247,7 @@ async function getThread(supabase: any, userId: string, threadId: string) {
       supplier:suppliers(id, company_name, company_logo_url),
       participants:thread_participants(
         id, profile_id, participant_type, unread_count, last_read_at,
-        profile:profiles(id, name, avatar_url)
+        profile:profiles(id, full_name, avatar_url)
       )
     `)
     .eq('id', threadId)
@@ -265,7 +265,7 @@ async function getMessages(supabase: any, userId: string, params: any) {
     .from('communication_messages')
     .select(`
       *,
-      sender:profiles!sender_id(id, name, avatar_url),
+      sender:profiles!sender_id(id, full_name, avatar_url),
       attachments:message_attachments(*)
     `)
     .eq('thread_id', threadId)
@@ -301,7 +301,7 @@ async function sendMessage(supabase: any, userId: string, params: any) {
     })
     .select(`
       *,
-      sender:profiles!sender_id(id, name, avatar_url)
+      sender:profiles!sender_id(id, full_name, avatar_url)
     `)
     .single();
 
@@ -495,7 +495,7 @@ async function getMentionableUsers(supabase: any, userId: string, params: any) {
     .select(`
       profile_id,
       role,
-      profile:profiles(id, name, avatar_url, email)
+      profile:profiles(id, full_name, avatar_url, email)
     `)
     .eq('company_id', targetCompanyId)
     .eq('company_type', targetCompanyType)
@@ -510,7 +510,7 @@ async function getMentionableUsers(supabase: any, userId: string, params: any) {
 
   let users = (data || []).map((cu: any) => ({
     profileId: cu.profile_id,
-    name: cu.profile?.name || 'Unknown',
+    name: cu.profile?.full_name || 'Unknown',
     avatarUrl: cu.profile?.avatar_url,
     email: cu.profile?.email,
     role: cu.role

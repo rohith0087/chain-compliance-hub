@@ -27,6 +27,7 @@ import NotFound from "./pages/NotFound";
 import SubscriptionPage from "./pages/SubscriptionPage";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import SupplierSimulation from "./pages/SupplierSimulation";
+import MessagesPage from "./pages/MessagesPage";
 import "./i18n";
 import { BranchProvider } from "@/contexts/BranchContext";
 
@@ -185,6 +186,11 @@ const AppRoutes = () => {
               <Route path="/subscription" element={
                 <ProtectedRoute>
                   <SubscriptionPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/messages" element={
+                <ProtectedRoute>
+                  <MessagesPage />
                 </ProtectedRoute>
               } />
               <Route path="/admin" element={

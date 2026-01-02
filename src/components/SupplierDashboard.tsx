@@ -61,6 +61,7 @@ import { DocumentUploadModal } from '@/components/supplier/DocumentUploadModal';
 import { MyAssignments } from '@/components/shared/MyAssignments';
 import DocumentRenewalDialog from '@/components/supplier/DocumentRenewalDialog';
 import { useBranchContext } from '@/contexts/BranchContext';
+import { useCommunicationThreads } from '@/hooks/useCommunicationThreads';
 
 interface SupplierDashboardProps {
   user: { 
@@ -113,6 +114,9 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
   const { getSupplierProfile } = useCompanySetup();
   const { requests: allOnboardingRequests } = useOnboardingRequests();
   const { currentBranch, allBranchesView } = useBranchContext();
+  
+  // Get unread message count for sidebar badge
+  const { totalUnread } = useCommunicationThreads(supplierProfile?.id || '', 'supplier');
 
   // Notification navigation handler
   const handleNotificationNavigation = (tab: string, notificationId?: string) => {
@@ -1021,6 +1025,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
         onUploadDocument={() => setShowUploadModal(true)}
         pendingRequests={stats.pendingRequests}
         connectedBuyers={connectedBuyers.length}
+        unreadMessages={totalUnread}
       >
         {renderTabContent()}
       </SupplierSidebarLayout>

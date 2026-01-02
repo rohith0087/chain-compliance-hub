@@ -280,7 +280,17 @@ async function getMessages(supabase: any, userId: string, params: any) {
   const { data, error } = await query;
   if (error) throw error;
 
-  return { messages: (data || []).reverse() };
+  // Map full_name to name for consistency with client interface
+  const formattedMessages = (data || []).map((msg: any) => ({
+    ...msg,
+    sender: msg.sender ? {
+      id: msg.sender.id,
+      name: msg.sender.full_name,
+      avatar_url: msg.sender.avatar_url
+    } : null
+  }));
+
+  return { messages: formattedMessages.reverse() };
 }
 
 // Send a message
@@ -307,6 +317,16 @@ async function sendMessage(supabase: any, userId: string, params: any) {
 
   if (msgError) throw msgError;
 
+  // Format sender to map full_name to name
+  const formattedMessage = {
+    ...message,
+    sender: message.sender ? {
+      id: message.sender.id,
+      name: message.sender.full_name,
+      avatar_url: message.sender.avatar_url
+    } : null
+  };
+
   // Log audit
   await logAudit(supabase, {
     thread_id: threadId,
@@ -325,7 +345,7 @@ async function sendMessage(supabase: any, userId: string, params: any) {
       await supabase.from('notifications').insert({
         user_id: mention.profile_id,
         title: 'You were mentioned in a message',
-        message: `${message.sender?.name || 'Someone'} mentioned you in a conversation`,
+        message: `${formattedMessage.sender?.name || 'Someone'} mentioned you in a conversation`,
         type: 'communication_mention',
         read: false,
         reference_id: message.id
@@ -333,7 +353,7 @@ async function sendMessage(supabase: any, userId: string, params: any) {
     }
   }
 
-  return { message };
+  return { message: formattedMessage };
 }
 
 // Edit a message
@@ -490,32 +510,42 @@ async function getMentionableUsers(supabase: any, userId: string, params: any) {
   const targetCompanyId = companyType === 'buyer' ? thread.supplier_id : thread.buyer_id;
   const targetCompanyType = companyType === 'buyer' ? 'supplier' : 'buyer';
 
-  let query = supabase
+  // Step 1: Get company_users without join (avoids FK relationship issue)
+  const { data: companyUsers, error: cuError } = await supabase
     .from('company_users')
-    .select(`
-      profile_id,
-      role,
-      profile:profiles(id, full_name, avatar_url, email)
-    `)
+    .select('profile_id, role')
     .eq('company_id', targetCompanyId)
     .eq('company_type', targetCompanyType)
-    .eq('status', 'active');
+    .eq('status', 'active')
+    .limit(50);
 
-  if (search) {
-    // We need to filter after fetching since we're joining
-  }
+  if (cuError) throw cuError;
+  if (!companyUsers || companyUsers.length === 0) return { users: [] };
 
-  const { data, error } = await query.limit(50);
-  if (error) throw error;
+  // Step 2: Get profiles for these users
+  const profileIds = companyUsers.map((cu: any) => cu.profile_id);
+  const { data: profiles, error: profError } = await supabase
+    .from('profiles')
+    .select('id, full_name, avatar_url, email')
+    .in('id', profileIds);
 
-  let users = (data || []).map((cu: any) => ({
-    profileId: cu.profile_id,
-    name: cu.profile?.full_name || 'Unknown',
-    avatarUrl: cu.profile?.avatar_url,
-    email: cu.profile?.email,
-    role: cu.role
-  }));
+  if (profError) throw profError;
 
+  // Step 3: Combine the data
+  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+  
+  let users = companyUsers.map((cu: any) => {
+    const profile = profileMap.get(cu.profile_id);
+    return {
+      profileId: cu.profile_id,
+      name: profile?.full_name || 'Unknown',
+      avatarUrl: profile?.avatar_url,
+      email: profile?.email,
+      role: cu.role
+    };
+  });
+
+  // Filter by search if provided
   if (search) {
     const searchLower = search.toLowerCase();
     users = users.filter((u: any) => 

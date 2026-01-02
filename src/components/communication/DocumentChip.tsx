@@ -15,6 +15,7 @@ interface DocumentChipProps {
   supplierId: string;
   compact?: boolean;
   onClick?: () => void;
+  isOwnMessage?: boolean;
 }
 
 export function DocumentChip({
@@ -22,9 +23,15 @@ export function DocumentChip({
   buyerId,
   supplierId,
   compact = false,
-  onClick
+  onClick,
+  isOwnMessage = false
 }: DocumentChipProps) {
   const getStatusColor = (status: string) => {
+    // For own messages (blue bubble), use high-contrast white styling
+    if (isOwnMessage) {
+      return 'bg-white/20 text-white border-white/40 hover:bg-white/30';
+    }
+    
     switch (status?.toLowerCase()) {
       case 'approved':
         return 'bg-green-500/10 text-green-600 border-green-500/20';
@@ -68,7 +75,7 @@ export function DocumentChip({
     return (
       <Badge 
         variant="outline" 
-        className={`flex items-center gap-1.5 cursor-pointer hover:bg-muted/50 ${getStatusColor(document.status)}`}
+        className={`flex items-center gap-1.5 cursor-pointer ${isOwnMessage ? 'hover:bg-white/30' : 'hover:bg-muted/50'} ${getStatusColor(document.status)}`}
         onClick={onClick}
       >
         <FileText className="h-3 w-3" />
@@ -82,12 +89,12 @@ export function DocumentChip({
       <HoverCardTrigger asChild>
         <Badge 
           variant="outline" 
-          className={`flex items-center gap-1.5 cursor-pointer hover:bg-muted/80 hover:scale-[1.02] active:scale-[0.98] transition-all ${getStatusColor(document.status)}`}
+          className={`flex items-center gap-1.5 cursor-pointer ${isOwnMessage ? 'hover:bg-white/30' : 'hover:bg-muted/80'} hover:scale-[1.02] active:scale-[0.98] transition-all ${getStatusColor(document.status)}`}
           onClick={onClick}
         >
           <FileText className="h-3.5 w-3.5" />
           <span className="truncate max-w-[150px]">{document.name}</span>
-          {getStatusIcon(document.status)}
+          {!isOwnMessage && getStatusIcon(document.status)}
         </Badge>
       </HoverCardTrigger>
       <HoverCardContent className="w-72" align="start">

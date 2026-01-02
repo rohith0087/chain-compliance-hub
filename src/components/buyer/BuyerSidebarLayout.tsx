@@ -586,9 +586,9 @@ export function BuyerSidebarLayout({
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto">
+        <main className={`flex-1 ${activeTab === 'messages' ? 'overflow-hidden' : 'overflow-auto'}`}>
           {activeTab === 'messages' ? (
-            <div className="h-full">
+            <div className="h-full overflow-hidden">
               {children}
             </div>
           ) : (

@@ -70,9 +70,9 @@ export function ConversationPane({
   };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b border-border bg-card">
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Header - frozen */}
+      <div className="flex items-center gap-3 p-4 border-b border-border bg-card flex-shrink-0">
         {onBack && (
           <Button variant="ghost" size="icon" onClick={onBack} className="md:hidden">
             <ArrowLeft className="h-5 w-5" />
@@ -95,8 +95,8 @@ export function ConversationPane({
         </div>
       </div>
 
-      {/* Messages */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+      {/* Messages - scrollable */}
+      <ScrollArea className="flex-1 min-h-0 p-4" ref={scrollRef}>
         {hasMore && (
           <div className="flex justify-center mb-4">
             <Button variant="ghost" size="sm" onClick={loadMore} disabled={loading}>
@@ -162,16 +162,18 @@ export function ConversationPane({
         )}
       </ScrollArea>
 
-      {/* Composer */}
-      <MessageComposer
-        threadId={thread.id}
-        buyerId={thread.buyer_id}
-        supplierId={thread.supplier_id}
-        companyId={companyId}
-        companyType={companyType}
-        onSend={handleSendMessage}
-        onTyping={startTyping}
-      />
+      {/* Composer - frozen at bottom */}
+      <div className="flex-shrink-0">
+        <MessageComposer
+          threadId={thread.id}
+          buyerId={thread.buyer_id}
+          supplierId={thread.supplier_id}
+          companyId={companyId}
+          companyType={companyType}
+          onSend={handleSendMessage}
+          onTyping={startTyping}
+        />
+      </div>
     </div>
   );
 }

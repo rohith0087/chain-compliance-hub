@@ -40,9 +40,9 @@ export function ThreadList({
   });
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="p-4 border-b border-border">
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Header - frozen */}
+      <div className="p-4 border-b border-border flex-shrink-0 bg-background">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold">Messages</h2>
           <Button 
@@ -65,8 +65,8 @@ export function ThreadList({
         </div>
       </div>
 
-      {/* Thread List */}
-      <ScrollArea className="flex-1">
+      {/* Thread List - scrollable */}
+      <ScrollArea className="flex-1 min-h-0">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

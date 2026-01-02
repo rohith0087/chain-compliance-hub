@@ -252,16 +252,20 @@ export function useCommunicationMessages(
           // Fetch the full message with sender info
           const newMsg = payload.new as any;
           
-          // Get sender profile
+          // Get sender profile - use full_name, not name
           const { data: sender } = await supabase
             .from('profiles')
-            .select('id, name, avatar_url')
+            .select('id, full_name, avatar_url')
             .eq('id', newMsg.sender_id)
             .single();
 
           const fullMessage: CommunicationMessage = {
             ...newMsg,
-            sender: sender || { id: newMsg.sender_id, name: 'Unknown', avatar_url: null },
+            sender: sender ? { 
+              id: sender.id, 
+              name: sender.full_name, 
+              avatar_url: sender.avatar_url 
+            } : { id: newMsg.sender_id, name: 'Unknown', avatar_url: null },
             attachments: [],
             mentions: newMsg.mentions || [],
             document_tags: newMsg.document_tags || []

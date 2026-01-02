@@ -125,19 +125,12 @@ const MessagesPage = () => {
   };
 
   const handleRoleSwitch = (role: 'buyer' | 'supplier') => {
-    if (role === 'buyer') {
-      navigate('/dashboard');
-    } else {
-      navigate('/supplier-dashboard');
-    }
+    navigate(`/dashboard?role=${role}`);
   };
 
   const handleTabChange = (tab: string) => {
-    if (companyInfo?.type === 'buyer') {
-      navigate(`/dashboard?tab=${tab}`);
-    } else {
-      navigate(`/supplier-dashboard?tab=${tab}`);
-    }
+    const role = companyInfo?.type || 'buyer';
+    navigate(`/dashboard?tab=${tab}&role=${role}`);
   };
 
   if (authLoading || loading) {

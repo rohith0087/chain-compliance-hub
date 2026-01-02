@@ -599,20 +599,22 @@ export function BuyerSidebarLayout({
         </main>
       </div>
 
-      {/* Floating Help Button */}
-      <HelpButton 
-        source="buyer_portal"
-        user={{
-          id: profile?.id,
-          email: profile?.email,
-          name: profile?.full_name || user.name,
-          companyId: buyerProfile?.id,
-          companyName: buyerProfile?.company_name,
-          userType: 'buyer'
-        }}
-        isOpen={helpCenterOpen}
-        onOpenChange={setHelpCenterOpen}
-      />
+      {/* Floating Help Button - hidden on messages tab */}
+      {activeTab !== 'messages' && (
+        <HelpButton 
+          source="buyer_portal"
+          user={{
+            id: profile?.id,
+            email: profile?.email,
+            name: profile?.full_name || user.name,
+            companyId: buyerProfile?.id,
+            companyName: buyerProfile?.company_name,
+            userType: 'buyer'
+          }}
+          isOpen={helpCenterOpen}
+          onOpenChange={setHelpCenterOpen}
+        />
+      )}
     </div>
   );
 }

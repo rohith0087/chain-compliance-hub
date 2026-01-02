@@ -568,20 +568,22 @@ export function SupplierSidebarLayout({
         </main>
       </div>
 
-      {/* Floating Help Button */}
-      <HelpButton 
-        source="supplier_portal"
-        user={{
-          id: profile?.id,
-          email: profile?.email,
-          name: profile?.full_name || user.name,
-          companyId: supplierProfile?.id,
-          companyName: supplierProfile?.company_name,
-          userType: 'supplier'
-        }}
-        isOpen={helpCenterOpen}
-        onOpenChange={setHelpCenterOpen}
-      />
+      {/* Floating Help Button - hidden on messages tab */}
+      {activeTab !== 'messages' && (
+        <HelpButton 
+          source="supplier_portal"
+          user={{
+            id: profile?.id,
+            email: profile?.email,
+            name: profile?.full_name || user.name,
+            companyId: supplierProfile?.id,
+            companyName: supplierProfile?.company_name,
+            userType: 'supplier'
+          }}
+          isOpen={helpCenterOpen}
+          onOpenChange={setHelpCenterOpen}
+        />
+      )}
     </div>
   );
 }

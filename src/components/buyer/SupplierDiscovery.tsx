@@ -13,7 +13,7 @@ import {
 import { 
   Building2, Search, ArrowLeft, Mail, Phone, 
   Send, RefreshCw, Eye, MoreHorizontal, UserPlus, 
-  Users, Check, X, Calendar, Clock
+  Users, Check, X, Calendar, Clock, MessageSquare
 } from 'lucide-react';
 import { CompanyLogo } from '@/components/ui/CompanyLogo';
 import { supabase } from '@/integrations/supabase/client';
@@ -565,6 +565,7 @@ const SupplierDiscovery = () => {
                   key={supplier.id}
                   supplier={supplier}
                   onView={() => handleViewSupplier(supplier)}
+                  onMessage={() => navigate(`/messages?supplier=${supplier.id}`)}
                 />
               ))}
             </div>
@@ -745,15 +746,15 @@ const SupplierDiscovery = () => {
 };
 
 // Compact card for connected suppliers
-const CompactSupplierCard = ({ supplier, onView }: { supplier: any; onView: () => void }) => (
-  <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer group" onClick={onView}>
+const CompactSupplierCard = ({ supplier, onView, onMessage }: { supplier: any; onView: () => void; onMessage: () => void }) => (
+  <Card className="p-4 hover:shadow-md transition-shadow group">
     <div className="flex items-start gap-3">
       <CompanyLogo 
         logoUrl={supplier.company_logo_url}
         companyName={supplier.company_name}
         size="sm"
       />
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 cursor-pointer" onClick={onView}>
         <h4 className="font-medium truncate group-hover:text-primary transition-colors">
           {supplier.company_name}
         </h4>
@@ -777,7 +778,29 @@ const CompactSupplierCard = ({ supplier, onView }: { supplier: any; onView: () =
           )}
         </div>
       </div>
-      <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={(e) => {
+            e.stopPropagation();
+            onMessage();
+          }}
+          title="Send Message"
+        >
+          <MessageSquare className="h-4 w-4 text-muted-foreground hover:text-primary" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={onView}
+          title="View Details"
+        >
+          <Eye className="h-4 w-4 text-muted-foreground" />
+        </Button>
+      </div>
     </div>
   </Card>
 );

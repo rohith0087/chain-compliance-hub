@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  CheckCircle, XCircle, Clock, AlertCircle, Users, Mail, Send, RefreshCw, Upload
+  CheckCircle, XCircle, Clock, AlertCircle, Users, Mail, Send, RefreshCw, Upload, MessageSquare
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { CompanyLogo } from '@/components/ui/CompanyLogo';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { ConnectWithBuyerModal } from './ConnectWithBuyerModal';
@@ -33,6 +34,7 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
   const { user } = useAuth();
   const { toast } = useToast();
   const { currentBranch, allBranchesView } = useBranchContext();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!user) return;
@@ -208,7 +210,20 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
                 </div>
               </div>
             </div>
-            <Badge className={displayStatus.color}>{displayStatus.label}</Badge>
+            <div className="flex items-center gap-2">
+              {connection.status === 'approved' && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => navigate(`/messages?buyer=${connection.buyer_id}`)}
+                  title="Send Message"
+                >
+                  <MessageSquare className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                </Button>
+              )}
+              <Badge className={displayStatus.color}>{displayStatus.label}</Badge>
+            </div>
           </div>
           {showActions && displayStatus.action === 'approve_reject' && (
             <div className="mt-4 flex gap-2">

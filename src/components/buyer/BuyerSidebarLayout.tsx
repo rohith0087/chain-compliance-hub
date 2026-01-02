@@ -257,6 +257,10 @@ export function BuyerSidebarLayout({
     if (item.value === 'company' || item.value === 'subscription') {
       return isCompanyOwner();
     }
+    // Messages is always available - it navigates to /messages
+    if (item.value === 'messages') {
+      return true;
+    }
     // Check other navigation permissions
     if (!canAccessRoute(item.value)) {
       return false;
@@ -272,6 +276,11 @@ export function BuyerSidebarLayout({
   };
 
   const handleMenuClick = (value: string) => {
+    // Navigate to /messages instead of changing tabs
+    if (value === 'messages') {
+      navigate('/messages');
+      return;
+    }
     // Switch to All Branches view when clicking Onboarding Pipeline
     if (value === 'onboarding') {
       setCurrentBranch(null); // Set to null for all branches view

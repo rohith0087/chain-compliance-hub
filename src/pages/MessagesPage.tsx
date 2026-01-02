@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams, Navigate } from 'react-router-dom';
+import { useSearchParams, Navigate, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import { supabase } from '@/integrations/supabase/client';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { BuyerSidebarLayout } from '@/components/buyer/BuyerSidebarLayout';
@@ -9,7 +10,9 @@ import { SupplierSidebarLayout } from '@/components/supplier/SupplierSidebarLayo
 import { CommunicationHub } from '@/components/communication/CommunicationHub';
 
 const MessagesPage = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, signOut, loading: authLoading } = useAuth();
+  const { hasRole } = useUserRoles();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [companyInfo, setCompanyInfo] = useState<{
     id: string;
@@ -17,6 +20,7 @@ const MessagesPage = () => {
     profile: any;
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
 
   // Get initial conversation params from URL
   const initialSupplierId = searchParams.get('supplier');
@@ -115,6 +119,27 @@ const MessagesPage = () => {
     resolveCompany();
   }, [user]);
 
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/');
+  };
+
+  const handleRoleSwitch = (role: 'buyer' | 'supplier') => {
+    if (role === 'buyer') {
+      navigate('/dashboard');
+    } else {
+      navigate('/supplier-dashboard');
+    }
+  };
+
+  const handleTabChange = (tab: string) => {
+    if (companyInfo?.type === 'buyer') {
+      navigate(`/dashboard?tab=${tab}`);
+    } else {
+      navigate(`/supplier-dashboard?tab=${tab}`);
+    }
+  };
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -140,14 +165,64 @@ const MessagesPage = () => {
     );
   }
 
+  const userName = profile?.full_name || profile?.email || 'User';
+  const userRoles: ('buyer' | 'supplier')[] = [];
+  if (hasRole('buyer')) userRoles.push('buyer');
+  if (hasRole('supplier')) userRoles.push('supplier');
+
+  if (companyInfo.type === 'buyer') {
+    return (
+      <SidebarProvider>
+        <BuyerSidebarLayout
+          activeTab="messages"
+          onTabChange={handleTabChange}
+          user={{
+            roles: userRoles,
+            name: userName,
+            currentRole: 'buyer'
+          }}
+          onLogout={handleLogout}
+          onRoleSwitch={handleRoleSwitch}
+          onShowRequestForm={() => {}}
+          onShowSettings={() => setShowSettings(true)}
+          onShowQuickOnboarding={() => {}}
+          onShowBulkInvite={() => {}}
+          buyerProfile={companyInfo.profile}
+          companyId={companyInfo.id}
+        >
+          <CommunicationHub
+            companyId={companyInfo.id}
+            companyType="buyer"
+            initialSupplierId={initialSupplierId || undefined}
+            initialBuyerId={initialBuyerId || undefined}
+          />
+        </BuyerSidebarLayout>
+      </SidebarProvider>
+    );
+  }
+
   return (
     <SidebarProvider>
-      <CommunicationHub
-        companyId={companyInfo.id}
-        companyType={companyInfo.type}
-        initialSupplierId={initialSupplierId || undefined}
-        initialBuyerId={initialBuyerId || undefined}
-      />
+      <SupplierSidebarLayout
+        activeTab="messages"
+        onTabChange={handleTabChange}
+        user={{
+          roles: userRoles,
+          name: userName,
+          currentRole: 'supplier'
+        }}
+        onLogout={handleLogout}
+        onRoleSwitch={handleRoleSwitch}
+        onShowSettings={() => setShowSettings(true)}
+        supplierProfile={companyInfo.profile}
+      >
+        <CommunicationHub
+          companyId={companyInfo.id}
+          companyType="supplier"
+          initialSupplierId={initialSupplierId || undefined}
+          initialBuyerId={initialBuyerId || undefined}
+        />
+      </SupplierSidebarLayout>
     </SidebarProvider>
   );
 };

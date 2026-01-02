@@ -286,6 +286,11 @@ export function SupplierSidebarLayout({
   const isActiveRoute = (value: string) => activeTab === value;
 
   const handleMenuClick = (value: string) => {
+    // Navigate to /messages instead of changing tabs
+    if (value === 'messages') {
+      navigate('/messages');
+      return;
+    }
     onTabChange(value);
   };
 

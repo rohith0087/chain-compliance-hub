@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useCompanySetup } from '@/hooks/useCompanySetup';
@@ -33,6 +32,7 @@ const DynamicDashboard = () => {
     supplierContexts 
   } = useUserContexts();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [currentRole, setCurrentRole] = useState<'buyer' | 'supplier'>('buyer');
   const [supplierProfile, setSupplierProfile] = useState<any>(null);
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
@@ -64,9 +64,21 @@ const DynamicDashboard = () => {
     }
   }, [needsPasswordReset, navigate]);
 
-  // Set current role based on context (for team members) or roles (for owners)
+  // Set current role based on URL query param, context (for team members), or roles (for owners)
   useEffect(() => {
     if (contextsLoading) return;
+
+    // Check URL for explicit role switch request
+    const urlRole = searchParams.get('role') as 'buyer' | 'supplier' | null;
+    if (urlRole && (urlRole === 'buyer' || urlRole === 'supplier')) {
+      console.log('Setting role from URL param:', urlRole);
+      setCurrentRole(urlRole);
+      // Also switch context for team members
+      if (isTeamMember) {
+        switchContext(urlRole);
+      }
+      return;
+    }
 
     if (currentContext) {
       // Team member: use context
@@ -81,7 +93,7 @@ const DynamicDashboard = () => {
       }
       console.log('Set role from roles array:', currentRole);
     }
-  }, [currentContext, contextsLoading, roles]);
+  }, [currentContext, contextsLoading, roles, searchParams, isTeamMember]);
 
   // Show dual-role info toast once
   useEffect(() => {

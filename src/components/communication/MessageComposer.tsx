@@ -281,11 +281,6 @@ export function MessageComposer({
           <Send className="h-5 w-5" />
         </Button>
       </div>
-
-      <p className="text-xs text-muted-foreground mt-2">
-        Press <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Enter</kbd> to send, 
-        <kbd className="px-1 py-0.5 bg-muted rounded text-[10px] ml-1">Shift+Enter</kbd> for new line
-      </p>
     </div>
   );
 }

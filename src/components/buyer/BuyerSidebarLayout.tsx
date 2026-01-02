@@ -587,9 +587,15 @@ export function BuyerSidebarLayout({
 
         {/* Main Content */}
         <main className="flex-1 overflow-auto">
-          <div className="container mx-auto py-6 px-4">
-            {children}
-          </div>
+          {activeTab === 'messages' ? (
+            <div className="h-full">
+              {children}
+            </div>
+          ) : (
+            <div className="container mx-auto py-6 px-4">
+              {children}
+            </div>
+          )}
         </main>
       </div>
 

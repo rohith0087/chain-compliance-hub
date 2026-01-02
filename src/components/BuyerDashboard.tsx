@@ -40,6 +40,7 @@ import { ComplianceRing } from '@/components/dashboard/ComplianceRing';
 import { MetricChip } from '@/components/dashboard/MetricChip';
 import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
+import { useCommunicationThreads } from '@/hooks/useCommunicationThreads';
 
 import { supabase } from '@/integrations/supabase/client';
 
@@ -83,6 +84,9 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
   
   // Get permissions to check if user is company owner
   const { isOwner, loading: permissionsLoading } = useCompanyPermissions(companyId, 'buyer');
+  
+  // Get unread message count for sidebar badge
+  const { totalUnread } = useCommunicationThreads(companyId || '', 'buyer');
   
   // Reset activeTab if non-owner tries to access owner-only tabs
   useEffect(() => {
@@ -415,6 +419,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
         onShowBulkInvite={() => setShowBulkInvite(true)}
         buyerProfile={buyerProfile}
         companyId={companyId}
+        unreadMessages={totalUnread}
       >
         {/* Dashboard Content */}
         {activeTab === 'dashboard' && (

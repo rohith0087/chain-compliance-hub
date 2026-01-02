@@ -28,7 +28,8 @@ import {
   GitBranch,
   Package,
   FolderKanban,
-  FileImage
+  FileImage,
+  MessageSquare
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
@@ -102,6 +103,7 @@ interface BuyerSidebarLayoutProps {
   onShowBulkInvite: () => void;
   buyerProfile: any;
   companyId?: string;
+  unreadMessages?: number;
 }
 
 export function BuyerSidebarLayout({
@@ -116,7 +118,8 @@ export function BuyerSidebarLayout({
   onShowQuickOnboarding,
   onShowBulkInvite,
   buyerProfile,
-  companyId
+  companyId,
+  unreadMessages = 0
 }: BuyerSidebarLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -227,6 +230,12 @@ export function BuyerSidebarLayout({
       icon: GitBranch,
       value: 'onboarding'
     },
+    {
+      title: 'Messages',
+      icon: MessageSquare,
+      value: 'messages',
+      badge: unreadMessages > 0 ? unreadMessages : undefined
+    },
     // {
     //   title: 'Agents',
     //   icon: Bot,
@@ -286,6 +295,9 @@ export function BuyerSidebarLayout({
         break;
       case 'subscription':
         navigate('/subscription');
+        break;
+      case 'messages':
+        navigate('/messages');
         break;
     }
   };

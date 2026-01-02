@@ -104,6 +104,7 @@ interface SupplierSidebarLayoutProps {
   onUploadDocument?: () => void;
   pendingRequests?: number;
   connectedBuyers?: number;
+  unreadMessages?: number;
 }
 
 export function SupplierSidebarLayout({
@@ -118,7 +119,8 @@ export function SupplierSidebarLayout({
   onConnectWithBuyer,
   onUploadDocument,
   pendingRequests = 0,
-  connectedBuyers = 0
+  connectedBuyers = 0,
+  unreadMessages = 0
 }: SupplierSidebarLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -255,6 +257,12 @@ export function SupplierSidebarLayout({
       badge: connectedBuyers > 0 ? connectedBuyers : undefined
     },
     {
+      title: 'Messages',
+      icon: MessageSquare,
+      value: 'messages',
+      badge: unreadMessages > 0 ? unreadMessages : undefined
+    },
+    {
       title: t('supplier:tabs.compliance'),
       icon: BarChart3,
       value: 'compliance'
@@ -295,6 +303,9 @@ export function SupplierSidebarLayout({
         break;
       case 'subscription':
         navigate('/subscription');
+        break;
+      case 'messages':
+        navigate('/messages');
         break;
     }
   };

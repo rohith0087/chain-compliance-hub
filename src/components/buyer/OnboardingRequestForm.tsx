@@ -199,17 +199,20 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
               buyerId, supplier.contact_email, supplier.company_name, formData.custom_message, supplierId
             );
           } else {
-            const request = await createOnboardingRequest(
+            const result = await createOnboardingRequest(
               buyerId, supplier.contact_email, supplier.company_name, formData.can_choose_branches, formData.custom_message, supplierId
             );
 
-            for (const docReq of documentRequirements) {
-              await addDocReq(request.id, docReq.document_type, docReq.document_name, docReq.description, docReq.is_required);
-            }
+            // Only add requirements for NEW requests (not duplicates)
+            if (!result.isExisting) {
+              for (const docReq of documentRequirements) {
+                await addDocReq(result.data.id, docReq.document_type, docReq.document_name, docReq.description, docReq.is_required);
+              }
 
-            for (let i = 0; i < formFields.length; i++) {
-              const field = formFields[i];
-              await addFormFieldReq(request.id, field.field_type, field.field_label, field.field_description, field.field_options, field.is_required, i);
+              for (let i = 0; i < formFields.length; i++) {
+                const field = formFields[i];
+                await addFormFieldReq(result.data.id, field.field_type, field.field_label, field.field_description, field.field_options, field.is_required, i);
+              }
             }
           }
           successCount++;

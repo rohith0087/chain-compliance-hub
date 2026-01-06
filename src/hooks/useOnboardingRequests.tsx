@@ -98,8 +98,8 @@ export const useOnboardingRequests = () => {
       const canChooseBranches = defaults.settings?.allow_branch_selection ?? false;
       const finalMessage = customMessage || defaults.settings?.default_welcome_message || '';
 
-      // Create the request
-      const request = await createOnboardingRequest(
+      // Create the request (returns existing if duplicate)
+      const result = await createOnboardingRequest(
         buyerId,
         supplierEmail,
         supplierCompanyName,
@@ -108,37 +108,40 @@ export const useOnboardingRequests = () => {
         supplierId
       );
 
-      // Add default document requirements
-      if (defaults.documentRequirements && defaults.documentRequirements.length > 0) {
-        for (const doc of defaults.documentRequirements) {
-          await addDocumentRequirement(
-            request.id,
-            doc.document_type,
-            doc.document_name,
-            doc.description,
-            doc.is_required,
-            doc.template_file_path,
-            doc.template_file_name
-          );
+      // Only add document requirements and form fields for NEW requests
+      if (!result.isExisting) {
+        // Add default document requirements
+        if (defaults.documentRequirements && defaults.documentRequirements.length > 0) {
+          for (const doc of defaults.documentRequirements) {
+            await addDocumentRequirement(
+              result.data.id,
+              doc.document_type,
+              doc.document_name,
+              doc.description,
+              doc.is_required,
+              doc.template_file_path,
+              doc.template_file_name
+            );
+          }
+        }
+
+        // Add default form fields
+        if (defaults.formFields && defaults.formFields.length > 0) {
+          for (const field of defaults.formFields) {
+            await addFormField(
+              result.data.id,
+              field.field_type,
+              field.field_label,
+              field.field_description,
+              field.field_options,
+              field.is_required,
+              field.field_order
+            );
+          }
         }
       }
 
-      // Add default form fields
-      if (defaults.formFields && defaults.formFields.length > 0) {
-        for (const field of defaults.formFields) {
-          await addFormField(
-            request.id,
-            field.field_type,
-            field.field_label,
-            field.field_description,
-            field.field_options,
-            field.is_required,
-            field.field_order
-          );
-        }
-      }
-
-      return request;
+      return result.data;
     } catch (err) {
       console.error('Error in createOnboardingRequestFromDefaults:', err);
       throw err;
@@ -229,19 +232,58 @@ export const useOnboardingRequests = () => {
     canChooseBranches: boolean,
     customMessage?: string,
     supplierId?: string
-  ) => {
+  ): Promise<{ data: any; isExisting: boolean }> => {
     try {
-      const { data, error} = await supabase
+      const normalizedEmail = supplierEmail.toLowerCase().trim();
+
+      // Check for existing active onboarding request (non-terminal statuses)
+      const { data: existingRequest } = await supabase
+        .from('supplier_onboarding_requests')
+        .select('id, status, resent_count')
+        .eq('buyer_id', buyerId)
+        .ilike('supplier_email', normalizedEmail)
+        .in('status', ['invited', 'pending', 'requested', 'under_review'])
+        .maybeSingle();
+
+      // If an active request exists, update it instead of creating a duplicate
+      if (existingRequest) {
+        const { error: updateError } = await supabase
+          .from('supplier_onboarding_requests')
+          .update({
+            last_sent_at: new Date().toISOString(),
+            resent_count: (existingRequest.resent_count || 0) + 1,
+            updated_at: new Date().toISOString(),
+            custom_message: customMessage || undefined,
+            supplier_company_name: supplierCompanyName,
+          })
+          .eq('id', existingRequest.id);
+
+        if (updateError) {
+          console.error('Error updating existing request:', updateError);
+        }
+
+        const { data: updated } = await supabase
+          .from('supplier_onboarding_requests')
+          .select('*')
+          .eq('id', existingRequest.id)
+          .single();
+
+        await fetchOnboardingRequests();
+        return { data: updated, isExisting: true };
+      }
+
+      // No existing request - create new one
+      const { data, error } = await supabase
         .from('supplier_onboarding_requests')
         .insert({
           buyer_id: buyerId,
           supplier_id: supplierId || null,
-          supplier_email: supplierEmail,
+          supplier_email: normalizedEmail,
           supplier_company_name: supplierCompanyName,
           can_choose_branches: canChooseBranches,
           custom_message: customMessage,
           created_by: user?.id,
-          status: supplierId ? 'pending' : 'invited' // invited if no supplier yet, pending if supplier exists
+          status: supplierId ? 'pending' : 'invited'
         })
         .select()
         .single();
@@ -264,10 +306,8 @@ export const useOnboardingRequests = () => {
 
         if (updateError) {
           console.error('Warning: Failed to link onboarding request to connection:', updateError);
-          // Don't throw - the request was created successfully
         }
 
-        // Send notification to supplier about the onboarding request
         const { data: supplier } = await supabase
           .from('suppliers')
           .select('profile_id')
@@ -286,7 +326,7 @@ export const useOnboardingRequests = () => {
       }
 
       await fetchOnboardingRequests();
-      return data;
+      return { data, isExisting: false };
     } catch (err) {
       console.error('Error in createOnboardingRequest:', err);
       throw err;

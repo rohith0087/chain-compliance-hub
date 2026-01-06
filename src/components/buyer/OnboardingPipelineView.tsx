@@ -52,14 +52,14 @@ export const OnboardingPipelineView = () => {
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [buyerId, setBuyerId] = useState<string>('');
-  const [showAnalytics, setShowAnalytics] = useState(true);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const [showActivityFeed, setShowActivityFeed] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>(() => {
     const saved = localStorage.getItem('onboarding-pipeline-view');
-    return (saved as 'kanban' | 'table') || 'kanban';
+    return (saved as 'kanban' | 'table') || 'table';
   });
   const [collapsedColumns, setCollapsedColumns] = useState<Set<string>>(new Set());
   const searchInputRef = useRef<HTMLInputElement>(null);

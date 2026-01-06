@@ -213,6 +213,20 @@ export const OnboardingRequestDetailDrawer = ({
     try {
       setActionLoading(true);
 
+      // First, update all pending document submissions to approved
+      const { error: docsError } = await supabase
+        .from('onboarding_document_submissions')
+        .update({ 
+          status: 'approved',
+          reviewed_by: user?.id,
+          reviewed_at: new Date().toISOString()
+        })
+        .eq('onboarding_request_id', request.id)
+        .eq('status', 'pending');
+
+      if (docsError) throw docsError;
+
+      // Then update the overall request status
       const { error } = await supabase
         .from('supplier_onboarding_requests')
         .update({ 
@@ -224,7 +238,7 @@ export const OnboardingRequestDetailDrawer = ({
 
       toast({
         title: 'Request Approved',
-        description: 'The supplier has been approved successfully.'
+        description: 'The supplier and all pending documents have been approved successfully.'
       });
 
       onStatusChange?.();

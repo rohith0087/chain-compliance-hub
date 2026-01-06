@@ -11,6 +11,7 @@ export const useOnboardingPipeline = (requests: any[]) => {
     branchId: 'all',
     documentStatus: 'all',
     priority: 'all',
+    status: 'all',
   });
   
   // Calculate priority for a request
@@ -96,6 +97,9 @@ export const useOnboardingPipeline = (requests: any[]) => {
         const requestPriority = calculatePriority(request);
         if (requestPriority !== filters.priority) return false;
       }
+      
+      // Onboarding Status
+      if (filters.status !== 'all' && request.status !== filters.status) return false;
       
       return true;
     });

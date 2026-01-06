@@ -16,6 +16,7 @@ export interface FilterOptions {
   branchId: string;
   documentStatus: string;
   priority: string;
+  status: string;
   dateFrom?: Date;
   dateTo?: Date;
 }
@@ -41,6 +42,7 @@ export const AdvancedFilters = ({ filters, onFiltersChange, branches = [] }: Adv
       branchId: 'all',
       documentStatus: 'all',
       priority: 'all',
+      status: 'all',
       dateFrom: undefined,
       dateTo: undefined,
     });
@@ -64,6 +66,18 @@ export const AdvancedFilters = ({ filters, onFiltersChange, branches = [] }: Adv
     }
     if (filters.documentStatus !== 'all') badges.push({ key: 'documentStatus', label: `Docs: ${filters.documentStatus}` });
     if (filters.priority !== 'all') badges.push({ key: 'priority', label: `Priority: ${filters.priority}` });
+    if (filters.status !== 'all') {
+      const statusLabels: Record<string, string> = {
+        'requested': 'Requested',
+        'invited': 'Invited',
+        'pending': 'Pending',
+        'onboarding_initiated': 'Started',
+        'under_review': 'Under Review',
+        'approved': 'Approved',
+        'rejected': 'Declined'
+      };
+      badges.push({ key: 'status', label: `Status: ${statusLabels[filters.status] || filters.status}` });
+    }
     if (filters.dateFrom) badges.push({ key: 'dateFrom', label: `From: ${format(filters.dateFrom, 'PP')}` });
     if (filters.dateTo) badges.push({ key: 'dateTo', label: `To: ${format(filters.dateTo, 'PP')}` });
     return badges;
@@ -210,6 +224,26 @@ export const AdvancedFilters = ({ filters, onFiltersChange, branches = [] }: Adv
                   <SelectItem value="urgent">Urgent</SelectItem>
                   <SelectItem value="high">High</SelectItem>
                   <SelectItem value="normal">Normal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Onboarding Status */}
+            <div className="space-y-2">
+              <Label>Onboarding Status</Label>
+              <Select value={filters.status} onValueChange={(value) => onFiltersChange({ ...filters, status: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="requested">Requested</SelectItem>
+                  <SelectItem value="invited">Invited</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="onboarding_initiated">Started</SelectItem>
+                  <SelectItem value="under_review">Under Review</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Declined</SelectItem>
                 </SelectContent>
               </Select>
             </div>

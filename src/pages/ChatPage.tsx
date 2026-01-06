@@ -163,6 +163,38 @@ type CompanyInfo = { id: string; type: "buyer" | "supplier"; industry?: string }
 
 const tidyTitle = (s?: string) => (s || "Untitled").replace(/_/g, " ");
 
+// Time-based greeting helper
+const getTimeOfDayGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'morning';
+  if (hour < 17) return 'afternoon';
+  return 'evening';
+};
+
+// Map function names to user-friendly display text
+const functionDisplayNames: Record<string, string> = {
+  'query_documents': 'Searching Documents',
+  'query_suppliers': 'Finding Suppliers',
+  'get_compliance_metrics': 'Analyzing Compliance',
+  'create_document_request': 'Creating Document Request',
+  'get_document_sets': 'Loading Document Sets',
+  'get_document_timeseries': 'Generating Timeline',
+  'get_missing_required_documents': 'Checking Missing Documents',
+  'create_requests_for_missing': 'Creating Requests',
+  'send_notification': 'Sending Notification',
+  'export_csv': 'Exporting Data',
+  'audit_trail': 'Reviewing Audit Trail',
+  'get_compliance_insights_dashboard': 'Generating Insights',
+  'generate_visualization_code': 'Building Visualization',
+  'draft_compliance_email': 'Drafting Email',
+  'find_documents_for_comparison': 'Comparing Documents',
+  'execute_document_comparison': 'Running Comparison',
+  'draft_generic_email': 'Composing Email',
+  'confirm_send_email': 'Sending Email',
+  'rag_chat': 'Processing',
+  'simple-rag-chat': 'Processing',
+};
+
 const getStatusColor = (status: string) => {
   switch (status) {
     case "approved":
@@ -216,7 +248,7 @@ function extractImageB64(obj?: any): string | null {
 /* ------------ Component ------------ */
 
 const ChatPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -234,6 +266,7 @@ const ChatPage: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [messageToShare, setMessageToShare] = useState<Message | null>(null);
+  const [activeFunction, setActiveFunction] = useState<string | null>(null);
   
   // Voice state
   const [isRecording, setIsRecording] = useState(false);
@@ -450,6 +483,7 @@ const ChatPage: React.FC = () => {
     setMessages((prev) => [...prev, userMsg]);
     setInputMessage("");
     setIsLoading(true);
+    setActiveFunction('simple-rag-chat');
 
     try {
       const { data, error } = await supabase.functions.invoke("simple-rag-chat", {
@@ -509,6 +543,7 @@ const ChatPage: React.FC = () => {
       });
     } finally {
       setIsLoading(false);
+      setActiveFunction(null);
     }
   }
 
@@ -1454,15 +1489,25 @@ const ChatPage: React.FC = () => {
                   </Button>
                   <span className="text-sm font-medium text-muted-foreground">Discovery</span>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="rounded-lg"
-                  onClick={() => navigate('/dashboard')}
-                  title="Go to Dashboard"
-                >
-                  <Home className="w-5 h-5" />
-                </Button>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground">
+                    {isLoading 
+                      ? (activeFunction 
+                          ? `${functionDisplayNames[activeFunction] || 'Processing'}...` 
+                          : 'Searching...')
+                      : `Hey ${profile?.full_name?.split(' ')[0] || 'there'}, good ${getTimeOfDayGreeting()}!`
+                    }
+                  </span>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="rounded-lg"
+                    onClick={() => navigate('/dashboard')}
+                    title="Go to Dashboard"
+                  >
+                    <Home className="w-5 h-5" />
+                  </Button>
+                </div>
               </div>
 
               {/* Centered Content */}
@@ -1578,15 +1623,25 @@ const ChatPage: React.FC = () => {
                   </Button>
                   <span className="text-sm font-medium text-muted-foreground">Compliance Compass</span>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="rounded-lg"
-                  onClick={() => navigate('/dashboard')}
-                  title="Go to Dashboard"
-                >
-                  <Home className="w-5 h-5" />
-                </Button>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground">
+                    {isLoading 
+                      ? (activeFunction 
+                          ? `${functionDisplayNames[activeFunction] || 'Processing'}...` 
+                          : 'Searching...')
+                      : `Hey ${profile?.full_name?.split(' ')[0] || 'there'}, good ${getTimeOfDayGreeting()}!`
+                    }
+                  </span>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="rounded-lg"
+                    onClick={() => navigate('/dashboard')}
+                    title="Go to Dashboard"
+                  >
+                    <Home className="w-5 h-5" />
+                  </Button>
+                </div>
               </div>
               <div className="space-y-1 px-6 py-6 max-w-4xl mx-auto w-full bg-white">
                 {messages.map((m) => (

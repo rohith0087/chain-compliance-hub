@@ -16,7 +16,7 @@ const buttonVariants = cva(
           "border border-border/50 bg-gradient-glass backdrop-blur-sm hover:bg-accent/10 hover:text-foreground shadow-subtle hover:shadow-modern",
         secondary:
           "bg-secondary/80 text-secondary-foreground hover:bg-secondary shadow-subtle hover:shadow-modern hover:scale-105",
-        ghost: "hover:bg-accent/30 hover:text-accent-foreground rounded-lg",
+        ghost: "hover:bg-muted hover:text-foreground focus:bg-muted/50 active:bg-muted rounded-lg",
         link: "text-primary underline-offset-4 hover:underline hover:text-primary/80",
         glass: "bg-gradient-glass backdrop-blur-sm border border-border/30 text-foreground hover:bg-accent/20 shadow-glass hover:shadow-elegant",
       },

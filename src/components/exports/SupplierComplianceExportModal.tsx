@@ -15,9 +15,6 @@ import { CalendarIcon, Download, FileText, Search, Building2, Loader2, Users, Ba
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { SubscriptionData } from '@/hooks/useSubscription';
-import { SubscriptionGuard } from '@/components/subscription/SubscriptionGuard';
-import { canGenerateReport, getReportCreditCost, getRemainingCredits } from '@/utils/subscriptionGuards';
 
 interface Supplier {
   id: string;
@@ -36,7 +33,6 @@ interface SupplierComplianceExportModalProps {
   onClose: () => void;
   suppliers: Supplier[];
   onExport: (selectedSuppliers: string[], reportType: string, dateRange: DateRange, options: ExportOptions) => Promise<void>;
-  subscriptionData: SubscriptionData | null;
 }
 
 interface DateRange {
@@ -56,8 +52,7 @@ const SupplierComplianceExportModal: React.FC<SupplierComplianceExportModalProps
   isOpen,
   onClose,
   suppliers,
-  onExport,
-  subscriptionData
+  onExport
 }) => {
   const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -107,51 +102,12 @@ const SupplierComplianceExportModal: React.FC<SupplierComplianceExportModalProps
     }));
   }, [selectedSuppliers.length]);
 
-  const getReportTypeForCredits = (type: string, supplierCount: number): 'standard' | 'detailed' | 'comparison' | 'ai_enhanced' => {
-    if (supplierCount > 1) return 'comparison';
-    if (type === 'detailed') return 'detailed';
-    if (type === 'ai_enhanced') return 'ai_enhanced';
-    return 'standard';
-  };
-
-  const getCurrentCreditCost = () => {
-    const reportTypeForCredits = getReportTypeForCredits(reportType, selectedSuppliers.length);
-    return getReportCreditCost(reportTypeForCredits);
-  };
-
-  const canExportReport = () => {
-    if (selectedSuppliers.length === 0) return false;
-    const reportTypeForCredits = getReportTypeForCredits(reportType, selectedSuppliers.length);
-    const checkResult = canGenerateReport(subscriptionData, reportTypeForCredits);
-    return checkResult.allowed;
-  };
-
-  const getExportDisabledReason = () => {
-    if (selectedSuppliers.length === 0) return "Please select at least one supplier";
-    const reportTypeForCredits = getReportTypeForCredits(reportType, selectedSuppliers.length);
-    const checkResult = canGenerateReport(subscriptionData, reportTypeForCredits);
-    if (!checkResult.allowed) return checkResult.reason || "Insufficient permissions";
-    return null;
-  };
 
   const handleExport = async () => {
     if (selectedSuppliers.length === 0) {
       toast({
         title: "Selection Required",
         description: "Please select at least one supplier to export.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Check credits and permissions
-    const reportTypeForCredits = getReportTypeForCredits(reportType, selectedSuppliers.length);
-    const checkResult = canGenerateReport(subscriptionData, reportTypeForCredits);
-    
-    if (!checkResult.allowed) {
-      toast({
-        title: "Export Not Available",
-        description: checkResult.reason || "You don't have permission to export this report type.",
         variant: "destructive"
       });
       return;
@@ -333,14 +289,11 @@ const SupplierComplianceExportModal: React.FC<SupplierComplianceExportModalProps
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="summary">Executive Summary ({getReportCreditCost('standard')} credits)</SelectItem>
-                      <SelectItem value="detailed">Detailed Analysis ({getReportCreditCost('detailed')} credits)</SelectItem>
-                      <SelectItem value="comparison">Comparison Report ({getReportCreditCost('comparison')} credits)</SelectItem>
+                      <SelectItem value="summary">Executive Summary</SelectItem>
+                      <SelectItem value="detailed">Detailed Analysis</SelectItem>
+                      <SelectItem value="comparison">Comparison Report</SelectItem>
                     </SelectContent>
                   </Select>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Current cost: {getCurrentCreditCost()} credits • You have: {getRemainingCredits(subscriptionData)} credits
-                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -440,14 +393,8 @@ const SupplierComplianceExportModal: React.FC<SupplierComplianceExportModalProps
                     <p><strong>Suppliers:</strong> {selectedSuppliers.length}</p>
                     <p><strong>Type:</strong> {selectedSuppliers.length > 1 ? 'Comparison Report' : 'Individual Report'}</p>
                     <p><strong>Features:</strong> {Object.values(exportOptions).filter(Boolean).length} enabled</p>
-                    <p><strong>Credit Cost:</strong> {getCurrentCreditCost()} credits</p>
                     {dateRange.from && dateRange.to && (
                       <p><strong>Period:</strong> {format(dateRange.from, "MMM dd")} - {format(dateRange.to, "MMM dd, yyyy")}</p>
-                    )}
-                    {!canExportReport() && (
-                      <div className="mt-2 p-2 bg-destructive/10 text-destructive text-xs rounded border">
-                        ⚠️ {getExportDisabledReason()}
-                      </div>
                     )}
                   </div>
                 </CardContent>
@@ -463,36 +410,23 @@ const SupplierComplianceExportModal: React.FC<SupplierComplianceExportModalProps
               >
                 Cancel
               </Button>
-              {canExportReport() ? (
-                <Button
-                  onClick={handleExport}
-                  disabled={selectedSuppliers.length === 0 || isExporting}
-                  className="flex-1"
-                >
-                  {isExporting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4 mr-2" />
-                      Export PDF ({getCurrentCreditCost()} credits)
-                    </>
-                  )}
-                </Button>
-              ) : (
-                <SubscriptionGuard
-                  checkResult={canGenerateReport(subscriptionData, getReportTypeForCredits(reportType, selectedSuppliers.length))}
-                  featureName="Report Export"
-                  description={`Generate ${reportType} compliance reports. This requires ${getCurrentCreditCost()} credits.`}
-                >
-                  <Button disabled className="flex-1">
+              <Button
+                onClick={handleExport}
+                disabled={selectedSuppliers.length === 0 || isExporting}
+                className="flex-1"
+              >
+                {isExporting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
                     <Download className="w-4 h-4 mr-2" />
                     Export PDF
-                  </Button>
-                </SubscriptionGuard>
-              )}
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </div>

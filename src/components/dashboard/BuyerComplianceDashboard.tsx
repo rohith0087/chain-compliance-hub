@@ -29,8 +29,6 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { ComplianceDataService } from '@/services/ComplianceDataService';
 import { AdvancedPDFExportService } from '@/services/AdvancedPDFExportService';
 import { AIInsightsService } from '@/services/AIInsightsService';
-import { SubscriptionGuard } from '@/components/subscription/SubscriptionGuard';
-import { canGenerateReport, getReportCreditCost } from '@/utils/subscriptionGuards';
 import { ComplianceFilters } from '../compliance/ComplianceFilters';
 import { useBranchContext } from '@/contexts/BranchContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -95,7 +93,7 @@ const BuyerComplianceDashboard = () => {
   const [supplierItemsMap, setSupplierItemsMap] = useState<Map<string, Set<string>>>(new Map());
   
   const { user } = useAuth();
-  const { subscriptionData, hasEnoughCredits } = useSubscription();
+  const { subscriptionData } = useSubscription();
   const { t } = useTranslation(['dashboard', 'common']);
   const { toast } = useToast();
 
@@ -494,20 +492,13 @@ const BuyerComplianceDashboard = () => {
           <Button variant="ghost" size="sm" onClick={loadDashboardData} className="text-muted-foreground">
             Refresh
           </Button>
-          <SubscriptionGuard
-            checkResult={canGenerateReport(subscriptionData, 'detailed')}
-            featureName="Report Export"
-            description="Generate detailed compliance reports and analytics for your suppliers."
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setShowExportModal(true)}
           >
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setShowExportModal(true)}
-              disabled={!hasEnoughCredits(getReportCreditCost('standard'))}
-            >
-              Export
-            </Button>
-          </SubscriptionGuard>
+            Export
+          </Button>
         </div>
       </div>
 
@@ -847,7 +838,6 @@ const BuyerComplianceDashboard = () => {
         onClose={() => setShowExportModal(false)}
         suppliers={supplierStats}
         onExport={handleExportReports}
-        subscriptionData={subscriptionData}
       />
     </div>
   );

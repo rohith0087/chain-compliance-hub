@@ -153,6 +153,20 @@ const handler = async (req: Request): Promise<Response> => {
                   <span class="buyer-id">${buyerData.buyerId}</span>
                 </div>
                 <a href="${signupUrl}" class="cta-button">Sign Up Now</a>
+                <p style="font-size: 14px; color: #6b7280; margin-top: 12px;">
+                  Can't see the button? Copy and paste this link in your browser:<br>
+                  <a href="${signupUrl}" style="color: #2563eb; word-break: break-all;">${signupUrl}</a>
+                </p>
+              </div>
+              
+              <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 20px; margin: 24px 0; border-radius: 4px;">
+                <h3 style="margin: 0 0 12px 0; color: #166534;">📹 Watch Our Onboarding Guide</h3>
+                <p style="margin: 0 0 12px 0; font-size: 14px; color: #374151; line-height: 1.6;">
+                  New to the platform? Watch this quick video to learn how to complete your supplier onboarding:
+                </p>
+                <a href="https://www.canva.com/design/DAG7Wju59_4/JjRSFhDtJJNMIRcokuQIJQ/watch" style="color: #2563eb; font-weight: bold; word-break: break-all;">
+                  https://www.canva.com/design/DAG7Wju59_4/JjRSFhDtJJNMIRcokuQIJQ/watch
+                </a>
               </div>
               
               <p style="font-size: 14px; color: #6b7280; line-height: 1.6;">If you have questions, contact ${buyerData.company} at <a href="mailto:${buyerData.email}" style="color: #2563eb;">${buyerData.email}</a>.</p>

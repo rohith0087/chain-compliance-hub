@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import ParticleBackground from './ParticleBackground';
 import { TurnstileWidget } from './TurnstileWidget';
 import { supabase } from '@/integrations/supabase/client';
+import { BackgroundBeamsWithCollision } from '@/components/ui/background-beams-with-collision';
 import { z } from 'zod';
 
 // Validation schemas with security hardening
@@ -292,8 +293,9 @@ const AuthPage = () => {
       </div>
 
       {/* Right Form Section */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-8 bg-background">
-        <div className="w-full max-w-md">
+      <div className="w-full lg:w-1/2 flex items-center justify-center bg-background relative overflow-hidden">
+        <BackgroundBeamsWithCollision className="absolute inset-0 z-0" />
+        <div className="w-full max-w-md relative z-10 p-6 sm:p-8">
           {/* Mobile Logo */}
           <div className="flex lg:hidden items-center justify-center gap-3 mb-8">
             <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
@@ -302,7 +304,7 @@ const AuthPage = () => {
             <span className="text-xl font-bold text-foreground">Tracer2C</span>
           </div>
 
-          <Card className="border-0 shadow-xl bg-card/50 backdrop-blur-sm">
+          <Card className="border-0 shadow-xl bg-card/80 backdrop-blur-md">
             <CardContent className="p-6 sm:p-8">
               <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-foreground">Welcome</h2>

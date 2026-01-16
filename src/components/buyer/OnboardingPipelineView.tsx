@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Clock, CheckCircle, XCircle, Search, RefreshCw, Eye, Send, AlertCircle, BarChart3, Activity, Keyboard, Download, ChevronDown, ThumbsUp, ThumbsDown, LayoutGrid, Table as TableIcon, ChevronUp, Plus } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Search, RefreshCw, Eye, Send, AlertCircle, BarChart3, Activity, Keyboard, Download, ChevronDown, ThumbsUp, ThumbsDown, LayoutGrid, Table as TableIcon, ChevronUp, Plus, X } from 'lucide-react';
 import { OnboardingRequestForm } from './OnboardingRequestForm';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -62,6 +62,7 @@ export const OnboardingPipelineView = () => {
     return (saved as 'kanban' | 'table') || 'table';
   });
   const [collapsedColumns, setCollapsedColumns] = useState<Set<string>>(new Set());
+  const [showBottleneckAlert, setShowBottleneckAlert] = useState(true);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Check for pre-selected supplier from notifications/discovery
@@ -525,6 +526,24 @@ export const OnboardingPipelineView = () => {
     const alert = getAlertStatus(r);
     return alert.level === 'critical';
   }).length;
+
+  // Auto-dismiss bottleneck alert after 10 seconds
+  useEffect(() => {
+    if (bottlenecks > 0 && showBottleneckAlert) {
+      const timer = setTimeout(() => {
+        setShowBottleneckAlert(false);
+      }, 10000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [bottlenecks, showBottleneckAlert]);
+
+  // Reset alert visibility when requests data changes
+  useEffect(() => {
+    if (bottlenecks > 0) {
+      setShowBottleneckAlert(true);
+    }
+  }, [requests.length]);
   
   const getAnalytics = () => {
     const total = requests.length;
@@ -548,13 +567,20 @@ export const OnboardingPipelineView = () => {
   return (
     <div className="space-y-4">
       {/* Bottleneck Alert */}
-      {bottlenecks > 0 && (
-        <Alert variant="destructive">
+      {bottlenecks > 0 && showBottleneckAlert && (
+        <Alert variant="destructive" className="relative">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>{bottlenecks} request{bottlenecks > 1 ? 's require' : ' requires'} attention</AlertTitle>
+          <AlertTitle>{bottlenecks} supplier{bottlenecks > 1 ? "s haven't" : " hasn't"} responded</AlertTitle>
           <AlertDescription>
-            You have {bottlenecks} supplier{bottlenecks > 1 ? 's' : ''} waiting more than 7 days
+            These suppliers have not started or completed their onboarding in over 7 days. Consider sending a reminder.
           </AlertDescription>
+          <button 
+            onClick={() => setShowBottleneckAlert(false)}
+            className="absolute top-3 right-3 text-destructive-foreground/70 hover:text-destructive-foreground transition-colors"
+            aria-label="Dismiss alert"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </Alert>
       )}
       

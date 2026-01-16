@@ -14,7 +14,7 @@ export interface SupplierNotificationSettings {
 const defaultSettings: Omit<SupplierNotificationSettings, 'supplier_id'> = {
   enabled: true,
   new_request_in_app_enabled: true,
-  new_request_email_enabled: false,
+  new_request_email_enabled: true,
 };
 
 export const useSupplierNotificationSettings = () => {

@@ -249,6 +249,9 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
 
       let totalRequestsCreated = 0;
       
+      // Collect request IDs per supplier for batch email
+      const requestsBySupplier: Record<string, string[]> = {};
+      
       // Create a separate request for each selected document AND each selected supplier
       for (const doc of selectedDocuments) {
         for (const supplierId of formData.suppliers) {
@@ -323,15 +326,23 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
             });
           }
 
+          // Collect request ID for batch email
+          if (!requestsBySupplier[supplierId]) {
+            requestsBySupplier[supplierId] = [];
+          }
+          requestsBySupplier[supplierId].push(request.id);
+
           // Call the callback to update the parent component
           onCreateRequest(request);
           totalRequestsCreated++;
-
-          // Trigger new request email notification to SUPPLIER (fire and forget)
-          supabase.functions.invoke('send-new-request-email', {
-            body: { requestId: request.id, supplierId: supplierId }
-          }).catch(err => console.error('Failed to send new request email:', err));
         }
+      }
+
+      // Send ONE batch email per supplier (instead of one per document)
+      for (const [supplierId, requestIds] of Object.entries(requestsBySupplier)) {
+        supabase.functions.invoke('send-batch-request-email', {
+          body: { requestIds, supplierId }
+        }).catch(err => console.error('Failed to send batch request email:', err));
       }
 
       toast({

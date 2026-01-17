@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Shield, AlertCircle, Building2, ShoppingCart, Mail, Eye, EyeOff, Check, X, Lock, Sparkles } from 'lucide-react';
+import { Shield, AlertCircle, Building2, ShoppingCart, Mail, Eye, EyeOff, Check, X, Lock, Sparkles, KeyRound } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
 import { HelpButton } from '@/components/support/HelpButton';
 import { useToast } from '@/hooks/use-toast';
@@ -83,6 +84,13 @@ const AuthPage = () => {
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const turnstileRef = useRef<{ reset: () => void } | null>(null);
   
+  // 2FA inline state
+  const [authStep, setAuthStep] = useState<'credentials' | 'mfa'>('credentials');
+  const [mfaCode, setMfaCode] = useState('');
+  const [useRecoveryCode, setUseRecoveryCode] = useState(false);
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [mfaLoading, setMfaLoading] = useState(false);
+  
   const { signIn, signUp, resetPassword } = useAuth();
   const { toast } = useToast();
 
@@ -141,8 +149,98 @@ const AuthPage = () => {
         variant: "destructive",
       });
       resetTurnstile();
+      setLoading(false);
+      return;
     }
+    
+    // Check if user needs MFA verification
+    const { data: factorsData } = await supabase.auth.mfa.listFactors();
+    const hasVerifiedTOTP = factorsData?.totp?.some(f => f.status === 'verified');
+    
+    if (hasVerifiedTOTP) {
+      // Show MFA input within the same card
+      setAuthStep('mfa');
+    }
+    // If no MFA, the auth state change will redirect to dashboard
     setLoading(false);
+  };
+
+  const handleMFAVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMfaError(null);
+    
+    if (useRecoveryCode) {
+      // Handle recovery code verification
+      if (!mfaCode.trim()) {
+        setMfaError('Please enter a recovery code');
+        return;
+      }
+      setMfaLoading(true);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await supabase.functions.invoke('verify-mfa-recovery-code', {
+        body: { code: mfaCode.trim() },
+        headers: { Authorization: `Bearer ${session?.access_token}` }
+      });
+      
+      if (response.data?.valid) {
+        toast({ title: "Verified", description: `Recovery code accepted. ${response.data.remainingCodes} codes remaining.` });
+        // Redirect will happen via auth state change
+      } else {
+        setMfaError(response.data?.error || 'Invalid recovery code');
+        setMfaCode('');
+      }
+      setMfaLoading(false);
+      return;
+    }
+    
+    // Standard TOTP verification
+    if (mfaCode.length !== 6) {
+      setMfaError('Please enter a valid 6-digit code');
+      return;
+    }
+    
+    setMfaLoading(true);
+    
+    const { data: factorsData } = await supabase.auth.mfa.listFactors();
+    const factor = factorsData?.totp?.find(f => f.status === 'verified');
+    
+    if (!factor) {
+      setMfaError('No MFA factor found');
+      setMfaLoading(false);
+      return;
+    }
+    
+    const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: factor.id });
+    
+    if (challengeError || !challengeData) {
+      setMfaError('Failed to create MFA challenge');
+      setMfaLoading(false);
+      return;
+    }
+    
+    const { error } = await supabase.auth.mfa.verify({
+      factorId: factor.id,
+      challengeId: challengeData.id,
+      code: mfaCode
+    });
+    
+    if (error) {
+      setMfaError('Invalid verification code');
+      setMfaCode('');
+    } else {
+      toast({ title: "Verified", description: "Login successful." });
+      // Auth state change will trigger redirect
+    }
+    setMfaLoading(false);
+  };
+
+  const handleCancelMFA = async () => {
+    await supabase.auth.signOut();
+    setAuthStep('credentials');
+    setMfaCode('');
+    setMfaError(null);
+    setUseRecoveryCode(false);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -298,134 +396,232 @@ const AuthPage = () => {
           <Card className="border-0 shadow-xl bg-card/80 backdrop-blur-md">
             <CardContent className="p-6 sm:p-8">
               <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-foreground">Welcome</h2>
+                <h2 className="text-2xl font-bold text-foreground">
+                  {authStep === 'mfa' ? 'Verify Identity' : 'Welcome'}
+                </h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {activeTab === 'login' ? 'Login to your account' : 'Create your account'}
+                  {authStep === 'mfa' 
+                    ? 'Complete two-factor authentication'
+                    : activeTab === 'login' ? 'Login to your account' : 'Create your account'
+                  }
                 </p>
               </div>
 
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="login" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                    Login
-                  </TabsTrigger>
-                  <TabsTrigger value="signup" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                    Sign Up
-                  </TabsTrigger>
-                </TabsList>
+                {authStep === 'credentials' && (
+                  <TabsList className="grid w-full grid-cols-2 mb-6">
+                    <TabsTrigger value="login" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                      Login
+                    </TabsTrigger>
+                    <TabsTrigger value="signup" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                      Sign Up
+                    </TabsTrigger>
+                  </TabsList>
+                )}
                 
                 <TabsContent value="login" className="mt-0">
-                  <form onSubmit={handleSignIn} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email" className="text-foreground">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => { setEmail(e.target.value); setErrors(prev => ({ ...prev, email: '' })); }}
-                        placeholder="Enter your email"
-                        className={`h-11 ${errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                        disabled={loading}
-                        maxLength={255}
-                      />
-                      {errors.email && (
-                        <p className="text-xs text-destructive flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" /> {errors.email}
-                        </p>
-                      )}
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="password" className="text-foreground">Password</Label>
-                      <div className="relative">
+                  {authStep === 'credentials' ? (
+                    <form onSubmit={handleSignIn} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="email" className="text-foreground">Email</Label>
                         <Input
-                          id="password"
-                          type={showPassword ? 'text' : 'password'}
-                          value={password}
-                          onChange={(e) => { setPassword(e.target.value); setErrors(prev => ({ ...prev, password: '' })); }}
-                          placeholder="Enter your password"
-                          className={`h-11 pr-10 ${errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                          id="email"
+                          type="email"
+                          value={email}
+                          onChange={(e) => { setEmail(e.target.value); setErrors(prev => ({ ...prev, email: '' })); }}
+                          placeholder="Enter your email"
+                          className={`h-11 ${errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                           disabled={loading}
-                          maxLength={128}
+                          maxLength={255}
                         />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
+                        {errors.email && (
+                          <p className="text-xs text-destructive flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" /> {errors.email}
+                          </p>
+                        )}
                       </div>
-                      {errors.password && (
-                        <p className="text-xs text-destructive flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" /> {errors.password}
-                        </p>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="password" className="text-foreground">Password</Label>
+                        <div className="relative">
+                          <Input
+                            id="password"
+                            type={showPassword ? 'text' : 'password'}
+                            value={password}
+                            onChange={(e) => { setPassword(e.target.value); setErrors(prev => ({ ...prev, password: '' })); }}
+                            placeholder="Enter your password"
+                            className={`h-11 pr-10 ${errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                            disabled={loading}
+                            maxLength={128}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                        {errors.password && (
+                          <p className="text-xs text-destructive flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" /> {errors.password}
+                          </p>
+                        )}
+                      </div>
+                      
+                      {/* Turnstile Widget - only show when enabled */}
+                      {isTurnstileEnabled && (
+                        <TurnstileWidget
+                          siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ''}
+                          onSuccess={(token) => setTurnstileToken(token)}
+                          onExpire={() => setTurnstileToken(null)}
+                          onError={() => setTurnstileToken(null)}
+                        />
                       )}
+                      
+                      <Button type="submit" className="w-full h-11 font-semibold" disabled={loading || (isTurnstileEnabled && !turnstileToken)}>
+                        {loading ? "Logging In..." : "Login"}
+                      </Button>
+                      
+                      <div className="text-center">
+                        <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+                          <DialogTrigger asChild>
+                            <Button variant="link" className="text-sm text-muted-foreground hover:text-primary p-0 h-auto">
+                              Forgot your password?
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                              <DialogTitle className="flex items-center gap-2">
+                                <Mail className="w-5 h-5 text-primary" />
+                                Reset Password
+                              </DialogTitle>
+                              <DialogDescription>
+                                Enter your email address and we'll send you a link to reset your password.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handleForgotPassword} className="space-y-4">
+                              <div>
+                                <Label htmlFor="resetEmail">Email</Label>
+                                <Input
+                                  id="resetEmail"
+                                  type="email"
+                                  value={resetEmail}
+                                  onChange={(e) => setResetEmail(e.target.value)}
+                                  placeholder="Enter your email"
+                                  className="h-11"
+                                  maxLength={255}
+                                  required
+                                />
+                              </div>
+                              <div className="flex gap-2">
+                                <Button 
+                                  type="button" 
+                                  variant="outline" 
+                                  className="flex-1"
+                                  onClick={() => setResetDialogOpen(false)}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button type="submit" className="flex-1" disabled={resetLoading}>
+                                  {resetLoading ? "Sending..." : "Send Reset Link"}
+                                </Button>
+                              </div>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                      <div className="text-center">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
+                          {useRecoveryCode ? (
+                            <KeyRound className="w-8 h-8 text-primary" />
+                          ) : (
+                            <Shield className="w-8 h-8 text-primary" />
+                          )}
+                        </div>
+                        <h3 className="text-lg font-semibold text-foreground">
+                          {useRecoveryCode ? 'Use Recovery Code' : 'Two-Factor Authentication'}
+                        </h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {useRecoveryCode 
+                            ? 'Enter one of your saved recovery codes'
+                            : 'Enter the 6-digit code from your authenticator app'
+                          }
+                        </p>
+                      </div>
+
+                      <form onSubmit={handleMFAVerify} className="space-y-4">
+                        {mfaError && (
+                          <Alert variant="destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription>{mfaError}</AlertDescription>
+                          </Alert>
+                        )}
+                        
+                        <Input
+                          type="text"
+                          inputMode={useRecoveryCode ? 'text' : 'numeric'}
+                          pattern={useRecoveryCode ? undefined : '[0-9]*'}
+                          maxLength={useRecoveryCode ? 20 : 6}
+                          value={mfaCode}
+                          onChange={(e) => setMfaCode(
+                            useRecoveryCode 
+                              ? e.target.value.toUpperCase() 
+                              : e.target.value.replace(/\D/g, '')
+                          )}
+                          placeholder={useRecoveryCode ? 'XXXX-XXXX' : '000000'}
+                          className={`text-center h-14 font-mono ${
+                            useRecoveryCode ? 'text-lg tracking-wider' : 'text-2xl tracking-[0.4em]'
+                          }`}
+                          autoFocus
+                          disabled={mfaLoading}
+                        />
+                        
+                        <Button 
+                          type="submit" 
+                          className="w-full h-11 font-semibold" 
+                          disabled={mfaLoading || (useRecoveryCode ? !mfaCode.trim() : mfaCode.length !== 6)}
+                        >
+                          {mfaLoading ? "Verifying..." : "Verify"}
+                        </Button>
+                        
+                        <div className="relative">
+                          <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
+                          </div>
+                          <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-card px-2 text-muted-foreground">or</span>
+                          </div>
+                        </div>
+                        
+                        <Button 
+                          type="button"
+                          variant="outline" 
+                          onClick={() => {
+                            setUseRecoveryCode(!useRecoveryCode);
+                            setMfaCode('');
+                            setMfaError(null);
+                          }} 
+                          className="w-full"
+                        >
+                          <KeyRound className="w-4 h-4 mr-2" />
+                          {useRecoveryCode ? 'Use authenticator app' : 'Lost access? Use recovery code'}
+                        </Button>
+                        
+                        <Button 
+                          type="button"
+                          variant="ghost" 
+                          onClick={handleCancelMFA} 
+                          className="w-full text-muted-foreground"
+                        >
+                          Cancel & Sign Out
+                        </Button>
+                      </form>
                     </div>
-                    
-                    {/* Turnstile Widget - only show when enabled */}
-                    {isTurnstileEnabled && (
-                      <TurnstileWidget
-                        siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ''}
-                        onSuccess={(token) => setTurnstileToken(token)}
-                        onExpire={() => setTurnstileToken(null)}
-                        onError={() => setTurnstileToken(null)}
-                      />
-                    )}
-                    
-                    <Button type="submit" className="w-full h-11 font-semibold" disabled={loading || (isTurnstileEnabled && !turnstileToken)}>
-                      {loading ? "Logging In..." : "Login"}
-                    </Button>
-                    
-                    <div className="text-center">
-                      <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
-                        <DialogTrigger asChild>
-                          <Button variant="link" className="text-sm text-muted-foreground hover:text-primary p-0 h-auto">
-                            Forgot your password?
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-md">
-                          <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
-                              <Mail className="w-5 h-5 text-primary" />
-                              Reset Password
-                            </DialogTitle>
-                            <DialogDescription>
-                              Enter your email address and we'll send you a link to reset your password.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <form onSubmit={handleForgotPassword} className="space-y-4">
-                            <div>
-                              <Label htmlFor="resetEmail">Email</Label>
-                            <Input
-                                id="resetEmail"
-                                type="email"
-                                value={resetEmail}
-                                onChange={(e) => setResetEmail(e.target.value)}
-                                placeholder="Enter your email"
-                                className="h-11"
-                                maxLength={255}
-                                required
-                              />
-                            </div>
-                            <div className="flex gap-2">
-                              <Button 
-                                type="button" 
-                                variant="outline" 
-                                className="flex-1"
-                                onClick={() => setResetDialogOpen(false)}
-                              >
-                                Cancel
-                              </Button>
-                              <Button type="submit" className="flex-1" disabled={resetLoading}>
-                                {resetLoading ? "Sending..." : "Send Reset Link"}
-                              </Button>
-                            </div>
-                          </form>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-                  </form>
+                  )}
                 </TabsContent>
                 
                 <TabsContent value="signup" className="mt-0">

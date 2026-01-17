@@ -58,8 +58,45 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
+  const [mfaCheckComplete, setMfaCheckComplete] = useState(false);
+  const [canRedirect, setCanRedirect] = useState(false);
 
-  if (loading) {
+  useEffect(() => {
+    const checkMFAStatus = async () => {
+      if (!user) {
+        setMfaCheckComplete(true);
+        setCanRedirect(false);
+        return;
+      }
+
+      try {
+        // Check if user has MFA enrolled
+        const { data: factorsData } = await supabase.auth.mfa.listFactors();
+        const hasVerifiedTOTP = factorsData?.totp?.some(f => f.status === 'verified');
+
+        if (!hasVerifiedTOTP) {
+          // No MFA enrolled - safe to redirect
+          setCanRedirect(true);
+        } else {
+          // MFA enrolled - check AAL level
+          const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+          const isMFAVerified = aalData?.currentLevel === 'aal2';
+          
+          // Only redirect if MFA is verified
+          setCanRedirect(isMFAVerified);
+        }
+      } catch (error) {
+        console.error('Error checking MFA status in PublicRoute:', error);
+        // On error, let the user stay on auth page
+        setCanRedirect(false);
+      }
+      setMfaCheckComplete(true);
+    };
+
+    checkMFAStatus();
+  }, [user]);
+
+  if (loading || (user && !mfaCheckComplete)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -67,9 +104,8 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  // Platform admins use /platform-admin/login separately
-  // Regular users simply redirect to dashboard
-  if (user) {
+  // Only redirect if MFA check passed
+  if (user && canRedirect) {
     return <Navigate to="/dashboard" replace />;
   }
 

@@ -202,10 +202,9 @@ export function BuyerSidebarLayout({
       icon: FileCheck,
       value: 'requests',
       submenu: [
-        { title: t('common:navigation.requests'), value: 'requests', icon: ListChecks },
         { title: t('common:navigation.documents'), value: 'documents', icon: FileCheck },
         { title: 'Templates', value: 'templates', icon: FileText },
-        { title: 'Sample Templates', value: 'sample-templates', icon: FileImage },
+        { title: 'Buyer Samples', value: 'sample-templates', icon: FileImage },
         { title: 'Document Sets', value: 'document-sets', icon: FolderKanban }
       ]
     },
@@ -423,7 +422,7 @@ export function BuyerSidebarLayout({
                         {isActiveRoute(item.value) && (
                           <div className="absolute inset-0 bg-primary/30 blur-lg" />
                         )}
-                        <item.icon className="h-4 w-4 relative z-10" />
+                        <item.icon className="h-4 w-4 relative z-10 transition-all duration-300 group-hover:scale-110 group-hover:rotate-6" />
                       </div>
                       <span className={isActiveRoute(item.value) ? 'font-medium' : ''}>
                         {item.title}
@@ -453,7 +452,7 @@ export function BuyerSidebarLayout({
                                 onClick={() => handleMenuClick(subItem.value)}
                                 className="w-full"
                               >
-                                {subItem.icon && <subItem.icon className="h-4 w-4" />}
+                                {subItem.icon && <subItem.icon className="h-4 w-4 transition-all duration-300 hover:scale-110 hover:rotate-6" />}
                                 <span>{subItem.title}</span>
                                 {subItem.badge && (
                                   <Badge variant="secondary" className="ml-auto">

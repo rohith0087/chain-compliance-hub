@@ -287,63 +287,68 @@ const EnhancedDocumentsFilter = ({
             </Select>
           </div>
 
-          {/* Filter Summary */}
+          {/* Filter Summary with Actions */}
           <div className="flex items-center justify-between pt-4 border-t">
             <div className="text-sm text-muted-foreground">
               Showing {filteredDocumentsCount} of {totalDocumentsCount} documents
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Bulk Actions */}
-      <Card className="bg-gradient-to-br from-[hsl(var(--pink-accent))]/5 to-purple-500/5 border-[hsl(var(--pink-accent))]/20">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[hsl(var(--pink-accent))] to-purple-500 flex items-center justify-center">
-              <Download className="w-4 h-4 text-white" />
-            </div>
-            Bulk Actions
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              {onRefresh && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={onRefresh}
+                  disabled={isRefreshing}
+                  className="gap-2"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              )}
               <Button 
                 variant="outline" 
                 size="sm"
                 onClick={onSelectAll}
                 disabled={filteredDocumentsCount === 0}
-                className="border-[hsl(var(--blue-accent))]/30 hover:bg-[hsl(var(--blue-accent))]/10"
               >
-                Select All Filtered ({filteredDocumentsCount})
+                Select All ({filteredDocumentsCount})
               </Button>
-              {selectedDocuments.size > 0 && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={onClearSelection}
-                  className="border-destructive/30 hover:bg-destructive/10"
-                >
-                  <X className="w-3 h-3 mr-1" />
-                  Clear Selection
-                </Button>
-              )}
-              <Badge className="bg-gradient-to-r from-[hsl(var(--pink-accent))] to-purple-500 text-white border-0">
-                {selectedDocuments.size} selected
-              </Badge>
             </div>
-            <Button 
-              onClick={onBulkDownload}
-              disabled={selectedDocuments.size === 0}
-              className="flex items-center gap-2 bg-gradient-to-r from-[hsl(var(--blue-accent))] to-[hsl(var(--accent))] hover:opacity-90 text-white border-0 shadow-[0_4px_12px_hsl(var(--blue-accent)/0.3)]"
-            >
-              <Download className="w-4 h-4" />
-              Download ZIP ({selectedDocuments.size})
-            </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Bulk Actions - Only show when documents are selected */}
+      {selectedDocuments.size > 0 && (
+        <Card className="bg-gradient-to-br from-[hsl(var(--pink-accent))]/5 to-purple-500/5 border-[hsl(var(--pink-accent))]/20 animate-in slide-in-from-top-2 duration-200">
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Badge className="bg-gradient-to-r from-[hsl(var(--pink-accent))] to-purple-500 text-white border-0">
+                  {selectedDocuments.size} selected
+                </Badge>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={onClearSelection}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-3 h-3 mr-1" />
+                  Clear
+                </Button>
+              </div>
+              <Button 
+                onClick={onBulkDownload}
+                size="sm"
+                className="flex items-center gap-2 bg-gradient-to-r from-[hsl(var(--blue-accent))] to-[hsl(var(--accent))] hover:opacity-90 text-white border-0"
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

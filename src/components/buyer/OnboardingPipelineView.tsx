@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Slab } from 'react-loading-indicators';
 import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -561,7 +562,11 @@ export const OnboardingPipelineView = () => {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Slab color="#3d31cc" size="medium" text="Loading..." textColor="#3d31cc" />
+      </div>
+    );
   }
 
   return (

@@ -131,6 +131,9 @@ export function BuyerSidebarLayout({
   
   // State to control Help Center from notifications
   const [helpCenterOpen, setHelpCenterOpen] = useState(false);
+  
+  // State for expanded submenus
+  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
 
   // Resolve company ID for team members vs owners
   const [resolvedCompanyId, setResolvedCompanyId] = useState<string | null>(null);
@@ -274,6 +277,23 @@ export function BuyerSidebarLayout({
     return item.submenu.some(sub => isActiveRoute(sub.value));
   };
 
+  const toggleSubmenu = (value: string) => {
+    setExpandedMenus(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(value)) {
+        newSet.delete(value);
+      } else {
+        newSet.add(value);
+      }
+      return newSet;
+    });
+  };
+
+  const isSubmenuExpanded = (item: NavigationItem) => {
+    if (!item.submenu) return false;
+    return expandedMenus.has(item.value) || hasActiveSubmenu(item);
+  };
+
   const handleMenuClick = (value: string) => {
     // Navigate to /messages instead of changing tabs
     if (value === 'messages') {
@@ -411,8 +431,8 @@ export function BuyerSidebarLayout({
                     )}
                     <SidebarMenuButton
                       isActive={isActiveRoute(item.value) || hasActiveSubmenu(item)}
-                      onClick={() => handleMenuClick(item.value)}
-                      className={`group transition-all duration-300 ${
+                      onClick={() => item.submenu ? toggleSubmenu(item.value) : handleMenuClick(item.value)}
+                      className={`group transition-colors duration-200 ${
                         isActiveRoute(item.value) 
                           ? 'bg-primary/10 text-primary hover:bg-primary/15' 
                           : 'hover:bg-muted/50'
@@ -422,15 +442,15 @@ export function BuyerSidebarLayout({
                         {isActiveRoute(item.value) && (
                           <div className="absolute inset-0 bg-primary/30 blur-lg" />
                         )}
-                        <item.icon className="h-4 w-4 relative z-10 transition-all duration-300 group-hover:scale-110 group-hover:rotate-6" />
+                        <item.icon className="h-4 w-4 relative z-10 transition-transform duration-200 group-hover:scale-110" />
                       </div>
                       <span className={isActiveRoute(item.value) ? 'font-medium' : ''}>
                         {item.title}
                       </span>
                       {item.submenu && (
                         <ChevronDown 
-                          className={`ml-auto h-4 w-4 transition-transform duration-300 ${
-                            hasActiveSubmenu(item) ? 'rotate-180' : ''
+                          className={`ml-auto h-4 w-4 transition-transform duration-200 ${
+                            isSubmenuExpanded(item) ? 'rotate-180' : ''
                           }`} 
                         />
                       )}
@@ -440,7 +460,7 @@ export function BuyerSidebarLayout({
                         </Badge>
                       )}
                     </SidebarMenuButton>
-                    {item.submenu && hasActiveSubmenu(item) && (
+                    {item.submenu && isSubmenuExpanded(item) && (
                       <SidebarMenuSub>
                         {item.submenu.map((subItem) => (
                           <SidebarMenuSubItem key={subItem.value}>
@@ -450,9 +470,9 @@ export function BuyerSidebarLayout({
                             >
                               <button
                                 onClick={() => handleMenuClick(subItem.value)}
-                                className="w-full"
+                                className="w-full group"
                               >
-                                {subItem.icon && <subItem.icon className="h-4 w-4 transition-all duration-300 hover:scale-110 hover:rotate-6" />}
+                                {subItem.icon && <subItem.icon className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />}
                                 <span>{subItem.title}</span>
                                 {subItem.badge && (
                                   <Badge variant="secondary" className="ml-auto">

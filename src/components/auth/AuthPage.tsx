@@ -252,15 +252,6 @@ const AuthPage = () => {
         <ParticleBackground />
         
         <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-lg">
-              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-xl">T</span>
-              </div>
-            </div>
-            <span className="text-2xl font-bold text-white">Tracer2C</span>
-          </div>
-          
           <h1 className="text-4xl xl:text-5xl font-bold text-white mb-6 leading-tight">
             Streamline Your<br />
             <span className="text-white/90">Compliance Management</span>

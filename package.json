@@ -74,6 +74,7 @@
     "react-hotkeys-hook": "^5.1.0",
     "react-i18next": "^15.6.1",
     "react-joyride": "^2.9.3",
+    "react-loading-indicators": "^1.0.1",
     "react-map-gl": "^8.1.0",
     "react-markdown": "^10.1.0",
     "react-resizable-panels": "^2.1.3",

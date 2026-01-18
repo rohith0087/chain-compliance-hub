@@ -1,4 +1,5 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 
 interface TurnstileWidgetProps {
   siteKey: string;
@@ -38,6 +39,7 @@ export function TurnstileWidget({
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
   const scriptLoadedRef = useRef(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const renderWidget = useCallback(() => {
     if (!containerRef.current || !window.turnstile || widgetIdRef.current) {
@@ -47,14 +49,23 @@ export function TurnstileWidget({
     try {
       widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: siteKey,
-        callback: onSuccess,
+        callback: (token) => {
+          setIsLoading(false);
+          onSuccess(token);
+        },
         'expired-callback': onExpire,
-        'error-callback': onError,
+        'error-callback': (error) => {
+          setIsLoading(false);
+          onError?.(error);
+        },
         theme,
         size,
       });
+      // Widget rendered, hide loading after a short delay
+      setTimeout(() => setIsLoading(false), 500);
     } catch (error) {
       console.error('Error rendering Turnstile widget:', error);
+      setIsLoading(false);
     }
   }, [siteKey, onSuccess, onExpire, onError, theme, size]);
 
@@ -101,16 +112,24 @@ export function TurnstileWidget({
   // Reset function exposed via ref if needed
   const reset = useCallback(() => {
     if (widgetIdRef.current && window.turnstile) {
+      setIsLoading(true);
       window.turnstile.reset(widgetIdRef.current);
     }
   }, []);
 
   return (
-    <div 
-      ref={containerRef} 
-      className="flex justify-center my-4"
-      data-reset={reset}
-    />
+    <div className="relative min-h-[65px]">
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/30 rounded-lg">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      )}
+      <div 
+        ref={containerRef} 
+        className="flex justify-center [&>iframe]:rounded-lg [&>iframe]:shadow-sm [&>*]:!bg-transparent"
+        data-reset={reset}
+      />
+    </div>
   );
 }
 

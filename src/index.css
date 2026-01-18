@@ -224,4 +224,28 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none; /* Chrome, Safari and Opera */
   }
+
+  /* Custom scrollbar for auth form */
+  .auth-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted)) transparent;
+  }
+
+  .auth-scroll::-webkit-scrollbar {
+    display: block;
+    width: 4px;
+  }
+
+  .auth-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .auth-scroll::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted));
+    border-radius: 4px;
+  }
+
+  .auth-scroll::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+  }
 }

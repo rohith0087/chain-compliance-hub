@@ -625,9 +625,10 @@ const AuthPage = () => {
                 </TabsContent>
                 
                 <TabsContent value="signup" className="mt-0">
-                  <form onSubmit={handleSignUp} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="fullName" className="text-foreground">Full Name</Label>
+                  <div className="max-h-[400px] overflow-y-auto pr-1 auth-scroll">
+                    <form onSubmit={handleSignUp} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="fullName" className="text-foreground">Full Name</Label>
                       <Input
                         id="fullName"
                         type="text"
@@ -740,64 +741,6 @@ const AuthPage = () => {
                       )}
                     </div>
                     
-                    <div className="space-y-3">
-                      <Label className="text-foreground">Select your role(s)</Label>
-                      <div className="grid grid-cols-2 gap-3">
-                        <button 
-                          type="button"
-                          onClick={() => toggleRole('buyer')}
-                          disabled={loading}
-                          className={`p-3 rounded-lg border-2 text-left transition-all ${
-                            selectedRoles.includes('buyer') 
-                              ? 'border-primary bg-primary/5' 
-                              : 'border-border hover:border-primary/50'
-                          } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
-                              selectedRoles.includes('buyer') 
-                                ? 'bg-primary border-primary' 
-                                : 'border-muted-foreground'
-                            }`}>
-                              {selectedRoles.includes('buyer') && <Check className="w-3 h-3 text-primary-foreground" />}
-                            </div>
-                            <ShoppingCart className="w-4 h-4 text-primary" />
-                          </div>
-                          <p className="text-sm font-medium mt-2 text-foreground">Buyer</p>
-                          <p className="text-xs text-muted-foreground">Request documents</p>
-                        </button>
-                        
-                        <button 
-                          type="button"
-                          onClick={() => toggleRole('supplier')}
-                          disabled={loading}
-                          className={`p-3 rounded-lg border-2 text-left transition-all ${
-                            selectedRoles.includes('supplier') 
-                              ? 'border-primary bg-primary/5' 
-                              : 'border-border hover:border-primary/50'
-                          } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
-                              selectedRoles.includes('supplier') 
-                                ? 'bg-primary border-primary' 
-                                : 'border-muted-foreground'
-                            }`}>
-                              {selectedRoles.includes('supplier') && <Check className="w-3 h-3 text-primary-foreground" />}
-                            </div>
-                            <Building2 className="w-4 h-4 text-primary" />
-                          </div>
-                          <p className="text-sm font-medium mt-2 text-foreground">Supplier</p>
-                          <p className="text-xs text-muted-foreground">Provide documents</p>
-                        </button>
-                      </div>
-                      {errors.roles && (
-                        <p className="text-xs text-destructive flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" /> {errors.roles}
-                        </p>
-                      )}
-                    </div>
-                    
                     {/* Turnstile Widget - only show when enabled */}
                     {isTurnstileEnabled && (
                       <TurnstileWidget
@@ -808,14 +751,15 @@ const AuthPage = () => {
                       />
                     )}
                     
-                    <Button 
-                      type="submit" 
-                      className="w-full h-11 font-semibold" 
-                      disabled={loading || selectedRoles.length === 0 || (isTurnstileEnabled && !turnstileToken)}
-                    >
-                      {loading ? "Creating Account..." : "Create Account"}
-                    </Button>
-                  </form>
+                      <Button 
+                        type="submit" 
+                        className="w-full h-11 font-semibold" 
+                        disabled={loading || (isTurnstileEnabled && !turnstileToken)}
+                      >
+                        {loading ? "Creating Account..." : "Create Account"}
+                      </Button>
+                    </form>
+                  </div>
                 </TabsContent>
               </Tabs>
             </CardContent>

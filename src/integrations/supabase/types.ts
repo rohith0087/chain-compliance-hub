@@ -4814,7 +4814,7 @@ export type Database = {
         Returns: boolean
       }
       reject_document_request: {
-        Args: { p_reason: string; p_request_id: string }
+        Args: { p_reason?: string; p_request_id: string }
         Returns: Json
       }
       remove_company_user: {

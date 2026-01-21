@@ -247,29 +247,56 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="flex flex-wrap h-auto gap-1 justify-start w-auto">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="branches">Branches</TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2">
+        <TabsList className="inline-flex h-12 items-center gap-1 rounded-full bg-muted/60 p-1.5 justify-start">
+            <TabsTrigger 
+              value="overview"
+              className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground"
+            >
+              Overview
+            </TabsTrigger>
+            <TabsTrigger 
+              value="branches"
+              className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground"
+            >
+              Branches
+            </TabsTrigger>
+            <TabsTrigger 
+              value="users" 
+              className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground flex items-center gap-2"
+            >
               Users
               {stats.pendingInvitations > 0 && (
-                <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                <Badge variant="secondary" className="h-5 px-1.5 text-xs rounded-full">
                   {stats.pendingInvitations}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="permissions">Permissions</TabsTrigger>
-            <TabsTrigger value="company" className="flex items-center gap-1">
+            <TabsTrigger 
+              value="permissions"
+              className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground"
+            >
+              Permissions
+            </TabsTrigger>
+            <TabsTrigger 
+              value="company" 
+              className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground flex items-center gap-1"
+            >
               <Settings className="h-3.5 w-3.5" />
               Company
             </TabsTrigger>
             {companyType === 'buyer' && (
               <>
-                <TabsTrigger value="onboarding" className="flex items-center gap-1">
+                <TabsTrigger 
+                  value="onboarding" 
+                  className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground flex items-center gap-1"
+                >
                   <FileText className="h-3.5 w-3.5" />
                   Onboarding
                 </TabsTrigger>
-                <TabsTrigger value="notifications" className="flex items-center gap-1">
+                <TabsTrigger 
+                  value="notifications" 
+                  className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground flex items-center gap-1"
+                >
                   <Bell className="h-3.5 w-3.5" />
                   Notifications
                 </TabsTrigger>

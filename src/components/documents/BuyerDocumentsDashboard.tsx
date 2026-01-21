@@ -930,9 +930,19 @@ if (user?.id && latest.id) {
 
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="documents">Document Manager</TabsTrigger>
-          <TabsTrigger value="timeline">Activity</TabsTrigger>
+        <TabsList className="inline-flex h-12 items-center gap-1 rounded-full bg-muted/60 p-1.5 justify-start">
+          <TabsTrigger 
+            value="documents"
+            className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground"
+          >
+            Document Manager
+          </TabsTrigger>
+          <TabsTrigger 
+            value="timeline"
+            className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground"
+          >
+            Activity
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="documents">

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, Users, Shield, MapPin, Plus, ArrowRight, UserPlus, Mail, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Building2, Users, Shield, MapPin, Plus, ArrowRight, UserPlus, Mail, Clock, CheckCircle2, AlertCircle, Settings, Bell, FileText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { useCompanyBranches, CompanyBranch } from '@/hooks/useCompanyBranches';
 import { useCompanyPermissions } from '@/hooks/useCompanyPermissions';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,6 +16,13 @@ import { CompanyUserManagement } from './CompanyUserManagement';
 import { PermissionManagementInterface } from './PermissionManagementInterface';
 import UnauthorizedAccess from '@/components/auth/UnauthorizedAccess';
 import { formatDistanceToNow } from 'date-fns';
+import { DefaultOnboardingSettings } from '@/components/settings/DefaultOnboardingSettings';
+import { NotificationSettingsForm } from '@/components/settings/NotificationSettingsForm';
+import { LogoUploadWidget } from '@/components/settings/LogoUploadWidget';
+import { AddressFields, emptyAddressData, AddressData } from '@/components/shared/AddressFields';
+import { SafeSelect, SafeSelectItem } from '@/components/ui/SafeSelect';
+import { VALID_INDUSTRIES } from '@/config/industries';
+import { toast } from 'sonner';
 
 interface CompanyManagementDashboardProps {
   companyId: string;
@@ -45,6 +54,17 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
   const { canViewCompanyManagement, role, isOwner } = useCompanyPermissions(companyId, companyType);
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
+  const [savingCompany, setSavingCompany] = useState(false);
+  
+  // State for company settings form
+  const [companyData, setCompanyData] = useState({
+    company_name: '',
+    industry: '',
+    contact_email: '',
+    phone: '',
+    company_logo_url: '',
+    address: emptyAddressData()
+  });
   
   // State for "other" company info (for dual-role user invitations)
   const [otherCompanyInfo, setOtherCompanyInfo] = useState<{
@@ -89,6 +109,69 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
     
     fetchOtherCompany();
   }, [user, companyType]);
+
+  // Load company data for settings tab
+  useEffect(() => {
+    const loadCompanyData = async () => {
+      const table = companyType === 'buyer' ? 'buyers' : 'suppliers';
+      const { data } = await supabase
+        .from(table)
+        .select('*')
+        .eq('id', companyId)
+        .single();
+      
+      if (data) {
+        setCompanyData({
+          company_name: data.company_name || '',
+          industry: data.industry || '',
+          contact_email: data.contact_email || '',
+          phone: data.phone || '',
+          company_logo_url: data.company_logo_url || '',
+          address: {
+            address_line1: data.address_line1 || '',
+            address_line2: data.address_line2 || '',
+            city: data.city || '',
+            state: data.state || '',
+            postal_code: data.postal_code || '',
+            country: data.country || ''
+          }
+        });
+      }
+    };
+    
+    loadCompanyData();
+  }, [companyId, companyType]);
+
+  const handleCompanySubmit = async () => {
+    setSavingCompany(true);
+    try {
+      const table = companyType === 'buyer' ? 'buyers' : 'suppliers';
+      const { error } = await supabase
+        .from(table)
+        .update({
+          company_name: companyData.company_name,
+          industry: companyData.industry,
+          contact_email: companyData.contact_email,
+          phone: companyData.phone,
+          company_logo_url: companyData.company_logo_url,
+          address_line1: companyData.address.address_line1,
+          address_line2: companyData.address.address_line2,
+          city: companyData.address.city,
+          state: companyData.address.state,
+          postal_code: companyData.address.postal_code,
+          country: companyData.address.country
+        })
+        .eq('id', companyId);
+      
+      if (error) throw error;
+      toast.success('Company settings saved successfully');
+    } catch (error) {
+      console.error('Error saving company settings:', error);
+      toast.error('Failed to save company settings');
+    } finally {
+      setSavingCompany(false);
+    }
+  };
 
   // Check permission - only company owner can access
   if (!loading && !canViewCompanyManagement()) {
@@ -318,7 +401,7 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
+        <TabsList className="flex flex-wrap h-auto gap-1">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="branches">Branches</TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
@@ -330,6 +413,22 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
               )}
             </TabsTrigger>
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
+            <TabsTrigger value="company" className="flex items-center gap-1">
+              <Settings className="h-3.5 w-3.5" />
+              Company
+            </TabsTrigger>
+            {companyType === 'buyer' && (
+              <>
+                <TabsTrigger value="onboarding" className="flex items-center gap-1">
+                  <FileText className="h-3.5 w-3.5" />
+                  Onboarding
+                </TabsTrigger>
+                <TabsTrigger value="notifications" className="flex items-center gap-1">
+                  <Bell className="h-3.5 w-3.5" />
+                  Notifications
+                </TabsTrigger>
+              </>
+            )}
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -478,6 +577,125 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
             onPermissionUpdate={refetch}
           />
         </TabsContent>
+
+        {/* Company Settings Tab */}
+        <TabsContent value="company" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Company Profile
+              </CardTitle>
+              <CardDescription>
+                Manage your company information and branding
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Logo Upload */}
+              <div className="space-y-2">
+                <Label>Company Logo</Label>
+                <LogoUploadWidget
+                  currentLogoUrl={companyData.company_logo_url}
+                  onLogoUpdate={(url) => setCompanyData(prev => ({ ...prev, company_logo_url: url || '' }))}
+                  embedded
+                />
+              </div>
+
+              {/* Company Name & Industry */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="company_name">Company Name</Label>
+                  <Input
+                    id="company_name"
+                    value={companyData.company_name}
+                    onChange={(e) => setCompanyData(prev => ({ ...prev, company_name: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="industry">Industry</Label>
+                  <SafeSelect
+                    value={companyData.industry}
+                    onValueChange={(value) => setCompanyData(prev => ({ ...prev, industry: value }))}
+                    placeholder="Select industry"
+                  >
+                    {VALID_INDUSTRIES.map((industry) => (
+                      <SafeSelectItem key={industry} value={industry}>
+                        {industry}
+                      </SafeSelectItem>
+                    ))}
+                  </SafeSelect>
+                </div>
+              </div>
+
+              {/* Contact Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="contact_email">Contact Email</Label>
+                  <Input
+                    id="contact_email"
+                    type="email"
+                    value={companyData.contact_email}
+                    onChange={(e) => setCompanyData(prev => ({ ...prev, contact_email: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={companyData.phone}
+                    onChange={(e) => setCompanyData(prev => ({ ...prev, phone: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              {/* Address Fields */}
+              <div className="space-y-2">
+                <Label>Company Address</Label>
+                <AddressFields
+                  data={companyData.address}
+                  onChange={(field, value) => 
+                    setCompanyData(prev => ({
+                      ...prev,
+                      address: { ...prev.address, [field]: value }
+                    }))
+                  }
+                />
+              </div>
+
+              <Button onClick={handleCompanySubmit} disabled={savingCompany}>
+                {savingCompany ? 'Saving...' : 'Save Company Settings'}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Onboarding Settings Tab (Buyer only) */}
+        {companyType === 'buyer' && (
+          <TabsContent value="onboarding" className="space-y-4">
+            <DefaultOnboardingSettings />
+          </TabsContent>
+        )}
+
+        {/* Notification Settings Tab (Buyer only) */}
+        {companyType === 'buyer' && (
+          <TabsContent value="notifications" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className="h-5 w-5" />
+                  Notification Settings
+                </CardTitle>
+                <CardDescription>
+                  Configure how and when you receive notifications
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <NotificationSettingsForm />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

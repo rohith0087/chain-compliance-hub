@@ -68,10 +68,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
-import { SubscriptionStatusWidget } from '@/components/subscription/SubscriptionStatusWidget';
 import { BranchSelector } from '@/components/company/BranchSelector';
 import { HelpButton } from '@/components/support/HelpButton';
 import { CommandPaletteSearch } from './CommandPaletteSearch';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { HelpCircle } from 'lucide-react';
 
 interface NavigationItem {
   title: string;
@@ -583,11 +584,9 @@ export function BuyerSidebarLayout({
               )}
             </div>
             
-            <div className="flex items-center gap-3">
-              <SubscriptionStatusWidget compact />
+            <div className="flex items-center gap-2">
               <NotificationCenter 
                 onNavigate={(tab, referenceId) => {
-                  // Handle special 'create-onboarding' tab to navigate to pipeline (which will auto-open create form via sessionStorage)
                   if (tab === 'create-onboarding') {
                     onTabChange('onboarding');
                     return;
@@ -600,6 +599,47 @@ export function BuyerSidebarLayout({
                 }}
                 onOpenHelpCenter={() => setHelpCenterOpen(true)}
               />
+              
+              {/* User Profile Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={profile?.avatar_url} />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                        {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64 bg-popover">
+                  <div 
+                    className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted rounded-md transition-colors"
+                    onClick={() => navigate('/profile-settings')}
+                  >
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={profile?.avatar_url} />
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-sm font-medium truncate">{profile?.full_name || user.name}</span>
+                      <span className="text-xs text-muted-foreground truncate">{profile?.email}</span>
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setHelpCenterOpen(true)} className="gap-2">
+                    <HelpCircle className="h-4 w-4" />
+                    Help & Support
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onLogout} className="gap-2 text-destructive focus:text-destructive">
+                    <LogOut className="h-4 w-4" />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </header>

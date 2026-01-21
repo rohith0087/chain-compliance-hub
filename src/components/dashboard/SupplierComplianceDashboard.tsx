@@ -202,7 +202,7 @@ const SupplierComplianceDashboard = () => {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="inline-flex h-12 items-center gap-1 rounded-full bg-muted/60 p-1.5 justify-start">
+        <TabsList className="inline-flex h-12 items-center gap-1 rounded-full bg-white border border-border/40 p-1.5 justify-start shadow-sm">
           <TabsTrigger 
             value="overview"
             className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground"

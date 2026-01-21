@@ -245,163 +245,9 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
         )}
       </div>
 
-      {/* Actionable Stats Overview */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* Branches Card - Clickable */}
-        <Card 
-          className="cursor-pointer hover:shadow-md transition-all hover:border-primary/50 group"
-          onClick={() => setActiveTab('branches')}
-        >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Branches</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-              <Building2 className="h-4 w-4 text-primary" />
-            </div>
-          </CardHeader>
-          <CardContent className="pb-2">
-            <div className="text-2xl font-bold">{stats.totalBranches}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.activeBranches} active
-            </p>
-          </CardContent>
-          <CardFooter className="pt-0 pb-3">
-            <div className="flex items-center gap-3 text-xs">
-              <button 
-                onClick={(e) => { e.stopPropagation(); setActiveTab('branches'); }}
-                className="text-primary hover:underline flex items-center gap-1"
-              >
-                <Plus className="h-3 w-3" /> Add Branch
-              </button>
-              <span className="text-muted-foreground">•</span>
-              <span className="text-muted-foreground group-hover:text-primary transition-colors flex items-center gap-1">
-                View All <ArrowRight className="h-3 w-3" />
-              </span>
-            </div>
-          </CardFooter>
-        </Card>
-
-        {/* Team Members Card - Clickable */}
-        <Card 
-          className="cursor-pointer hover:shadow-md transition-all hover:border-primary/50 group"
-          onClick={() => setActiveTab('users')}
-        >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Team Members</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-secondary/50 flex items-center justify-center group-hover:bg-secondary transition-colors">
-              <Users className="h-4 w-4 text-secondary-foreground" />
-            </div>
-          </CardHeader>
-          <CardContent className="pb-2">
-            <div className="text-2xl font-bold flex items-center gap-2">
-              {stats.totalUsers}
-              {stats.pendingInvitations > 0 && (
-                <Badge variant="secondary" className="text-xs font-normal">
-                  {stats.pendingInvitations} pending
-                </Badge>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {stats.pendingInvitations === 0 ? 'All invitations accepted' : 'Active team members'}
-            </p>
-          </CardContent>
-          <CardFooter className="pt-0 pb-3">
-            <button 
-              onClick={(e) => { e.stopPropagation(); setActiveTab('users'); }}
-              className="text-xs text-primary hover:underline flex items-center gap-1"
-            >
-              <UserPlus className="h-3 w-3" /> Invite Member
-            </button>
-          </CardFooter>
-        </Card>
-
-        {/* Current Branch Card - Smart Empty State */}
-        <Card className={!currentBranch ? 'border-dashed border-warning/50 bg-warning/5' : ''}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Current Branch</CardTitle>
-            <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
-              currentBranch ? 'bg-accent/50' : 'bg-warning/20'
-            }`}>
-              <MapPin className={`h-4 w-4 ${currentBranch ? 'text-accent-foreground' : 'text-warning'}`} />
-            </div>
-          </CardHeader>
-          <CardContent className="pb-2">
-            {currentBranch ? (
-              <>
-                <div className="text-2xl font-bold truncate">{currentBranch.branch_name}</div>
-                <p className="text-xs text-muted-foreground truncate">
-                  {currentBranch.location || 'No location set'}
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center gap-2 text-warning">
-                  <AlertCircle className="h-4 w-4" />
-                  <span className="text-sm font-medium">No branch selected</span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Select a branch to manage users & documents
-                </p>
-              </>
-            )}
-          </CardContent>
-          <CardFooter className="pt-0 pb-3">
-            {currentBranch ? (
-              <button 
-                onClick={() => {}}
-                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-              >
-                Switch Branch <ArrowRight className="h-3 w-3" />
-              </button>
-            ) : branches.length > 0 ? (
-              <BranchSelector
-                branches={branches}
-                currentBranch={currentBranch}
-                onBranchChange={switchBranch}
-                loading={loading}
-                compact
-              />
-            ) : (
-              <button 
-                onClick={() => setActiveTab('branches')}
-                className="text-xs text-primary hover:underline flex items-center gap-1"
-              >
-                <Plus className="h-3 w-3" /> Create First Branch
-              </button>
-            )}
-          </CardFooter>
-        </Card>
-
-        {/* Access Level Card - Informational */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Your Access</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
-              <Shield className="h-4 w-4 text-muted-foreground" />
-            </div>
-          </CardHeader>
-          <CardContent className="pb-2">
-            <div className="text-2xl font-bold flex items-center gap-2">
-              Admin
-              <CheckCircle2 className="h-5 w-5 text-success" />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Full company access
-            </p>
-          </CardContent>
-          <CardFooter className="pt-0 pb-3">
-            <button 
-              onClick={() => setActiveTab('permissions')}
-              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-            >
-              View Permissions <ArrowRight className="h-3 w-3" />
-            </button>
-          </CardFooter>
-        </Card>
-      </div>
-
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="flex flex-wrap h-auto gap-1">
+        <TabsList className="flex flex-wrap h-auto gap-1 justify-start w-auto">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="branches">Branches</TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
@@ -431,7 +277,162 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
             )}
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-4">
+        <TabsContent value="overview" className="space-y-6">
+          {/* Actionable Stats Overview - Now inside Overview tab only */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {/* Branches Card - Clickable */}
+            <Card 
+              className="cursor-pointer hover:shadow-md transition-all hover:border-primary/50 group"
+              onClick={() => setActiveTab('branches')}
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Branches</CardTitle>
+                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <Building2 className="h-4 w-4 text-primary" />
+                </div>
+              </CardHeader>
+              <CardContent className="pb-2">
+                <div className="text-2xl font-bold">{stats.totalBranches}</div>
+                <p className="text-xs text-muted-foreground">
+                  {stats.activeBranches} active
+                </p>
+              </CardContent>
+              <CardFooter className="pt-0 pb-3">
+                <div className="flex items-center gap-3 text-xs">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setActiveTab('branches'); }}
+                    className="text-primary hover:underline flex items-center gap-1"
+                  >
+                    <Plus className="h-3 w-3" /> Add Branch
+                  </button>
+                  <span className="text-muted-foreground">•</span>
+                  <span className="text-muted-foreground group-hover:text-primary transition-colors flex items-center gap-1">
+                    View All <ArrowRight className="h-3 w-3" />
+                  </span>
+                </div>
+              </CardFooter>
+            </Card>
+
+            {/* Team Members Card - Clickable */}
+            <Card 
+              className="cursor-pointer hover:shadow-md transition-all hover:border-primary/50 group"
+              onClick={() => setActiveTab('users')}
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Team Members</CardTitle>
+                <div className="h-8 w-8 rounded-lg bg-secondary/50 flex items-center justify-center group-hover:bg-secondary transition-colors">
+                  <Users className="h-4 w-4 text-secondary-foreground" />
+                </div>
+              </CardHeader>
+              <CardContent className="pb-2">
+                <div className="text-2xl font-bold flex items-center gap-2">
+                  {stats.totalUsers}
+                  {stats.pendingInvitations > 0 && (
+                    <Badge variant="secondary" className="text-xs font-normal">
+                      {stats.pendingInvitations} pending
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {stats.pendingInvitations === 0 ? 'All invitations accepted' : 'Active team members'}
+                </p>
+              </CardContent>
+              <CardFooter className="pt-0 pb-3">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setActiveTab('users'); }}
+                  className="text-xs text-primary hover:underline flex items-center gap-1"
+                >
+                  <UserPlus className="h-3 w-3" /> Invite Member
+                </button>
+              </CardFooter>
+            </Card>
+
+            {/* Current Branch Card - Smart Empty State */}
+            <Card className={!currentBranch ? 'border-dashed border-warning/50 bg-warning/5' : ''}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Current Branch</CardTitle>
+                <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                  currentBranch ? 'bg-accent/50' : 'bg-warning/20'
+                }`}>
+                  <MapPin className={`h-4 w-4 ${currentBranch ? 'text-accent-foreground' : 'text-warning'}`} />
+                </div>
+              </CardHeader>
+              <CardContent className="pb-2">
+                {currentBranch ? (
+                  <>
+                    <div className="text-2xl font-bold truncate">{currentBranch.branch_name}</div>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {currentBranch.location || 'No location set'}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 text-warning">
+                      <AlertCircle className="h-4 w-4" />
+                      <span className="text-sm font-medium">No branch selected</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Select a branch to manage users & documents
+                    </p>
+                  </>
+                )}
+              </CardContent>
+              <CardFooter className="pt-0 pb-3">
+                {currentBranch ? (
+                  <button 
+                    onClick={() => {}}
+                    className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                  >
+                    Switch Branch <ArrowRight className="h-3 w-3" />
+                  </button>
+                ) : branches.length > 0 ? (
+                  <BranchSelector
+                    branches={branches}
+                    currentBranch={currentBranch}
+                    onBranchChange={switchBranch}
+                    loading={loading}
+                    compact
+                  />
+                ) : (
+                  <button 
+                    onClick={() => setActiveTab('branches')}
+                    className="text-xs text-primary hover:underline flex items-center gap-1"
+                  >
+                    <Plus className="h-3 w-3" /> Create First Branch
+                  </button>
+                )}
+              </CardFooter>
+            </Card>
+
+            {/* Access Level Card - Informational */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Your Access</CardTitle>
+                <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+                  <Shield className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </CardHeader>
+              <CardContent className="pb-2">
+                <div className="text-2xl font-bold flex items-center gap-2">
+                  Admin
+                  <CheckCircle2 className="h-5 w-5 text-success" />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Full company access
+                </p>
+              </CardContent>
+              <CardFooter className="pt-0 pb-3">
+                <button 
+                  onClick={() => setActiveTab('permissions')}
+                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                >
+                  View Permissions <ArrowRight className="h-3 w-3" />
+                </button>
+              </CardFooter>
+            </Card>
+          </div>
+
+          {/* Invite Team + Recent Activity */}
           <div className="grid gap-4 md:grid-cols-2">
             {/* Recommended Action - Primary CTA */}
             <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">

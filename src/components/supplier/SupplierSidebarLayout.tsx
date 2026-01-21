@@ -67,11 +67,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
-import { SubscriptionStatusWidget } from '@/components/subscription/SubscriptionStatusWidget';
 import { BranchSelector } from '@/components/company/BranchSelector';
 import { HelpButton } from '@/components/support/HelpButton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
+import { HelpCircle } from 'lucide-react';
 
 interface NavigationItem {
   title: string;
@@ -523,11 +523,7 @@ export function SupplierSidebarLayout({
               <NotificationCenter
                 onNavigate={async (tab, referenceId) => {
                   onTabChange(tab);
-                  // Store reference ID in sessionStorage for deep-linking
-                  // Handle backward compatibility: referenceId could be request_id (new) or document_upload_id (old)
                   if (referenceId) {
-                    // Try to use it as request_id first (new format)
-                    // If it's actually a document_upload_id (old format), resolve to request_id
                     try {
                       const { data: uploadData } = await supabase
                         .from('document_uploads')
@@ -536,20 +532,67 @@ export function SupplierSidebarLayout({
                         .maybeSingle();
                       
                       if (uploadData?.request_id) {
-                        // Old format: was document_upload_id, use resolved request_id
                         sessionStorage.setItem('highlight_request_id', uploadData.request_id);
                       } else {
-                        // New format or direct request_id - use as-is
                         sessionStorage.setItem('highlight_request_id', referenceId);
                       }
                     } catch {
-                      // Fallback: use referenceId as-is
                       sessionStorage.setItem('highlight_request_id', referenceId);
                     }
                   }
                 }}
                 onOpenHelpCenter={() => setHelpCenterOpen(true)}
               />
+              
+              {/* User Profile Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={profile?.avatar_url} />
+                      <AvatarFallback className="bg-green-600 text-white text-sm">
+                        {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64 bg-popover">
+                  <div 
+                    className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted rounded-md transition-colors"
+                    onClick={() => navigate('/profile-settings')}
+                  >
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={profile?.avatar_url} />
+                      <AvatarFallback className="bg-green-600 text-white">
+                        {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-sm font-medium truncate">{profile?.full_name || user.name}</span>
+                      <span className="text-xs text-muted-foreground truncate">{profile?.email}</span>
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setHelpCenterOpen(true)} className="gap-2">
+                    <HelpCircle className="h-4 w-4" />
+                    Help & Support
+                  </DropdownMenuItem>
+                  {hasRole('buyer') && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => onRoleSwitch('buyer')} className="gap-2">
+                        <User className="h-4 w-4" />
+                        {t('common:navigation.switchTo', { role: 'buyer' })}
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onLogout} className="gap-2 text-destructive focus:text-destructive">
+                    <LogOut className="h-4 w-4" />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </header>

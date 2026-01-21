@@ -202,10 +202,25 @@ const SupplierComplianceDashboard = () => {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        <TabsList className="inline-flex h-12 items-center gap-1 rounded-full bg-muted/60 p-1.5 justify-start">
+          <TabsTrigger 
+            value="overview"
+            className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground"
+          >
+            Overview
+          </TabsTrigger>
+          <TabsTrigger 
+            value="performance"
+            className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground"
+          >
+            Performance
+          </TabsTrigger>
+          <TabsTrigger 
+            value="analytics"
+            className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground"
+          >
+            Analytics
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">

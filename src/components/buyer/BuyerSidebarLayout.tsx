@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Building2, 
@@ -152,8 +152,50 @@ export function BuyerSidebarLayout({
   // State to control Help Center from notifications
   const [helpCenterOpen, setHelpCenterOpen] = useState(false);
   
-  // State for expanded submenus
-  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
+  // Single active dropdown state (accordion behavior)
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Hover handlers for improved UX
+  const handleMouseEnter = useCallback((value: string, hasSubmenu: boolean) => {
+    if (!hasSubmenu) return;
+    
+    // Clear any pending timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    
+    // Delay before opening to prevent accidental triggers
+    hoverTimeoutRef.current = setTimeout(() => {
+      setActiveDropdown(value);
+    }, 150);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    
+    // Small delay before closing to allow moving to submenu
+    hoverTimeoutRef.current = setTimeout(() => {
+      setActiveDropdown(null);
+    }, 200);
+  }, []);
+
+  const cancelHoverTimeout = useCallback(() => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Resolve company ID for team members vs owners
   const [resolvedCompanyId, setResolvedCompanyId] = useState<string | null>(null);
@@ -297,21 +339,15 @@ export function BuyerSidebarLayout({
     return item.submenu.some(sub => isActiveRoute(sub.value));
   };
 
+  // Toggle submenu on click (accordion behavior - only one open at a time)
   const toggleSubmenu = (value: string) => {
-    setExpandedMenus(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(value)) {
-        newSet.delete(value);
-      } else {
-        newSet.add(value);
-      }
-      return newSet;
-    });
+    setActiveDropdown(prev => prev === value ? null : value);
   };
 
   const isSubmenuExpanded = (item: NavigationItem) => {
     if (!item.submenu) return false;
-    return expandedMenus.has(item.value) || hasActiveSubmenu(item);
+    // Expanded if actively open OR has active child route
+    return activeDropdown === item.value || hasActiveSubmenu(item);
   };
 
   const handleMenuClick = (value: string) => {
@@ -444,7 +480,13 @@ export function BuyerSidebarLayout({
             <SidebarGroupContent>
               <SidebarMenu>
                 {navigationItems.map((item) => (
-                <SidebarMenuItem key={item.value} className="relative" data-guide-id={`nav-${item.value}`}>
+                <SidebarMenuItem 
+                  key={item.value} 
+                  className="relative" 
+                  data-guide-id={`nav-${item.value}`}
+                  onMouseEnter={() => handleMouseEnter(item.value, !!item.submenu)}
+                  onMouseLeave={handleMouseLeave}
+                >
                     {/* Active indicator gradient bar */}
                     {isActiveRoute(item.value) && (
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary to-secondary rounded-r-full" />
@@ -481,7 +523,10 @@ export function BuyerSidebarLayout({
                       )}
                     </SidebarMenuButton>
                     {item.submenu && isSubmenuExpanded(item) && (
-                      <SidebarMenuSub>
+                      <SidebarMenuSub
+                        onMouseEnter={cancelHoverTimeout}
+                        onMouseLeave={handleMouseLeave}
+                      >
                         {item.submenu.map((subItem) => (
                           <SidebarMenuSubItem key={subItem.value}>
                             <SidebarMenuSubButton

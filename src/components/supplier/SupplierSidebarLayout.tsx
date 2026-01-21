@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Building2, 
@@ -152,6 +152,48 @@ export function SupplierSidebarLayout({
   
   // State to control Help Center from notifications
   const [helpCenterOpen, setHelpCenterOpen] = useState(false);
+  
+  // Single active dropdown state for hover UX (future-proofing for submenus)
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Hover handlers for improved UX
+  const handleMouseEnter = useCallback((value: string, hasSubmenu: boolean) => {
+    if (!hasSubmenu) return;
+    
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    
+    hoverTimeoutRef.current = setTimeout(() => {
+      setActiveDropdown(value);
+    }, 150);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    
+    hoverTimeoutRef.current = setTimeout(() => {
+      setActiveDropdown(null);
+    }, 200);
+  }, []);
+
+  const cancelHoverTimeout = useCallback(() => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Resolve company ID for team members
   const [resolvedSupplierId, setResolvedSupplierId] = useState<string | null>(supplierProfile?.id || null);
@@ -423,13 +465,17 @@ export function SupplierSidebarLayout({
             <SidebarGroupContent>
               <SidebarMenu>
                 {filteredNavigationItems.map((item) => (
-                  <SidebarMenuItem key={item.value}>
+                  <SidebarMenuItem 
+                    key={item.value}
+                    onMouseEnter={() => handleMouseEnter(item.value, !!item.submenu)}
+                    onMouseLeave={handleMouseLeave}
+                  >
                     <SidebarMenuButton
                       isActive={isActiveRoute(item.value)}
                       onClick={() => handleMenuClick(item.value)}
-                      className="group"
+                      className="group transition-colors duration-200"
                     >
-                      <item.icon className="h-4 w-4" />
+                      <item.icon className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
                       <span>{item.title}</span>
                       {item.badge && (
                         <Badge variant="secondary" className="ml-auto">

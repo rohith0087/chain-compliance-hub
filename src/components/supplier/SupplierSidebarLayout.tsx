@@ -28,7 +28,8 @@ import {
   UserCog,
   Play,
   Volume2,
-  VolumeX
+  VolumeX,
+  HelpCircle
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
@@ -71,7 +72,25 @@ import { BranchSelector } from '@/components/company/BranchSelector';
 import { HelpButton } from '@/components/support/HelpButton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
-import { HelpCircle } from 'lucide-react';
+import { WhatsNewDialog } from '@/components/shared/WhatsNewDialog';
+import { APP_VERSION } from '@/config/version';
+
+// Version button component for sidebar footer
+function VersionButton() {
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
+  
+  return (
+    <>
+      <button
+        onClick={() => setShowWhatsNew(true)}
+        className="w-full py-2.5 px-4 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors text-primary font-medium text-sm"
+      >
+        v{APP_VERSION}
+      </button>
+      <WhatsNewDialog open={showWhatsNew} onOpenChange={setShowWhatsNew} />
+    </>
+  );
+}
 
 interface NavigationItem {
   title: string;
@@ -425,51 +444,8 @@ export function SupplierSidebarLayout({
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter className="border-t border-gray-200/50 p-3 bg-white/50">
-          <div className="flex items-center gap-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-auto p-2 w-full justify-start">
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={profile?.avatar_url} />
-                    <AvatarFallback>
-                      {user.name?.charAt(0)?.toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  {!collapsed && (
-                    <div className="flex flex-col items-start ml-2 flex-1">
-                      <span className="text-sm font-medium truncate">
-                        {user.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {hasAllBranchAccess || isOwner
-                          ? 'Supplier' 
-                          : `Supplier - ${formatRole(role) || 'Team Member'}`
-                        }
-                      </span>
-                    </div>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={onShowSettings}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  {t('supplier:settings')}
-                </DropdownMenuItem>
-                {hasRole('buyer') && (
-                  <DropdownMenuItem onClick={() => onRoleSwitch('buyer')}>
-                    <User className="mr-2 h-4 w-4" />
-                    {t('common:navigation.switchTo', { role: 'buyer' })}
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={onLogout} className="text-destructive">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  {t('supplier:logout')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+        <SidebarFooter className="p-3">
+          <VersionButton />
         </SidebarFooter>
       </Sidebar>
 

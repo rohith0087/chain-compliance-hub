@@ -388,8 +388,8 @@ export function BuyerSidebarLayout({
 
   return (
     <div className={`flex w-full ${activeTab === 'messages' ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
-      <Sidebar className="border-r bg-white/95 backdrop-blur-sm">
-        <SidebarHeader className="border-b border-gray-200/50 px-3 py-4 bg-white/50">
+      <Sidebar className="border-r border-gray-200 bg-white">
+        <SidebarHeader className="border-b border-gray-200 px-3 py-4 bg-white">
           <div className="flex items-center gap-3">
             {/* Company Logo - displays uploaded logo or default Building2 icon */}
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary overflow-hidden">

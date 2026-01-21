@@ -29,7 +29,8 @@ import {
   Package,
   FolderKanban,
   FileImage,
-  MessageSquare
+  MessageSquare,
+  HelpCircle
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
@@ -72,7 +73,25 @@ import { BranchSelector } from '@/components/company/BranchSelector';
 import { HelpButton } from '@/components/support/HelpButton';
 import { CommandPaletteSearch } from './CommandPaletteSearch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { HelpCircle } from 'lucide-react';
+import { WhatsNewDialog } from '@/components/shared/WhatsNewDialog';
+import { APP_VERSION } from '@/config/version';
+
+// Version button component for sidebar footer
+function VersionButton() {
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
+  
+  return (
+    <>
+      <button
+        onClick={() => setShowWhatsNew(true)}
+        className="w-full py-2.5 px-4 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors text-primary font-medium text-sm"
+      >
+        v{APP_VERSION}
+      </button>
+      <WhatsNewDialog open={showWhatsNew} onOpenChange={setShowWhatsNew} />
+    </>
+  );
+}
 
 interface NavigationItem {
   title: string;
@@ -494,50 +513,7 @@ export function BuyerSidebarLayout({
         </SidebarContent>
 
         <SidebarFooter className="p-3">
-          <div className="flex items-center gap-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-auto p-2 w-full justify-start hover:bg-muted focus:bg-muted" data-guide-id="profile-dropdown">
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={profile?.avatar_url} />
-                    <AvatarFallback className="bg-muted text-muted-foreground text-xs">
-                      {user.name?.charAt(0)?.toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  {!collapsed && (
-                    <div className="flex flex-col items-start ml-2 flex-1">
-                      <span className="text-sm font-medium truncate text-foreground">
-                        {user.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {hasAllBranchAccess 
-                          ? 'Buyer' 
-                          : `Buyer - ${currentBranch?.branch_name || 'No Branch'}`
-                        }
-                      </span>
-                    </div>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-popover">
-                <DropdownMenuItem onClick={onShowSettings} className="hover:bg-muted focus:bg-muted" data-guide-id="settings-menu-item">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
-                </DropdownMenuItem>
-                {hasRole('supplier') && (
-                  <DropdownMenuItem onClick={() => onRoleSwitch('supplier')} className="hover:bg-muted focus:bg-muted">
-                    <User className="mr-2 h-4 w-4" />
-                    {t('common:navigation.switchTo', { role: 'supplier' })}
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={onLogout} className="text-destructive hover:bg-destructive/10 focus:bg-destructive/10 focus:text-destructive">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  {t('common:navigation.logout')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <VersionButton />
         </SidebarFooter>
       </Sidebar>
 

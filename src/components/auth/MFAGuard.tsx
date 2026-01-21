@@ -1,10 +1,7 @@
-import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useMFA } from '@/hooks/useMFA';
 import { useAuth } from '@/hooks/useAuth';
 import { MFAVerification } from './MFAVerification';
-import { MFAEnrollment } from './MFAEnrollment';
-import { MFAGracePeriodBanner } from './MFAGracePeriodBanner';
 
 interface MFAGuardProps {
   children: React.ReactNode;
@@ -12,8 +9,7 @@ interface MFAGuardProps {
 
 export const MFAGuard = ({ children }: MFAGuardProps) => {
   const { signOut } = useAuth();
-  const { mfaEnrolled, mfaVerified, gracePeriodExpired, loading } = useMFA();
-  const [showEnrollment, setShowEnrollment] = useState(false);
+  const { mfaEnrolled, mfaVerified, loading } = useMFA();
 
   // Still loading MFA status
   if (loading) {
@@ -39,41 +35,6 @@ export const MFAGuard = ({ children }: MFAGuardProps) => {
     );
   }
 
-  // MFA not enrolled and grace period expired → force enrollment
-  if (!mfaEnrolled && gracePeriodExpired) {
-    return (
-      <MFAEnrollment 
-        mandatory 
-        onComplete={() => {
-          // Force refresh to update state
-          window.location.reload();
-        }}
-      />
-    );
-  }
-
-  // User chose to set up MFA from banner
-  if (showEnrollment) {
-    return (
-      <MFAEnrollment 
-        onComplete={() => {
-          setShowEnrollment(false);
-          window.location.reload();
-        }}
-        onSkip={() => setShowEnrollment(false)}
-      />
-    );
-  }
-
-  // All good - show app with optional grace period banner as toast
-  return (
-    <>
-      {!mfaEnrolled && (
-        <div className="fixed bottom-4 right-4 z-50 max-w-sm">
-          <MFAGracePeriodBanner onSetupClick={() => setShowEnrollment(true)} />
-        </div>
-      )}
-      {children}
-    </>
-  );
+  // All good - show app (MFA is now optional)
+  return <>{children}</>;
 };

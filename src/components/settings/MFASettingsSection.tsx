@@ -47,16 +47,15 @@ export const MFASettingsSection = () => {
     
     toast({
       title: "MFA Disabled",
-      description: "You must now set up MFA again to continue.",
+      description: "Two-factor authentication has been disabled for your account.",
     });
 
     setShowDisableDialog(false);
     setConfirmText('');
     setDisabling(false);
     
-    // Force immediate re-enrollment
-    setForceReenrollment(true);
-    setShowEnrollment(true);
+    // Refresh MFA status
+    checkMFAStatus();
   };
 
   const handleRegenerateRecoveryCodes = async () => {
@@ -189,14 +188,14 @@ export const MFASettingsSection = () => {
                       Disable Two-Factor Authentication
                     </DialogTitle>
                     <DialogDescription>
-                      This will remove your current MFA setup. You will be required to set up MFA again immediately.
+                      This will remove your current MFA setup. Your account will no longer require a verification code when signing in.
                     </DialogDescription>
                   </DialogHeader>
                   
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      Warning: After disabling, you must immediately set up MFA again to continue using your account.
+                      Warning: Disabling MFA will make your account less secure. You can re-enable it anytime from settings.
                     </AlertDescription>
                   </Alert>
 
@@ -225,7 +224,7 @@ export const MFASettingsSection = () => {
                           Disabling...
                         </>
                       ) : (
-                        'Disable & Re-setup MFA'
+                        'Disable MFA'
                       )}
                     </Button>
                   </DialogFooter>
@@ -269,7 +268,7 @@ export const MFASettingsSection = () => {
           <>
             <p className="text-sm text-muted-foreground">
               Protect your account by requiring a verification code from your authenticator 
-              app when signing in. This is mandatory and must be set up within your grace period.
+              app when signing in.
             </p>
 
             <Button onClick={() => setShowEnrollment(true)} className="w-full">

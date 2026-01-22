@@ -902,6 +902,25 @@ export const OnboardingRequestDetailDrawer = ({
                     </TooltipProvider>
                   )}
 
+                  {/* Approve directly when no documents were required */}
+                  {submissions.length === 0 && documents.length === 0 && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            className="flex-1"
+                            onClick={handleApprove}
+                            disabled={actionLoading}
+                          >
+                            <ThumbsUp className="mr-2 h-4 w-4" />
+                            Approve
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Approve this supplier (no documents required)</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>

@@ -385,7 +385,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
           </div>
         </DialogHeader>
         
-        <ScrollArea className="flex-1 min-h-0 max-h-[calc(90vh-180px)]">
+        <ScrollArea className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
           <div className="px-6 py-5">
             {/* Two-column grid layout for desktop */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

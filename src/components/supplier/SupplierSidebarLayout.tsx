@@ -29,7 +29,8 @@ import {
   Play,
   Volume2,
   VolumeX,
-  HelpCircle
+  HelpCircle,
+  ArrowLeftRight
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
@@ -566,6 +567,23 @@ export function SupplierSidebarLayout({
                 onOpenHelpCenter={() => setHelpCenterOpen(true)}
               />
               
+              {/* Role Switch Button - Only for dual-role users */}
+              {hasRole('buyer') && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onRoleSwitch('buyer')}
+                      className="h-9 w-9 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                    >
+                      <ArrowLeftRight className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Switch to Buyer</TooltipContent>
+                </Tooltip>
+              )}
+              
               {/* User Profile Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -599,15 +617,6 @@ export function SupplierSidebarLayout({
                     <HelpCircle className="h-4 w-4" />
                     Help & Support
                   </DropdownMenuItem>
-                  {hasRole('buyer') && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => onRoleSwitch('buyer')} className="gap-2">
-                        <User className="h-4 w-4" />
-                        {t('common:navigation.switchTo', { role: 'buyer' })}
-                      </DropdownMenuItem>
-                    </>
-                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onLogout} className="gap-2 text-destructive focus:text-destructive">
                     <LogOut className="h-4 w-4" />

@@ -30,7 +30,8 @@ import {
   FolderKanban,
   FileImage,
   MessageSquare,
-  HelpCircle
+  HelpCircle,
+  ArrowLeftRight
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
@@ -620,6 +621,23 @@ export function BuyerSidebarLayout({
                 }}
                 onOpenHelpCenter={() => setHelpCenterOpen(true)}
               />
+              
+              {/* Role Switch Button - Only for dual-role users */}
+              {hasRole('supplier') && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onRoleSwitch('supplier')}
+                      className="h-9 w-9 hover:bg-green-50 hover:text-green-600 transition-colors"
+                    >
+                      <ArrowLeftRight className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Switch to Supplier</TooltipContent>
+                </Tooltip>
+              )}
               
               {/* User Profile Dropdown */}
               <DropdownMenu>

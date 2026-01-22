@@ -219,19 +219,29 @@ export const OnboardingPipelineView = () => {
       if (error) throw error;
       setRequests(data || []);
 
-      // Load requirement counts
-      const counts: Record<string, number> = {};
-      if (data) {
-        for (const req of data) {
-          const { count } = await supabase
-            .from('onboarding_document_requirements')
-            .select('id', { count: 'exact', head: true })
-            .eq('onboarding_request_id', req.id);
-          
-          counts[req.id] = count ?? 0;
+      // Load requirement counts in a single batch query (fixes N+1 problem)
+      if (data && data.length > 0) {
+        const requestIds = data.map(r => r.id);
+        
+        const { data: requirementsData } = await supabase
+          .from('onboarding_document_requirements')
+          .select('onboarding_request_id')
+          .in('onboarding_request_id', requestIds);
+        
+        // Aggregate counts client-side
+        const counts: Record<string, number> = {};
+        requestIds.forEach(id => counts[id] = 0); // Initialize all to 0
+        
+        if (requirementsData) {
+          requirementsData.forEach(req => {
+            counts[req.onboarding_request_id] = (counts[req.onboarding_request_id] || 0) + 1;
+          });
         }
+        
+        setRequirementCounts(counts);
+      } else {
+        setRequirementCounts({});
       }
-      setRequirementCounts(counts);
     } catch (error) {
       console.error('Error loading requests:', error);
       toast({

@@ -607,21 +607,6 @@ export function BuyerSidebarLayout({
             </div>
             
             <div className="flex items-center gap-2">
-              <NotificationCenter 
-                onNavigate={(tab, referenceId) => {
-                  if (tab === 'create-onboarding') {
-                    onTabChange('onboarding');
-                    return;
-                  }
-                  
-                  onTabChange(tab);
-                  if (referenceId) {
-                    sessionStorage.setItem('highlight_document_request_id', referenceId);
-                  }
-                }}
-                onOpenHelpCenter={() => setHelpCenterOpen(true)}
-              />
-              
               {/* Role Switch Button - Only for dual-role users */}
               {hasRole('supplier') && (
                 <Tooltip>
@@ -638,6 +623,21 @@ export function BuyerSidebarLayout({
                   <TooltipContent>Switch to Supplier</TooltipContent>
                 </Tooltip>
               )}
+              
+              <NotificationCenter 
+                onNavigate={(tab, referenceId) => {
+                  if (tab === 'create-onboarding') {
+                    onTabChange('onboarding');
+                    return;
+                  }
+                  
+                  onTabChange(tab);
+                  if (referenceId) {
+                    sessionStorage.setItem('highlight_document_request_id', referenceId);
+                  }
+                }}
+                onOpenHelpCenter={() => setHelpCenterOpen(true)}
+              />
               
               {/* User Profile Dropdown */}
               <DropdownMenu>

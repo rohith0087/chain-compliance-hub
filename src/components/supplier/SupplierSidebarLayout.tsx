@@ -543,6 +543,23 @@ export function SupplierSidebarLayout({
                       : 'Mute notification sounds'}
                 </TooltipContent>
               </Tooltip>
+              {/* Role Switch Button - Only for dual-role users */}
+              {hasRole('buyer') && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onRoleSwitch('buyer')}
+                      className="h-9 w-9 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                    >
+                      <ArrowLeftRight className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Switch to Buyer</TooltipContent>
+                </Tooltip>
+              )}
+              
               <NotificationCenter
                 onNavigate={async (tab, referenceId) => {
                   onTabChange(tab);
@@ -566,23 +583,6 @@ export function SupplierSidebarLayout({
                 }}
                 onOpenHelpCenter={() => setHelpCenterOpen(true)}
               />
-              
-              {/* Role Switch Button - Only for dual-role users */}
-              {hasRole('buyer') && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onRoleSwitch('buyer')}
-                      className="h-9 w-9 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                    >
-                      <ArrowLeftRight className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Switch to Buyer</TooltipContent>
-                </Tooltip>
-              )}
               
               {/* User Profile Dropdown */}
               <DropdownMenu>

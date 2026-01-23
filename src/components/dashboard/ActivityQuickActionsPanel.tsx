@@ -225,20 +225,20 @@ export function ActivityQuickActionsPanel({
 
       {/* Quick Actions */}
       <Card className="flex-shrink-0 border-0 bg-gradient-to-br from-card via-card to-muted/30">
-        <CardHeader className="pb-2 pt-3">
+        <CardHeader className="pb-3 pt-4">
           <CardTitle className="text-sm font-semibold">Quick Actions</CardTitle>
         </CardHeader>
-        <CardContent className="pb-3">
-          <div className="grid grid-cols-2 gap-2">
+        <CardContent className="pb-4 px-4">
+          <div className="grid grid-cols-2 gap-3">
             {quickActions.map((action) => (
               <Button
                 key={action.label}
                 size="sm"
-                className={cn("h-9 text-xs", action.color)}
+                className={cn("h-10 text-xs font-medium justify-start px-3", action.color)}
                 onClick={action.onClick}
               >
-                <action.icon className="w-3.5 h-3.5 mr-1.5" />
-                {action.label}
+                <action.icon className="w-4 h-4 mr-2 flex-shrink-0" />
+                <span className="truncate">{action.label}</span>
               </Button>
             ))}
           </div>

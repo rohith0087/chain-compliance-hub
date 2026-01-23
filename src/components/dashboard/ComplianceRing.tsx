@@ -61,9 +61,14 @@ export function ComplianceRing({ score, size = 140, strokeWidth = 10 }: Complian
         <AnimatedNumber 
           value={score} 
           suffix="%" 
-          className="text-3xl font-bold text-foreground"
+          className={cn(
+            "font-bold text-foreground",
+            size <= 80 ? "text-lg" : size <= 120 ? "text-2xl" : "text-3xl"
+          )}
         />
-        <span className="text-xs text-muted-foreground">Completed</span>
+        {size > 80 && (
+          <span className="text-xs text-muted-foreground">Completed</span>
+        )}
       </div>
     </div>
   );

@@ -666,6 +666,11 @@ export function BuyerSidebarLayout({
                     </div>
                   </div>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/help')} className="gap-2">
+                    <HelpCircle className="h-4 w-4" />
+                    Help & Support
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onLogout} className="gap-2 text-destructive focus:text-destructive">
                     <LogOut className="h-4 w-4" />
                     Sign out

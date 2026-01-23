@@ -19,6 +19,7 @@ interface ExpiringDocument {
   id: string;
   document_name: string;
   document_type: string;
+  supplier_id: string;
   supplier_name: string;
   expiration_date: string;
   days_until_expiry: number;
@@ -63,7 +64,8 @@ export function ExpiryPanel({ buyerId, onNavigateToDocuments }: ExpiryPanelProps
               document_type,
               buyer_id,
               branch_id,
-              suppliers (company_name)
+              supplier_id,
+              suppliers (id, company_name)
             )
           `)
           .eq('document_requests.buyer_id', buyerId)
@@ -93,6 +95,7 @@ export function ExpiryPanel({ buyerId, onNavigateToDocuments }: ExpiryPanelProps
             id: doc.id,
             document_name: request?.title || doc.file_name,
             document_type: request?.document_type || 'Document',
+            supplier_id: request?.supplier_id || '',
             supplier_name: request?.suppliers?.company_name || 'Unknown',
             expiration_date: doc.expiration_date,
             days_until_expiry: daysUntil,
@@ -153,9 +156,20 @@ export function ExpiryPanel({ buyerId, onNavigateToDocuments }: ExpiryPanelProps
 
   const totalExpiring = documents.critical.length + documents.soon.length + documents.upcoming.length + documents.expired.length;
 
-  const handleRequestRenewal = (requestId: string) => {
-    sessionStorage.setItem('buyer_docs_highlight_request', requestId);
-    onNavigateToDocuments('expiring');
+  const handleDocumentClick = (doc: ExpiringDocument) => {
+    // Set multiple filters via sessionStorage for deep-link navigation
+    sessionStorage.setItem('buyer_docs_filter_search', doc.document_name);
+    if (doc.supplier_id) {
+      sessionStorage.setItem('buyer_docs_filter_supplier', doc.supplier_id);
+    }
+    sessionStorage.setItem('buyer_docs_filter_expiration', 'expiring_soon');
+    sessionStorage.setItem('buyer_docs_highlight_request', doc.request_id);
+    onNavigateToDocuments();
+  };
+
+  const handleRequestRenewal = (doc: ExpiringDocument, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent row click
+    handleDocumentClick(doc);
   };
 
   return (
@@ -220,8 +234,9 @@ export function ExpiryPanel({ buyerId, onNavigateToDocuments }: ExpiryPanelProps
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: index * 0.03 }}
+                          onClick={() => handleDocumentClick(doc)}
                           className={cn(
-                            "group p-3 rounded-lg border transition-all duration-200",
+                            "group p-3 rounded-lg border transition-all duration-200 cursor-pointer",
                             "hover:shadow-md hover:border-primary/30",
                             getDocumentColor(doc.days_until_expiry)
                           )}
@@ -246,7 +261,7 @@ export function ExpiryPanel({ buyerId, onNavigateToDocuments }: ExpiryPanelProps
                                 variant="ghost"
                                 size="sm"
                                 className="h-6 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() => handleRequestRenewal(doc.request_id)}
+                                onClick={(e) => handleRequestRenewal(doc, e)}
                               >
                                 <RefreshCw className="w-3 h-3 mr-1" />
                                 Renew

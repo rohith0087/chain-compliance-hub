@@ -17,6 +17,7 @@ interface AttentionPanelProps {
 interface AttentionItem {
   id: string;
   title: string;
+  supplier_id: string;
   supplier_name: string;
   status: string;
   due_date: string | null;
@@ -50,6 +51,7 @@ export function AttentionPanel({ buyerId, onNavigateToDocuments }: AttentionPane
             due_date, 
             priority,
             updated_at,
+            supplier_id,
             suppliers (company_name)
           `)
           .eq('buyer_id', buyerId)
@@ -70,6 +72,7 @@ export function AttentionPanel({ buyerId, onNavigateToDocuments }: AttentionPane
             due_date, 
             priority,
             updated_at,
+            supplier_id,
             suppliers (company_name)
           `)
           .eq('buyer_id', buyerId)
@@ -84,6 +87,7 @@ export function AttentionPanel({ buyerId, onNavigateToDocuments }: AttentionPane
         const submitted = (submittedData || []).map(item => ({
           id: item.id,
           title: item.title,
+          supplier_id: item.supplier_id,
           supplier_name: (item.suppliers as any)?.company_name || 'Unknown',
           status: 'submitted',
           due_date: item.due_date,
@@ -95,6 +99,7 @@ export function AttentionPanel({ buyerId, onNavigateToDocuments }: AttentionPane
         const overdue = (overdueData || []).map(item => ({
           id: item.id,
           title: item.title,
+          supplier_id: item.supplier_id,
           supplier_name: (item.suppliers as any)?.company_name || 'Unknown',
           status: 'overdue',
           due_date: item.due_date,
@@ -133,10 +138,23 @@ export function AttentionPanel({ buyerId, onNavigateToDocuments }: AttentionPane
     return `${diffDays}d ago`;
   };
 
+  const handleItemClick = (item: AttentionItem) => {
+    // Set multiple filters via sessionStorage for deep-link navigation
+    sessionStorage.setItem('buyer_docs_filter_search', item.title);
+    if (item.supplier_id) {
+      sessionStorage.setItem('buyer_docs_filter_supplier', item.supplier_id);
+    }
+    sessionStorage.setItem('buyer_docs_filter_status', item.is_overdue ? 'pending' : 'submitted');
+    sessionStorage.setItem('buyer_docs_highlight_request', item.id);
+    onNavigateToDocuments();
+  };
+
   const handleQuickAction = async (itemId: string, action: 'view' | 'approve' | 'decline') => {
     if (action === 'view') {
-      sessionStorage.setItem('buyer_docs_highlight_request', itemId);
-      onNavigateToDocuments('submitted');
+      const item = items.find(i => i.id === itemId);
+      if (item) {
+        handleItemClick(item);
+      }
     }
     // Approve/Decline would need more complex handling with modals
   };
@@ -190,8 +208,9 @@ export function AttentionPanel({ buyerId, onNavigateToDocuments }: AttentionPane
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05 }}
+                  onClick={() => handleItemClick(item)}
                   className={cn(
-                    "group p-3 rounded-lg border transition-all duration-200",
+                    "group p-3 rounded-lg border transition-all duration-200 cursor-pointer",
                     "hover:shadow-md hover:border-primary/30",
                     item.is_overdue 
                       ? "bg-red-500/5 border-red-500/20" 

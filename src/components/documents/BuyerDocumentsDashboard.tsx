@@ -71,14 +71,34 @@ const BuyerDocumentsDashboard = () => {
   useEffect(() => {
     const presetStatus = sessionStorage.getItem('buyer_docs_filter_status');
     const presetExpiration = sessionStorage.getItem('buyer_docs_filter_expiration');
+    const presetSearch = sessionStorage.getItem('buyer_docs_filter_search');
+    const presetSupplier = sessionStorage.getItem('buyer_docs_filter_supplier');
+    
+    const newFilters: Partial<typeof filters> = {};
     
     if (presetStatus) {
-      setFilters(prev => ({ ...prev, status: presetStatus }));
+      newFilters.status = presetStatus;
       sessionStorage.removeItem('buyer_docs_filter_status');
     }
     if (presetExpiration) {
-      setFilters(prev => ({ ...prev, expirationStatus: presetExpiration }));
+      newFilters.expirationStatus = presetExpiration;
       sessionStorage.removeItem('buyer_docs_filter_expiration');
+    }
+    if (presetSearch) {
+      newFilters.search = presetSearch;
+      sessionStorage.removeItem('buyer_docs_filter_search');
+    }
+    if (presetSupplier) {
+      // Validate supplier ID format (UUID) to prevent injection
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(presetSupplier)) {
+        newFilters.supplier = presetSupplier;
+      }
+      sessionStorage.removeItem('buyer_docs_filter_supplier');
+    }
+    
+    if (Object.keys(newFilters).length > 0) {
+      setFilters(prev => ({ ...prev, ...newFilters }));
     }
   }, []);
 

@@ -70,7 +70,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import { BranchSelector } from '@/components/company/BranchSelector';
-import { HelpButton } from '@/components/support/HelpButton';
+
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 import { WhatsNewDialog } from '@/components/shared/WhatsNewDialog';
@@ -151,8 +151,6 @@ export function SupplierSidebarLayout({
   const collapsed = sidebar?.state === 'collapsed';
   const { isEnabled, isUnlocked, toggleEnabled } = useNotificationSound();
   
-  // State to control Help Center from notifications
-  const [helpCenterOpen, setHelpCenterOpen] = useState(false);
   
   // Single active dropdown state for hover UX (future-proofing for submenus)
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -581,7 +579,7 @@ export function SupplierSidebarLayout({
                     }
                   }
                 }}
-                onOpenHelpCenter={() => setHelpCenterOpen(true)}
+                
               />
               
               {/* User Profile Dropdown */}
@@ -613,11 +611,6 @@ export function SupplierSidebarLayout({
                     </div>
                   </div>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setHelpCenterOpen(true)} className="gap-2">
-                    <HelpCircle className="h-4 w-4" />
-                    Help & Support
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onLogout} className="gap-2 text-destructive focus:text-destructive">
                     <LogOut className="h-4 w-4" />
                     Sign out
@@ -642,22 +635,6 @@ export function SupplierSidebarLayout({
         </main>
       </div>
 
-      {/* Floating Help Button - hidden on messages tab */}
-      {activeTab !== 'messages' && (
-        <HelpButton 
-          source="supplier_portal"
-          user={{
-            id: profile?.id,
-            email: profile?.email,
-            name: profile?.full_name || user.name,
-            companyId: supplierProfile?.id,
-            companyName: supplierProfile?.company_name,
-            userType: 'supplier'
-          }}
-          isOpen={helpCenterOpen}
-          onOpenChange={setHelpCenterOpen}
-        />
-      )}
     </div>
   );
 }

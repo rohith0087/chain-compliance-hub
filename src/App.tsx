@@ -24,6 +24,7 @@ import PlatformAdminDashboard from "./pages/PlatformAdminDashboard";
 
 import SharedDocumentViewer from "./components/shared/SharedDocumentViewer";
 import NotFound from "./pages/NotFound";
+import HelpCenterPage from "./pages/HelpCenterPage";
 import SubscriptionPage from "./pages/SubscriptionPage";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import SupplierSimulation from "./pages/SupplierSimulation";
@@ -250,6 +251,7 @@ const AppRoutes = () => {
               
               <Route path="/shared-document/:token" element={<SharedDocumentViewer />} />
               <Route path="/supplier-simulation" element={<SupplierSimulation />} />
+              <Route path="/help" element={<HelpCenterPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             </TourProvider>

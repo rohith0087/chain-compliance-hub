@@ -4,7 +4,7 @@ import {
   Headphones, 
   Phone, 
   Mail, 
-  MessageCircle, 
+  Activity, 
   Search, 
   ArrowLeft,
   ChevronRight,
@@ -327,12 +327,15 @@ export default function HelpCenterPage() {
           <Card className="hover:shadow-lg transition-shadow">
             <CardContent className="p-6 text-center">
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-4">
-                <MessageCircle className="h-6 w-6 text-primary" />
+                <Activity className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="font-semibold text-lg mb-2">Live Chat</h3>
-              <p className="text-sm text-muted-foreground mb-4">Chat with our support team</p>
-              <Button variant="outline" className="w-full">
-                Start Chat
+              <h3 className="font-semibold text-lg mb-2">System Status</h3>
+              <p className="text-sm text-muted-foreground mb-4">Check platform availability</p>
+              <Button variant="outline" className="w-full gap-2" asChild>
+                <a href="https://status.tracer2c.com" target="_blank" rel="noopener noreferrer">
+                  View Status
+                  <ExternalLink className="h-4 w-4" />
+                </a>
               </Button>
             </CardContent>
           </Card>

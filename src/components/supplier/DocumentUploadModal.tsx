@@ -52,6 +52,7 @@ interface FileEntry {
   category: string;
   description: string;
   expiration_date: string;
+  no_expiration: boolean;
   tags: string[];
   tagInput: string;
 }
@@ -128,6 +129,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
         category: '',
         description: '',
         expiration_date: '',
+        no_expiration: false,
         tags: [],
         tagInput: ''
       });
@@ -204,6 +206,13 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
       return;
     }
 
+    // Validate expiration date is set OR no-expiration checkbox is checked for all files
+    const missingExpiration = files.filter(f => !f.expiration_date && !f.no_expiration);
+    if (missingExpiration.length > 0) {
+      toast.error('Please set an expiration date or mark as "no expiration" for all files');
+      return;
+    }
+
     if (!user) {
       toast.error('You must be logged in to upload documents');
       return;
@@ -246,7 +255,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
               description: fileEntry.description.trim() || null,
               uploaded_by: user.id,
               extraction_status: 'completed',
-              expiration_date: fileEntry.expiration_date || null
+              expiration_date: fileEntry.no_expiration ? null : (fileEntry.expiration_date || null)
             });
 
           if (dbError) {
@@ -428,14 +437,33 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                         <div className="space-y-1">
                           <Label className="text-xs font-medium flex items-center gap-1.5">
                             <Calendar className="h-3 w-3 text-amber-600" />
-                            Expiration Date
+                            Expiration Date <span className="text-destructive">*</span>
                           </Label>
                           <Input
                             type="date"
                             value={fileEntry.expiration_date}
-                            onChange={(e) => updateFileEntry(fileEntry.id, { expiration_date: e.target.value })}
-                            className="h-9 bg-background"
+                            onChange={(e) => updateFileEntry(fileEntry.id, { expiration_date: e.target.value, no_expiration: false })}
+                            disabled={fileEntry.no_expiration}
+                            className={cn("h-9 bg-background", fileEntry.no_expiration && "opacity-50 cursor-not-allowed")}
                           />
+                          <div className="flex items-center space-x-2 pt-1">
+                            <input
+                              type="checkbox"
+                              id={`no-expiration-${fileEntry.id}`}
+                              checked={fileEntry.no_expiration}
+                              onChange={(e) => updateFileEntry(fileEntry.id, { 
+                                no_expiration: e.target.checked,
+                                expiration_date: e.target.checked ? '' : fileEntry.expiration_date
+                              })}
+                              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                            />
+                            <label
+                              htmlFor={`no-expiration-${fileEntry.id}`}
+                              className="text-xs text-muted-foreground cursor-pointer"
+                            >
+                              No expiration
+                            </label>
+                          </div>
                         </div>
 
                         <div className="space-y-1">

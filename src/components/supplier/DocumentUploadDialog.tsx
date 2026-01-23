@@ -43,6 +43,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
   const [notes, setNotes] = useState('');
   const [documentName, setDocumentName] = useState('');
   const [expirationDate, setExpirationDate] = useState<Date | undefined>(undefined);
+  const [noExpirationDate, setNoExpirationDate] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [updateMetadataOnly, setUpdateMetadataOnly] = useState(false);
@@ -190,6 +191,16 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
       toast({
         title: "Document Required",
         description: "Please select a document from your machine or library.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate expiration date is set OR no-expiration checkbox is checked
+    if (!expirationDate && !noExpirationDate) {
+      toast({
+        title: "Expiration Date Required",
+        description: "Please select an expiration date or check 'This document does not expire'.",
         variant: "destructive",
       });
       return;
@@ -353,6 +364,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
     setNotes('');
     setDocumentName('');
     setExpirationDate(undefined);
+    setNoExpirationDate(false);
     setIsCalendarOpen(false);
     setUpdateMetadataOnly(false);
     setUploadSource('machine');
@@ -686,19 +698,25 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
                   <div className="space-y-1.5">
                     <Label className="flex items-center gap-2 text-xs font-medium text-foreground">
                       <CalendarIcon className="w-3.5 h-3.5 text-amber-600" />
-                      Expiration Date (Optional)
+                      Expiration Date <span className="text-destructive">*</span>
                     </Label>
                     <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
+                          disabled={noExpirationDate}
                           className={cn(
                             "w-full justify-start text-left font-normal bg-background",
-                            !expirationDate && "text-muted-foreground"
+                            !expirationDate && "text-muted-foreground",
+                            noExpirationDate && "opacity-50 cursor-not-allowed"
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {expirationDate ? format(expirationDate, "PPP") : "Select expiration date"}
+                          {noExpirationDate 
+                            ? "No expiration date" 
+                            : expirationDate 
+                              ? format(expirationDate, "PPP") 
+                              : "Select expiration date"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0 z-50" align="start">
@@ -715,7 +733,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
                         />
                       </PopoverContent>
                     </Popover>
-                    {expirationDate && (
+                    {expirationDate && !noExpirationDate && (
                       <Button 
                         variant="ghost" 
                         size="sm" 
@@ -725,6 +743,24 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
                         Clear date
                       </Button>
                     )}
+                    <div className="flex items-center space-x-2 pt-1">
+                      <Checkbox
+                        id="no-expiration"
+                        checked={noExpirationDate}
+                        onCheckedChange={(checked) => {
+                          setNoExpirationDate(checked === true);
+                          if (checked) {
+                            setExpirationDate(undefined);
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor="no-expiration"
+                        className="text-xs text-muted-foreground cursor-pointer"
+                      >
+                        This document does not expire
+                      </label>
+                    </div>
                   </div>
                 </div>
 

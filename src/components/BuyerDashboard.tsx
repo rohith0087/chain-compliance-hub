@@ -58,6 +58,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
   const [showBulkInvite, setShowBulkInvite] = useState(false);
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
   const [companyId, setCompanyId] = useState<string | undefined>(undefined);
+  const [documentsKey, setDocumentsKey] = useState(0); // Force remount when navigating from dashboard
   const [dashboardStats, setDashboardStats] = useState({
     connectedSuppliers: 0,
     activeRequests: 0,
@@ -302,6 +303,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                   color="amber" 
                   onClick={() => {
                     sessionStorage.setItem('buyer_docs_filter_status', 'pending');
+                    setDocumentsKey(prev => prev + 1);
                     setActiveTab('documents');
                   }}
                 />
@@ -313,6 +315,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                   pulse={dashboardStats.pendingReview > 0}
                   onClick={() => {
                     sessionStorage.setItem('buyer_docs_filter_status', 'submitted');
+                    setDocumentsKey(prev => prev + 1);
                     setActiveTab('documents');
                   }}
                 />
@@ -324,6 +327,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                   pulse={dashboardStats.expiringSoon > 0}
                   onClick={() => {
                     sessionStorage.setItem('buyer_docs_filter_expiration', 'expiring_soon');
+                    setDocumentsKey(prev => prev + 1);
                     setActiveTab('documents');
                   }}
                 />
@@ -354,6 +358,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                   buyerId={companyId}
                   onNavigateToDocuments={(filter) => {
                     if (filter) sessionStorage.setItem('buyer_docs_filter_status', filter);
+                    setDocumentsKey(prev => prev + 1);
                     setActiveTab('documents');
                   }}
                 />
@@ -370,6 +375,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                   buyerId={companyId}
                   onNavigateToDocuments={(filter) => {
                     if (filter) sessionStorage.setItem('buyer_docs_filter_expiration', filter);
+                    setDocumentsKey(prev => prev + 1);
                     setActiveTab('documents');
                   }}
                 />
@@ -388,6 +394,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
                   onInviteSupplier={() => setShowBulkInvite(true)}
                   onNavigateToDocuments={(filter) => {
                     if (filter) sessionStorage.setItem('buyer_docs_filter_status', filter);
+                    setDocumentsKey(prev => prev + 1);
                     setActiveTab('documents');
                   }}
                   onNavigateToTab={setActiveTab}
@@ -414,7 +421,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
 
         {/* Documents Content */}
         {activeTab === 'documents' && (
-          <BuyerDocumentsDashboard />
+          <BuyerDocumentsDashboard key={documentsKey} />
         )}
 
         {/* Performance Dashboard */}

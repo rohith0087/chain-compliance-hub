@@ -1,132 +1,185 @@
 
-# Fix get_platform_admin_users Function - Missing Table Reference
+# Fix Impersonation - Missing Navigation and Data
 
 ## Problem Summary
 
-The user impersonation search is returning 404 errors because the `get_platform_admin_users()` database function references a non-existent table called `user_subscriptions`.
+When a super admin impersonates a user, two issues occur:
+1. **No data is displayed** - Dashboard shows 0 for all metrics
+2. **Missing navigation** - Only "Quick Actions" and "Messages" appear in the sidebar
 
-**Error in database logs:**
+## Root Causes
+
+### 1. Early Return in BuyerDashboard.tsx
+
+When `impersonatedBuyerId` is present, the code fetches the buyer profile but exits early before loading metrics:
+
+```javascript
+if (impersonatedBuyerId) {
+  const { data: buyer } = await supabase
+    .from('buyers')
+    .select('*')
+    .eq('id', impersonatedBuyerId)
+    .single();
+  
+  setBuyerProfile(buyer);
+  setCompanyId(impersonatedBuyerId);
+  return; // ← EARLY EXIT - stats never loaded!
+}
 ```
-relation "user_subscriptions" does not exist
+
+### 2. Permissions Not Impersonation-Aware
+
+The `useCompanyUserRole` hook checks ownership using the currently authenticated user's ID (super admin), not the impersonated user's ID:
+
+```javascript
+const { user } = useAuth(); // ← Super admin's user
+// ...
+.eq('profile_id', user.id) // ← Checks super admin's ID, not impersonated user
 ```
 
-## Root Cause
-
-When the function was recreated to add `buyer_id` and `supplier_id`, it inherited code that references `user_subscriptions` - a table that doesn't exist. The actual tables in the database are:
-
-| Function References | Actual Table Name | Contains |
-|---------------------|-------------------|----------|
-| `user_subscriptions` | Does not exist! | - |
-| - | `subscriptions` | status, plan_type, stripe IDs, period dates |
-| - | `user_credits` | available/purchased/consumed credits |
+Since the super admin isn't the owner of the impersonated company, all permission checks fail.
 
 ## Solution
 
-Update the `get_platform_admin_users()` function to use the correct table names:
-- Join `subscriptions` for subscription status and Stripe data
-- Join `user_credits` for credit balances
+### Fix 1: Load Dashboard Stats When Impersonating
 
-## Technical Implementation
+Modify the `fetchDashboardData` function to NOT return early when impersonating. Instead, proceed to load the dashboard metrics using the impersonated buyer ID.
 
-### Database Migration: Fix table references
+**File:** `src/components/BuyerDashboard.tsx`
 
-```sql
-DROP FUNCTION IF EXISTS public.get_platform_admin_users();
+**Change:** Remove the early `return;` and restructure to continue loading stats with `impersonatedBuyerId` as the effective buyer ID.
 
-CREATE FUNCTION public.get_platform_admin_users()
-RETURNS TABLE (
-  id uuid,
-  email text,
-  full_name text,
-  roles text[],
-  company_name text,
-  created_at timestamptz,
-  last_sign_in_at timestamptz,
-  is_buyer boolean,
-  is_supplier boolean,
-  subscription_status text,
-  subscription_plan_type text,
-  subscription_end_date timestamptz,
-  available_credits integer,
-  total_purchased_credits integer,
-  total_consumed_credits integer,
-  stripe_customer_id text,
-  stripe_subscription_id text,
-  buyer_id uuid,
-  supplier_id uuid
-)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  -- Check if caller is a platform admin with super_admin role
-  IF NOT EXISTS (
-    SELECT 1 FROM platform_administrators
-    WHERE auth_user_id = auth.uid()
-    AND is_active = true
-    AND 'super_admin' = ANY(platform_roles)
-  ) THEN
-    RAISE EXCEPTION 'Unauthorized';
-  END IF;
+### Fix 2: Grant Full Permissions During Impersonation
 
-  RETURN QUERY
-  SELECT 
-    p.id,
-    p.email,
-    p.full_name,
-    COALESCE(
-      (SELECT array_agg(DISTINCT ur.role::text) FROM user_roles ur WHERE ur.user_id = p.id),
-      ARRAY[]::text[]
-    ) as roles,
-    COALESCE(
-      (SELECT b.company_name FROM buyers b WHERE b.profile_id = p.id LIMIT 1),
-      (SELECT s.company_name FROM suppliers s WHERE s.profile_id = p.id LIMIT 1),
-      p.company_name
-    ) as company_name,
-    p.created_at,
-    (SELECT au.last_sign_in_at FROM auth.users au WHERE au.id = p.id) as last_sign_in_at,
-    EXISTS(SELECT 1 FROM buyers b WHERE b.profile_id = p.id) as is_buyer,
-    EXISTS(SELECT 1 FROM suppliers s WHERE s.profile_id = p.id) as is_supplier,
-    sub.status as subscription_status,           -- from subscriptions table
-    sub.plan_type::text as subscription_plan_type,
-    sub.current_period_end as subscription_end_date,
-    uc.available_credits,                        -- from user_credits table
-    uc.total_purchased_credits,
-    uc.total_consumed_credits,
-    sub.stripe_customer_id,
-    sub.stripe_subscription_id,
-    (SELECT b.id FROM buyers b WHERE b.profile_id = p.id LIMIT 1) as buyer_id,
-    (SELECT s.id FROM suppliers s WHERE s.profile_id = p.id LIMIT 1) as supplier_id
-  FROM profiles p
-  LEFT JOIN subscriptions sub ON sub.user_id = p.id
-  LEFT JOIN user_credits uc ON uc.user_id = p.id
-  ORDER BY p.created_at DESC;
-END;
-$$;
+For super admins who are actively impersonating, bypass normal permission checks and treat them as if they have full owner access to the impersonated company.
+
+**File:** `src/hooks/useCompanyUserRole.tsx`
+
+**Change:** Add impersonation context check. When impersonating and the company ID matches the impersonated company, automatically grant owner-level permissions.
+
+### Fix 3: Update Sidebar Company ID Resolution
+
+The sidebar resolves company ID using the authenticated user's profile. During impersonation, it should use the impersonated company ID instead.
+
+**File:** `src/components/buyer/BuyerSidebarLayout.tsx`
+
+**Change:** Add impersonation awareness to the company ID resolution logic.
+
+## Implementation Details
+
+### Step 1: Fix BuyerDashboard.tsx - Load Stats for Impersonation
+
+Remove the early return and use impersonatedBuyerId for metric queries:
+
+```javascript
+const fetchDashboardData = async () => {
+  let effectiveBuyerId = impersonatedBuyerId;
+  
+  // If impersonating, use the impersonated buyer ID directly
+  if (impersonatedBuyerId) {
+    const { data: buyer } = await supabase
+      .from('buyers')
+      .select('*')
+      .eq('id', impersonatedBuyerId)
+      .single();
+    
+    setBuyerProfile(buyer);
+    setCompanyId(impersonatedBuyerId);
+    // REMOVED: return; - Continue to load stats
+  } else {
+    // Normal flow for non-impersonation
+    // ... existing team member / owner logic
+    effectiveBuyerId = teamMember?.company_id || buyer?.id;
+  }
+
+  // Load dashboard stats
+  if (effectiveBuyerId) {
+    // ... existing metric queries using effectiveBuyerId
+  }
+};
 ```
 
-### Key Changes
+### Step 2: Fix useCompanyUserRole.tsx - Impersonation Permissions
 
-1. **Replace** `LEFT JOIN user_subscriptions us` with:
-   - `LEFT JOIN subscriptions sub` for subscription data
-   - `LEFT JOIN user_credits uc` for credit data
+Add impersonation context check at the start:
 
-2. **Update column mappings:**
-   - `sub.status` (subscription status)
-   - `sub.plan_type::text` (cast from enum to text)
-   - `sub.current_period_end` (subscription end date)
-   - `uc.available_credits`, `uc.total_purchased_credits`, `uc.total_consumed_credits`
-   - `sub.stripe_customer_id`, `sub.stripe_subscription_id`
+```javascript
+import { useImpersonation } from '@/contexts/ImpersonationContext';
+
+export const useCompanyUserRole = (companyId?: string, companyType?: 'buyer' | 'supplier') => {
+  const { user } = useAuth();
+  const { isImpersonating, impersonatedCompany } = useImpersonation();
+  const [role, setRole] = useState<string | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // When impersonating, grant owner permissions if viewing impersonated company
+    if (isImpersonating && impersonatedCompany) {
+      if (companyId === impersonatedCompany.id && companyType === impersonatedCompany.type) {
+        setRole('company_admin');
+        setIsOwner(true);
+        setLoading(false);
+        return;
+      }
+    }
+    
+    // Normal permission checks
+    if (user && companyId && companyType) {
+      fetchUserRole();
+    } else {
+      setRole(null);
+      setIsOwner(false);
+      setLoading(false);
+    }
+  }, [user, companyId, companyType, isImpersonating, impersonatedCompany]);
+  
+  // ... rest of hook
+};
+```
+
+### Step 3: Fix BuyerSidebarLayout.tsx - Impersonation-Aware Company ID
+
+Update the company ID resolution to use impersonated company when applicable:
+
+```javascript
+const { isImpersonating, impersonatedCompany } = useImpersonation();
+
+useEffect(() => {
+  const resolveCompanyId = async () => {
+    // During impersonation, use the impersonated company ID directly
+    if (isImpersonating && impersonatedCompany?.type === 'buyer') {
+      setResolvedCompanyId(impersonatedCompany.id);
+      return;
+    }
+    
+    // Normal resolution for non-impersonation
+    if (!profile?.id) return;
+    // ... existing logic
+  };
+  
+  resolveCompanyId();
+}, [profile?.id, buyerProfile?.id, isImpersonating, impersonatedCompany]);
+```
 
 ## Files to Modify
 
-1. **Database Migration** - New SQL migration to fix the function
+| File | Change |
+|------|--------|
+| `src/components/BuyerDashboard.tsx` | Remove early return, load stats during impersonation |
+| `src/hooks/useCompanyUserRole.tsx` | Grant owner permissions during impersonation |
+| `src/components/buyer/BuyerSidebarLayout.tsx` | Use impersonated company ID for resolution |
+| `src/components/supplier/SupplierSidebarLayout.tsx` | Same changes for supplier side |
+| `src/hooks/useCompanyBranches.tsx` | Add impersonation awareness (if needed) |
 
-## Expected Outcome
+## Testing After Implementation
 
-After the migration:
-- The RPC call will succeed (no more 404 errors)
-- Users will appear in the impersonation search
-- All subscription and credit data will be correctly displayed
-- Impersonation will work because `buyer_id` and `supplier_id` are now returned
+1. Log in as platform admin (`rzg0087@auburn.edu`)
+2. Navigate to Platform Admin Dashboard → Support Tickets
+3. Search for `rcrohith017@gmail.com`
+4. Click "Impersonate"
+5. **Expected results:**
+   - Full navigation sidebar visible (Dashboard, Suppliers, Requests & Documents, Compliance, etc.)
+   - Dashboard metrics show actual data (suppliers count, active requests, etc.)
+   - All tabs and features accessible as if viewing as the company owner
+6. Click "End Impersonation" in banner to return to admin view

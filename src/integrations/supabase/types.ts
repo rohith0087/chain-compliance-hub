@@ -4772,6 +4772,7 @@ export type Database = {
         Args: never
         Returns: {
           available_credits: number
+          buyer_id: string
           company_name: string
           created_at: string
           email: string
@@ -4780,12 +4781,13 @@ export type Database = {
           is_buyer: boolean
           is_supplier: boolean
           last_sign_in_at: string
-          roles: Database["public"]["Enums"]["user_role"][]
+          roles: string[]
           stripe_customer_id: string
           stripe_subscription_id: string
           subscription_end_date: string
           subscription_plan_type: string
           subscription_status: string
+          supplier_id: string
           total_consumed_credits: number
           total_purchased_credits: number
         }[]

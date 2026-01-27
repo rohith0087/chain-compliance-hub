@@ -240,11 +240,12 @@ export const usePlatformAdmin = () => {
     }
   }, []);
 
-  const signInPlatformAdmin = useCallback(async (email: string, password: string) => {
+  const signInPlatformAdmin = useCallback(async (email: string, password: string, captchaToken?: string) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
+        options: captchaToken ? { captchaToken } : undefined,
       });
 
       if (error) {

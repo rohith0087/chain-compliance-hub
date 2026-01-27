@@ -7,12 +7,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Shield, AlertCircle } from 'lucide-react';
 import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';
+import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
+
+const isTurnstileEnabled = import.meta.env.VITE_TURNSTILE_ENABLED === 'true';
 
 export default function PlatformAdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const navigate = useNavigate();
   const { signInPlatformAdmin } = usePlatformAdmin();
 
@@ -21,17 +25,21 @@ export default function PlatformAdminLogin() {
     setLoading(true);
     setError('');
 
-    const { error } = await signInPlatformAdmin(email, password);
+    const { error } = await signInPlatformAdmin(email, password, turnstileToken || undefined);
     
     if (error) {
       setError(error.message);
       setLoading(false);
+      // Reset turnstile token on error to force re-verification
+      setTurnstileToken(null);
       return;
     }
 
     // Redirect to platform admin dashboard
     navigate('/platform-admin/dashboard');
   };
+
+  const isSubmitDisabled = loading || (isTurnstileEnabled && !turnstileToken);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/50 p-4">
@@ -79,8 +87,19 @@ export default function PlatformAdminLogin() {
                 disabled={loading}
               />
             </div>
+
+            {isTurnstileEnabled && (
+              <div className="flex justify-center">
+                <TurnstileWidget 
+                  siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ''}
+                  onSuccess={setTurnstileToken}
+                  onError={() => setTurnstileToken(null)}
+                  onExpire={() => setTurnstileToken(null)}
+                />
+              </div>
+            )}
             
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full" disabled={isSubmitDisabled}>
               {loading ? 'Authenticating...' : 'Sign In'}
             </Button>
           </form>

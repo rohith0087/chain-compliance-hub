@@ -150,8 +150,7 @@ export function BuyerSidebarLayout({
   const { hasRole } = useUserRoles();
   const sidebar = useSidebar();
   const collapsed = sidebar?.state === 'collapsed';
-  const { isImpersonating } = useImpersonation();
-  
+  const { isImpersonating, impersonatedCompany } = useImpersonation();
   
   // Single active dropdown state (accordion behavior)
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -198,11 +197,17 @@ export function BuyerSidebarLayout({
     };
   }, []);
 
-  // Resolve company ID for team members vs owners
+  // Resolve company ID for team members vs owners (impersonation-aware)
   const [resolvedCompanyId, setResolvedCompanyId] = useState<string | null>(null);
 
   useEffect(() => {
     const resolveCompanyId = async () => {
+      // During impersonation, use the impersonated company ID directly
+      if (isImpersonating && impersonatedCompany?.type === 'buyer') {
+        setResolvedCompanyId(impersonatedCompany.id);
+        return;
+      }
+
       if (!profile?.id) return;
       
       // Check if user is a team member first
@@ -224,7 +229,7 @@ export function BuyerSidebarLayout({
     };
     
     resolveCompanyId();
-  }, [profile?.id, buyerProfile?.id, supabase]);
+  }, [profile?.id, buyerProfile?.id, isImpersonating, impersonatedCompany]);
 
   // Company branches management - use resolved company ID
   const {

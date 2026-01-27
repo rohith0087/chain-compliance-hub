@@ -1,14 +1,26 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useImpersonation } from '@/contexts/ImpersonationContext';
 
 export const useCompanyUserRole = (companyId?: string, companyType?: 'buyer' | 'supplier') => {
   const [role, setRole] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { isImpersonating, impersonatedCompany } = useImpersonation();
 
   useEffect(() => {
+    // When impersonating, grant owner permissions if viewing impersonated company
+    if (isImpersonating && impersonatedCompany) {
+      if (companyId === impersonatedCompany.id && companyType === impersonatedCompany.type) {
+        setRole('company_admin');
+        setIsOwner(true);
+        setLoading(false);
+        return;
+      }
+    }
+
     if (user && companyId && companyType) {
       fetchUserRole();
     } else {
@@ -16,7 +28,7 @@ export const useCompanyUserRole = (companyId?: string, companyType?: 'buyer' | '
       setIsOwner(false);
       setLoading(false);
     }
-  }, [user, companyId, companyType]);
+  }, [user, companyId, companyType, isImpersonating, impersonatedCompany]);
 
   const fetchUserRole = async () => {
     if (!user || !companyId || !companyType) return;

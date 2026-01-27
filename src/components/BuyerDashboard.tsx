@@ -148,6 +148,8 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
   // Fetch buyer profile data and dashboard stats (top-level metrics only)
   useEffect(() => {
     const fetchDashboardData = async () => {
+      let effectiveBuyerId: string | undefined = undefined;
+
       // If impersonating, use the impersonated buyer ID directly
       if (impersonatedBuyerId) {
         const { data: buyer } = await supabase
@@ -158,58 +160,67 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
         
         setBuyerProfile(buyer);
         setCompanyId(impersonatedBuyerId);
+        effectiveBuyerId = impersonatedBuyerId;
+        // Continue to load stats (removed early return)
+
+      } else if (!authUser) {
         return;
+      } else {
+        // Not impersonating - normal flow
+        try {
+          // Check if user is a team member first
+          const { data: teamMember, error: teamError } = await supabase
+            .from('company_users')
+            .select('company_id, company_type, role, status')
+            .eq('profile_id', authUser.id)
+            .eq('company_type', 'buyer')
+            .in('status', ['active', 'pending'])
+            .single();
+
+          if (teamError && teamError.code !== 'PGRST116') {
+            console.error('Error checking team membership:', teamError);
+          }
+
+          if (teamMember) {
+            // User is a team member - fetch company data using company_id
+            setCompanyId(teamMember.company_id);
+            effectiveBuyerId = teamMember.company_id;
+            
+            const { data: buyer, error: buyerError } = await supabase
+              .from('buyers')
+              .select('*')
+              .eq('id', teamMember.company_id)
+              .single();
+
+            if (buyerError && buyerError.code !== 'PGRST116') {
+              console.error('Error fetching buyer profile for team member:', buyerError);
+            }
+            
+            setBuyerProfile(buyer);
+          } else {
+            // User is a company owner - fetch buyer profile
+            const { data: buyer, error: buyerError } = await supabase
+              .from('buyers')
+              .select('*')
+              .eq('profile_id', authUser.id)
+              .single();
+
+            if (buyerError && buyerError.code !== 'PGRST116') {
+              console.error('Error fetching buyer profile:', buyerError);
+              return;
+            }
+
+            setCompanyId(buyer?.id);
+            setBuyerProfile(buyer);
+            effectiveBuyerId = buyer?.id;
+          }
+        } catch (error) {
+          console.error('Error in fetchDashboardData:', error);
+          return;
+        }
       }
 
-      if (!authUser) return;
-
-      try {
-        // Check if user is a team member first
-        const { data: teamMember, error: teamError } = await supabase
-          .from('company_users')
-          .select('company_id, company_type, role, status')
-          .eq('profile_id', authUser.id)
-          .eq('company_type', 'buyer')
-          .in('status', ['active', 'pending'])
-          .single();
-
-        if (teamError && teamError.code !== 'PGRST116') {
-          console.error('Error checking team membership:', teamError);
-        }
-
-        if (teamMember) {
-          // User is a team member - fetch company data using company_id
-          setCompanyId(teamMember.company_id);
-          
-          const { data: buyer, error: buyerError } = await supabase
-            .from('buyers')
-            .select('*')
-            .eq('id', teamMember.company_id)
-            .single();
-
-          if (buyerError && buyerError.code !== 'PGRST116') {
-            console.error('Error fetching buyer profile for team member:', buyerError);
-          }
-          
-          setBuyerProfile(buyer);
-        } else {
-          // User is a company owner - fetch buyer profile
-          const { data: buyer, error: buyerError } = await supabase
-            .from('buyers')
-            .select('*')
-            .eq('profile_id', authUser.id)
-            .single();
-
-          if (buyerError && buyerError.code !== 'PGRST116') {
-            console.error('Error fetching buyer profile:', buyerError);
-            return;
-          }
-
-          setCompanyId(buyer?.id);
-          setBuyerProfile(buyer);
-        }
-
-        const effectiveBuyerId = teamMember?.company_id || buyerProfile?.id;
+      // Load dashboard stats with effectiveBuyerId
 
         if (effectiveBuyerId) {
           const branchFilter = !allBranchesView && currentBranch?.id ? currentBranch.id : null;
@@ -250,9 +261,6 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
             totalDocs: totalDocs,
           });
         }
-      } catch (error) {
-        console.error('Error in fetchDashboardData:', error);
-      }
     };
 
     fetchDashboardData();

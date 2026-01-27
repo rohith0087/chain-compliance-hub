@@ -8,6 +8,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
+import { ImpersonationBanner } from "@/components/super-admin/ImpersonationBanner";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { MFAGuard } from "@/components/auth/MFAGuard";
@@ -197,65 +199,68 @@ const AppRoutes = () => {
     <BrowserRouter>
       <LanguageProvider>
         <AuthProvider>
-          <BranchProvider>
-            <TourProvider>
-            <Routes>
-              <Route path="/" element={
-                <PublicRoute>
-                  <AuthPage />
-                </PublicRoute>
-              } />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <DynamicDashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/chat" element={
-                <ProtectedRoute>
-                  <ChatPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/agents" element={
-                <ProtectedRoute>
-                  <AgentManagementDashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/subscription" element={
-                <ProtectedRoute>
-                  <SubscriptionPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/messages" element={
-                <ProtectedRoute>
-                  <MessagesPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/profile-settings" element={
-                <ProtectedRoute>
-                  <ProfileSettingsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/admin" element={
-                <AdminRoute>
-                  <AdminDashboard />
-                </AdminRoute>
-              } />
-              <Route path="/super-admin" element={
-                <SuperAdminRoute>
-                  <SuperAdminDashboard />
-                </SuperAdminRoute>
-              } />
-              <Route path="/platform-admin/login" element={<PlatformAdminLogin />} />
-              <Route path="/platform-admin/dashboard" element={<PlatformAdminDashboard />} />
-              
-              <Route path="/shared-document/:token" element={<SharedDocumentViewer />} />
-              <Route path="/supplier-simulation" element={<SupplierSimulation />} />
-              <Route path="/help" element={<HelpCenterPage />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            </TourProvider>
-          </BranchProvider>
+          <ImpersonationProvider>
+            <BranchProvider>
+              <TourProvider>
+                <ImpersonationBanner />
+                <Routes>
+                  <Route path="/" element={
+                    <PublicRoute>
+                      <AuthPage />
+                    </PublicRoute>
+                  } />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/dashboard" element={
+                    <ProtectedRoute>
+                      <DynamicDashboard />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/chat" element={
+                    <ProtectedRoute>
+                      <ChatPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/agents" element={
+                    <ProtectedRoute>
+                      <AgentManagementDashboard />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/subscription" element={
+                    <ProtectedRoute>
+                      <SubscriptionPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/messages" element={
+                    <ProtectedRoute>
+                      <MessagesPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/profile-settings" element={
+                    <ProtectedRoute>
+                      <ProfileSettingsPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/admin" element={
+                    <AdminRoute>
+                      <AdminDashboard />
+                    </AdminRoute>
+                  } />
+                  <Route path="/super-admin" element={
+                    <SuperAdminRoute>
+                      <SuperAdminDashboard />
+                    </SuperAdminRoute>
+                  } />
+                  <Route path="/platform-admin/login" element={<PlatformAdminLogin />} />
+                  <Route path="/platform-admin/dashboard" element={<PlatformAdminDashboard />} />
+                  
+                  <Route path="/shared-document/:token" element={<SharedDocumentViewer />} />
+                  <Route path="/supplier-simulation" element={<SupplierSimulation />} />
+                  <Route path="/help" element={<HelpCenterPage />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </TourProvider>
+            </BranchProvider>
+          </ImpersonationProvider>
         </AuthProvider>
       </LanguageProvider>
     </BrowserRouter>

@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import { useSupportTickets, SupportTicket } from '@/hooks/useSupportTickets';
+import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +39,7 @@ const cardStyle = {
 };
 
 export const SuperAdminClientSupport = () => {
+  const navigate = useNavigate();
   const { users, loading: usersLoading } = useSuperAdmin();
   const { 
     tickets, 
@@ -47,6 +50,7 @@ export const SuperAdminClientSupport = () => {
     updateTicketStatus,
     refetch 
   } = useSupportTickets();
+  const { startImpersonation } = useImpersonation();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -71,12 +75,45 @@ export const SuperAdminClientSupport = () => {
     setIsImpersonateDialogOpen(true);
   };
 
-  const confirmImpersonate = () => {
+  const confirmImpersonate = async () => {
+    if (!selectedUser) return;
+
+    // Determine company type and ID from the user's data
+    const companyType = selectedUser.company_type || (selectedUser.buyer_id ? 'buyer' : 'supplier');
+    const companyId = selectedUser.company_id || selectedUser.buyer_id || selectedUser.supplier_id;
+    const companyName = selectedUser.company_name || 'Unknown Company';
+
+    if (!companyId) {
+      toast({
+        title: "Cannot Impersonate",
+        description: "This user doesn't have an associated company.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    await startImpersonation(
+      {
+        id: selectedUser.id,
+        email: selectedUser.email,
+        fullName: selectedUser.full_name || selectedUser.email
+      },
+      {
+        id: companyId,
+        name: companyName,
+        type: companyType as 'buyer' | 'supplier'
+      }
+    );
+
     toast({
       title: "Impersonation Started",
       description: `Now viewing the system as ${selectedUser.email}. This action has been logged.`,
     });
+    
     setIsImpersonateDialogOpen(false);
+    
+    // Navigate to the appropriate dashboard
+    navigate('/dashboard');
   };
 
   const viewTicketDetails = (ticket: SupportTicket) => {

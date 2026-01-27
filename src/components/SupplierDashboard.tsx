@@ -71,9 +71,10 @@ interface SupplierDashboardProps {
   };
   onLogout: () => void;
   onRoleSwitch: (role: 'buyer' | 'supplier') => void;
+  impersonatedSupplierId?: string; // Optional: when super admin is impersonating
 }
 
-const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardProps) => {
+const SupplierDashboard = ({ user, onLogout, onRoleSwitch, impersonatedSupplierId }: SupplierDashboardProps) => {
   const { t } = useTranslation(['supplier', 'common']);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(() => {
@@ -162,10 +163,10 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
     : 0;
 
   useEffect(() => {
-    if (authUser) {
+    if (authUser || impersonatedSupplierId) {
       loadSupplierData();
     }
-  }, [authUser, currentBranch?.id, allBranchesView]);
+  }, [authUser, currentBranch?.id, allBranchesView, impersonatedSupplierId]);
 
   // Filter onboarding requests for current supplier
   useEffect(() => {
@@ -197,29 +198,40 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch }: SupplierDashboardPr
   const loadSupplierData = async () => {
     setLoading(true);
     try {
-      // Step 1: Check if user is a team member first (company ID resolution pattern)
-      const { data: teamMember } = await supabase
-        .from('company_users')
-        .select('company_id')
-        .eq('profile_id', authUser?.id)
-        .eq('company_type', 'supplier')
-        .eq('status', 'active')
-        .maybeSingle();
-
       let profile: any = null;
 
-      if (teamMember) {
-        // Team member - use company_id to fetch supplier profile
+      // If impersonating, use the impersonated supplier ID directly
+      if (impersonatedSupplierId) {
         const { data: supplierData } = await supabase
           .from('suppliers')
           .select('*')
-          .eq('id', teamMember.company_id)
+          .eq('id', impersonatedSupplierId)
           .single();
         
         profile = supplierData;
       } else {
-        // Company owner - use existing method
-        profile = await getSupplierProfile();
+        // Step 1: Check if user is a team member first (company ID resolution pattern)
+        const { data: teamMember } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('profile_id', authUser?.id)
+          .eq('company_type', 'supplier')
+          .eq('status', 'active')
+          .maybeSingle();
+
+        if (teamMember) {
+          // Team member - use company_id to fetch supplier profile
+          const { data: supplierData } = await supabase
+            .from('suppliers')
+            .select('*')
+            .eq('id', teamMember.company_id)
+            .single();
+          
+          profile = supplierData;
+        } else {
+          // Company owner - use existing method
+          profile = await getSupplierProfile();
+        }
       }
 
       setSupplierProfile(profile);

@@ -46,9 +46,10 @@ interface BuyerDashboardProps {
   };
   onLogout: () => void;
   onRoleSwitch: (role: 'buyer' | 'supplier') => void;
+  impersonatedBuyerId?: string; // Optional: when super admin is impersonating
 }
 
-const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) => {
+const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: BuyerDashboardProps) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('buyerDashboard_activeTab') || 'dashboard';
@@ -57,7 +58,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
   const [showSettings, setShowSettings] = useState(false);
   const [showBulkInvite, setShowBulkInvite] = useState(false);
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
-  const [companyId, setCompanyId] = useState<string | undefined>(undefined);
+  const [companyId, setCompanyId] = useState<string | undefined>(impersonatedBuyerId);
   const [documentsKey, setDocumentsKey] = useState(0); // Force remount when navigating from dashboard
   const [dashboardStats, setDashboardStats] = useState({
     connectedSuppliers: 0,
@@ -147,6 +148,19 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
   // Fetch buyer profile data and dashboard stats (top-level metrics only)
   useEffect(() => {
     const fetchDashboardData = async () => {
+      // If impersonating, use the impersonated buyer ID directly
+      if (impersonatedBuyerId) {
+        const { data: buyer } = await supabase
+          .from('buyers')
+          .select('*')
+          .eq('id', impersonatedBuyerId)
+          .single();
+        
+        setBuyerProfile(buyer);
+        setCompanyId(impersonatedBuyerId);
+        return;
+      }
+
       if (!authUser) return;
 
       try {
@@ -242,7 +256,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch }: BuyerDashboardProps) =
     };
 
     fetchDashboardData();
-  }, [authUser, currentBranch?.id, allBranchesView]);
+  }, [authUser, currentBranch?.id, allBranchesView, impersonatedBuyerId]);
 
   const handleFindSuppliersClick = () => {
     console.log('Find Suppliers button clicked, switching to suppliers tab');

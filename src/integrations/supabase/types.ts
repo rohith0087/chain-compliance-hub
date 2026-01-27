@@ -2500,6 +2500,63 @@ export type Database = {
         }
         Relationships: []
       }
+      impersonation_logs: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          impersonated_company_id: string
+          impersonated_company_type: string
+          impersonated_user_id: string | null
+          ip_address: string | null
+          metadata: Json | null
+          started_at: string
+          super_admin_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          impersonated_company_id: string
+          impersonated_company_type: string
+          impersonated_user_id?: string | null
+          ip_address?: string | null
+          metadata?: Json | null
+          started_at?: string
+          super_admin_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          impersonated_company_id?: string
+          impersonated_company_type?: string
+          impersonated_user_id?: string | null
+          ip_address?: string | null
+          metadata?: Json | null
+          started_at?: string
+          super_admin_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impersonation_logs_impersonated_user_id_fkey"
+            columns: ["impersonated_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "impersonation_logs_impersonated_user_id_fkey"
+            columns: ["impersonated_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       item_facility_mappings: {
         Row: {
           certifications: Json | null

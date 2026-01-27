@@ -39,6 +39,7 @@ import { useTranslation } from 'react-i18next';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
 import { useBranchContext } from '@/contexts/BranchContext';
 import { useCompanyPermissions } from '@/hooks/useCompanyPermissions';
+import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { supabase } from '@/integrations/supabase/client';
 
 import {
@@ -149,6 +150,7 @@ export function BuyerSidebarLayout({
   const { hasRole } = useUserRoles();
   const sidebar = useSidebar();
   const collapsed = sidebar?.state === 'collapsed';
+  const { isImpersonating } = useImpersonation();
   
   
   // Single active dropdown state (accordion behavior)
@@ -386,7 +388,7 @@ export function BuyerSidebarLayout({
   };
 
   return (
-    <div className={`flex w-full ${activeTab === 'messages' ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
+    <div className={`flex w-full ${activeTab === 'messages' ? 'h-screen overflow-hidden' : 'min-h-screen'} ${isImpersonating ? 'pt-12' : ''}`}>
       <Sidebar className="border-r border-gray-200 bg-white">
         <SidebarHeader className="border-b border-gray-200 px-3 py-4 bg-white">
           <div className="flex items-center gap-3">

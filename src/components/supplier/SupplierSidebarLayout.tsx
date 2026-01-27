@@ -151,8 +151,7 @@ export function SupplierSidebarLayout({
   const sidebar = useSidebar();
   const collapsed = sidebar?.state === 'collapsed';
   const { isEnabled, isUnlocked, toggleEnabled } = useNotificationSound();
-  const { isImpersonating } = useImpersonation();
-  
+  const { isImpersonating, impersonatedCompany } = useImpersonation();
   
   // Single active dropdown state for hover UX (future-proofing for submenus)
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -196,11 +195,17 @@ export function SupplierSidebarLayout({
     };
   }, []);
 
-  // Resolve company ID for team members
+  // Resolve company ID for team members (impersonation-aware)
   const [resolvedSupplierId, setResolvedSupplierId] = useState<string | null>(supplierProfile?.id || null);
 
   useEffect(() => {
     const resolveCompanyId = async () => {
+      // During impersonation, use the impersonated company ID directly
+      if (isImpersonating && impersonatedCompany?.type === 'supplier') {
+        setResolvedSupplierId(impersonatedCompany.id);
+        return;
+      }
+
       if (!authUser) return;
       
       // Check if user is a team member
@@ -220,7 +225,7 @@ export function SupplierSidebarLayout({
     };
     
     resolveCompanyId();
-  }, [authUser, supplierProfile?.id]);
+  }, [authUser, supplierProfile?.id, isImpersonating, impersonatedCompany]);
 
   // Company branches management with resolved ID
   const {

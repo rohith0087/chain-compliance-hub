@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSuperAdmin } from '@/hooks/useSuperAdmin';
+import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';
 import { useSupportTickets, SupportTicket } from '@/hooks/useSupportTickets';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,7 +40,7 @@ const cardStyle = {
 
 export const SuperAdminClientSupport = () => {
   const navigate = useNavigate();
-  const { users, loading: usersLoading } = useSuperAdmin();
+  const { users, loading: usersLoading } = usePlatformAdmin();
   const { 
     tickets, 
     loading: ticketsLoading, 
@@ -455,12 +455,12 @@ export const SuperAdminClientSupport = () => {
                       <TableCell style={{ color: 'hsl(var(--admin-text))' }}>{user.company_name || 'No Company'}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          {user.is_buyer && (
+                          {(user.user_type === 'Buyer' || user.user_type === 'Both') && (
                             <Badge variant="outline" className="text-xs" style={{ borderColor: NEON_COLORS.cyan, color: NEON_COLORS.cyan }}>
                               Buyer
                             </Badge>
                           )}
-                          {user.is_supplier && (
+                          {(user.user_type === 'Supplier' || user.user_type === 'Both') && (
                             <Badge variant="outline" className="text-xs" style={{ borderColor: NEON_COLORS.purple, color: NEON_COLORS.purple }}>
                               Supplier
                             </Badge>

@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useCompanySetup } from '@/hooks/useCompanySetup';
 import { useUserContexts } from '@/hooks/useUserContexts';
+import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { supabase } from '@/integrations/supabase/client';
 import BuyerDashboard from '@/components/BuyerDashboard';
 import SupplierDashboard from '@/components/SupplierDashboard';
@@ -31,6 +32,7 @@ const DynamicDashboard = () => {
     buyerContexts,
     supplierContexts 
   } = useUserContexts();
+  const { isImpersonating, impersonatedCompany, impersonatedUser } = useImpersonation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [currentRole, setCurrentRole] = useState<'buyer' | 'supplier'>('buyer');
@@ -39,9 +41,41 @@ const DynamicDashboard = () => {
   const [profilesLoading, setProfilesLoading] = useState(true);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
+  const [impersonatedProfiles, setImpersonatedProfiles] = useState<{ buyer: any; supplier: any }>({ buyer: null, supplier: null });
 
   // Determine if user is a team member (has company_users records)
   const isTeamMember = contexts.length > 0;
+
+  // Load impersonated company profile when impersonating
+  useEffect(() => {
+    if (!isImpersonating || !impersonatedCompany) {
+      setImpersonatedProfiles({ buyer: null, supplier: null });
+      return;
+    }
+
+    const loadImpersonatedProfile = async () => {
+      if (impersonatedCompany.type === 'buyer') {
+        const { data } = await supabase
+          .from('buyers')
+          .select('*')
+          .eq('id', impersonatedCompany.id)
+          .single();
+        setImpersonatedProfiles({ buyer: data, supplier: null });
+        setCurrentRole('buyer');
+      } else {
+        const { data } = await supabase
+          .from('suppliers')
+          .select('*')
+          .eq('id', impersonatedCompany.id)
+          .single();
+        setImpersonatedProfiles({ buyer: null, supplier: data });
+        setCurrentRole('supplier');
+      }
+      setProfilesLoading(false);
+    };
+
+    loadImpersonatedProfile();
+  }, [isImpersonating, impersonatedCompany]);
 
   // Timeout detection for infinite loading
   useEffect(() => {
@@ -361,24 +395,30 @@ const DynamicDashboard = () => {
   // Create user object with expected structure for dashboard components
   const dashboardUser = {
     roles: profile.roles as ('buyer' | 'supplier')[],
-    name: profile.full_name || 'User',
+    name: isImpersonating && impersonatedUser ? impersonatedUser.fullName : (profile.full_name || 'User'),
     currentRole: currentRole
   };
 
+  // When impersonating, use the impersonated company's profile
+  const effectiveBuyerProfile = isImpersonating ? impersonatedProfiles.buyer : buyerProfile;
+  const effectiveSupplierProfile = isImpersonating ? impersonatedProfiles.supplier : supplierProfile;
+
   // Show the appropriate dashboard based on current role
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${isImpersonating ? 'pt-12' : ''}`}>
       {currentRole === 'supplier' ? (
         <SupplierDashboard 
           user={dashboardUser} 
           onLogout={handleLogout} 
-          onRoleSwitch={handleRoleSwitch} 
+          onRoleSwitch={handleRoleSwitch}
+          impersonatedSupplierId={isImpersonating ? impersonatedCompany?.id : undefined}
         />
       ) : (
         <BuyerDashboard 
           user={dashboardUser} 
           onLogout={handleLogout} 
-          onRoleSwitch={handleRoleSwitch} 
+          onRoleSwitch={handleRoleSwitch}
+          impersonatedBuyerId={isImpersonating ? impersonatedCompany?.id : undefined}
         />
       )}
     </div>

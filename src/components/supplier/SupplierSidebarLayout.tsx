@@ -38,6 +38,7 @@ import { useTranslation } from 'react-i18next';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
 import { useCompanyPermissions } from '@/hooks/useCompanyPermissions';
 import { useBranchContext } from '@/contexts/BranchContext';
+import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { supabase } from '@/integrations/supabase/client';
 
 import {
@@ -150,6 +151,7 @@ export function SupplierSidebarLayout({
   const sidebar = useSidebar();
   const collapsed = sidebar?.state === 'collapsed';
   const { isEnabled, isUnlocked, toggleEnabled } = useNotificationSound();
+  const { isImpersonating } = useImpersonation();
   
   
   // Single active dropdown state for hover UX (future-proofing for submenus)
@@ -376,7 +378,7 @@ export function SupplierSidebarLayout({
   };
 
   return (
-    <div className={`flex w-full ${activeTab === 'messages' ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
+    <div className={`flex w-full ${activeTab === 'messages' ? 'h-screen overflow-hidden' : 'min-h-screen'} ${isImpersonating ? 'pt-12' : ''}`}>
       <Sidebar className="border-r border-gray-200 bg-white">
         <SidebarHeader className="border-b border-gray-200 px-3 py-4 bg-white">
           <div className="flex items-center gap-3">

@@ -38,6 +38,9 @@ export interface DetailedUser {
   total_consumed_credits: number;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
+  // Company ID fields for impersonation
+  buyer_id: string | null;
+  supplier_id: string | null;
 }
 
 export interface PlatformAdmin {
@@ -139,7 +142,10 @@ export const usePlatformAdmin = () => {
         total_purchased_credits: user.total_purchased_credits || 0,
         total_consumed_credits: user.total_consumed_credits || 0,
         stripe_customer_id: user.stripe_customer_id,
-        stripe_subscription_id: user.stripe_subscription_id
+        stripe_subscription_id: user.stripe_subscription_id,
+        // Company ID fields for impersonation
+        buyer_id: user.buyer_id || null,
+        supplier_id: user.supplier_id || null
       }));
       
       setUsers(usersData);

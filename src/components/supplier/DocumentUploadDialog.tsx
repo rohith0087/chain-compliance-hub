@@ -848,14 +848,14 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
             {uploading ? (
               <span className="flex items-center gap-2">
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                {isResubmission ? 'Resubmitting...' : 'Uploading...'}
+                {isResubmission ? 'Resubmitting...' : 'Submitting...'}
               </span>
             ) : (
               <span className="flex items-center gap-2">
                 <Upload className="h-4 w-4" />
                 {isResubmission 
                   ? (updateMetadataOnly ? 'Update Metadata' : 'Resubmit Document') 
-                  : 'Upload Document'
+                  : 'Submit Document'
                 }
               </span>
             )}

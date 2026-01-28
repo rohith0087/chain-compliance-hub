@@ -1,185 +1,99 @@
 
-# Fix Impersonation - Missing Navigation and Data
+# Fix Upload Error Handling and Filename Sanitization
 
 ## Problem Summary
 
-When a super admin impersonates a user, two issues occur:
-1. **No data is displayed** - Dashboard shows 0 for all metrics
-2. **Missing navigation** - Only "Quick Actions" and "Messages" appear in the sidebar
+When suppliers try to upload files with special characters in the filename (like spaces), the upload fails with an "Invalid key" error that exposes internal storage paths and IDs - a security issue.
 
 ## Root Causes
 
-### 1. Early Return in BuyerDashboard.tsx
+1. **Unsanitized Filenames**: Files with spaces or special characters in their names cause Supabase Storage to reject the upload
+2. **Raw Error Exposure**: The error message from Supabase is displayed directly to users, revealing internal storage structure and UUIDs
 
-When `impersonatedBuyerId` is present, the code fetches the buyer profile but exits early before loading metrics:
+## Solution Overview
 
-```javascript
-if (impersonatedBuyerId) {
-  const { data: buyer } = await supabase
-    .from('buyers')
-    .select('*')
-    .eq('id', impersonatedBuyerId)
-    .single();
-  
-  setBuyerProfile(buyer);
-  setCompanyId(impersonatedBuyerId);
-  return; // ← EARLY EXIT - stats never loaded!
-}
+### 1. Sanitize Filenames Before Upload
+
+Add a filename sanitization function that removes or replaces problematic characters before uploading to storage. This applies to:
+- `CustomTemplateResponse.tsx` (template submissions)
+- `DocumentUploadDialog.tsx` (standard document uploads)
+- `FileUploadZone.tsx` (bulk upload zone)
+
+### 2. Create User-Friendly Error Messages
+
+Replace raw Supabase error messages with user-friendly alternatives that don't expose internal details.
+
+## Technical Implementation
+
+### Step 1: Create Utility Function for Filename Sanitization
+
+Create a shared utility that:
+- Removes or replaces spaces and special characters
+- Preserves file extension
+- Generates unique names to avoid collisions
+
+```text
+sanitizeFileName("Screenshot 2026-01-27 at 12.28.52 PM.png")
+→ "screenshot_2026-01-27_at_12_28_52_pm.png"
 ```
 
-### 2. Permissions Not Impersonation-Aware
+### Step 2: Update CustomTemplateResponse.tsx
 
-The `useCompanyUserRole` hook checks ownership using the currently authenticated user's ID (super admin), not the impersonated user's ID:
-
+Current (line 244):
 ```javascript
-const { user } = useAuth(); // ← Super admin's user
-// ...
-.eq('profile_id', user.id) // ← Checks super admin's ID, not impersonated user
+const fileName = `${Date.now()}-${selectedFile.name}`;
 ```
 
-Since the super admin isn't the owner of the impersonated company, all permission checks fail.
+Updated:
+```javascript
+const sanitizedName = sanitizeFileName(selectedFile.name);
+const fileName = `${Date.now()}-${sanitizedName}`;
+```
 
-## Solution
+### Step 3: Add User-Friendly Error Handler
 
-### Fix 1: Load Dashboard Stats When Impersonating
-
-Modify the `fetchDashboardData` function to NOT return early when impersonating. Instead, proceed to load the dashboard metrics using the impersonated buyer ID.
-
-**File:** `src/components/BuyerDashboard.tsx`
-
-**Change:** Remove the early `return;` and restructure to continue loading stats with `impersonatedBuyerId` as the effective buyer ID.
-
-### Fix 2: Grant Full Permissions During Impersonation
-
-For super admins who are actively impersonating, bypass normal permission checks and treat them as if they have full owner access to the impersonated company.
-
-**File:** `src/hooks/useCompanyUserRole.tsx`
-
-**Change:** Add impersonation context check. When impersonating and the company ID matches the impersonated company, automatically grant owner-level permissions.
-
-### Fix 3: Update Sidebar Company ID Resolution
-
-The sidebar resolves company ID using the authenticated user's profile. During impersonation, it should use the impersonated company ID instead.
-
-**File:** `src/components/buyer/BuyerSidebarLayout.tsx`
-
-**Change:** Add impersonation awareness to the company ID resolution logic.
-
-## Implementation Details
-
-### Step 1: Fix BuyerDashboard.tsx - Load Stats for Impersonation
-
-Remove the early return and use impersonatedBuyerId for metric queries:
+Create error message mapping that:
+- Detects "Invalid key" errors and shows "Please rename your file to remove special characters"
+- Never exposes internal paths, IDs, or storage structure
+- Provides actionable guidance
 
 ```javascript
-const fetchDashboardData = async () => {
-  let effectiveBuyerId = impersonatedBuyerId;
+const getUploadErrorMessage = (error: any) => {
+  const message = error?.message || '';
   
-  // If impersonating, use the impersonated buyer ID directly
-  if (impersonatedBuyerId) {
-    const { data: buyer } = await supabase
-      .from('buyers')
-      .select('*')
-      .eq('id', impersonatedBuyerId)
-      .single();
-    
-    setBuyerProfile(buyer);
-    setCompanyId(impersonatedBuyerId);
-    // REMOVED: return; - Continue to load stats
-  } else {
-    // Normal flow for non-impersonation
-    // ... existing team member / owner logic
-    effectiveBuyerId = teamMember?.company_id || buyer?.id;
+  if (message.includes('Invalid key')) {
+    return 'Upload failed. Please rename your file to remove special characters (spaces, symbols) and try again.';
   }
-
-  // Load dashboard stats
-  if (effectiveBuyerId) {
-    // ... existing metric queries using effectiveBuyerId
+  if (message.includes('Payload too large')) {
+    return 'File is too large. Maximum file size is 50MB.';
   }
+  if (message.includes('not allowed')) {
+    return 'This file type is not supported. Please upload PDF, DOC, DOCX, XLS, XLSX, or image files.';
+  }
+  
+  return 'Upload failed. Please try again or contact support if the issue persists.';
 };
 ```
 
-### Step 2: Fix useCompanyUserRole.tsx - Impersonation Permissions
+### Step 4: Apply to All Upload Components
 
-Add impersonation context check at the start:
-
-```javascript
-import { useImpersonation } from '@/contexts/ImpersonationContext';
-
-export const useCompanyUserRole = (companyId?: string, companyType?: 'buyer' | 'supplier') => {
-  const { user } = useAuth();
-  const { isImpersonating, impersonatedCompany } = useImpersonation();
-  const [role, setRole] = useState<string | null>(null);
-  const [isOwner, setIsOwner] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // When impersonating, grant owner permissions if viewing impersonated company
-    if (isImpersonating && impersonatedCompany) {
-      if (companyId === impersonatedCompany.id && companyType === impersonatedCompany.type) {
-        setRole('company_admin');
-        setIsOwner(true);
-        setLoading(false);
-        return;
-      }
-    }
-    
-    // Normal permission checks
-    if (user && companyId && companyType) {
-      fetchUserRole();
-    } else {
-      setRole(null);
-      setIsOwner(false);
-      setLoading(false);
-    }
-  }, [user, companyId, companyType, isImpersonating, impersonatedCompany]);
-  
-  // ... rest of hook
-};
-```
-
-### Step 3: Fix BuyerSidebarLayout.tsx - Impersonation-Aware Company ID
-
-Update the company ID resolution to use impersonated company when applicable:
-
-```javascript
-const { isImpersonating, impersonatedCompany } = useImpersonation();
-
-useEffect(() => {
-  const resolveCompanyId = async () => {
-    // During impersonation, use the impersonated company ID directly
-    if (isImpersonating && impersonatedCompany?.type === 'buyer') {
-      setResolvedCompanyId(impersonatedCompany.id);
-      return;
-    }
-    
-    // Normal resolution for non-impersonation
-    if (!profile?.id) return;
-    // ... existing logic
-  };
-  
-  resolveCompanyId();
-}, [profile?.id, buyerProfile?.id, isImpersonating, impersonatedCompany]);
-```
+| File | Changes |
+|------|---------|
+| `src/lib/utils.ts` | Add `sanitizeFileName` utility function |
+| `src/components/supplier/CustomTemplateResponse.tsx` | Use sanitized filename, add friendly error messages |
+| `src/components/supplier/DocumentUploadDialog.tsx` | Use sanitized filename, add friendly error messages |
+| `src/components/uploads/FileUploadZone.tsx` | Use sanitized filename, add friendly error messages |
 
 ## Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/components/BuyerDashboard.tsx` | Remove early return, load stats during impersonation |
-| `src/hooks/useCompanyUserRole.tsx` | Grant owner permissions during impersonation |
-| `src/components/buyer/BuyerSidebarLayout.tsx` | Use impersonated company ID for resolution |
-| `src/components/supplier/SupplierSidebarLayout.tsx` | Same changes for supplier side |
-| `src/hooks/useCompanyBranches.tsx` | Add impersonation awareness (if needed) |
+1. **src/lib/utils.ts** - Add `sanitizeFileName` and `getUploadErrorMessage` utilities
+2. **src/components/supplier/CustomTemplateResponse.tsx** - Apply filename sanitization and error handling
+3. **src/components/supplier/DocumentUploadDialog.tsx** - Apply filename sanitization and error handling
+4. **src/components/uploads/FileUploadZone.tsx** - Apply filename sanitization and error handling
 
-## Testing After Implementation
+## Expected Outcome
 
-1. Log in as platform admin (`rzg0087@auburn.edu`)
-2. Navigate to Platform Admin Dashboard → Support Tickets
-3. Search for `rcrohith017@gmail.com`
-4. Click "Impersonate"
-5. **Expected results:**
-   - Full navigation sidebar visible (Dashboard, Suppliers, Requests & Documents, Compliance, etc.)
-   - Dashboard metrics show actual data (suppliers count, active requests, etc.)
-   - All tabs and features accessible as if viewing as the company owner
-6. Click "End Impersonation" in banner to return to admin view
+After implementation:
+- Files with any name (including spaces and special characters) will upload successfully
+- If an upload fails, users see helpful messages like "Please rename your file..." instead of internal storage paths
+- No internal IDs, paths, or infrastructure details are ever exposed in error messages

@@ -65,6 +65,7 @@ interface DocumentCardWithSelectionProps {
   onDecline?: () => void;
   onCreateLink?: () => void;
   onWithdraw?: () => void;
+  onOpenSummary?: () => void;
   showActions?: boolean;
   userRole?: 'buyer' | 'supplier';
   approveLoading?: boolean;
@@ -85,6 +86,7 @@ const DocumentCardWithSelection = ({
   onDecline,
   onCreateLink,
   onWithdraw,
+  onOpenSummary,
   showActions = true,
   userRole = 'buyer',
   approveLoading = false,
@@ -95,6 +97,24 @@ const DocumentCardWithSelection = ({
   onSelectionChange,
   showSelection = false
 }: DocumentCardWithSelectionProps) => {
+  // Check if card should be clickable (approved documents for buyer)
+  const isClickable = userRole === 'buyer' && document.status === 'approved' && onOpenSummary;
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't trigger if clicking on action buttons, checkbox, or version history
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('button') ||
+      target.closest('[role="checkbox"]') ||
+      target.closest('[data-version-history]')
+    ) {
+      return;
+    }
+    
+    if (isClickable) {
+      onOpenSummary();
+    }
+  };
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved': return 'bg-gradient-to-r from-[hsl(var(--green-accent))] to-[hsl(var(--emerald-accent))] text-white border-0';
@@ -175,7 +195,10 @@ const DocumentCardWithSelection = ({
   };
 
   return (
-    <Card className={`hover:shadow-elegant transition-all duration-300 border-l-4 ${getCategoryColor(document.category)} ${isSelected ? 'ring-2 ring-[hsl(var(--blue-accent))] shadow-[0_0_20px_hsl(var(--blue-accent)/0.3)]' : ''}`}>
+    <Card 
+      className={`hover:shadow-elegant transition-all duration-300 border-l-4 ${getCategoryColor(document.category)} ${isSelected ? 'ring-2 ring-[hsl(var(--blue-accent))] shadow-[0_0_20px_hsl(var(--blue-accent)/0.3)]' : ''} ${isClickable ? 'cursor-pointer hover:ring-1 hover:ring-[hsl(var(--green-accent))]/50' : ''}`}
+      onClick={handleCardClick}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
@@ -384,15 +407,22 @@ const DocumentCardWithSelection = ({
 
           {/* Company Information */}
           <div className="pt-3 border-t">
-            <div className="text-sm text-muted-foreground">
-              {userRole === 'buyer' && document.supplier && (
-                <span>Supplier: {document.supplier.company_name}</span>
-              )}
-              {userRole === 'supplier' && document.buyer && (
-                <span>Requested by: {document.buyer.company_name}</span>
-              )}
-              {document.uploader && (
-                <span className="ml-4">Uploaded by: {document.uploader.full_name}</span>
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <div>
+                {userRole === 'buyer' && document.supplier && (
+                  <span>Supplier: {document.supplier.company_name}</span>
+                )}
+                {userRole === 'supplier' && document.buyer && (
+                  <span>Requested by: {document.buyer.company_name}</span>
+                )}
+                {document.uploader && (
+                  <span className="ml-4">Uploaded by: {document.uploader.full_name}</span>
+                )}
+              </div>
+              {isClickable && (
+                <span className="text-xs text-[hsl(var(--green-accent))] font-medium">
+                  Click to view summary →
+                </span>
               )}
             </div>
           </div>

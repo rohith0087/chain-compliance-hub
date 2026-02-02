@@ -18,6 +18,7 @@ import { DocumentLinkModal } from './DocumentLinkModal';
 import { resolveStoragePath } from '@/utils/storagePath';
 import { BulkDownloadOptionsDialog } from './BulkDownloadOptionsDialog';
 import { BulkDownloadOverlay } from './BulkDownloadOverlay';
+import ApprovedDocumentSummaryModal from './ApprovedDocumentSummaryModal';
 
 interface BuyerDocumentsManagerProps {
   documents: any[];
@@ -69,6 +70,8 @@ const BuyerDocumentsManager = ({
   const [showVersionDialog, setShowVersionDialog] = useState(false);
   const [downloadMode, setDownloadMode] = useState<'current' | 'all'>('current');
   const [organizeFolders, setOrganizeFolders] = useState(true);
+  const [summaryModalOpen, setSummaryModalOpen] = useState(false);
+  const [summaryDocument, setSummaryDocument] = useState<any>(null);
   const { toast } = useToast();
 
   // Enhanced filter logic with new filter options
@@ -430,6 +433,11 @@ const BuyerDocumentsManager = ({
     setLinkModalOpen(true);
   };
 
+  const handleOpenSummary = (doc: any) => {
+    setSummaryDocument(doc);
+    setSummaryModalOpen(true);
+  };
+
   // Bulk selection functions
   const handleSelectAll = () => {
     const newSelection = new Set<string>();
@@ -693,6 +701,7 @@ const BuyerDocumentsManager = ({
                   onDecline={() => onDecline(doc.id)}
                   onWithdraw={() => onWithdraw(doc.id, doc.title || doc.document_type)}
                   onCreateLink={() => handleCreateLink(doc)}
+                  onOpenSummary={doc.status === 'approved' ? () => handleOpenSummary(doc) : undefined}
                   approveLoading={approveLoading === doc.id}
                   declineLoading={declineLoading === doc.id}
                   withdrawLoading={withdrawLoading === doc.id}
@@ -727,6 +736,31 @@ const BuyerDocumentsManager = ({
           documentUpload={getLatestUpload(selectedDocument.document_uploads)}
         />
       )}
+
+      {/* Approved Document Summary Modal */}
+      <ApprovedDocumentSummaryModal
+        isOpen={summaryModalOpen}
+        onClose={() => {
+          setSummaryModalOpen(false);
+          setSummaryDocument(null);
+        }}
+        document={summaryDocument ? {
+          ...summaryDocument,
+          supplier: summaryDocument.suppliers
+        } : null}
+        onView={() => {
+          if (summaryDocument) handleView(summaryDocument);
+        }}
+        onDownload={() => {
+          if (summaryDocument) handleDownload(summaryDocument);
+        }}
+        onCreateLink={() => {
+          if (summaryDocument) {
+            setSummaryModalOpen(false);
+            handleCreateLink(summaryDocument);
+          }
+        }}
+      />
     </div>
   );
 };

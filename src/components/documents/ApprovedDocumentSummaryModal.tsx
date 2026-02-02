@@ -84,6 +84,88 @@ interface ApprovedDocumentSummaryModalProps {
   onCreateLink: () => void;
 }
 
+// Pending state component with Analyze Now button
+const PendingSummaryState = ({ 
+  documentUploadId, 
+  onAnalysisTriggered 
+}: { 
+  documentUploadId: string;
+  onAnalysisTriggered: () => void;
+}) => {
+  const [analyzing, setAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const triggerAnalysis = async () => {
+    setAnalyzing(true);
+    setError(null);
+
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke('backfill-buyer-document-content', {
+        body: { document_upload_id: documentUploadId }
+      });
+
+      if (fnError) throw fnError;
+
+      if (data?.success) {
+        onAnalysisTriggered();
+      } else {
+        setError(data?.error || 'Analysis failed');
+      }
+    } catch (err) {
+      console.error('Error triggering analysis:', err);
+      setError(err instanceof Error ? err.message : 'Failed to analyze document');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  if (analyzing) {
+    return (
+      <div className="p-4 bg-background rounded-lg border">
+        <div className="flex items-center gap-3">
+          <Loader2 className="h-5 w-5 animate-spin text-[hsl(var(--blue-accent))]" />
+          <div>
+            <p className="text-sm font-medium">Analyzing document...</p>
+            <p className="text-xs text-muted-foreground">
+              This may take 30-60 seconds
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 bg-background rounded-lg border space-y-3">
+      <div className="flex items-center gap-3">
+        <Clock className="h-5 w-5 text-[hsl(var(--orange-accent))]" />
+        <div>
+          <p className="text-sm font-medium">Summary not yet generated</p>
+          <p className="text-xs text-muted-foreground">
+            This document was approved before AI analysis was enabled
+          </p>
+        </div>
+      </div>
+      
+      {error && (
+        <div className="p-2 bg-destructive/10 rounded border border-destructive/30 text-xs text-destructive">
+          {error}
+        </div>
+      )}
+      
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={triggerAnalysis}
+        className="w-full gap-2"
+      >
+        <Sparkles className="h-4 w-4" />
+        Analyze Now
+      </Button>
+    </div>
+  );
+};
+
 const ApprovedDocumentSummaryModal = ({
   isOpen,
   onClose,
@@ -388,17 +470,7 @@ const ApprovedDocumentSummaryModal = ({
                         </div>
                       </div>
                     ) : current?.content_extraction_status === 'pending' ? (
-                      <div className="p-4 bg-background rounded-lg border">
-                        <div className="flex items-center gap-3">
-                          <Clock className="h-5 w-5 text-[hsl(var(--orange-accent))]" />
-                          <div>
-                            <p className="text-sm font-medium">Summary pending</p>
-                            <p className="text-xs text-muted-foreground">
-                              Document queued for AI analysis
-                            </p>
-                          </div>
-                        </div>
-                      </div>
+                      <PendingSummaryState documentUploadId={current.id} onAnalysisTriggered={fetchActivityChain} />
                     ) : (
                       <div className="p-4 bg-background rounded-lg border">
                         <div className="flex items-center gap-3">

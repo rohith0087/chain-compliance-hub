@@ -209,3 +209,7 @@ verify_jwt = false
 # Communication Hub - real-time messaging between buyers and suppliers
 [functions.communication-hub]
 verify_jwt = true
+
+# Backfill buyer document content - platform admin only
+[functions.backfill-buyer-document-content]
+verify_jwt = true

@@ -9,7 +9,8 @@ import {
   LogOut,
   FileText,
   Ticket,
-  X
+  X,
+  Sparkles
 } from 'lucide-react';
 import {
   Sidebar,
@@ -79,6 +80,12 @@ const navigationItems = [
     url: '/platform-admin/dashboard?tab=logs',
     icon: FileText,
     section: 'logs'
+  },
+  {
+    title: 'AI Backfill',
+    url: '/platform-admin/dashboard?tab=backfill',
+    icon: Sparkles,
+    section: 'backfill'
   }
 ];
 

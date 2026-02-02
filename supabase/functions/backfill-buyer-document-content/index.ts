@@ -4,7 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://edwerzutsknhuplidhsj.supabase.co';
@@ -58,14 +58,15 @@ serve(async (req) => {
       );
     }
 
-    // Check if user is platform admin
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_platform_admin')
-      .eq('id', userData.user.id)
+    // Check if user is platform admin - query the platform_administrators table
+    const { data: adminRecord } = await supabase
+      .from('platform_administrators')
+      .select('id, is_active, platform_roles')
+      .eq('auth_user_id', userData.user.id)
+      .eq('is_active', true)
       .single();
 
-    if (!profile?.is_platform_admin) {
+    if (!adminRecord) {
       return new Response(
         JSON.stringify({ error: 'Platform admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

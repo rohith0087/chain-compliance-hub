@@ -10,6 +10,7 @@ import { PlatformAdminSystemSettings } from './PlatformAdminSystemSettings';
 import { PlatformAdminInvitations } from './PlatformAdminInvitations';
 import { PlatformAdminAuditLogs } from './PlatformAdminAuditLogs';
 import { SuperAdminClientSupport } from '@/components/super-admin/SuperAdminClientSupport';
+import { DocumentBackfillManager } from './DocumentBackfillManager';
 import { formatDistanceToNow } from 'date-fns';
 
 export function PlatformAdminDashboardContent() {
@@ -98,6 +99,10 @@ export function PlatformAdminDashboardContent() {
 
   if (activeTab === 'logs') {
     return <PlatformAdminAuditLogs />;
+  }
+
+  if (activeTab === 'backfill') {
+    return <DocumentBackfillManager />;
   }
 
   return (

@@ -394,6 +394,41 @@ async function processDocumentUpload(upload: DocumentUpload) {
         .eq('buyer_id', request.buyer_id);
     }
 
+    // Trigger content extraction for approved documents (for Compliance Compass knowledge base)
+    if (newStatus === 'approved') {
+      try {
+        console.log(`Triggering content extraction for approved document: ${upload.id}`);
+        
+        // Invoke the buyer document content processor asynchronously
+        await supabase.functions.invoke('buyer-document-content-processor', {
+          body: {
+            document_upload_id: upload.id,
+            buyer_id: request.buyer_id
+          }
+        });
+        
+        await logAgentActivity(
+          'content_extraction_triggered',
+          upload.id,
+          'document_upload',
+          { buyer_id: request.buyer_id },
+          true
+        );
+      } catch (extractError) {
+        // Log but don't fail - content extraction is supplementary
+        console.error('Content extraction invocation failed:', extractError);
+        await logAgentActivity(
+          'content_extraction_failed',
+          upload.id,
+          'document_upload',
+          { error: extractError.message },
+          false,
+          undefined,
+          extractError.message
+        );
+      }
+    }
+
     console.log(`Processed document ${upload.id}: ${newStatus}`);
 
   } catch (error) {

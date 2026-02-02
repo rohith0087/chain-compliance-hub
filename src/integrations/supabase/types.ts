@@ -2227,6 +2227,9 @@ export type Database = {
         Row: {
           branch_id: string | null
           buyer_notes: string | null
+          content_extracted_at: string | null
+          content_extraction_status: string | null
+          content_summary: string | null
           created_at: string | null
           document_name: string | null
           expiration_date: string | null
@@ -2251,6 +2254,9 @@ export type Database = {
         Insert: {
           branch_id?: string | null
           buyer_notes?: string | null
+          content_extracted_at?: string | null
+          content_extraction_status?: string | null
+          content_summary?: string | null
           created_at?: string | null
           document_name?: string | null
           expiration_date?: string | null
@@ -2275,6 +2281,9 @@ export type Database = {
         Update: {
           branch_id?: string | null
           buyer_notes?: string | null
+          content_extracted_at?: string | null
+          content_extraction_status?: string | null
+          content_summary?: string | null
           created_at?: string | null
           document_name?: string | null
           expiration_date?: string | null

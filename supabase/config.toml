@@ -130,6 +130,10 @@ verify_jwt = true
 [functions.secure-document-url]
 verify_jwt = true
 
+# Buyer document content processor - extracts content from approved buyer requests
+[functions.buyer-document-content-processor]
+verify_jwt = true
+
 # Secure sample document URL generation - requires authentication
 [functions.secure-sample-url]
 verify_jwt = true

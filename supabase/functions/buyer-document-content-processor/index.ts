@@ -1,7 +1,10 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
-import * as pdfjs from 'https://esm.sh/pdfjs-dist@4.0.379/build/pdf.mjs';
+import { getDocument, GlobalWorkerOptions } from 'https://esm.sh/pdfjs-dist@4.4.168/build/pdf.mjs';
+
+// Disable worker for serverless environment
+GlobalWorkerOptions.workerSrc = '';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -82,13 +85,24 @@ function isVisionCompatibleImage(mimeType: string): boolean {
 // ============ PDF PROCESSING ============
 
 /**
- * Extract text from PDF using pdfjs
+ * Extract text from PDF using pdfjs-dist with disabled worker
  */
 async function extractPdfText(pdfBuffer: ArrayBuffer): Promise<{ text: string; pageCount: number }> {
   try {
-    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(pdfBuffer) });
+    console.log('Starting PDF text extraction with pdfjs-dist...');
+    
+    // Use disableWorker option for serverless environment
+    const loadingTask = getDocument({
+      data: new Uint8Array(pdfBuffer),
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true,
+    });
+    
     const pdf = await loadingTask.promise;
     const pageCount = pdf.numPages;
+    console.log(`PDF loaded successfully: ${pageCount} pages`);
+    
     let fullText = '';
 
     // Process up to 10 pages for text extraction
@@ -293,7 +307,7 @@ async function processDocumentIntelligent(
 
   // Route 2: PDF files - try text extraction first
   if (mimeType === 'application/pdf') {
-    console.log('Route: PDF processing');
+    console.log('Route: PDF processing pipeline');
     
     // Step 1: Try to extract text from PDF
     const { text, pageCount } = await extractPdfText(fileBuffer);
@@ -305,27 +319,22 @@ async function processDocumentIntelligent(
       return await analyzeTextContent(text, category, documentType);
     }
 
-    // Step 3: PDF is likely scanned/image-based - try Vision API with PDF
-    console.log('PDF appears to be scanned/image-based - attempting Vision API');
-    try {
-      const base64Data = arrayBufferToBase64(fileBuffer);
-      return await analyzeImageWithVision(base64Data, 'application/pdf', category, documentType);
-    } catch (visionError: any) {
-      console.error('Vision API cannot process this PDF:', visionError.message);
-      
-      return {
-        summary: `PDF document with ${pageCount} pages. Unable to extract text content - document appears to be scanned images. Manual review recommended.`,
-        extractedText: text || 'No text could be extracted from this scanned PDF.',
-        documentType: documentType,
-        keyDates: [],
-        entities: [],
-        complianceStandards: [],
-        riskFlags: ['Scanned PDF - limited text extraction'],
-        confidenceScore: 0.3,
-        enhancedDescription: 'This PDF contains scanned images and could not be fully analyzed automatically.',
-        suggestedTags: [category, documentType, 'scanned', 'needs-review']
-      };
-    }
+    // Step 3: PDF has no extractable text - it's likely a scanned document
+    console.log('PDF appears to be scanned - text extraction found minimal content');
+    
+    // For scanned PDFs, return a result indicating manual review is needed
+    return {
+      summary: `PDF document with ${pageCount > 0 ? pageCount : 'unknown number of'} pages. The document appears to be a scanned image-based PDF. Text extraction was not successful, suggesting the PDF contains embedded images rather than selectable text. Manual review is recommended for accurate content extraction.`,
+      extractedText: text || 'Unable to extract text - this appears to be a scanned PDF document.',
+      documentType: documentType,
+      keyDates: [],
+      entities: [],
+      complianceStandards: [],
+      riskFlags: ['Scanned PDF - automated text extraction not available', 'Manual review recommended'],
+      confidenceScore: 0.3,
+      enhancedDescription: 'This PDF contains scanned images. For full content extraction, please use OCR tools or manually review the document.',
+      suggestedTags: [category, documentType, 'scanned-pdf', 'needs-review']
+    };
   }
 
   // Route 3: DOCX files - extract text directly
@@ -525,112 +534,94 @@ serve(async (req) => {
       analysis.complianceStandards
     );
 
-    // Store in ai_knowledge_entries with buyer context
+    // Create knowledge entry for Compliance Compass
     const knowledgeEntry = {
       company_id: buyer_id,
       company_type: 'buyer',
-      entry_type: 'buyer_document_content',
-      title: `${upload.document_requests.document_type} - ${supplierName} (${year})`,
+      entry_type: 'document_analysis',
+      title: `${upload.document_requests.document_type || 'Document'} - ${supplierName}`,
       content: analysis.extractedText,
       embedding: `[${embedding.join(',')}]`,
-      source_reference: `buyer_upload:${document_upload_id}`,
-      relevance_tags: relevanceTags,
       metadata: {
         document_upload_id: document_upload_id,
-        document_request_id: upload.request_id,
         supplier_id: upload.document_requests.supplier_id,
         supplier_name: supplierName,
         document_type: upload.document_requests.document_type,
         category: upload.document_requests.category,
-        year: year,
-        expiration_date: upload.expiration_date,
-        approval_date: new Date().toISOString(),
-        summary: analysis.summary,
+        file_name: upload.file_name,
         key_dates: analysis.keyDates,
         entities: analysis.entities,
         compliance_standards: analysis.complianceStandards,
         risk_flags: analysis.riskFlags,
         confidence_score: analysis.confidenceScore,
-        file_name: upload.file_name
-      }
+        year: year
+      },
+      source_reference: `document_uploads:${document_upload_id}`,
+      industry_context: supplierIndustry,
+      relevance_tags: relevanceTags,
     };
 
-    // Upsert to prevent duplicates
-    const { error: knowledgeError } = await supabase
+    const { error: insertError } = await supabase
       .from('ai_knowledge_entries')
-      .upsert(knowledgeEntry, { onConflict: 'source_reference' });
+      .insert(knowledgeEntry);
 
-    if (knowledgeError) {
-      console.error('Failed to insert knowledge entry:', knowledgeError);
+    if (insertError) {
+      console.error('Failed to insert knowledge entry:', insertError);
     }
 
-    // Update document upload with extraction results
-    const { error: updateError } = await supabase
+    // Update document with analysis results
+    await supabase
       .from('document_uploads')
       .update({
+        content_summary: analysis.summary,
         content_extraction_status: 'completed',
         content_extracted_at: new Date().toISOString(),
-        content_summary: analysis.summary
+        metadata: {
+          ...upload.metadata,
+          ai_analysis: {
+            enhanced_description: analysis.enhancedDescription,
+            suggested_tags: analysis.suggestedTags,
+            key_dates: analysis.keyDates,
+            entities: analysis.entities,
+            compliance_standards: analysis.complianceStandards,
+            risk_flags: analysis.riskFlags,
+            confidence_score: analysis.confidenceScore,
+            analyzed_at: new Date().toISOString()
+          }
+        }
       })
       .eq('id', document_upload_id);
 
-    if (updateError) {
-      console.error('Failed to update document upload:', updateError);
-    }
-
-    // Log agent activity
-    await supabase
-      .from('agent_activities')
-      .insert({
-        agent_type: 'buyer',
-        action_type: 'buyer_document_content_extracted',
-        entity_id: document_upload_id,
-        entity_type: 'document_upload',
-        details: {
-          buyer_id,
-          supplier_id: upload.document_requests.supplier_id,
-          supplier_name: supplierName,
-          document_type: upload.document_requests.document_type,
-          confidence_score: analysis.confidenceScore,
-          extracted_length: analysis.extractedText.length
-        },
-        success: true,
-        confidence_score: analysis.confidenceScore
-      });
-
-    console.log(`Successfully processed buyer document content: ${document_upload_id}`);
+    console.log(`Document ${document_upload_id} processed successfully`);
 
     return new Response(
       JSON.stringify({
         success: true,
         document_upload_id,
-        buyer_id,
-        analysis: {
-          summary: analysis.summary,
-          document_type: analysis.documentType,
-          confidence_score: analysis.confidenceScore,
-          key_dates_count: analysis.keyDates.length,
-          entities_count: analysis.entities.length,
-          compliance_standards: analysis.complianceStandards
-        }
+        summary: analysis.summary,
+        confidence_score: analysis.confidenceScore,
+        document_type: analysis.documentType
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error: any) {
-    console.error('Error processing buyer document content:', error);
+    console.error('Processor error:', error);
 
-    // Update status to failed
+    // Try to update the document status to failed
     try {
-      const body = await req.clone().json();
-      if (body.document_upload_id) {
+      const { document_upload_id } = await req.json().catch(() => ({}));
+      if (document_upload_id) {
         await supabase
           .from('document_uploads')
-          .update({ content_extraction_status: 'failed' })
-          .eq('id', body.document_upload_id);
+          .update({
+            content_extraction_status: 'failed',
+            content_summary: `Processing failed: ${error.message}`
+          })
+          .eq('id', document_upload_id);
       }
-    } catch (e) {
-      console.error('Failed to update error status:', e);
+    } catch (updateError) {
+      console.error('Failed to update document status:', updateError);
     }
 
     return new Response(

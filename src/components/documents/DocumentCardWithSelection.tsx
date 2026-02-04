@@ -196,7 +196,7 @@ const DocumentCardWithSelection = ({
 
   return (
     <Card 
-      className={`hover:shadow-elegant transition-all duration-300 border-l-4 ${getCategoryColor(document.category)} ${isSelected ? 'ring-2 ring-[hsl(var(--blue-accent))] shadow-[0_0_20px_hsl(var(--blue-accent)/0.3)]' : ''} ${isClickable ? 'cursor-pointer hover:ring-1 hover:ring-[hsl(var(--green-accent))]/50' : ''}`}
+      className={`hover:shadow-elegant transition-all duration-300 border-l-4 ${getCategoryColor(document.category)} ${isSelected ? 'ring-2 ring-[hsl(var(--blue-accent))] shadow-[0_0_20px_hsl(var(--blue-accent)/0.3)]' : ''} ${isClickable ? 'cursor-pointer hover:ring-1 hover:ring-[#003f88]/50' : ''}`}
       onClick={handleCardClick}
     >
       <CardHeader className="pb-3">
@@ -420,7 +420,7 @@ const DocumentCardWithSelection = ({
                 )}
               </div>
               {isClickable && (
-                <span className="text-xs text-[hsl(var(--green-accent))] font-medium">
+                <span className="text-xs text-[#003f88] font-medium">
                   Click to view summary →
                 </span>
               )}

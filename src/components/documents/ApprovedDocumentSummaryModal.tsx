@@ -182,8 +182,12 @@ const ApprovedDocumentSummaryModal = ({
   const getVersionsWithSummaries = (uploads: DocumentUpload[] | undefined) => {
     if (!uploads || uploads.length === 0) return { current: null, previous: [] };
 
-    // Sort by version DESC (newest first)
-    const sorted = [...uploads].sort((a, b) => (b.version || 0) - (a.version || 0));
+    // Sort by version DESC, then created_at DESC as tiebreaker for same versions
+    const sorted = [...uploads].sort((a, b) => {
+      const versionDiff = (b.version || 0) - (a.version || 0);
+      if (versionDiff !== 0) return versionDiff;
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    });
 
     // Find the latest approved version (this is "current")
     const currentApproved = sorted.find((u) => u.status === 'approved');

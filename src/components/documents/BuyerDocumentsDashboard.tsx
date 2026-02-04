@@ -350,10 +350,12 @@ const BuyerDocumentsDashboard = () => {
         let effectiveStatus = doc.status;
         
         if (doc.document_uploads && doc.document_uploads.length > 0) {
-          // Sort by version DESC to get the LATEST upload (highest version number)
-          const sortedUploads = [...doc.document_uploads].sort((a: any, b: any) => 
-            (b.version || 0) - (a.version || 0)
-          );
+          // Sort by version DESC, then created_at DESC as tiebreaker for same versions
+          const sortedUploads = [...doc.document_uploads].sort((a: any, b: any) => {
+            const versionDiff = (b.version || 0) - (a.version || 0);
+            if (versionDiff !== 0) return versionDiff;
+            return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+          });
           const latestUpload = sortedUploads[0];
           
           // PRIORITY 1: Check if latest upload needs review (renewal submitted)

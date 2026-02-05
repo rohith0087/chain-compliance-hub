@@ -1,90 +1,177 @@
 
-# Fix: Document Status Showing Wrong Version
+# Add Refresh Summary Icon to Approved Document Modal
 
-## Problem Identified
+## Overview
 
-The document card for the ISO 9001 Certificate from Voot Foods displays **"Rejected"** when the **current/latest version is actually "Approved"**.
+Add a refresh icon button to the summary card in the Approved Document Summary Modal that allows users to regenerate the AI summary when the output is not satisfactory. When hovered, it shows a tooltip "Refresh Summary".
 
-### Root Cause: Database Version Numbers Not Incrementing + Sort Logic Mismatch
+## UI Design
 
-| Component | Sort Method | Result |
-|-----------|-------------|--------|
-| `DocumentVersionHistory.tsx` | `created_at DESC` | ✅ Correctly identifies newest upload (approved) as "Current" |
-| `BuyerDocumentsDashboard.tsx` | `version DESC` only | ❌ Both uploads have `version=1`, so sort is arbitrary |
-| `ApprovedDocumentSummaryModal.tsx` | `version DESC` | ❌ Same issue |
+The refresh icon will be placed in the summary card header, next to the version/status badges. It will:
+- Only appear when the current version has a completed summary (status = 'completed')
+- Show a spinning animation while regenerating
+- Display a tooltip on hover: "Refresh Summary"
+- Use the existing `backfill-buyer-document-content` edge function with `document_upload_id`
 
-**Database Evidence:**
+```text
++----------------------------------------------------------+
+| V1 — Current   [AI Analyzed]              [↻ Refresh]    |
++----------------------------------------------------------+
+| Summary text content...                                   |
++----------------------------------------------------------+
 ```
-Upload 1 (rejected): created_at = 08:38:10, version = 1
-Upload 2 (approved): created_at = 08:39:18, version = 1  ← Should be version 2!
-```
 
-Both uploads have `version = 1` in the database, so when sorting by version, JavaScript's unstable sort can return either one first, causing the rejected version to incorrectly appear as the "latest."
+## Technical Implementation
 
----
+### File: `src/components/documents/ApprovedDocumentSummaryModal.tsx`
 
-## Solution: Two-Part Fix
-
-### Part 1: Fix the Sort Logic (Frontend - Immediate Fix)
-
-Update all components to sort by **version DESC, then created_at DESC** as a tiebreaker. This ensures that when versions are equal, the most recently uploaded file is used.
-
-**Files to update:**
-
-#### 1. `src/components/documents/BuyerDocumentsDashboard.tsx` (line 354-356)
-
+**1. Add RefreshCw icon import:**
 ```typescript
-// BEFORE:
-const sortedUploads = [...doc.document_uploads].sort((a: any, b: any) => 
-  (b.version || 0) - (a.version || 0)
-);
-
-// AFTER:
-const sortedUploads = [...doc.document_uploads].sort((a: any, b: any) => {
-  // Primary: version DESC
-  const versionDiff = (b.version || 0) - (a.version || 0);
-  if (versionDiff !== 0) return versionDiff;
-  // Tiebreaker: created_at DESC (newest first)
-  return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-});
+import {
+  // ... existing imports
+  RefreshCw,  // Add this
+} from 'lucide-react';
 ```
 
-#### 2. `src/components/documents/ApprovedDocumentSummaryModal.tsx` (line 186)
-
-Apply the same fix to ensure the summary modal identifies the correct "current" version.
-
-#### 3. `src/components/documents/BuyerDocumentsManager.tsx`
-
-Verify the `getLatestUpload` helper already uses `created_at` (it does, so no change needed there).
-
-### Part 2: Fix the Data (Backend - Correct the Version Numbers)
-
-The real issue is that when V2 was uploaded, the version column wasn't incremented. This should be fixed:
-
-1. **SQL to fix existing data:**
-```sql
--- Update the approved upload to version 2
-UPDATE document_uploads 
-SET version = 2 
-WHERE id = 'bf7d0b4a-a04f-4478-bcaa-327e4858a0f8';
+**2. Add Tooltip imports:**
+```typescript
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 ```
 
-2. **Investigate why version wasn't incremented** when the supplier resubmitted - this could be a bug in the upload flow for rejected documents.
+**3. Add state for refresh operation in the main component:**
+```typescript
+const [refreshing, setRefreshing] = useState(false);
+const [refreshError, setRefreshError] = useState<string | null>(null);
+```
 
----
+**4. Add refresh handler function:**
+```typescript
+const handleRefreshSummary = async () => {
+  if (!current?.id) return;
+  
+  setRefreshing(true);
+  setRefreshError(null);
+  
+  try {
+    const { data, error: fnError } = await supabase.functions.invoke(
+      'backfill-buyer-document-content',
+      { body: { document_upload_id: current.id } }
+    );
+    
+    if (fnError) throw fnError;
+    
+    if (data?.success) {
+      // Trigger a re-fetch of the document data
+      // The modal receives document as prop, so we need to trigger parent refresh
+      fetchActivityChain(); // This will update activities
+      // Show success feedback (optional toast)
+    } else {
+      setRefreshError(data?.error || 'Failed to refresh summary');
+    }
+  } catch (err) {
+    console.error('Error refreshing summary:', err);
+    setRefreshError(err instanceof Error ? err.message : 'Failed to refresh');
+  } finally {
+    setRefreshing(false);
+  }
+};
+```
+
+**5. Add onRefresh prop to trigger parent data refresh:**
+```typescript
+interface ApprovedDocumentSummaryModalProps {
+  // ... existing props
+  onRefresh?: () => void;  // New prop to trigger parent data refresh
+}
+```
+
+**6. Add refresh icon button in the summary card header (around line 443-452):**
+
+The button will be added to the flex container that holds the badges:
+
+```tsx
+<div className="flex items-center justify-between mb-3">
+  <div className="flex items-center gap-2">
+    <Badge variant="outline" className="font-medium">
+      V{current?.version || 1} — Current
+    </Badge>
+    <Badge className={`${extractionStatus.className} border`}>
+      {extractionStatus.icon}
+      <span className="ml-1">{extractionStatus.label}</span>
+    </Badge>
+  </div>
+  
+  {/* Refresh Summary Button - only show when summary exists */}
+  {current?.content_extraction_status === 'completed' && (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-[#003f88]"
+            onClick={handleRefreshSummary}
+            disabled={refreshing}
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{refreshing ? 'Refreshing...' : 'Refresh Summary'}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )}
+</div>
+```
+
+**7. Add error display below the summary (optional):**
+```tsx
+{refreshError && (
+  <div className="mt-2 p-2 bg-destructive/10 rounded border border-destructive/30 text-xs text-destructive">
+    {refreshError}
+  </div>
+)}
+```
+
+**8. Update parent components to pass onRefresh prop:**
+
+In `BuyerDocumentsDashboard.tsx`, when rendering the modal, pass a refresh callback that invalidates the query:
+
+```tsx
+<ApprovedDocumentSummaryModal
+  // ... existing props
+  onRefresh={() => queryClient.invalidateQueries({ queryKey: ['buyer-documents'] })}
+/>
+```
+
+## User Experience Flow
+
+1. User clicks on an approved document card
+2. Summary modal opens showing the AI-generated summary
+3. If the summary is poor/incorrect, user hovers over the refresh icon → sees "Refresh Summary" tooltip
+4. User clicks refresh icon → icon spins, showing "Refreshing..."
+5. After completion:
+   - Success: Summary content updates with new analysis
+   - Failure: Error message displays below the summary
+6. Knowledge base is automatically updated as part of the backfill process
 
 ## Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/components/documents/BuyerDocumentsDashboard.tsx` | Update sort at line 354-356 to use `version DESC, created_at DESC` |
-| `src/components/documents/ApprovedDocumentSummaryModal.tsx` | Update sort at line 186 with same fix |
+| File | Changes |
+|------|---------|
+| `src/components/documents/ApprovedDocumentSummaryModal.tsx` | Add RefreshCw icon, Tooltip imports, refresh state, handler, and refresh button in UI |
+| `src/components/documents/BuyerDocumentsDashboard.tsx` | Pass `onRefresh` prop to modal for query invalidation |
 
----
+## Edge Cases Handled
 
-## Expected Result
-
-After this fix:
-- The ISO 9001 Certificate card will show **"Approved"** (the newer upload's status)
-- Version History will continue to work correctly (already uses `created_at`)
-- All components will consistently identify the newest upload as "current"
+- Button disabled while refreshing (prevents double-clicks)
+- Error message displayed if refresh fails
+- Loading state with spinning icon
+- Tooltip changes to "Refreshing..." during operation
+- Only shows refresh button when summary already exists (completed status)

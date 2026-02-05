@@ -1,10 +1,8 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.0";
-import { getDocument, GlobalWorkerOptions } from "https://esm.sh/pdfjs-dist@4.4.168/build/pdf.mjs";
-
-// Disable worker for serverless environment
-GlobalWorkerOptions.workerSrc = "";
+import { getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
+import JSZip from "https://esm.sh/jszip@3.10.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -91,21 +89,13 @@ function isVisionCompatibleImage(mimeType: string): boolean {
 // ============ PDF PROCESSING ============
 
 /**
- * Extract text from PDF using pdfjs-dist with disabled worker
+ * Extract text from PDF using unpdf (Deno-compatible)
  */
 async function extractPdfText(pdfBuffer: ArrayBuffer): Promise<{ text: string; pageCount: number }> {
   try {
-    console.log("Starting PDF text extraction with pdfjs-dist...");
-
-    // Use disableWorker option for serverless environment
-    const loadingTask = getDocument({
-      data: new Uint8Array(pdfBuffer),
-      useWorkerFetch: false,
-      isEvalSupported: false,
-      useSystemFonts: true,
-    });
-
-    const pdf = await loadingTask.promise;
+    console.log("Starting PDF text extraction with unpdf...");
+    
+    const pdf = await getDocumentProxy(new Uint8Array(pdfBuffer));
     const pageCount = pdf.numPages;
     console.log(`PDF loaded successfully: ${pageCount} pages`);
 
@@ -128,55 +118,6 @@ async function extractPdfText(pdfBuffer: ArrayBuffer): Promise<{ text: string; p
   } catch (error) {
     console.error("PDF text extraction failed:", error);
     return { text: "", pageCount: 0 };
-  }
-}
-
-/**
- * Convert PDF pages to high-resolution images for Vision API
- * Uses canvas rendering from pdfjs
- */
-async function convertPdfPagesToImages(pdfBuffer: ArrayBuffer, maxPages: number = 4): Promise<string[]> {
-  try {
-    console.log("Converting PDF pages to images...");
-
-    const loadingTask = getDocument({
-      data: new Uint8Array(pdfBuffer),
-      useWorkerFetch: false,
-      isEvalSupported: false,
-      useSystemFonts: true,
-    });
-
-    const pdf = await loadingTask.promise;
-    const numPages = Math.min(pdf.numPages, maxPages);
-    const images: string[] = [];
-
-    for (let i = 1; i <= numPages; i++) {
-      try {
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 2.0 }); // High resolution
-
-        // Create a simple canvas-like structure for Deno
-        // Note: In Deno, we need to use a different approach
-        // For now, we'll render to a data structure and convert
-        const operatorList = await page.getOperatorList();
-
-        // Extract any embedded images from the PDF page
-        // This is a simplified approach - full canvas rendering would require additional deps
-        console.log(
-          `Page ${i}: viewport ${viewport.width}x${viewport.height}, ${operatorList.fnArray.length} operations`,
-        );
-
-        // For PDFs with embedded images, we can try to extract them
-        // However, full PDF-to-image conversion in Deno requires additional work
-      } catch (pageError) {
-        console.warn(`Failed to convert page ${i} to image:`, pageError);
-      }
-    }
-
-    return images;
-  } catch (error) {
-    console.error("PDF to image conversion failed:", error);
-    return [];
   }
 }
 
@@ -368,6 +309,28 @@ function parseVisionResponse(data: any, category: string, documentType: string):
     };
   } catch (parseError) {
     console.error("Failed to parse API response as JSON:", parseError);
+    
+    // Check if the AI apologized (indicates it couldn't read the content)
+    const isApology = content.toLowerCase().includes("i'm sorry") || 
+                      content.toLowerCase().includes("not in a readable format") ||
+                      content.toLowerCase().includes("cannot be directly analyzed") ||
+                      content.toLowerCase().includes("cannot analyze");
+    
+    if (isApology) {
+      return {
+        summary: "We were unable to extract content from this document. The file format may not be fully supported or the document may require manual review.",
+        extractedText: "Content extraction was not successful",
+        documentType: documentType,
+        keyDates: [],
+        entities: [],
+        complianceStandards: [],
+        riskFlags: ["Content extraction failed"],
+        confidenceScore: 0.2,
+        enhancedDescription: "Document analysis encountered an issue. Please verify the file is not corrupted and try again, or contact support for assistance.",
+        suggestedTags: [category, documentType, "needs-review"],
+      };
+    }
+    
     return {
       summary: content.substring(0, 500) + (content.length > 500 ? "..." : ""),
       extractedText: content,
@@ -421,65 +384,75 @@ async function processDocumentIntelligent(
     }
 
     // Step 3: PDF has no extractable text - it's likely a scanned document
-    // For scanned PDFs, we need to convert to images first
     console.log("PDF appears to be scanned - text extraction found minimal content");
 
-    // Since full PDF-to-image conversion is complex in Deno without canvas,
-    // we return a result indicating manual review is needed
-    // In a production environment, you would use a service like CloudConvert or similar
     return {
-      summary: `PDF document with ${pageCount > 0 ? pageCount : "unknown number of"} pages. The document appears to be a scanned image-based PDF. Text extraction was not successful, suggesting the PDF contains embedded images rather than selectable text. Manual review is recommended for accurate content extraction.`,
-      extractedText: text || "Unable to extract text - this appears to be a scanned PDF document.",
+      summary: `PDF document with ${pageCount > 0 ? pageCount : "unknown"} pages. Automated text extraction found limited content (${text.length} characters). This may be a scanned or image-based PDF.`,
+      extractedText: text || "Unable to extract text from this PDF",
       documentType: documentType,
       keyDates: [],
       entities: [],
       complianceStandards: [],
-      riskFlags: ["Scanned PDF - automated text extraction not available", "Manual review recommended"],
-      confidenceScore: 0.3,
-      enhancedDescription:
-        "This PDF contains scanned images. For full content extraction, please use OCR tools or manually review the document.",
-      suggestedTags: [category, documentType, "scanned-pdf", "needs-review"],
+      riskFlags: [],
+      confidenceScore: 0.4,
+      enhancedDescription: "This PDF may contain images or scanned content. For best results, consider uploading a text-based PDF or image files.",
+      suggestedTags: [category, documentType, "limited-extraction"],
     };
   }
 
-  // Route 3: DOCX files - extract text directly
+  // Route 3: DOCX files - extract text from ZIP/XML structure
   if (mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-    console.log("Route: DOCX text extraction");
+    console.log("Route: DOCX ZIP extraction");
     try {
-      // For DOCX, we'll try to extract basic text content
-      // Note: Full DOCX parsing would require additional libraries
-      const textDecoder = new TextDecoder("utf-8");
-      const rawContent = textDecoder.decode(fileBuffer);
-
-      // DOCX is actually a ZIP file - try to get some content
-      // This is a simplified extraction
-      if (rawContent.length > 100) {
-        // Extract any readable text patterns
-        const cleanText = rawContent
-          .replace(/<[^>]*>/g, " ")
-          .replace(/\s+/g, " ")
-          .trim();
-        if (cleanText.length > 50) {
-          return await analyzeTextContent(cleanText.substring(0, 8000), category, documentType);
-        }
+      const zip = await JSZip.loadAsync(fileBuffer);
+      const documentXml = zip.file("word/document.xml");
+      
+      if (!documentXml) {
+        throw new Error("Invalid DOCX: missing word/document.xml");
       }
-
+      
+      const xmlContent = await documentXml.async("text");
+      
+      // Extract text from XML, removing tags and normalizing whitespace
+      const textContent = xmlContent
+        .replace(/<w:t[^>]*>([^<]*)<\/w:t>/g, "$1 ")  // Extract text from <w:t> tags
+        .replace(/<w:p[^>]*>/g, "\n")                   // Paragraph breaks
+        .replace(/<[^>]+>/g, "")                        // Remove remaining XML tags
+        .replace(/\s+/g, " ")                           // Normalize whitespace
+        .trim();
+      
+      if (textContent.length > 50) {
+        console.log(`DOCX extracted ${textContent.length} characters of text`);
+        return await analyzeTextContent(textContent.substring(0, 12000), category, documentType);
+      }
+      
+      // Fallback if minimal text found
       return {
-        summary: "Word document uploaded. Content extraction requires manual review.",
-        extractedText: "DOCX file - automated extraction limited",
+        summary: "Word document uploaded but contains minimal extractable text.",
+        extractedText: textContent || "Unable to extract text content",
         documentType: documentType,
         keyDates: [],
         entities: [],
         complianceStandards: [],
-        riskFlags: ["Word document - manual review recommended"],
+        riskFlags: [],
         confidenceScore: 0.4,
-        enhancedDescription:
-          "This is a Microsoft Word document that may require manual review for full content extraction.",
-        suggestedTags: [category, documentType, "word-document"],
+        enhancedDescription: "This Word document was processed but may require manual review for complete content.",
+        suggestedTags: [category, documentType],
       };
     } catch (docxError) {
       console.error("DOCX extraction failed:", docxError);
-      throw new Error("Failed to process Word document");
+      return {
+        summary: "Unable to process this Word document. The file may be corrupted or in an unsupported format.",
+        extractedText: "DOCX processing error",
+        documentType: documentType,
+        keyDates: [],
+        entities: [],
+        complianceStandards: [],
+        riskFlags: ["Document processing error"],
+        confidenceScore: 0.2,
+        enhancedDescription: "An error occurred while processing this document. Please try re-uploading or contact support.",
+        suggestedTags: [category, documentType, "processing-error"],
+      };
     }
   }
 

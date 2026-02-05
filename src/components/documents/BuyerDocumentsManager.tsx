@@ -760,6 +760,7 @@ const BuyerDocumentsManager = ({
             handleCreateLink(summaryDocument);
           }
         }}
+         onRefresh={onRefresh}
       />
     </div>
   );

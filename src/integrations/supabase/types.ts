@@ -271,6 +271,21 @@ export type Database = {
           },
         ]
       }
+      assessments: {
+        Row: {
+          created_at: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
       auth_audit_logs: {
         Row: {
           action: string
@@ -2508,6 +2523,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      entity_relationships: {
+        Row: {
+          assessment_id: string | null
+          confidence: number | null
+          created_at: string | null
+          details: Json | null
+          id: string
+          relationship_type: string
+          source_entity: string
+          source_url: string | null
+          target_entity: string
+        }
+        Insert: {
+          assessment_id?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          relationship_type: string
+          source_entity: string
+          source_url?: string | null
+          target_entity: string
+        }
+        Update: {
+          assessment_id?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          relationship_type?: string
+          source_entity?: string
+          source_url?: string | null
+          target_entity?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_relationships_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       impersonation_logs: {
         Row: {

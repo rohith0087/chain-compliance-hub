@@ -33,9 +33,16 @@ import {
   Loader2,
   Upload,
   MessageSquare,
+   RefreshCw,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
+import {
+   Tooltip,
+   TooltipContent,
+   TooltipProvider,
+   TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface DocumentUpload {
   id: string;
@@ -82,6 +89,7 @@ interface ApprovedDocumentSummaryModalProps {
   onView: () => void;
   onDownload: () => void;
   onCreateLink: () => void;
+   onRefresh?: () => void;
 }
 
 // Pending state component with Analyze Now button
@@ -173,10 +181,13 @@ const ApprovedDocumentSummaryModal = ({
   onView,
   onDownload,
   onCreateLink,
+   onRefresh,
 }: ApprovedDocumentSummaryModalProps) => {
   const [previousVersionsOpen, setPreviousVersionsOpen] = useState(false);
   const [activities, setActivities] = useState<ActivityLog[]>([]);
   const [loadingActivities, setLoadingActivities] = useState(false);
+   const [refreshing, setRefreshing] = useState(false);
+   const [refreshError, setRefreshError] = useState<string | null>(null);
 
   // Get versions sorted and categorized
   const getVersionsWithSummaries = (uploads: DocumentUpload[] | undefined) => {
@@ -206,6 +217,34 @@ const ApprovedDocumentSummaryModal = ({
       fetchActivityChain();
     }
   }, [isOpen, document?.id]);
+
+   const handleRefreshSummary = async () => {
+     if (!current?.id) return;
+     
+     setRefreshing(true);
+     setRefreshError(null);
+     
+     try {
+       const { data, error: fnError } = await supabase.functions.invoke(
+         'backfill-buyer-document-content',
+         { body: { document_upload_id: current.id } }
+       );
+       
+       if (fnError) throw fnError;
+       
+       if (data?.success) {
+         fetchActivityChain();
+         onRefresh?.();
+       } else {
+         setRefreshError(data?.error || 'Failed to refresh summary');
+       }
+     } catch (err) {
+       console.error('Error refreshing summary:', err);
+       setRefreshError(err instanceof Error ? err.message : 'Failed to refresh');
+     } finally {
+       setRefreshing(false);
+     }
+   };
 
   const fetchActivityChain = async () => {
     if (!document?.id) return;
@@ -450,6 +489,28 @@ const ApprovedDocumentSummaryModal = ({
                           <span className="ml-1">{extractionStatus.label}</span>
                         </Badge>
                       </div>
+                       
+                       {/* Refresh Summary Button */}
+                       {current?.content_extraction_status === 'completed' && (
+                         <TooltipProvider>
+                           <Tooltip>
+                             <TooltipTrigger asChild>
+                               <Button
+                                 variant="ghost"
+                                 size="icon"
+                                 className="h-8 w-8 text-muted-foreground hover:text-[#003f88]"
+                                 onClick={handleRefreshSummary}
+                                 disabled={refreshing}
+                               >
+                                 <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                               </Button>
+                             </TooltipTrigger>
+                             <TooltipContent>
+                               <p>{refreshing ? 'Refreshing...' : 'Refresh Summary'}</p>
+                             </TooltipContent>
+                           </Tooltip>
+                         </TooltipProvider>
+                       )}
                     </div>
 
                     {/* Summary Content */}
@@ -460,6 +521,11 @@ const ApprovedDocumentSummaryModal = ({
                             {current.content_summary}
                           </p>
                         </div>
+                         {refreshError && (
+                           <div className="p-2 bg-destructive/10 rounded border border-destructive/30 text-xs text-destructive">
+                             {refreshError}
+                           </div>
+                         )}
                       </div>
                     ) : current?.content_extraction_status === 'processing' ? (
                       <div className="p-4 bg-background rounded-lg border">

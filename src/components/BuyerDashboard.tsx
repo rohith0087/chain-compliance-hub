@@ -28,6 +28,7 @@ import { DocumentSetManager } from '@/components/buyer/DocumentSetManager';
 import { BuyerSupplierFacilityMatrix } from '@/components/buyer/BuyerSupplierFacilityMatrix';
 import SampleTemplateManager from '@/components/buyer/SampleTemplateManager';
 import { SupplierMap } from '@/components/buyer/SupplierMap';
+import { SupplierRiskAssessment } from '@/components/buyer/supplier-risk/SupplierRiskAssessment';
 import { ComplianceRing } from '@/components/dashboard/ComplianceRing';
 import { MetricChip } from '@/components/dashboard/MetricChip';
 import { AttentionPanel } from '@/components/dashboard/AttentionPanel';
@@ -469,6 +470,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
         {/* Facility Matrix Content */}
         {activeTab === 'facility-matrix' && (
           <BuyerSupplierFacilityMatrix />
+        )}
+
+        {/* Supplier Risk Assessment */}
+        {activeTab === 'supplier-risk' && (
+          <SupplierRiskAssessment />
         )}
 
         {/* Onboarding Content - Use Pipeline View */}

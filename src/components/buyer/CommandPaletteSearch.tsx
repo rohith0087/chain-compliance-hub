@@ -90,6 +90,7 @@ const navigationItems = [
   { title: 'Compliance Overview', value: 'compliance', icon: BarChart3, keywords: ['analytics', 'status'] },
   { title: 'Item Compliance', value: 'item-compliance', icon: Package, keywords: ['products', 'items'] },
   { title: 'Facility Matrix', value: 'facility-matrix', icon: Building2, keywords: ['locations', 'branches'] },
+  { title: 'Supplier Risk', value: 'supplier-risk', icon: Building2, keywords: ['risk', 'assessment', 'score'] },
   { title: 'Assignments', value: 'assignments', icon: ClipboardCheck, keywords: ['tasks', 'assigned'] },
   { title: 'Onboarding Pipeline', value: 'onboarding', icon: GitBranch, keywords: ['pipeline', 'progress'] },
   { title: 'Company Management', value: 'company', icon: Building2, keywords: ['team', 'users', 'branches'] },

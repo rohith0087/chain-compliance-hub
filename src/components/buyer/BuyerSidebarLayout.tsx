@@ -285,6 +285,7 @@ export function BuyerSidebarLayout({
       value: 'compliance',
       submenu: [
         { title: 'Overview', value: 'compliance', icon: BarChart3 },
+        { title: 'Supplier Risk', value: 'supplier-risk', icon: AlertTriangle },
         { title: 'Item Compliance', value: 'item-compliance', icon: Package },
         { title: 'Facility Matrix', value: 'facility-matrix', icon: Building2 }
       ]

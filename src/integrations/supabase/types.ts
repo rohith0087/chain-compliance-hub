@@ -1013,6 +1013,407 @@ export type Database = {
         }
         Relationships: []
       }
+      coa_analyte_results: {
+        Row: {
+          analyte_code: string
+          analyte_name: string
+          basis: string | null
+          censored_threshold: number | null
+          censored_type: string | null
+          confidence: string
+          conversion_notes: string | null
+          created_at: string
+          flag_reason: string | null
+          id: string
+          is_censored: boolean
+          normalized_method: string | null
+          normalized_unit: string
+          numeric_value: number | null
+          raw_method: string | null
+          raw_unit: string
+          raw_value: string
+          spec_max: number | null
+          spec_min: number | null
+          status: string
+          submission_id: string
+        }
+        Insert: {
+          analyte_code: string
+          analyte_name: string
+          basis?: string | null
+          censored_threshold?: number | null
+          censored_type?: string | null
+          confidence?: string
+          conversion_notes?: string | null
+          created_at?: string
+          flag_reason?: string | null
+          id?: string
+          is_censored?: boolean
+          normalized_method?: string | null
+          normalized_unit: string
+          numeric_value?: number | null
+          raw_method?: string | null
+          raw_unit: string
+          raw_value: string
+          spec_max?: number | null
+          spec_min?: number | null
+          status?: string
+          submission_id: string
+        }
+        Update: {
+          analyte_code?: string
+          analyte_name?: string
+          basis?: string | null
+          censored_threshold?: number | null
+          censored_type?: string | null
+          confidence?: string
+          conversion_notes?: string | null
+          created_at?: string
+          flag_reason?: string | null
+          id?: string
+          is_censored?: boolean
+          normalized_method?: string | null
+          normalized_unit?: string
+          numeric_value?: number | null
+          raw_method?: string | null
+          raw_unit?: string
+          raw_value?: string
+          spec_max?: number | null
+          spec_min?: number | null
+          status?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coa_analyte_results_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "coa_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coa_method_equivalencies: {
+        Row: {
+          analyte_code: string
+          authority: string | null
+          buyer_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          method_a: string
+          method_b: string
+          notes: string | null
+          rule_name: string
+        }
+        Insert: {
+          analyte_code: string
+          authority?: string | null
+          buyer_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          method_a: string
+          method_b: string
+          notes?: string | null
+          rule_name: string
+        }
+        Update: {
+          analyte_code?: string
+          authority?: string | null
+          buyer_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          method_a?: string
+          method_b?: string
+          notes?: string | null
+          rule_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coa_method_equivalencies_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coa_policy_settings: {
+        Row: {
+          auto_flag_unknown_analytes: boolean
+          buyer_id: string
+          censored_equivalent_is_match: boolean
+          created_at: string
+          flag_non_convertible_units: boolean
+          id: string
+          require_basis_conversion: boolean
+          updated_at: string
+          within_spec_is_match: boolean
+        }
+        Insert: {
+          auto_flag_unknown_analytes?: boolean
+          buyer_id: string
+          censored_equivalent_is_match?: boolean
+          created_at?: string
+          flag_non_convertible_units?: boolean
+          id?: string
+          require_basis_conversion?: boolean
+          updated_at?: string
+          within_spec_is_match?: boolean
+        }
+        Update: {
+          auto_flag_unknown_analytes?: boolean
+          buyer_id?: string
+          censored_equivalent_is_match?: boolean
+          created_at?: string
+          flag_non_convertible_units?: boolean
+          id?: string
+          require_basis_conversion?: boolean
+          updated_at?: string
+          within_spec_is_match?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coa_policy_settings_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: true
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coa_schedules: {
+        Row: {
+          auto_remind: boolean
+          buyer_id: string
+          created_at: string
+          custom_interval_days: number | null
+          frequency: string
+          grace_period_days: number
+          id: string
+          last_submitted_date: string | null
+          next_due_date: string
+          notes: string | null
+          product_name: string | null
+          reminder_days_before: number[] | null
+          status: string
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          auto_remind?: boolean
+          buyer_id: string
+          created_at?: string
+          custom_interval_days?: number | null
+          frequency?: string
+          grace_period_days?: number
+          id?: string
+          last_submitted_date?: string | null
+          next_due_date: string
+          notes?: string | null
+          product_name?: string | null
+          reminder_days_before?: number[] | null
+          status?: string
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          auto_remind?: boolean
+          buyer_id?: string
+          created_at?: string
+          custom_interval_days?: number | null
+          frequency?: string
+          grace_period_days?: number
+          id?: string
+          last_submitted_date?: string | null
+          next_due_date?: string
+          notes?: string | null
+          product_name?: string | null
+          reminder_days_before?: number[] | null
+          status?: string
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coa_schedules_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coa_schedules_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coa_specifications: {
+        Row: {
+          acceptable_methods: string[] | null
+          action_on_exceed: string
+          analyte_code: string
+          analyte_name: string
+          basis: string | null
+          buyer_id: string
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean
+          method: string | null
+          spec_max: number | null
+          spec_min: number | null
+          supplier_id: string | null
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          acceptable_methods?: string[] | null
+          action_on_exceed?: string
+          analyte_code: string
+          analyte_name: string
+          basis?: string | null
+          buyer_id: string
+          category: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          method?: string | null
+          spec_max?: number | null
+          spec_min?: number | null
+          supplier_id?: string | null
+          unit: string
+          updated_at?: string
+        }
+        Update: {
+          acceptable_methods?: string[] | null
+          action_on_exceed?: string
+          analyte_code?: string
+          analyte_name?: string
+          basis?: string | null
+          buyer_id?: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          method?: string | null
+          spec_max?: number | null
+          spec_min?: number | null
+          supplier_id?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coa_specifications_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coa_specifications_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coa_submissions: {
+        Row: {
+          analysis_status: string
+          buyer_id: string
+          comparison_results: Json | null
+          created_at: string
+          document_upload_id: string | null
+          flags_count: number
+          id: string
+          lot_number: string | null
+          normalized_data: Json | null
+          overall_score: number | null
+          pass_fail: string | null
+          product_name: string | null
+          raw_extracted_data: Json | null
+          schedule_id: string | null
+          submission_date: string
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          analysis_status?: string
+          buyer_id: string
+          comparison_results?: Json | null
+          created_at?: string
+          document_upload_id?: string | null
+          flags_count?: number
+          id?: string
+          lot_number?: string | null
+          normalized_data?: Json | null
+          overall_score?: number | null
+          pass_fail?: string | null
+          product_name?: string | null
+          raw_extracted_data?: Json | null
+          schedule_id?: string | null
+          submission_date?: string
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          analysis_status?: string
+          buyer_id?: string
+          comparison_results?: Json | null
+          created_at?: string
+          document_upload_id?: string | null
+          flags_count?: number
+          id?: string
+          lot_number?: string | null
+          normalized_data?: Json | null
+          overall_score?: number | null
+          pass_fail?: string | null
+          product_name?: string | null
+          raw_extracted_data?: Json | null
+          schedule_id?: string | null
+          submission_date?: string
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coa_submissions_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coa_submissions_document_upload_id_fkey"
+            columns: ["document_upload_id"]
+            isOneToOne: false
+            referencedRelation: "document_uploads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coa_submissions_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "coa_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coa_submissions_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       communication_audit_logs: {
         Row: {
           action_type: string

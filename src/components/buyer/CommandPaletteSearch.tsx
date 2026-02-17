@@ -87,6 +87,7 @@ const navigationItems = [
   { title: 'Documents', value: 'documents', icon: FileCheck, keywords: ['files', 'uploads'] },
   { title: 'Templates', value: 'templates', icon: FileText, keywords: ['forms', 'custom'] },
   { title: 'Document Sets', value: 'document-sets', icon: FolderKanban, keywords: ['groups', 'collections'] },
+  { title: 'COA Analysis', value: 'coa-analysis', icon: FileCheck, keywords: ['coa', 'certificate', 'analysis', 'allergen', 'contaminant'] },
   { title: 'Compliance Overview', value: 'compliance', icon: BarChart3, keywords: ['analytics', 'status'] },
   { title: 'Item Compliance', value: 'item-compliance', icon: Package, keywords: ['products', 'items'] },
   { title: 'Facility Matrix', value: 'facility-matrix', icon: Building2, keywords: ['locations', 'branches'] },

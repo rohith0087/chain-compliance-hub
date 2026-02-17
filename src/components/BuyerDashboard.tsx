@@ -29,6 +29,7 @@ import { BuyerSupplierFacilityMatrix } from '@/components/buyer/BuyerSupplierFac
 import SampleTemplateManager from '@/components/buyer/SampleTemplateManager';
 import { SupplierMap } from '@/components/buyer/SupplierMap';
 import { SupplierRiskAssessment } from '@/components/buyer/supplier-risk/SupplierRiskAssessment';
+import { COADashboard } from '@/components/buyer/coa/COADashboard';
 import { ComplianceRing } from '@/components/dashboard/ComplianceRing';
 import { MetricChip } from '@/components/dashboard/MetricChip';
 import { AttentionPanel } from '@/components/dashboard/AttentionPanel';
@@ -495,6 +496,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
         {/* Document Sets Content */}
         {activeTab === 'document-sets' && companyId && (
           <DocumentSetManager buyerId={companyId} />
+        )}
+
+        {/* COA Analysis */}
+        {activeTab === 'coa-analysis' && (
+          <COADashboard />
         )}
 
         {/* Suppliers Content */}

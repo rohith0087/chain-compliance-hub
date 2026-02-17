@@ -5,7 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Activity, 
   Plus, 
-  UserPlus, 
+  FlaskConical, 
   Bell, 
   FileDown,
   CheckCircle,
@@ -13,7 +13,7 @@ import {
   Link2,
   Upload,
   Users,
-  MessageSquare
+  ShieldAlert
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useBranchContext } from '@/contexts/BranchContext';
@@ -73,7 +73,6 @@ export function ActivityQuickActionsPanel({
       
       setLoading(true);
       try {
-        // Get document request IDs for this buyer
         const branchFilter = !allBranchesView && currentBranch?.id ? currentBranch.id : null;
         
         let requestsQuery = supabase
@@ -90,7 +89,6 @@ export function ActivityQuickActionsPanel({
           return;
         }
 
-        // Fetch recent activity logs
         const { data: activityData, error } = await supabase
           .from('document_activity_logs')
           .select('*')
@@ -99,7 +97,6 @@ export function ActivityQuickActionsPanel({
           .limit(15);
 
         if (error) {
-          // Fallback: fetch without complex filter
           const { data: fallbackData } = await supabase
             .from('document_activity_logs')
             .select('*')
@@ -163,13 +160,35 @@ export function ActivityQuickActionsPanel({
 
   const quickActions = [
     { label: 'New Request', icon: Plus, onClick: onNewRequest, color: 'bg-primary hover:bg-primary/90 text-primary-foreground' },
-    { label: 'Invite Supplier', icon: UserPlus, onClick: onInviteSupplier, color: 'bg-teal-500 hover:bg-teal-600 text-white' },
-    { label: 'Messages', icon: MessageSquare, onClick: () => onNavigateToTab('messages'), color: 'bg-secondary hover:bg-secondary/90 text-secondary-foreground' },
+    { label: 'COA Analysis', icon: FlaskConical, onClick: () => onNavigateToTab('coa-analysis'), color: 'bg-teal-500 hover:bg-teal-600 text-white' },
+    { label: 'Supplier Risk', icon: ShieldAlert, onClick: () => onNavigateToTab('supplier-risk'), color: 'bg-secondary hover:bg-secondary/90 text-secondary-foreground' },
     { label: 'Suppliers', icon: Users, onClick: () => onNavigateToTab('suppliers'), color: 'bg-muted hover:bg-muted/80 text-foreground' },
   ];
 
   return (
     <div className="h-full flex flex-col gap-4">
+      {/* Quick Actions */}
+      <Card className="flex-shrink-0 border-0 bg-gradient-to-br from-card via-card to-muted/30">
+        <CardHeader className="pb-3 pt-4">
+          <CardTitle className="text-sm font-semibold">Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent className="pb-4 px-4">
+          <div className="grid grid-cols-2 gap-3">
+            {quickActions.map((action) => (
+              <Button
+                key={action.label}
+                size="sm"
+                className={cn("h-10 text-xs font-medium justify-start px-3", action.color)}
+                onClick={action.onClick}
+              >
+                <action.icon className="w-4 h-4 mr-2 flex-shrink-0" />
+                <span className="truncate">{action.label}</span>
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Activity Feed */}
       <Card className="flex-1 min-h-0 flex flex-col border-0 bg-gradient-to-br from-card via-card to-primary/5">
         <CardHeader className="flex-shrink-0 pb-2">
@@ -220,28 +239,6 @@ export function ActivityQuickActionsPanel({
               </div>
             )}
           </ScrollArea>
-        </CardContent>
-      </Card>
-
-      {/* Quick Actions */}
-      <Card className="flex-shrink-0 border-0 bg-gradient-to-br from-card via-card to-muted/30">
-        <CardHeader className="pb-3 pt-4">
-          <CardTitle className="text-sm font-semibold">Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent className="pb-4 px-4">
-          <div className="grid grid-cols-2 gap-3">
-            {quickActions.map((action) => (
-              <Button
-                key={action.label}
-                size="sm"
-                className={cn("h-10 text-xs font-medium justify-start px-3", action.color)}
-                onClick={action.onClick}
-              >
-                <action.icon className="w-4 h-4 mr-2 flex-shrink-0" />
-                <span className="truncate">{action.label}</span>
-              </Button>
-            ))}
-          </div>
         </CardContent>
       </Card>
     </div>

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronUp, FileText, Calendar, Hash } from 'lucide-react';
+import { ChevronDown, ChevronUp, Calendar, Hash, Loader2 } from 'lucide-react';
+import { useCOASubmissions } from '@/hooks/useCOA';
 import { demoSubmissions, type COASubmission } from './coaDemoData';
 import { COAScoreCard } from './COAScoreCard';
 import { COAComparisonTable } from './COAComparisonTable';
@@ -17,7 +17,17 @@ const passBadgeStyles: Record<string, string> = {
 
 export function COAResultsView() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [submissions] = useState<COASubmission[]>(demoSubmissions);
+  const { data: liveSubmissions, isLoading } = useCOASubmissions();
+
+  const submissions: COASubmission[] = liveSubmissions && liveSubmissions.length > 0 ? liveSubmissions : demoSubmissions;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading results...
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

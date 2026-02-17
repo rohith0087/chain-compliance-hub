@@ -1,20 +1,24 @@
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Plus, Settings2, ArrowLeftRight } from 'lucide-react';
+import { Plus, Settings2, ArrowLeftRight, Trash2, Loader2 } from 'lucide-react';
+import { useCOAPolicySettings, useCOAMethodEquivalencies } from '@/hooks/useCOA';
 import { demoPolicySettings, demoMethodEquivalencies, type COAPolicySettings as PolicyType } from './coaDemoData';
-import { toast } from 'sonner';
 
 export function COAPolicySettings() {
-  const [policy, setPolicy] = useState<PolicyType>(demoPolicySettings);
-  const [equivalencies] = useState(demoMethodEquivalencies);
+  const { data: livePolicy, isLoading: loadingPolicy, upsertPolicy, buyerId } = useCOAPolicySettings();
+  const { data: liveEquivalencies, isLoading: loadingEq, toggleEquivalency, deleteEquivalency } = useCOAMethodEquivalencies();
+
+  const policy: PolicyType = livePolicy || demoPolicySettings;
+  const equivalencies = liveEquivalencies && liveEquivalencies.length > 0 ? liveEquivalencies : demoMethodEquivalencies;
 
   const togglePolicy = (key: keyof PolicyType) => {
-    setPolicy(prev => ({ ...prev, [key]: !prev[key] }));
-    toast.success('Policy updated');
+    const updated = { ...policy, [key]: !policy[key] };
+    if (buyerId) {
+      upsertPolicy.mutate(updated);
+    }
   };
 
   const policyItems = [
@@ -39,7 +43,11 @@ export function COAPolicySettings() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {policyItems.map((item) => (
+          {loadingPolicy ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+              <Loader2 className="h-4 w-4 animate-spin" /> Loading policies...
+            </div>
+          ) : policyItems.map((item) => (
             <div key={item.key} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
               <div>
                 <p className="text-sm font-medium">{item.label}</p>
@@ -79,10 +87,18 @@ export function COAPolicySettings() {
                   <TableHead>Method B</TableHead>
                   <TableHead>Authority</TableHead>
                   <TableHead>Status</TableHead>
+                  {buyerId && <TableHead className="w-10"></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {equivalencies.map((eq) => (
+                {loadingEq ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                      Loading equivalencies...
+                    </TableCell>
+                  </TableRow>
+                ) : equivalencies.map((eq) => (
                   <TableRow key={eq.id}>
                     <TableCell className="font-medium text-sm">{eq.rule_name}</TableCell>
                     <TableCell className="text-xs font-mono">{eq.analyte_code}</TableCell>
@@ -92,10 +108,21 @@ export function COAPolicySettings() {
                       <Badge variant="outline" className="text-[10px]">{eq.authority || '—'}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={eq.is_active ? 'default' : 'secondary'} className="text-[10px]">
+                      <Badge
+                        variant={eq.is_active ? 'default' : 'secondary'}
+                        className="text-[10px] cursor-pointer"
+                        onClick={() => buyerId && toggleEquivalency.mutate({ id: eq.id, is_active: !eq.is_active })}
+                      >
                         {eq.is_active ? 'Active' : 'Inactive'}
                       </Badge>
                     </TableCell>
+                    {buyerId && (
+                      <TableCell>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteEquivalency.mutate(eq.id)}>
+                          <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

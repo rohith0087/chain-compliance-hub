@@ -31,7 +31,8 @@ import {
   FileImage,
   MessageSquare,
   HelpCircle,
-  ArrowLeftRight
+  ArrowLeftRight,
+  FlaskConical
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
@@ -276,7 +277,8 @@ export function BuyerSidebarLayout({
         { title: t('common:navigation.documents'), value: 'documents', icon: FileCheck },
         { title: 'Templates', value: 'templates', icon: FileText },
         { title: 'Buyer Samples', value: 'sample-templates', icon: FileImage },
-        { title: 'Document Sets', value: 'document-sets', icon: FolderKanban }
+        { title: 'Document Sets', value: 'document-sets', icon: FolderKanban },
+        { title: 'COA Analysis', value: 'coa-analysis', icon: FlaskConical }
       ]
     },
     {

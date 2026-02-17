@@ -4,8 +4,9 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Plus, Search, FlaskConical, Atom, Wheat, Beaker } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, Search, FlaskConical, Atom, Wheat, Beaker, Trash2, Loader2 } from 'lucide-react';
+import { useCOASpecifications } from '@/hooks/useCOA';
 import { demoSpecs, specTemplates, type COASpec } from './coaDemoData';
 import { toast } from 'sonner';
 
@@ -17,9 +18,26 @@ const categoryIcons: Record<string, any> = {
 };
 
 export function COASpecEditor() {
-  const [specs] = useState<COASpec[]>(demoSpecs);
+  const { data: liveSpecs, isLoading, addSpec, loadTemplate, deleteSpec, buyerId } = useCOASpecifications();
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
+
+  const specs: COASpec[] = liveSpecs && liveSpecs.length > 0
+    ? liveSpecs.map((s: any) => ({
+        id: s.id,
+        analyte_name: s.analyte_name,
+        analyte_code: s.analyte_code,
+        category: s.category,
+        spec_min: s.spec_min,
+        spec_max: s.spec_max,
+        unit: s.unit,
+        method: s.method,
+        acceptable_methods: s.acceptable_methods || [],
+        action_on_exceed: s.action_on_exceed,
+        basis: s.basis,
+        is_active: s.is_active,
+      }))
+    : demoSpecs;
 
   const categories = ['all', ...new Set(specs.map(s => s.category))];
   const filtered = specs.filter(s => {
@@ -30,7 +48,16 @@ export function COASpecEditor() {
 
   const handleLoadTemplate = (templateKey: string) => {
     const template = specTemplates[templateKey as keyof typeof specTemplates];
-    toast.success(`Loaded "${template.name}" template with ${template.specs.length} analytes`);
+    if (!buyerId) {
+      toast.success(`Loaded "${template.name}" template with ${template.specs.length} analytes`);
+      return;
+    }
+    loadTemplate.mutate(template.specs);
+  };
+
+  const handleDelete = (id: string) => {
+    if (!buyerId) return;
+    deleteSpec.mutate(id);
   };
 
   return (
@@ -42,8 +69,8 @@ export function COASpecEditor() {
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           {Object.entries(specTemplates).map(([key, template]) => (
-            <Button key={key} variant="outline" size="sm" onClick={() => handleLoadTemplate(key)}>
-              <Plus className="h-3.5 w-3.5 mr-1" />
+            <Button key={key} variant="outline" size="sm" onClick={() => handleLoadTemplate(key)} disabled={loadTemplate.isPending}>
+              {loadTemplate.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Plus className="h-3.5 w-3.5 mr-1" />}
               {template.name}
             </Button>
           ))}
@@ -89,10 +116,18 @@ export function COASpecEditor() {
                   <TableHead>Method</TableHead>
                   <TableHead>Action</TableHead>
                   <TableHead>Status</TableHead>
+                  {buyerId && <TableHead className="w-10"></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((spec) => {
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                      Loading specifications...
+                    </TableCell>
+                  </TableRow>
+                ) : filtered.map((spec) => {
                   const CatIcon = categoryIcons[spec.category] || FlaskConical;
                   return (
                     <TableRow key={spec.id}>
@@ -118,6 +153,13 @@ export function COASpecEditor() {
                           {spec.is_active ? 'Active' : 'Inactive'}
                         </Badge>
                       </TableCell>
+                      {buyerId && (
+                        <TableCell>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(spec.id)}>
+                            <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   );
                 })}

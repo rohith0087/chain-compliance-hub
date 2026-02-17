@@ -213,3 +213,11 @@ verify_jwt = true
 # Backfill buyer document content - platform admin only
 [functions.backfill-buyer-document-content]
 verify_jwt = true
+
+# COA analyzer - requires buyer/team member authentication
+[functions.coa-analyzer]
+verify_jwt = true
+
+# COA schedule reminder - system cron, validates internally
+[functions.coa-schedule-reminder]
+verify_jwt = false

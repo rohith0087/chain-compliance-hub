@@ -12,7 +12,7 @@ const confColor = (c: string) => {
 };
 
 export function KeyDrivers({ drivers }: { drivers: RiskDriver[] }) {
-  const maxImpact = Math.max(...drivers.map(d => d.impact));
+  const maxImpact = 20; // Fixed scale matching max tuning weight
 
   return (
     <Card className="border-border/50 shadow-sm">

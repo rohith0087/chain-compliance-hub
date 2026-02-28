@@ -132,7 +132,7 @@ export const InviteSupplierModal = ({
       whatsapp: `https://wa.me/?text=${text}`
     };
 
-    window.open(socialUrls[platform as keyof typeof socialUrls], '_blank', 'width=600,height=400');
+    window.open(socialUrls[platform as keyof typeof socialUrls], '_blank', 'noopener,noreferrer,width=600,height=400');
   };
 
   const handleCopyText = async () => {

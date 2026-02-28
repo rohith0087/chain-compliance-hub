@@ -205,7 +205,7 @@ export const CustomTemplateResponse = ({ isOpen, onClose, request, onSubmissionC
         throw new Error(data?.error || 'Failed to get secure URL');
       }
 
-      window.open(data.url, '_blank');
+      window.open(data.url, '_blank', 'noopener,noreferrer');
     } catch (error: any) {
       console.error('Error previewing template:', error);
       toast({

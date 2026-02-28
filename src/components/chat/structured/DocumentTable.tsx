@@ -109,7 +109,7 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({ documents, count }
       if (error) throw error;
       
       if (data?.url) {
-        window.open(data.url, '_blank');
+        window.open(data.url, '_blank', 'noopener,noreferrer');
       } else {
         throw new Error('No signed URL returned');
       }

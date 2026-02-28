@@ -676,7 +676,7 @@ const handleViewDocumentFile = async (doc: any) => {
               body: { filePath: sub.submission_file_path, expiresIn: 3600 }
             });
             if (error || !data?.success) throw new Error(data?.error || 'Failed to get secure URL');
-            window.open(data.url, '_blank');
+            window.open(data.url, '_blank', 'noopener,noreferrer');
             return;
           }
         }
@@ -697,7 +697,7 @@ const handleViewDocumentFile = async (doc: any) => {
 
     // Only pre-open tab for viewable types to avoid stuck tabs
     if (isViewable) {
-      preOpenedTab = window.open('', '_blank');
+      preOpenedTab = window.open('', '_blank', 'noopener,noreferrer');
       if (preOpenedTab) preOpenedTab.document.write('Loading document...');
     }
 
@@ -714,7 +714,7 @@ const handleViewDocumentFile = async (doc: any) => {
 
     if (isViewable) {
       if (preOpenedTab) preOpenedTab.location.href = data.signedUrl;
-      else window.open(data.signedUrl, '_blank');
+      else window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
     } else {
       // Non-previewable types: trigger download instead
       await handleDownloadDocumentFile(doc);

@@ -231,7 +231,7 @@ const BuyerDocumentsManager = ({
               body: { filePath: sub.submission_file_path, expiresIn: 3600 }
             });
             if (error || !data?.success) throw new Error(data?.error || 'Failed to get secure URL');
-            window.open(data.url, '_blank');
+            window.open(data.url, '_blank', 'noopener,noreferrer');
             return;
           }
         }
@@ -255,7 +255,7 @@ const BuyerDocumentsManager = ({
         upload?.file_name?.toLowerCase?.().endsWith('.pdf');
 
       if (isPreviewable) {
-        newTab = window.open('', '_blank');
+        newTab = window.open('', '_blank', 'noopener,noreferrer');
         if (newTab) newTab.document.write('Loading document...');
 
         const resolved = resolveStoragePath(upload.file_path);
@@ -268,7 +268,7 @@ const BuyerDocumentsManager = ({
         if (newTab) {
           newTab.location.href = data.signedUrl;
         } else {
-          window.open(data.signedUrl, '_blank');
+          window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
         }
       } else {
         // For other files, trigger a download

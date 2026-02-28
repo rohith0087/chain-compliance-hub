@@ -1,10 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Sparkles, Code2, RefreshCw } from 'lucide-react';
-import * as Recharts from 'recharts';
-import { transform } from 'sucrase';
 
 interface CodeVisualizationProps {
   code: string;
@@ -18,160 +16,138 @@ function validateVisualizationData(data: any): { isValid: boolean; message?: str
     return { isValid: false, message: 'No data available for visualization' };
   }
   
-  // Check if all items have a name field (required for all chart types)
   const hasNames = data.every(item => item.name !== undefined && item.name !== null);
   if (!hasNames) {
-    return { 
-      isValid: false, 
-      message: 'All data items must have a "name" field for labels.' 
-    };
+    return { isValid: false, message: 'All data items must have a "name" field for labels.' };
   }
   
-  // Check if items have at least one numeric field (supports multi-series)
   const hasNumericData = data.every(item => {
-    // Check for single-series format (value/count)
-    if (typeof item.value === 'number' || typeof item.count === 'number') {
-      return true;
-    }
-    
-    // Check for nested data array
-    if (item.data && Array.isArray(item.data)) {
-      return true;
-    }
-    
-    // Check for multi-series format (any numeric field)
-    const numericFields = Object.keys(item).filter(key => 
-      key !== 'name' && typeof item[key] === 'number'
-    );
+    if (typeof item.value === 'number' || typeof item.count === 'number') return true;
+    if (item.data && Array.isArray(item.data)) return true;
+    const numericFields = Object.keys(item).filter(key => key !== 'name' && typeof item[key] === 'number');
     return numericFields.length > 0;
   });
   
   if (!hasNumericData) {
-    return { 
-      isValid: false, 
-      message: 'Data items must contain at least one numeric field (value, count, or series data).' 
-    };
+    return { isValid: false, message: 'Data items must contain at least one numeric field (value, count, or series data).' };
   }
   
   return { isValid: true };
 }
 
+/**
+ * Builds a self-contained HTML page that renders the visualization inside
+ * a sandboxed iframe. The iframe has `sandbox="allow-scripts"` (no
+ * allow-same-origin), so it cannot access the parent DOM, cookies,
+ * localStorage, or any auth state.
+ */
+function buildSandboxHtml(code: string, data: any): string {
+  const serializedData = JSON.stringify(data);
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: system-ui, sans-serif; background: transparent; }
+  #root { width:100%; min-height:200px; }
+  .error { color:#dc2626; padding:16px; font-size:14px; }
+</style>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"><\/script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"><\/script>
+<script src="https://unpkg.com/recharts@2/umd/Recharts.js"><\/script>
+<script src="https://unpkg.com/sucrase@3/dist/umd/index.js"><\/script>
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function(){
+  try {
+    var data = ${serializedData};
+    var code = ${JSON.stringify(code)};
+
+    // Transform JSX
+    var transformed;
+    try {
+      transformed = Sucrase.transform(code, { transforms: ['jsx','typescript'], production: true }).code;
+    } catch(e) {
+      transformed = code;
+    }
+
+    var R = Recharts;
+    var safeGlobals = {
+      React: React,
+      ResponsiveContainer: R.ResponsiveContainer,
+      BarChart: R.BarChart, LineChart: R.LineChart, AreaChart: R.AreaChart,
+      PieChart: R.PieChart, ScatterChart: R.ScatterChart, RadarChart: R.RadarChart,
+      ComposedChart: R.ComposedChart,
+      Bar: R.Bar, Line: R.Line, Area: R.Area, Pie: R.Pie,
+      Scatter: R.Scatter, Radar: R.Radar,
+      XAxis: R.XAxis, YAxis: R.YAxis, ZAxis: R.ZAxis,
+      CartesianGrid: R.CartesianGrid, Tooltip: R.Tooltip,
+      Legend: R.Legend, Cell: R.Cell,
+      data: data
+    };
+
+    var wrappedCode = "'use strict';\\nvar " +
+      Object.keys(safeGlobals).map(function(k){ return k + '=arguments[0].' + k; }).join(',') +
+      ';\\n' + transformed + '\\nreturn CustomVisualization;';
+
+    var Component = (new Function(wrappedCode))(safeGlobals);
+    ReactDOM.render(React.createElement(Component, { data: data }), document.getElementById('root'));
+
+    // Tell parent the rendered height
+    setTimeout(function(){
+      var h = document.getElementById('root').scrollHeight;
+      parent.postMessage({ type:'viz-height', height: Math.max(h, 200) }, '*');
+    }, 300);
+  } catch(err) {
+    document.getElementById('root').innerHTML =
+      '<div class="error">Visualization error: ' +
+      (err.message || 'Unknown error').replace(/</g,'&lt;') + '</div>';
+    parent.postMessage({ type:'viz-height', height: 80 }, '*');
+  }
+})();
+<\/script>
+</body>
+</html>`;
+}
+
 export function CodeVisualizationRenderer({ code, data, summary }: CodeVisualizationProps) {
   const [showCode, setShowCode] = useState(false);
-  
-  // Validate data quality on mount
+  const [iframeHeight, setIframeHeight] = useState(350);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
   const dataValidation = useMemo(() => validateVisualizationData(data), [data]);
-  
-  const { component: RenderedComponent, error } = useMemo(() => {
-    try {
-      // Security check: validate code doesn't contain dangerous patterns
-      const dangerousPatterns = [
-        /localStorage/i,
-        /sessionStorage/i,
-        /document\.cookie/i,
-        /eval\(/i,
-        /Function\(/i,
-        /import\s/i,
-        /require\(/i,
-        /fetch\(/i,
-        /XMLHttpRequest/i,
-      ];
 
-      for (const pattern of dangerousPatterns) {
-        if (pattern.test(code)) {
-          throw new Error(`Security violation: Code contains prohibited pattern: ${pattern.source}`);
-        }
+  const sandboxHtml = useMemo(() => {
+    if (!dataValidation.isValid) return '';
+    return buildSandboxHtml(code, data);
+  }, [code, data, dataValidation.isValid]);
+
+  const blobUrl = useMemo(() => {
+    if (!sandboxHtml) return '';
+    const blob = new Blob([sandboxHtml], { type: 'text/html' });
+    return URL.createObjectURL(blob);
+  }, [sandboxHtml]);
+
+  // Clean up blob URL on unmount
+  useEffect(() => {
+    return () => { if (blobUrl) URL.revokeObjectURL(blobUrl); };
+  }, [blobUrl]);
+
+  // Listen for height messages from the sandboxed iframe
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === 'viz-height' && typeof e.data.height === 'number') {
+        setIframeHeight(e.data.height + 16);
       }
-      
-      // Basic validation
-      if (!code.includes('CustomVisualization')) {
-        throw new Error('Invalid code: Component not named CustomVisualization');
-      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
 
-      // Transform JSX/TSX to plain JavaScript before execution
-      let executableCode = code;
-      try {
-        const transformed = transform(code, {
-          transforms: ['jsx', 'typescript'],
-          production: true,
-        });
-        executableCode = transformed.code;
-      } catch (transformError: any) {
-        console.error('Sucrase transformation failed:', transformError);
-        // Fallback: try basic regex cleanup
-        executableCode = code
-          .replace(/\(\s*{\s*(\w+)\s*}\s*:\s*{[^}]+}\s*\)/g, '({ $1 })')
-          .replace(/const\s+(\w+)\s*:\s*React\.FC<[^>]+>\s*=/g, 'const $1 =')
-          .replace(/\s+as\s+[A-Za-z0-9_.<>[\]]+/g, '');
-      }
-
-      // Create a safe execution context with timeout protection
-      const timeoutMs = 5000;
-      let timeoutId: NodeJS.Timeout;
-      
-      const safeGlobals = {
-        React,
-        ...Recharts,
-        data,
-        setTimeout: () => { throw new Error('setTimeout not allowed'); },
-        setInterval: () => { throw new Error('setInterval not allowed'); },
-      };
-
-      // Transform the code to a function that returns a component
-      const wrappedCode = `
-        'use strict';
-        const {
-          React,
-          ResponsiveContainer,
-          BarChart,
-          LineChart,
-          AreaChart,
-          PieChart,
-          ScatterChart,
-          RadarChart,
-          ComposedChart,
-          Bar,
-          Line,
-          Area,
-          Pie,
-          Scatter,
-          Radar,
-          XAxis,
-          YAxis,
-          ZAxis,
-          CartesianGrid,
-          Tooltip,
-          Legend,
-          Cell,
-          data
-        } = arguments[0];
-        
-        ${executableCode}
-        
-        return CustomVisualization;
-      `;
-
-      const componentFunction = new Function(wrappedCode);
-      const Component = componentFunction(safeGlobals);
-
-      // Set timeout for execution
-      timeoutId = setTimeout(() => {
-        throw new Error('Visualization execution timeout');
-      }, timeoutMs);
-
-      clearTimeout(timeoutId);
-      
-      return { component: Component, error: null };
-    } catch (err: any) {
-      console.error('Failed to execute visualization code:', err);
-      return { 
-        component: null, 
-        error: err.message || 'Unknown error occurred while rendering visualization' 
-      };
-    }
-  }, [code, data]);
-
-  // Early return if data validation fails
   if (!dataValidation.isValid) {
     return (
       <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
@@ -192,7 +168,7 @@ export function CodeVisualizationRenderer({ code, data, summary }: CodeVisualiza
       </Card>
     );
   }
-  
+
   return (
     <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
       <CardHeader>
@@ -216,16 +192,15 @@ export function CodeVisualizationRenderer({ code, data, summary }: CodeVisualiza
         )}
       </CardHeader>
       <CardContent className="space-y-4">
-        {error ? (
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              Failed to render visualization: {error}
-            </AlertDescription>
-          </Alert>
-        ) : RenderedComponent ? (
-          <div className="bg-card p-6 rounded-lg border shadow-sm">
-            <RenderedComponent data={data} />
+        {blobUrl ? (
+          <div className="bg-card rounded-lg border shadow-sm overflow-hidden">
+            <iframe
+              ref={iframeRef}
+              src={blobUrl}
+              sandbox="allow-scripts"
+              style={{ width: '100%', height: iframeHeight, border: 'none' }}
+              title="Visualization"
+            />
           </div>
         ) : (
           <div className="flex items-center justify-center p-8 text-muted-foreground">
@@ -233,7 +208,7 @@ export function CodeVisualizationRenderer({ code, data, summary }: CodeVisualiza
             <p>Loading visualization...</p>
           </div>
         )}
-        
+
         {showCode && (
           <div className="mt-4">
             <div className="bg-muted/50 p-4 rounded-lg border">

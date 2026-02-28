@@ -105,7 +105,7 @@ function TemplatePreviewContent({ template }: { template: SampleTemplate }) {
   const handleOpenInNewTab = async () => {
     const url = signedUrl || await fetchSignedUrl();
     if (url) {
-      window.open(url, '_blank');
+      window.open(url, '_blank', 'noopener,noreferrer');
     }
   };
 

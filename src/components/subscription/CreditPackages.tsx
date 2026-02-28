@@ -33,7 +33,7 @@ export const CreditPackages: React.FC = () => {
   const handlePurchase = async (priceId: string, credits: number) => {
     const result = await createCreditPurchase(priceId, 1);
     if (result?.url) {
-      window.open(result.url, '_blank');
+      window.open(result.url, '_blank', 'noopener,noreferrer');
     }
   };
 

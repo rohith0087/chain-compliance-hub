@@ -101,7 +101,7 @@ export const OnboardingReviewModal: React.FC<OnboardingReviewModalProps> = ({
       }
 
       if (data?.signedUrl) {
-        window.open(data.signedUrl, '_blank');
+        window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
       }
     } catch (error) {
       console.error('Error viewing document:', error);

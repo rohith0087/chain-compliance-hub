@@ -140,7 +140,7 @@ const DocumentVersionHistory = ({
         throw new Error('Failed to generate view URL');
       }
 
-      window.open(urlData.signedUrl, '_blank');
+      window.open(urlData.signedUrl, '_blank', 'noopener,noreferrer');
     } catch (error) {
       console.error('Error viewing version:', error);
       toast({

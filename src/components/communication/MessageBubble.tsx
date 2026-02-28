@@ -89,7 +89,7 @@ export function MessageBubble({
 
       if (error || !data?.signedUrl) throw error || new Error('Could not generate URL');
 
-      window.open(data.signedUrl, '_blank');
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
     } catch (err) {
       console.error('Error opening document:', err);
       toast({

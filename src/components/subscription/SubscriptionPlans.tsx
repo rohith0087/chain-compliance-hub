@@ -85,7 +85,7 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ userType }
     const result = await createSubscriptionCheckout(plan.stripe_price_id, plan.plan_type);
     
     if (result?.url) {
-      window.open(result.url, '_blank');
+      window.open(result.url, '_blank', 'noopener,noreferrer');
     }
   };
 

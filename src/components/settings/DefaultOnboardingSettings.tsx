@@ -466,7 +466,7 @@ export const DefaultOnboardingSettings: React.FC = () => {
                               .from('compliance-documents')
                               .createSignedUrl(req.template_file_path!, 300);
                             if (data?.signedUrl) {
-                              window.open(data.signedUrl, '_blank');
+                              window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
                             }
                           }}
                         >

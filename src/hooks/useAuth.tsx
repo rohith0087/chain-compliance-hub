@@ -223,12 +223,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     });
 
+    // Don't reveal whether an account exists -- always return success
+    // (Supabase returns an empty identities array for existing emails)
     if (data?.user && data.user.identities?.length === 0) {
-      return { 
-        error: { 
-          message: "An account with this email already exists. Please login instead." 
-        } 
-      };
+      return { error: null };
     }
 
     return { error };

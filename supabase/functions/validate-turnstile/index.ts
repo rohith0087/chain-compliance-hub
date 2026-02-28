@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/corsHeaders.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -7,6 +8,13 @@ serve(async (req) => {
   if (preflight) return preflight;
 
   try {
+    // Rate limit by IP: 20 req/min
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() 
+      || req.headers.get('cf-connecting-ip') 
+      || 'unknown';
+    const rl = checkRateLimit(`turnstile:${clientIp}`, 20, 60_000);
+    if (!rl.allowed) return rateLimitResponse(corsHeaders, rl.retryAfterMs);
+
     const { token, remoteip } = await req.json();
 
     // Validate input

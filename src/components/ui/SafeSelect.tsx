@@ -2,6 +2,7 @@
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertCircle } from 'lucide-react';
+import logger from '@/utils/logger';
 
 interface SafeSelectProps {
   value?: string;
@@ -84,7 +85,7 @@ export const SafeSelect: React.FC<SafeSelectProps> = ({
   }, [value]);
 
   const handleValueChange = React.useCallback((newValue: string) => {
-    console.log('SafeSelect value change:', newValue);
+    logger.debug('SafeSelect value change:', newValue);
     
     // Prevent empty string values
     if (newValue === '') {

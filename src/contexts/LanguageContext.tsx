@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { REGION_LANGUAGE_MAP, REGIONS } from '../i18n';
 import { useIPLocation } from '../hooks/useIPLocation';
+import logger from '@/utils/logger';
 
 interface LanguageContextType {
   currentLanguage: string;
@@ -32,7 +33,6 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setCurrentRegion(region);
     localStorage.setItem('selectedRegion', region);
     
-    // Auto-set language based on region
     const defaultLanguage = REGION_LANGUAGE_MAP[region as keyof typeof REGION_LANGUAGE_MAP];
     if (defaultLanguage) {
       setLanguage(defaultLanguage);
@@ -44,7 +44,6 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const savedRegion = localStorage.getItem('selectedRegion');
     const hasUserOverride = savedLanguage || savedRegion;
     
-    // If user has previously made a selection, respect it
     if (hasUserOverride) {
       if (savedLanguage) {
         i18n.changeLanguage(savedLanguage);
@@ -55,9 +54,8 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return;
     }
 
-    // If location is detected and no user override exists, auto-set
     if (!locationLoading && detectedLanguage && detectedRegion && !hasDetectedLocation) {
-      console.log(`Auto-detecting location: ${countryCode} -> Language: ${detectedLanguage}, Region: ${detectedRegion}`);
+      logger.debug(`Auto-detecting location: ${countryCode} -> Language: ${detectedLanguage}, Region: ${detectedRegion}`);
       setLanguage(detectedLanguage);
       setCurrentRegion(detectedRegion);
       localStorage.setItem('autoDetectedRegion', detectedRegion);

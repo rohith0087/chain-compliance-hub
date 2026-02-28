@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import logger from '@/utils/logger';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -97,7 +98,7 @@ const ActionExecutor: React.FC<ActionExecutorProps> = ({
     setExecutionStates(prev => ({ ...prev, [actionId]: 'executing' }));
 
     try {
-      console.log('Executing action:', { actionType, parameters });
+      logger.debug('Executing action:', { actionType, parameters });
 
       const { data, error } = await supabase.functions.invoke('execute-chat-action', {
         body: {

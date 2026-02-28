@@ -1,3 +1,5 @@
+import logger from '@/utils/logger';
+
 interface GeocodeResult {
   lat: number;
   lng: number;
@@ -39,7 +41,7 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult | n
   const cache = getCache();
   const cached = cache[address];
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    console.log('Using cached geocode for:', address);
+    logger.debug('Using cached geocode for:', address);
     return cached.result;
   }
 
@@ -73,7 +75,7 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult | n
       };
       setCache(cache);
 
-      console.log('Geocoded:', address, '→', geocodeResult);
+      logger.debug('Geocoded:', address, '→', geocodeResult);
       return geocodeResult;
     } else {
       console.warn('Geocoding failed for:', address, data.status);

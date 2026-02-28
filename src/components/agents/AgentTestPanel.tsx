@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import logger from '@/utils/logger';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +21,7 @@ const AgentTestPanel: React.FC<AgentTestPanelProps> = ({ companyType, companyId 
   const testSupplierAgent = async () => {
     setIsTestingSupplier(true);
     try {
-      console.log('Testing supplier agent...');
+      logger.debug('Testing supplier agent...');
       const { data, error } = await supabase.functions.invoke('agent-coordinator', {
         body: { 
           action: 'trigger_supplier',
@@ -33,7 +34,7 @@ const AgentTestPanel: React.FC<AgentTestPanelProps> = ({ companyType, companyId 
         throw error;
       }
 
-      console.log('Supplier agent response:', data);
+      logger.debug('Supplier agent response:', data);
       toast({
         title: "Supplier Agent Test",
         description: data?.result?.data?.message || data?.result?.error || "Agent test completed successfully",
@@ -53,7 +54,7 @@ const AgentTestPanel: React.FC<AgentTestPanelProps> = ({ companyType, companyId 
   const testBuyerAgent = async () => {
     setIsTestingBuyer(true);
     try {
-      console.log('Testing buyer agent...');
+      logger.debug('Testing buyer agent...');
       const { data, error } = await supabase.functions.invoke('agent-coordinator', {
         body: { 
           action: 'trigger_buyer',
@@ -66,7 +67,7 @@ const AgentTestPanel: React.FC<AgentTestPanelProps> = ({ companyType, companyId 
         throw error;
       }
 
-      console.log('Buyer agent response:', data);
+      logger.debug('Buyer agent response:', data);
       toast({
         title: "Buyer Agent Test",
         description: data?.result?.data?.message || data?.result?.error || "Agent test completed successfully",
@@ -86,7 +87,7 @@ const AgentTestPanel: React.FC<AgentTestPanelProps> = ({ companyType, companyId 
   const runFullCycle = async () => {
     setIsRunningCycle(true);
     try {
-      console.log('Running full agent cycle...');
+      logger.debug('Running full agent cycle...');
       const { data, error } = await supabase.functions.invoke('agent-coordinator', {
         body: { 
           action: 'run_cycle',
@@ -99,7 +100,7 @@ const AgentTestPanel: React.FC<AgentTestPanelProps> = ({ companyType, companyId 
         throw error;
       }
 
-      console.log('Agent coordinator response:', data);
+      logger.debug('Agent coordinator response:', data);
       toast({
         title: "Full Agent Cycle",
         description: data?.message || "Agent cycle completed successfully",

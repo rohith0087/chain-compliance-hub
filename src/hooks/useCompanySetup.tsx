@@ -2,19 +2,19 @@
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import logger from '@/utils/logger';
 
 export const useCompanySetup = () => {
   const { user, profile } = useAuth();
 
   const createSupplierRecord = async () => {
     if (!user || !profile) {
-      console.log('No user or profile available for supplier record creation');
+      logger.debug('No user or profile available for supplier record creation');
       return;
     }
 
     try {
-      console.log('Checking for existing supplier record...');
-      // Only create supplier record if user has supplier role and doesn't have one yet
+      logger.debug('Checking for existing supplier record...');
       if (profile.roles?.includes('supplier')) {
         const { data: existingSuppliers, error: fetchError } = await supabase
           .from('suppliers')
@@ -29,7 +29,7 @@ export const useCompanySetup = () => {
         }
 
         if (!existingSuppliers || existingSuppliers.length === 0) {
-          console.log('Creating new supplier record...');
+          logger.debug('Creating new supplier record...');
           const { data: newSupplier, error: supplierError } = await supabase
             .from('suppliers')
             .insert({
@@ -48,11 +48,10 @@ export const useCompanySetup = () => {
           if (supplierError) {
             console.error('Error creating supplier record:', supplierError);
           } else {
-            console.log('Supplier record created successfully');
-            // Note: Database trigger automatically creates Main Office branch and company_users record
+            logger.debug('Supplier record created successfully');
           }
         } else {
-          console.log('Supplier record already exists');
+          logger.debug('Supplier record already exists');
         }
       }
     } catch (error) {
@@ -62,13 +61,12 @@ export const useCompanySetup = () => {
 
   const createBuyerRecord = async () => {
     if (!user || !profile) {
-      console.log('No user or profile available for buyer record creation');
+      logger.debug('No user or profile available for buyer record creation');
       return;
     }
 
     try {
-      console.log('Checking for existing buyer record...');
-      // Only create buyer record if user has buyer role and doesn't have one yet
+      logger.debug('Checking for existing buyer record...');
       if (profile.roles?.includes('buyer')) {
         const { data: existingBuyers, error: fetchError } = await supabase
           .from('buyers')
@@ -83,7 +81,7 @@ export const useCompanySetup = () => {
         }
 
         if (!existingBuyers || existingBuyers.length === 0) {
-          console.log('Creating new buyer record...');
+          logger.debug('Creating new buyer record...');
           const { data: newBuyer, error: buyerError } = await supabase
             .from('buyers')
             .insert({
@@ -100,11 +98,10 @@ export const useCompanySetup = () => {
           if (buyerError) {
             console.error('Error creating buyer record:', buyerError);
           } else {
-            console.log('Buyer record created successfully');
-            // Note: Database trigger automatically creates Main Office branch and company_users record
+            logger.debug('Buyer record created successfully');
           }
         } else {
-          console.log('Buyer record already exists');
+          logger.debug('Buyer record already exists');
         }
       }
     } catch (error) {
@@ -116,7 +113,7 @@ export const useCompanySetup = () => {
     if (!user) return null;
 
     try {
-      console.log('Fetching supplier profile for user:', user.id);
+      logger.debug('Fetching supplier profile for user:', user.id);
       const { data: suppliers, error } = await supabase
         .from('suppliers')
         .select('*')
@@ -130,7 +127,7 @@ export const useCompanySetup = () => {
       }
 
       const result = suppliers && suppliers.length > 0 ? suppliers[0] : null;
-      console.log('Supplier profile result:', result);
+      logger.debug('Supplier profile result:', result);
       return result;
     } catch (error) {
       console.error('Error in getSupplierProfile:', error);
@@ -142,7 +139,7 @@ export const useCompanySetup = () => {
     if (!user) return null;
 
     try {
-      console.log('Fetching buyer profile for user:', user.id);
+      logger.debug('Fetching buyer profile for user:', user.id);
       const { data: buyers, error } = await supabase
         .from('buyers')
         .select('*')
@@ -156,7 +153,7 @@ export const useCompanySetup = () => {
       }
 
       const result = buyers && buyers.length > 0 ? buyers[0] : null;
-      console.log('Buyer profile result:', result);
+      logger.debug('Buyer profile result:', result);
       return result;
     } catch (error) {
       console.error('Error in getBuyerProfile:', error);

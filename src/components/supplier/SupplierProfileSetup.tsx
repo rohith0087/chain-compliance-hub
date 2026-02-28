@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import logger from '@/utils/logger';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,8 +33,8 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
   const { toast } = useToast();
 
   // Log industries to debug
-  console.log('VALID_INDUSTRIES array:', VALID_INDUSTRIES);
-  console.log('Current industry value:', industry);
+  logger.debug('VALID_INDUSTRIES array:', VALID_INDUSTRIES);
+  logger.debug('Current industry value:', industry);
 
   useEffect(() => {
     if (user) {
@@ -202,7 +203,7 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
               </SelectTrigger>
               <SelectContent>
                 {VALID_INDUSTRIES.map((ind) => {
-                  console.log('Rendering industry SelectItem:', ind);
+                  logger.debug('Rendering industry SelectItem:', ind);
                   return (
                     <SelectItem key={ind} value={ind}>
                       {ind}

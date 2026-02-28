@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import logger from '@/utils/logger';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -125,10 +126,10 @@ const BuyerConnectionRequests = () => {
     if (!selectedConnection) return;
 
     const connectionId = selectedConnection.id;
-    console.log(`Starting approval with onboarding type: ${onboardingType} for connection ID: ${connectionId}`);
+    logger.debug(`Starting approval with onboarding type: ${onboardingType} for connection ID: ${connectionId}`);
 
     if (processingIds.has(connectionId)) {
-      console.log(`Already processing connection ${connectionId}, ignoring duplicate request`);
+      logger.debug(`Already processing connection ${connectionId}, ignoring duplicate request`);
       return;
     }
 
@@ -213,10 +214,10 @@ const BuyerConnectionRequests = () => {
   };
 
   const handleReject = async (connectionId: string) => {
-    console.log(`Starting rejection for connection ID: ${connectionId}`);
+    logger.debug(`Starting rejection for connection ID: ${connectionId}`);
 
     if (processingIds.has(connectionId)) {
-      console.log(`Already processing connection ${connectionId}, ignoring duplicate request`);
+      logger.debug(`Already processing connection ${connectionId}, ignoring duplicate request`);
       return;
     }
 

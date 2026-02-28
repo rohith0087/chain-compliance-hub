@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import logger from '@/utils/logger';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
@@ -105,7 +106,7 @@ const DynamicDashboard = () => {
     // Check URL for explicit role switch request
     const urlRole = searchParams.get('role') as 'buyer' | 'supplier' | null;
     if (urlRole && (urlRole === 'buyer' || urlRole === 'supplier')) {
-      console.log('Setting role from URL param:', urlRole);
+      logger.debug('Setting role from URL param:', urlRole);
       setCurrentRole(urlRole);
       // Also switch context for team members
       if (isTeamMember) {
@@ -117,7 +118,7 @@ const DynamicDashboard = () => {
     if (currentContext) {
       // Team member: use context
       setCurrentRole(currentContext.companyType);
-      console.log('Set role from context:', currentContext.companyType);
+      logger.debug('Set role from context:', currentContext.companyType);
     } else if (roles.length > 0) {
       // Company owner: use roles array
       if (roles.includes('supplier' as any)) {
@@ -125,7 +126,7 @@ const DynamicDashboard = () => {
       } else if (roles.includes('buyer' as any)) {
         setCurrentRole('buyer');
       }
-      console.log('Set role from roles array:', currentRole);
+      logger.debug('Set role from roles array:', currentRole);
     }
   }, [currentContext, contextsLoading, roles, searchParams, isTeamMember]);
 
@@ -148,7 +149,7 @@ const DynamicDashboard = () => {
 
     // Skip profile loading for team members
     if (isTeamMember) {
-      console.log('User is a team member, skipping profile loading');
+      logger.debug('User is a team member, skipping profile loading');
       setProfilesLoading(false);
       return;
     }
@@ -157,11 +158,11 @@ const DynamicDashboard = () => {
   }, [contextsLoading, user, roles, isTeamMember]);
 
   const loadProfiles = async () => {
-    console.log('Loading profiles...', { isTeamMember });
+    logger.debug('Loading profiles...', { isTeamMember });
     
     // Skip profile loading for team members - they don't need supplier/buyer records
     if (isTeamMember) {
-      console.log('User is a team member, skipping profile loading');
+      logger.debug('User is a team member, skipping profile loading');
       setProfilesLoading(false);
       return;
     }
@@ -169,16 +170,16 @@ const DynamicDashboard = () => {
     setProfilesLoading(true);
     try {
       if (hasRole('supplier')) {
-        console.log('Loading supplier profile...');
+        logger.debug('Loading supplier profile...');
         const supplier = await getSupplierProfile();
-        console.log('Loaded supplier profile:', supplier);
+        logger.debug('Loaded supplier profile');
         setSupplierProfile(supplier);
       }
       
       if (hasRole('buyer')) {
-        console.log('Loading buyer profile...');
+        logger.debug('Loading buyer profile...');
         const buyer = await getBuyerProfile();
-        console.log('Loaded buyer profile:', buyer);
+        logger.debug('Loaded buyer profile');
         setBuyerProfile(buyer);
       }
     } catch (error) {
@@ -189,7 +190,7 @@ const DynamicDashboard = () => {
   };
 
   const handleRoleSwitch = (newRole: 'buyer' | 'supplier') => {
-    console.log('Switching to role:', newRole);
+    logger.debug('Switching to role:', newRole);
     setCurrentRole(newRole);
     // Also switch context for team members
     if (isTeamMember) {
@@ -198,7 +199,7 @@ const DynamicDashboard = () => {
   };
 
   const handleProfileCreated = async () => {
-    console.log('Profile created, reloading profiles...');
+    logger.debug('Profile created, reloading profiles...');
     // Add a small delay to ensure database has updated
     setTimeout(async () => {
       await loadProfiles();
@@ -207,7 +208,7 @@ const DynamicDashboard = () => {
 
   const handleLogout = async () => {
     try {
-      console.log('Logout button clicked');
+      logger.debug('Logout button clicked');
       await signOut();
     } catch (error) {
       console.error('Error during logout:', error);
@@ -217,7 +218,7 @@ const DynamicDashboard = () => {
   };
 
   const handleResetSession = async () => {
-    console.log('Resetting session...');
+    logger.debug('Resetting session...');
     try {
       await signOut();
       window.location.href = '/';
@@ -325,11 +326,11 @@ const DynamicDashboard = () => {
   // Graceful fallback: if current role context is gone but other remains
   if (isTeamMember) {
     if (currentRole === 'buyer' && buyerContexts.length === 0 && supplierContexts.length > 0) {
-      console.log('Buyer context removed, falling back to supplier');
+      logger.debug('Buyer context removed, falling back to supplier');
       setCurrentRole('supplier');
       toast.info('Your buyer access has been removed. Switched to supplier view.');
     } else if (currentRole === 'supplier' && supplierContexts.length === 0 && buyerContexts.length > 0) {
-      console.log('Supplier context removed, falling back to buyer');
+      logger.debug('Supplier context removed, falling back to buyer');
       setCurrentRole('buyer');
       toast.info('Your supplier access has been removed. Switched to buyer view.');
     }
@@ -338,7 +339,7 @@ const DynamicDashboard = () => {
   // HARD BLOCK: Team members (invited users) NEVER see profile setup forms
   // This prevents race conditions where profile forms show during state transitions
   if (isTeamMember) {
-    console.log('User is a team member - bypassing ALL profile setup checks');
+    logger.debug('User is a team member - bypassing ALL profile setup checks');
     // Skip to dashboard rendering below
   }
   
@@ -355,7 +356,7 @@ const DynamicDashboard = () => {
                          hasRole('buyer') && 
                          !isBuyerProfileComplete(buyerProfile);
 
-  console.log('Dashboard state:', {
+  logger.debug('Dashboard state:', {
     currentRole,
     supplierProfile: !!supplierProfile,
     buyerProfile: !!buyerProfile,

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import logger from '@/utils/logger';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -37,11 +38,11 @@ export const DocumentAssignmentManager = () => {
         .single();
 
       if (!buyer) {
-        console.log('[DocumentAssignmentManager] No buyer found for user');
+        logger.debug('[DocumentAssignmentManager] No buyer found for user');
         return;
       }
 
-      console.log('[DocumentAssignmentManager] Buyer ID:', buyer.id);
+      logger.debug('[DocumentAssignmentManager] Buyer ID:', buyer.id);
 
       // Get unassigned documents - relaxed status filter to include both pending_review and submitted
       const { data: docs, error: docsError } = await supabase
@@ -60,10 +61,9 @@ export const DocumentAssignmentManager = () => {
         .not('id', 'in', `(SELECT document_upload_id FROM document_assignments)`)
         .limit(50);
 
-      console.log('[DocumentAssignmentManager] Unassigned docs query result:', {
+      logger.debug('[DocumentAssignmentManager] Unassigned docs query result:', {
         count: docs?.length || 0,
-        error: docsError,
-        statuses: docs?.map(d => d.status)
+        error: docsError
       });
 
       setUnassignedDocs(docs || []);
@@ -80,10 +80,9 @@ export const DocumentAssignmentManager = () => {
         .eq('status', 'active')
         .in('role', ['company_admin', 'branch_manager', 'document_manager', 'approver']);
 
-      console.log('[DocumentAssignmentManager] Team members query result:', {
+      logger.debug('[DocumentAssignmentManager] Team members query result:', {
         count: team?.length || 0,
-        error: teamError,
-        roles: team?.map(t => t.role)
+        error: teamError
       });
 
       setTeamMembers(team || []);

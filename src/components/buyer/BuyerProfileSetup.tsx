@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import logger from '@/utils/logger';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,14 +42,14 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
     }
   }, [user, profile]);
 
-  console.log('VALID_INDUSTRIES array in BuyerProfileSetup:', VALID_INDUSTRIES);
-  console.log('Current industry value:', formData.industry);
+  logger.debug('VALID_INDUSTRIES array in BuyerProfileSetup:', VALID_INDUSTRIES);
+  logger.debug('Current industry value:', formData.industry);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    console.log('Starting buyer profile setup...', formData);
+    logger.debug('Starting buyer profile setup...', formData);
     setLoading(true);
 
     try {
@@ -64,7 +65,7 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
       let isNewProfile = false;
       
       if (existingBuyer) {
-        console.log('Updating existing buyer profile:', existingBuyer.id);
+        logger.debug('Updating existing buyer profile:', existingBuyer.id);
         // Update existing buyer profile
         const { data, error } = await supabase
           .from('buyers')
@@ -88,7 +89,7 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
         if (error) throw error;
         buyerResult = data;
       } else {
-        console.log('Creating new buyer profile...');
+        logger.debug('Creating new buyer profile...');
         isNewProfile = true;
         // Create new buyer profile
         const { data, error } = await supabase
@@ -113,7 +114,7 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
         buyerResult = data;
       }
 
-      console.log('Buyer profile saved successfully:', buyerResult);
+      logger.debug('Buyer profile saved successfully');
 
       // Initialize default onboarding settings for new profiles
       if (isNewProfile && formData.industry) {
@@ -204,7 +205,7 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
 
   const handleIndustryChange = (value: string) => {
     const safeValue = createSafeSelectValue(value, 'Technology');
-    console.log('Industry changed to:', safeValue);
+    logger.debug('Industry changed to:', safeValue);
     setFormData({...formData, industry: safeValue});
   };
 
@@ -244,7 +245,7 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
                   placeholder="Select your industry"
                 >
                   {VALID_INDUSTRIES.map((industry) => {
-                    console.log('Rendering industry SafeSelectItem in BuyerProfileSetup:', industry, 'length:', industry.length);
+                    logger.debug('Rendering industry SafeSelectItem in BuyerProfileSetup:', industry);
                     return (
                       <SafeSelectItem key={industry} value={industry}>
                         {industry}

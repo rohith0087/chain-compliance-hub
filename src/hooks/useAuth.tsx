@@ -2,6 +2,7 @@
 import { useState, useEffect, createContext, useContext, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import logger from '@/utils/logger';
 
 // Get client IP address using public API
 const getClientIP = async (): Promise<string | null> => {
@@ -59,9 +60,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const isInitializedRef = useRef(false);
 
   const createMissingProfile = async (user: User) => {
-    console.log('Creating missing profile for user:', user.id);
+    logger.debug('Creating missing profile for user:', user.id);
     try {
-      // Get roles from user metadata, default to buyer if not provided
       const userRoles = user.user_metadata?.roles || ['buyer'];
       
       const { data, error } = await supabase
@@ -80,9 +80,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw error;
       }
 
-      console.log('Profile created successfully:', data);
+      logger.debug('Profile created successfully');
       
-      // Grant roles using the grant_role function for security
       for (const role of userRoles) {
         const { error: roleError } = await supabase.rpc('grant_role', {
           _target_user_id: user.id,
@@ -103,12 +102,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      console.log('Fetching profile for user:', userId);
+      logger.debug('Fetching profile for user:', userId);
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .maybeSingle(); // Use maybeSingle to avoid error when no rows found
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching profile:', error);
@@ -116,8 +115,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       if (!profile) {
-        console.log('No profile found, creating one...');
-        // Get the current user to create the profile
+        logger.debug('No profile found, creating one...');
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           const newProfile = await createMissingProfile(user);
@@ -126,41 +124,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
 
-      console.log('Profile fetched:', profile);
+      logger.debug('Profile fetched successfully');
       setProfile(profile);
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
-      // Don't throw here, just set profile to null
       setProfile(null);
     }
   };
 
   useEffect(() => {
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
+        logger.debug('Auth state changed:', event);
         
-        // TOKEN_REFRESHED: Only update session/user silently, don't disrupt UI
         if (event === 'TOKEN_REFRESHED' && isInitializedRef.current) {
           if (session) {
             setSession(session);
             setUser(session.user);
           }
-          // Don't set loading, don't clear existing state
           return;
         }
         
-        // INITIAL_SESSION after already initialized: preserve existing state
         if (event === 'INITIAL_SESSION' && isInitializedRef.current && session?.user) {
           if (session) {
             setSession(session);
             setUser(session.user);
           }
-          return; // Don't disrupt current state
+          return;
         }
         
-        // SIGNED_OUT: Clear everything
         if (event === 'SIGNED_OUT') {
           setSession(null);
           setUser(null);
@@ -170,12 +162,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           return;
         }
         
-        // SIGNED_IN and first INITIAL_SESSION: Full processing
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile with delay to avoid deadlock
           setTimeout(async () => {
             await fetchUserProfile(session.user.id);
             isInitializedRef.current = true;
@@ -187,14 +177,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     );
 
-    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check:', session?.user?.email);
+      logger.debug('Initial session check');
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        // Fetch profile for existing session
         setTimeout(async () => {
           await fetchUserProfile(session.user.id);
           isInitializedRef.current = true;
@@ -213,7 +201,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       options: captchaToken ? { captchaToken } : undefined,
     });
     
-    // Log successful login
     if (!error && data.user) {
       logAuthEvent('login', data.user.id, data.user.email || email, data.user.user_metadata?.full_name);
     }
@@ -236,7 +223,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     });
 
-    // Check if user already exists (Supabase returns user with empty identities array)
     if (data?.user && data.user.identities?.length === 0) {
       return { 
         error: { 
@@ -250,28 +236,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
-      console.log('Signing out user...');
+      logger.debug('Signing out user...');
       
-      // Log logout event before clearing state
       if (user) {
         await logAuthEvent('logout', user.id, user.email || '', profile?.full_name);
       }
       
-      // Clear local state first
       setUser(null);
       setSession(null);
       setProfile(null);
       
-      // Then sign out from Supabase
       const { error } = await supabase.auth.signOut();
       
       if (error) {
         console.error('Error signing out:', error);
       } else {
-        console.log('Successfully signed out');
+        logger.debug('Successfully signed out');
       }
       
-      // Force a page reload to ensure clean state
       window.location.href = '/';
     } catch (error) {
       console.error('Error in signOut:', error);

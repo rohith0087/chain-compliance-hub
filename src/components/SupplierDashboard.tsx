@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import logger from '@/utils/logger';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -326,7 +327,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch, impersonatedSupplierI
                 });
                 
                 const connectionsWithBuyers = await Promise.all(buyerDetailsPromises);
-                console.log('Connected buyers with unified status:', connectionsWithBuyers);
+                logger.debug('Connected buyers with unified status loaded');
                 setConnectedBuyers(connectionsWithBuyers);
               } else {
                 setConnectedBuyers([]);

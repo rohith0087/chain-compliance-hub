@@ -61,7 +61,7 @@ const BuyerDocumentCard = ({ document, onDelete }: BuyerDocumentCardProps) => {
       if (error) throw error;
 
       if (data?.signedUrl) {
-        window.open(data.signedUrl, '_blank');
+        window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
       }
     } catch (error) {
       console.error('Error viewing document:', error);

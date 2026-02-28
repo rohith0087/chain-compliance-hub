@@ -526,7 +526,7 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
                                 if (error) {
                                   throw error;
                                 }
-                                window.open(data.signedUrl, '_blank');
+                                window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
                               } catch (err: any) {
                                 console.error('Error opening file:', err);
                                 toast({ title: 'Error', description: err.message || 'Unable to open file', variant: 'destructive' });

@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
+import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/corsHeaders.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const supabase = createClient(
@@ -9,15 +10,10 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 );
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const corsHeaders = getCorsHeaders(req);
+  const preflight = handleCorsPreflightRequest(req);
+  if (preflight) return preflight;
 
   try {
     // Validate authentication

@@ -331,7 +331,7 @@ export const DocumentLinkModal: React.FC<DocumentLinkModalProps> = ({
                           size="sm"
                           onClick={() => {
                             const encodedToken = encodeURIComponent(link.access_token);
-                            window.open(`/shared-document/${encodedToken}`, '_blank');
+                            window.open(`/shared-document/${encodedToken}`, '_blank', 'noopener,noreferrer');
                           }}
                         >
                           <ExternalLink className="h-4 w-4" />

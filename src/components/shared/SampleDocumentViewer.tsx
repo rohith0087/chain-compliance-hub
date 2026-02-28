@@ -71,7 +71,7 @@ const SampleDocumentViewer = ({
         setShowPreview(true);
       } else {
         // For other file types, open in new tab
-        window.open(url, '_blank');
+        window.open(url, '_blank', 'noopener,noreferrer');
       }
     }
   };

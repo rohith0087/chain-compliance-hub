@@ -373,7 +373,7 @@ const BuyerComplianceDashboard = () => {
       const isViewable = upload.mime_type?.startsWith('image/') || upload.mime_type === 'application/pdf';
 
       if (isViewable) {
-        const newTab = window.open('', '_blank');
+        const newTab = window.open('', '_blank', 'noopener,noreferrer');
         if (newTab) newTab.document.write('Loading document...');
         const { data, error } = await supabase.storage
           .from('compliance-documents')
@@ -383,7 +383,7 @@ const BuyerComplianceDashboard = () => {
         if (newTab) {
           newTab.location.href = data.signedUrl;
         } else {
-          window.open(data.signedUrl, '_blank');
+          window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
         }
       } else {
         const { data: signed, error: signedErr } = await supabase.storage

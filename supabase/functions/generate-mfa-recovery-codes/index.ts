@@ -1,9 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/corsHeaders.ts";
 
 // Generate a random alphanumeric code
 function generateCode(length: number = 8): string {
@@ -29,9 +25,9 @@ async function hashCode(code: string): Promise<string> {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const corsHeaders = getCorsHeaders(req);
+  const preflight = handleCorsPreflightRequest(req);
+  if (preflight) return preflight;
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;

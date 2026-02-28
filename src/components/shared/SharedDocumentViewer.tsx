@@ -106,7 +106,7 @@ const SharedDocumentViewer: React.FC = () => {
 
   const handleView = () => {
     if (documentData?.signedUrl) {
-      window.open(documentData.signedUrl, '_blank');
+      window.open(documentData.signedUrl, '_blank', 'noopener,noreferrer');
     }
   };
 

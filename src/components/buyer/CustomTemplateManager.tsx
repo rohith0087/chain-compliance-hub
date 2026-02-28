@@ -163,7 +163,7 @@ export const CustomTemplateManager = () => {
         throw error;
       }
 
-      window.open(data.signedUrl, '_blank');
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
     } catch (error: any) {
       console.error('Error previewing template:', error);
       toast.error('Failed to preview template');

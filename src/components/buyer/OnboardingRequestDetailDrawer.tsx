@@ -124,7 +124,7 @@ export const OnboardingRequestDetailDrawer = ({
       }
 
       if (data?.signedUrl) {
-        window.open(data.signedUrl, '_blank');
+        window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
       }
     } catch (error) {
       console.error('Error viewing document:', error);

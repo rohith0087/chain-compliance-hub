@@ -1,15 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { Resend } from "npm:resend@2.0.0";
+import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/corsHeaders.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 interface GenericEmailRequest {
   mode?: 'draft' | 'send';
@@ -30,12 +26,10 @@ function isValidUUID(str: string): boolean {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  const corsHeaders = getCorsHeaders(req);
+  const preflight = handleCorsPreflightRequest(req);
+  if (preflight) return preflight;
   console.log("[send-generic-email] Function invoked");
-  
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
 
   try {
     // Validate auth

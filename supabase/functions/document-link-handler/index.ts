@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/corsHeaders.ts";
 
 // Resolve various forms of stored file paths into a bucket + key pair
 function resolveStoragePath(input?: string | null): { bucket: string; key: string } | null {
@@ -52,10 +48,9 @@ function resolveStoragePath(input?: string | null): { bucket: string; key: strin
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const corsHeaders = getCorsHeaders(req);
+  const preflight = handleCorsPreflightRequest(req);
+  if (preflight) return preflight;
 
   try {
     const supabase = createClient(
@@ -66,10 +61,10 @@ serve(async (req) => {
     // Check if this is a request to create a shared link
     const body = await req.json().catch(() => null);
     
-    console.log('document-link-handler received body:', JSON.stringify(body, null, 2));
+    console.log('document-link-handler: action received');
     
     if (body && body.action === 'create_link') {
-      console.log('Creating shared link for document_id:', body.document_id, 'with permission_level:', body.permission_level);
+      console.log('Creating shared link for document');
       
       // Authenticate user
       const authHeader = req.headers.get('Authorization');
@@ -130,7 +125,7 @@ serve(async (req) => {
         is_active: true
       };
       
-      console.log('Inserting into document_shared_links:', JSON.stringify(insertPayload, null, 2));
+      console.log('Inserting shared link record');
       
       const { data: linkData, error: insertError } = await supabase
         .from('document_shared_links')
@@ -400,7 +395,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('Generating signed URL', { filePathRaw, bucket: resolved.bucket, key: resolved.key });
+    console.log('Generating signed URL for document access');
 
     const { data: signedUrl, error: urlError } = await supabase.storage
       .from(resolved.bucket)
@@ -436,7 +431,6 @@ serve(async (req) => {
         expires_at: linkData.expires_at,
         access_info: {
           view_count: linkData.view_count + 1,
-          accessed_by: user?.email || 'Anonymous',
           accessed_at: new Date().toISOString()
         }
       }),

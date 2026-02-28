@@ -198,7 +198,7 @@ const SupplierInsightsModal = ({ isOpen, onClose, supplier, buyerId }: SupplierI
       const subject = `Regarding ${supplier.company_name} - Compliance Documentation`;
       const body = `Dear ${supplier.company_name} team,\n\nI hope this message finds you well. I wanted to reach out regarding your compliance documentation status.\n\nBest regards`;
       const mailtoLink = `mailto:${supplier.contact_email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      window.open(mailtoLink, '_blank');
+      window.open(mailtoLink, '_blank', 'noopener,noreferrer');
     } else {
       toast({
         title: "Contact Information Unavailable",

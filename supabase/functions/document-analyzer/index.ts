@@ -32,7 +32,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Document analysis requested by user: ${userData.user.id}`);
+    console.log('Document analysis requested');
 
     const formData = await req.formData();
     const file = formData.get('file') as File;

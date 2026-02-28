@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
       also_grant_other_role, other_company_id, other_company_type, other_branch_id, other_role, other_company_name
     } = requestData;
 
-    console.log('Creating user:', { email, role, company_type, company_id, also_grant_other_role });
+    console.log('Creating user:', { role, company_type, company_id, also_grant_other_role });
 
     // Validate required fields
     if (!email || !full_name || !role || !company_id || !company_type) {
@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to create company user record: ${companyUserError.message}`);
     }
 
-    console.log('Primary company user created:', companyUserData);
+    console.log('Primary company user created:', companyUserData?.id);
 
     // Insert secondary company_users record if dual-role enabled
     let otherCompanyUserData = null;
@@ -201,7 +201,7 @@ Deno.serve(async (req) => {
         // Don't throw - primary creation succeeded
       } else {
         otherCompanyUserData = otherData;
-        console.log('Secondary company user created:', otherCompanyUserData);
+        console.log('Secondary company user created:', otherCompanyUserData?.id);
       }
     }
 
@@ -246,7 +246,7 @@ Deno.serve(async (req) => {
         subject: emailSubject,
         html: emailBody,
       });
-      console.log('Welcome email sent to:', email);
+      console.log('Welcome email sent successfully');
     } catch (emailError) {
       console.error('Error sending email:', emailError);
       // Don't throw - user is created, email is not critical

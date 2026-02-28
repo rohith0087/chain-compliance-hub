@@ -33,12 +33,12 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Document content extraction requested by user: ${userData.user.id}`);
+    console.log('Document content extraction requested');
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const { document_id, file_path } = await req.json();
 
-    console.log(`Processing document with Vision API: ${document_id}, file: ${file_path}`);
+    console.log('Processing document with Vision API');
 
     // Update processing status
     await supabase

@@ -73,7 +73,7 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     
-    console.log('secure-document-url RAW body:', JSON.stringify(body, null, 2));
+    console.log('secure-document-url: processing request');
     
     // Support both camelCase and snake_case
     const bucket = body.bucket;
@@ -82,7 +82,7 @@ serve(async (req) => {
     const document_id = body.document_id || body.documentId;
     const expiresIn = body.expiresIn || body.expires_in || 3600;
 
-    console.log('secure-document-url parsed params:', { bucket, key, filePath, document_id, expiresIn });
+    console.log('secure-document-url: params parsed, document_id:', !!document_id, 'filePath:', !!filePath);
 
     let resolved = null as { bucket: string; key: string } | null;
     if (bucket && key) {
@@ -91,7 +91,7 @@ serve(async (req) => {
       resolved = resolveStoragePath(filePath);
     } else if (document_id) {
       // Fallback: look up document by ID
-      console.log('Looking up document by ID:', document_id);
+      console.log('Looking up document by ID');
       const { data: docData, error: docError } = await adminClient
         .from('document_uploads')
         .select('file_path')
@@ -103,20 +103,20 @@ serve(async (req) => {
       }
       
       if (docData?.file_path) {
-        console.log('Found file_path for document:', docData.file_path);
+        console.log('Found file_path for document');
         resolved = resolveStoragePath(docData.file_path);
       }
     }
 
     if (!resolved) {
-      console.error('Failed to resolve storage path:', { bucket, key, filePath, document_id });
+      console.error('Failed to resolve storage path');
       return new Response(JSON.stringify({ error: 'Missing or invalid file path' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log('Resolved storage path:', resolved);
+    console.log('Resolved storage path: bucket=', resolved.bucket);
 
     // Handle legacy corrupted paths with "undefined" in the path
     // These occurred when supplier_id wasn't available during upload
@@ -139,7 +139,7 @@ serve(async (req) => {
         const supplierId = uploadWithRequest.document_requests.supplier_id;
         // Reconstruct the correct path by replacing "undefined" with actual supplier_id
         const correctedKey = resolved.key.replace(/\/?undefined\//, `${supplierId}/`);
-        console.log('Corrected path:', { original: resolved.key, corrected: correctedKey, supplierId });
+        console.log('Corrected undefined path segment');
         resolved = { bucket: resolved.bucket, key: correctedKey };
       }
     }
@@ -160,7 +160,7 @@ serve(async (req) => {
       
       if (templateData) {
         customTemplate = templateData;
-        console.log('Found custom template:', templateData);
+        console.log('Found custom template');
       } else {
         console.warn('Custom template not found for key', { resolved });
         return new Response(JSON.stringify({ error: 'Template not found' }), {
@@ -204,7 +204,7 @@ serve(async (req) => {
 
       upload = await tryFindUpload();
       if (!upload) {
-        console.log('Document upload not found in database for key:', resolved.key);
+        console.log('Document upload not found in database');
         // Try to find a template submission with this file path
         const tryFindSubmission = async () => {
           // Exact match
@@ -239,7 +239,7 @@ serve(async (req) => {
 
         submission = await tryFindSubmission();
         if (!submission) {
-          console.log('Document not found in database, attempting direct storage access:', resolved);
+          console.log('Document not found in database, attempting direct storage access');
           
           // Fallback: Check if user is a buyer or supplier and file exists in storage
           // This allows access to files that might have been moved/renamed but still exist
@@ -270,15 +270,15 @@ serve(async (req) => {
             }
           }
           
-          console.error('Document not found in database and no direct access:', { resolved, document_id, filePath });
+          console.error('Document not found in database and no direct access');
           return new Response(JSON.stringify({ error: 'Document not found in database' }), {
             status: 404,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
-        console.log('Found template submission:', submission);
+        console.log('Found template submission');
       } else {
-        console.log('Found document upload:', upload);
+        console.log('Found document upload');
       }
     }
 
@@ -400,7 +400,7 @@ serve(async (req) => {
     }
 
     if (!allowed) {
-      console.log('Access denied for user', userId, 'to resource', resolved.key);
+      console.log('Access denied for document');
       return new Response(JSON.stringify({ error: 'Access denied' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -413,14 +413,14 @@ serve(async (req) => {
       .createSignedUrl(resolved.key, Math.min(60 * 60 * 6, Math.max(60, Number(expiresIn) || 3600))); // 1h default, max 6h
 
     if (signErr || !signed?.signedUrl) {
-      console.error('Failed to create signed URL:', { error: signErr, bucket: resolved.bucket, key: resolved.key });
+      console.error('Failed to create signed URL');
       return new Response(JSON.stringify({ error: 'File not found in storage' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log('Successfully created signed URL for:', resolved.key);
+    console.log('Successfully created signed URL');
 
     return new Response(
       JSON.stringify({ success: true, url: signed.signedUrl }),

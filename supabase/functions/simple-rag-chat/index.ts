@@ -1893,7 +1893,7 @@ Respond ONLY with valid JSON:
     const data = await response.json();
     const analysis = JSON.parse(data.choices[0].message.content);
     
-    console.log('🤖 LLM Pending Action Analysis:', JSON.stringify(analysis, null, 2));
+    console.log('🤖 LLM Pending Action Analysis complete');
     return analysis;
     
   } catch (error) {
@@ -3262,7 +3262,7 @@ async function draftGenericEmail(params: any, authHeader: string) {
       };
     }
     
-    console.log(`📧 Creating email draft for: ${to_email}`);
+    console.log('📧 Creating email draft');
     
     // Call the edge function in draft mode
     const response = await fetch(`${SUPABASE_URL}/functions/v1/send-generic-email`, {
@@ -3291,7 +3291,7 @@ async function draftGenericEmail(params: any, authHeader: string) {
       };
     }
     
-    console.log('✅ Email draft created:', result);
+    console.log('✅ Email draft created');
     
     return {
       success: true,
@@ -3353,7 +3353,7 @@ async function confirmSendEmail(params: any, authHeader: string) {
       };
     }
     
-    console.log('✅ Email sent successfully:', result);
+    console.log('✅ Email sent successfully');
     
     return {
       success: true,
@@ -3386,7 +3386,7 @@ async function draftComplianceEmail(params: any, buyerId: string) {
     const documentIds = params.document_ids || [];
     const customMessage = params.custom_message || '';
     
-    console.log('📧 Draft email params:', { actionType, supplierNames, supplierIds: supplierIds.length, documentIds: documentIds.length });
+    console.log('📧 Draft email params:', { actionType, supplierCount: supplierNames.length, documentCount: documentIds.length });
     
     // NEW: Resolve supplier names to IDs using fuzzy matching
     if (supplierNames.length > 0 && supplierIds.length === 0) {
@@ -3899,13 +3899,13 @@ async function executeToolCall(
       console.log('📊 Generating compliance insights dashboard:', args);
       return await getComplianceInsightsDashboard(args, buyerId);
     case "draft_compliance_email":
-      console.log('📧 Drafting compliance follow-up email:', args);
+      console.log('📧 Drafting compliance follow-up email');
       return await draftComplianceEmail(args, buyerId);
     case "draft_generic_email":
-      console.log('📧 Creating generic email draft:', args);
+      console.log('📧 Creating generic email draft');
       return await draftGenericEmail(args, context?.authHeader || '');
     case "confirm_send_email":
-      console.log('📧 Confirming and sending email:', args);
+      console.log('📧 Confirming and sending email');
       return await confirmSendEmail(args, context?.authHeader || '');
     
     // ============= DOCUMENT COMPARISON TOOLS =============
@@ -4187,7 +4187,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('✓ User authenticated:', user.id);
+    console.log('✓ User authenticated');
 
     // Parse request body
     const { buyer_id: requested_buyer_id, question, session_id: incoming_session_id, user_context } = await req.json();
@@ -4217,7 +4217,7 @@ serve(async (req) => {
 
     // ============= VALIDATE COMPANY ACCESS =============
     if (!actualBuyerId) {
-      console.error('❌ User has no buyer access:', user.id);
+      console.error('❌ User has no buyer access');
       return new Response(
         JSON.stringify({ error: 'User is not associated with a buyer company' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -4229,11 +4229,7 @@ serve(async (req) => {
     
     // Log if requested_buyer_id doesn't match (potential security issue)
     if (requested_buyer_id && requested_buyer_id !== actualBuyerId) {
-      console.warn('⚠️ SECURITY: Requested buyer_id mismatch!', {
-        requested: requested_buyer_id,
-        actual: actualBuyerId,
-        user_id: user.id
-      });
+      console.warn('⚠️ SECURITY: Requested buyer_id mismatch!');
     }
 
     // Validate user_context.user_id matches authenticated user
@@ -4269,7 +4265,7 @@ serve(async (req) => {
       }
     }
     
-    console.log('simple-rag-chat request:', { buyer_id, question, session_id, authenticated_user: user.id });
+    console.log('simple-rag-chat request:', { question: question?.substring(0, 50), session_id });
     console.log('User context:', { company_type: companyType, industry });
 
     if (!question) {

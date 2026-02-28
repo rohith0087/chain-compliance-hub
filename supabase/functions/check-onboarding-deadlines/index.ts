@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('Authenticated user:', user.id, user.email);
+    console.log('Authenticated user for onboarding deadlines check');
 
     // Parse request body for optional buyer filter
     let requestedBuyerId: string | null = null;

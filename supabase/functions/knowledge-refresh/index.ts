@@ -291,7 +291,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Knowledge refresh initiated by user: ${userData.user.id}`);
+    console.log('Knowledge refresh initiated');
 
     const { mode, company_id, company_type }: RefreshRequest = await req.json();
     

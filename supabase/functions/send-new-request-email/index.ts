@@ -36,7 +36,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { requestId, supplierId }: EmailRequest = await req.json();
 
-    console.log("Processing new request email notification for SUPPLIER:", { requestId, supplierId });
+    console.log("Processing new request email notification");
 
     // Step 1: Check if supplier has email notifications enabled
     const { data: notificationSettings } = await supabase
@@ -46,7 +46,7 @@ const handler = async (req: Request): Promise<Response> => {
       .maybeSingle();
 
     if (!notificationSettings?.new_request_email_enabled) {
-      console.log("Email notifications disabled for supplier:", supplierId);
+      console.log("Email notifications disabled for supplier");
       return new Response(
         JSON.stringify({ success: true, message: "Email notifications disabled" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -186,7 +186,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Sending email to ${recipientEmails.size} supplier recipients:`, Array.from(recipientEmails));
+    console.log(`Sending email to ${recipientEmails.size} supplier recipients`);
 
     // Step 5: Send emails
     const buyerName = (request.buyers as any)?.company_name || "A Buyer";
@@ -291,10 +291,10 @@ const handler = async (req: Request): Promise<Response> => {
           subject: `New Document Request from ${buyerName}: ${request.title}`,
           html: emailHtml,
         });
-        console.log(`Email sent to ${email}:`, result);
+        console.log('Email sent successfully');
         return { email, success: true, result };
       } catch (emailError) {
-        console.error(`Failed to send email to ${email}:`, emailError);
+        console.error('Failed to send email:', emailError);
         return { email, success: false, error: emailError };
       }
     });

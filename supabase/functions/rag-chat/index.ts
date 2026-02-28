@@ -396,8 +396,8 @@ Respond in JSON format:
       .replace(/```\s*$/g, '')
       .trim();
     
-    console.log('Raw intent response:', rawContent);
-    console.log('Cleaned intent response:', cleanedContent);
+    console.log('Intent analysis parsed');
+    
     
     const analysis = JSON.parse(cleanedContent);
     return analysis;

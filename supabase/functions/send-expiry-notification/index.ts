@@ -33,7 +33,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Expiry notification triggered by user: ${userData.user.id}`);
+    console.log('Expiry notification triggered');
 
     const { 
       supplier_email, 
@@ -84,7 +84,7 @@ serve(async (req) => {
       `,
     });
 
-    console.log("Expiry notification sent:", emailResponse);
+    console.log("Expiry notification sent successfully");
 
     return new Response(JSON.stringify(emailResponse), {
       status: 200,

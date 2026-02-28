@@ -8,7 +8,6 @@ const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 console.log('Buyer Agent starting...');
-console.log('Supabase URL:', supabaseUrl);
 console.log('Service Role Key available:', !!supabaseServiceRoleKey);
 console.log('OpenAI Key available:', !!openAIApiKey);
 

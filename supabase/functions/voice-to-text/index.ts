@@ -53,7 +53,7 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured');
     }
 
-    console.log('Processing audio data, length:', audio.length);
+    console.log('Processing audio data, length:', audio.length > 1000 ? 'large' : 'small');
 
     // Process audio in chunks
     const binaryAudio = processBase64Chunks(audio);
@@ -83,7 +83,7 @@ serve(async (req) => {
     }
 
     const result = await response.json();
-    console.log('Transcription successful:', result.text?.substring(0, 50) + '...');
+    console.log('Transcription successful');
 
     return new Response(
       JSON.stringify({ text: result.text }),

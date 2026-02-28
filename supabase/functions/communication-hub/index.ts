@@ -32,7 +32,7 @@ serve(async (req) => {
     }
 
     const { action, ...params } = await req.json();
-    console.log(`[Communication Hub] Action: ${action}, User: ${user.id}`);
+    console.log(`[Communication Hub] Action: ${action}`);
 
     let result;
 

@@ -40,7 +40,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('Authenticated user:', user.id, user.email);
+    console.log('Authenticated user:', user.id);
 
     const { assignmentId } = await req.json();
 
@@ -135,7 +135,7 @@ serve(async (req) => {
         reference_id: assignment.document_upload_id
       });
 
-    console.log(`Notification sent for assignment ${assignmentId} to ${assignment.assignee?.email}`);
+    console.log(`Notification sent for assignment ${assignmentId}`);
 
     return new Response(
       JSON.stringify({ 

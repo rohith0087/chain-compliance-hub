@@ -25,7 +25,7 @@ function advanceDate(fromDate: string, frequency: string, customDays: number | n
 
 async function sendEmail(to: string, subject: string, html: string) {
   if (!resendApiKey) {
-    console.log(`[SKIP EMAIL] No RESEND_API_KEY. Would send to ${to}: ${subject}`);
+    console.log(`[SKIP EMAIL] No RESEND_API_KEY. Would send: ${subject}`);
     return;
   }
   try {

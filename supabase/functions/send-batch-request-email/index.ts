@@ -52,7 +52,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Processing batch email for ${requestIds.length} requests to supplier:`, supplierId);
+    console.log(`Processing batch email for ${requestIds.length} requests`);
 
     // Check if supplier has email notifications enabled
     const { data: notificationSettings } = await supabase
@@ -62,7 +62,7 @@ const handler = async (req: Request): Promise<Response> => {
       .maybeSingle();
 
     if (!notificationSettings?.new_request_email_enabled) {
-      console.log("Email notifications disabled for supplier:", supplierId);
+      console.log("Email notifications disabled for supplier");
       return new Response(
         JSON.stringify({ success: true, message: "Email notifications disabled" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -297,7 +297,7 @@ const handler = async (req: Request): Promise<Response> => {
           subject: `${buyerName} has requested ${requests.length} document${requests.length > 1 ? 's' : ''} from you`,
           html: emailHtml,
         });
-        console.log(`Batch email sent to ${email}:`, result);
+        console.log(`Batch email sent successfully`);
         return { email, success: true, result };
       } catch (emailError) {
         console.error(`Failed to send batch email to ${email}:`, emailError);

@@ -8,7 +8,6 @@ const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 console.log('Supplier Agent starting...');
-console.log('Supabase URL:', supabaseUrl);
 console.log('Service Role Key available:', !!supabaseServiceRoleKey);
 console.log('OpenAI Key available:', !!openAIApiKey);
 
@@ -450,10 +449,10 @@ serve(async (req) => {
       );
     }
 
-    console.log('Supplier agent - Authenticated user:', user.id, user.email);
+    console.log('Supplier agent - Authenticated');
 
     const requestBody = await req.json();
-    console.log('Supplier agent received request:', requestBody);
+    console.log('Supplier agent received request, action:', requestBody?.action);
     
     // Handle both old format ({ action, data }) and new format ({ action, company_id, company_type })
     const { action, data, company_id, company_type } = requestBody;

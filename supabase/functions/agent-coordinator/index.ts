@@ -174,7 +174,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('Authenticated user:', user.id, user.email);
+    console.log('Authenticated user for agent-coordinator');
 
     const requestBody = await req.json();
     const { action, company_id, company_type } = requestBody;

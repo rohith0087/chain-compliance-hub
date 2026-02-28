@@ -34,7 +34,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Document request notification triggered by user: ${userData.user.id}`);
+    console.log('Document request notification triggered');
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',

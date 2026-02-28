@@ -57,7 +57,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log('Authenticated user:', user.id, user.email);
+    console.log('Authenticated user for invitation');
 
     const { emails, subject, customMessage, buyerData }: InvitationRequest = await req.json();
 
@@ -193,9 +193,9 @@ const handler = async (req: Request): Promise<Response> => {
         });
 
         results.push({ email, success: true, id: emailResponse.data?.id });
-        console.log(`Email sent successfully to ${email}:`, emailResponse);
+        console.log(`Email sent successfully`);
       } catch (error) {
-        console.error(`Failed to send email to ${email}:`, error);
+        console.error('Failed to send invitation email:', error);
         results.push({ email, success: false, error: error.message });
       }
     }

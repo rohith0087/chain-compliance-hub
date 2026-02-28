@@ -56,7 +56,7 @@ const handler = async (req: Request): Promise<Response> => {
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
-    console.log("[send-generic-email] User verified:", user?.id);
+    console.log("[send-generic-email] User verified");
     
     if (authError || !user) {
       console.error("[send-generic-email] Auth error:", authError);
@@ -67,7 +67,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const requestBody: GenericEmailRequest = await req.json();
-    console.log("[send-generic-email] Request body:", JSON.stringify(requestBody, null, 2));
+    console.log("[send-generic-email] Request received, mode:", requestBody.mode || 'send');
     
     const mode = requestBody.mode || 'send'; // Default to 'send' for backward compatibility
 
@@ -78,7 +78,7 @@ const handler = async (req: Request): Promise<Response> => {
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!to_email || !emailRegex.test(to_email)) {
-        console.error("[send-generic-email] Invalid email address:", to_email);
+        console.error("[send-generic-email] Invalid email address format");
         return new Response(JSON.stringify({ 
           success: false, 
           error: "Invalid email address format" 
@@ -294,7 +294,7 @@ const handler = async (req: Request): Promise<Response> => {
       `;
 
       // Send email via Resend
-      console.log(`[send-generic-email] Sending email to: ${to_email}`);
+      console.log(`[send-generic-email] Sending email`);
       
       const emailResponse = await resend.emails.send({
         from: `${senderCompany} <compliance@tracer2c.com>`,
@@ -303,7 +303,7 @@ const handler = async (req: Request): Promise<Response> => {
         html: emailHtml,
       });
 
-      console.log(`[send-generic-email] ✓ Email sent:`, JSON.stringify(emailResponse));
+      console.log(`[send-generic-email] ✓ Email sent`);
 
       // Update draft status to 'sent'
       await supabase
@@ -352,7 +352,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!to_email || !emailRegex.test(to_email)) {
-      console.error("[send-generic-email] Invalid email address:", to_email);
+      console.error("[send-generic-email] Invalid email address format");
       return new Response(JSON.stringify({ 
         success: false, 
         error: "Invalid email address format" 
@@ -469,7 +469,7 @@ const handler = async (req: Request): Promise<Response> => {
     `;
 
     // Send email via Resend
-    console.log(`[send-generic-email] Sending email to: ${to_email}`);
+    console.log(`[send-generic-email] Sending email (legacy)`);
     
     const emailResponse = await resend.emails.send({
       from: `${finalSenderCompany} <compliance@tracer2c.com>`,
@@ -478,7 +478,7 @@ const handler = async (req: Request): Promise<Response> => {
       html: emailHtml,
     });
 
-    console.log(`[send-generic-email] ✓ Email sent:`, JSON.stringify(emailResponse));
+    console.log(`[send-generic-email] ✓ Email sent (legacy)`);
 
     // Log to auth_audit_logs for tracking
     await supabase.from("auth_audit_logs").insert({
@@ -511,8 +511,7 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message, 
-        stack: error.stack 
+        error: error.message
       }),
       {
         status: 500,

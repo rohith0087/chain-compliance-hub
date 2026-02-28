@@ -42,13 +42,13 @@ serve(async (req) => {
 
     const { action, user_id, company_id, company_type, title, session_id } = await req.json();
 
-    console.log('chat-session-manager:', { action, user_id, company_id, company_type, authenticated_user: user.id });
+    console.log('chat-session-manager:', { action, company_type });
 
     // ============================================
     // Validate user_id matches authenticated user
     // ============================================
     if (user_id && user_id !== user.id) {
-      console.error('User ID mismatch:', { requested: user_id, authenticated: user.id });
+      console.error('User ID mismatch');
       return new Response(
         JSON.stringify({ error: 'Unauthorized: Cannot access other users sessions' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

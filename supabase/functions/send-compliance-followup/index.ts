@@ -60,7 +60,7 @@ const handler = async (req: Request): Promise<Response> => {
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
-    console.log("[send-compliance-followup] User verified:", user?.id);
+    console.log("[send-compliance-followup] User verified");
     
     if (authError || !user) {
       console.error("[send-compliance-followup] Auth error:", authError);
@@ -71,7 +71,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const requestBody = await req.json();
-    console.log("[send-compliance-followup] Request body:", JSON.stringify(requestBody, null, 2));
+    console.log("[send-compliance-followup] Request received, email count:", emails?.length || 0);
     
     const { emails }: SendRequest = requestBody;
 
@@ -102,7 +102,7 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("id", user.id)
       .single();
     
-    console.log("[send-compliance-followup] Sender profile:", senderProfile?.full_name, senderProfile?.email);
+    console.log("[send-compliance-followup] Sender profile found");
 
     // Get buyer company info
     const { data: buyer } = await supabase
@@ -134,7 +134,7 @@ const handler = async (req: Request): Promise<Response> => {
       };
 
       for (const recipient of emailPayload.recipients) {
-        console.log(`[send-compliance-followup] Sending to: ${recipient.email}`);
+        console.log(`[send-compliance-followup] Sending to recipient`);
         
         try {
           // Build personalized email with signature
@@ -152,7 +152,7 @@ const handler = async (req: Request): Promise<Response> => {
             html: emailHtml,
           });
 
-          console.log(`[send-compliance-followup] ✓ Email sent to ${recipient.email}:`, JSON.stringify(emailResponse));
+          console.log(`[send-compliance-followup] ✓ Email sent`);
           supplierResults.emails_sent++;
 
           // Log to email_audit_logs table
@@ -198,7 +198,7 @@ const handler = async (req: Request): Promise<Response> => {
             },
           });
         } catch (sendError: any) {
-          console.error(`[send-compliance-followup] ✗ Failed to send to ${recipient.email}:`, sendError);
+          console.error(`[send-compliance-followup] ✗ Failed to send:`, sendError.message);
           supplierResults.errors.push(`${recipient.email}: ${sendError.message}`);
           
           // Log failed attempt
@@ -251,7 +251,7 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error("[send-compliance-followup] Unhandled error:", error);
     return new Response(
-      JSON.stringify({ error: error.message, stack: error.stack }),
+      JSON.stringify({ error: error.message }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

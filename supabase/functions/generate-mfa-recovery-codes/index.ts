@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Generating recovery codes for user: ${user.id}`);
+    console.log('Generating recovery codes');
 
     // Delete any existing recovery codes for this user
     const { error: deleteError } = await supabase

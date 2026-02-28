@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[RESET-PASSWORD-RECOVERY] Verifying recovery code for user: ${user.id}`);
+    console.log('[RESET-PASSWORD-RECOVERY] Verifying recovery code');
 
     // Normalize and hash the provided code
     const normalizedCode = recoveryCode.toUpperCase().replace(/[^A-Z0-9]/g, '');

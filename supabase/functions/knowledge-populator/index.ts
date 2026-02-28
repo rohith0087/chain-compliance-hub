@@ -310,7 +310,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Knowledge population initiated by user: ${userData.user.id}`);
+    console.log('Knowledge population initiated');
 
     const { company_id, company_type, incremental = false } = await req.json();
 

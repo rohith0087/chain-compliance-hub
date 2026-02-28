@@ -37,7 +37,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Rejection notification triggered by user: ${userData.user.id}`);
+    console.log('Rejection notification triggered');
 
     const { 
       upload_id, 
@@ -135,7 +135,7 @@ serve(async (req) => {
       `,
     });
 
-    console.log("Rejection notification sent:", emailResponse);
+    console.log("Rejection notification sent successfully");
 
     return new Response(JSON.stringify(emailResponse), {
       status: 200,

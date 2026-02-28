@@ -38,7 +38,7 @@ serve(async (req) => {
   try {
     const { action_type, parameters, session_id, context }: ActionRequest = await req.json();
     
-    console.log('Executing action:', { action_type, parameters });
+    console.log('Executing action:', action_type);
 
     let result: ActionResult;
 

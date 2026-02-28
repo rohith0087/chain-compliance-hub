@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('[secure-sample-url] User authenticated:', user.id);
+    console.log('[secure-sample-url] User authenticated');
 
     // Parse request body
     const { request_id } = await req.json();
@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('[secure-sample-url] Fetching request:', request_id);
+    console.log('[secure-sample-url] Fetching request');
 
     // Fetch the document request with sample info
     const { data: request, error: requestError } = await supabaseAdmin
@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('[secure-sample-url] Sample file path:', request.sample_file_path);
+    console.log('[secure-sample-url] Sample file found');
 
     // Check user permissions - must be buyer owner, buyer team member, supplier owner, or supplier team member
     let hasAccess = false;
@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
     }
 
     if (!hasAccess) {
-      console.error('[secure-sample-url] Access denied for user:', user.id);
+      console.error('[secure-sample-url] Access denied');
       return new Response(
         JSON.stringify({ error: 'Access denied' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

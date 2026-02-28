@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
+import DOMPurify from "dompurify";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -384,10 +385,12 @@ const ComplianceEmailComposer: React.FC<ComplianceEmailComposerProps> = ({
                     <div
                       className="min-h-[200px] p-4 rounded-lg border bg-muted/30 prose prose-sm dark:prose-invert max-w-none"
                       dangerouslySetInnerHTML={{
-                        __html: currentDraft.body
-                          .replace(/\n/g, "<br/>")
-                          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                          .replace(/• (.+)/g, "<li>$1</li>"),
+                        __html: DOMPurify.sanitize(
+                          currentDraft.body
+                            .replace(/\n/g, "<br/>")
+                            .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                            .replace(/• (.+)/g, "<li>$1</li>")
+                        ),
                       }}
                     />
                   ) : (

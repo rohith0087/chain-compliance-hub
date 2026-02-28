@@ -67,3 +67,13 @@ export function rateLimitResponse(corsHeaders: Record<string, string>, retryAfte
     }
   );
 }
+
+/**
+ * Sanitize user-provided content for email body injection prevention.
+ * Strips all HTML tags, keeping only text content.
+ */
+export function sanitizeEmailBody(body: string): string {
+  if (!body) return '';
+  // Strip all HTML tags to prevent injection
+  return body.replace(/<[^>]*>/g, '');
+}

@@ -65,6 +65,102 @@ Deno.serve(async (req) => {
       throw new Error('Missing required fields: email, full_name, role, company_id, company_type');
     }
 
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      throw new Error('Invalid email address format');
+    }
+
+    // ============================================
+    // AUTHORIZATION: Verify caller is company admin or owner of target company
+    // ============================================
+    // Check if caller is a platform admin
+    const { data: platformAdmin } = await supabase
+      .from('platform_administrators')
+      .select('id')
+      .eq('auth_user_id', invitingUser.id)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (!platformAdmin) {
+      // Check if caller is company owner
+      let isOwner = false;
+      if (company_type === 'buyer') {
+        const { data: buyer } = await supabase
+          .from('buyers')
+          .select('id')
+          .eq('id', company_id)
+          .eq('profile_id', invitingUser.id)
+          .maybeSingle();
+        isOwner = !!buyer;
+      } else if (company_type === 'supplier') {
+        const { data: supplier } = await supabase
+          .from('suppliers')
+          .select('id')
+          .eq('id', company_id)
+          .eq('profile_id', invitingUser.id)
+          .maybeSingle();
+        isOwner = !!supplier;
+      }
+
+      if (!isOwner) {
+        // Check if caller is company_admin of target company
+        const { data: callerAdmin } = await supabase
+          .from('company_users')
+          .select('id')
+          .eq('profile_id', invitingUser.id)
+          .eq('company_id', company_id)
+          .eq('company_type', company_type)
+          .eq('role', 'company_admin')
+          .eq('status', 'active')
+          .maybeSingle();
+
+        if (!callerAdmin) {
+          throw new Error('Unauthorized: You must be a company admin to create users');
+        }
+      }
+
+      // For dual-role, also verify admin access to the other company
+      if (also_grant_other_role && other_company_id && other_company_type) {
+        let isOtherOwner = false;
+        if (other_company_type === 'buyer') {
+          const { data: buyer } = await supabase
+            .from('buyers')
+            .select('id')
+            .eq('id', other_company_id)
+            .eq('profile_id', invitingUser.id)
+            .maybeSingle();
+          isOtherOwner = !!buyer;
+        } else if (other_company_type === 'supplier') {
+          const { data: supplier } = await supabase
+            .from('suppliers')
+            .select('id')
+            .eq('id', other_company_id)
+            .eq('profile_id', invitingUser.id)
+            .maybeSingle();
+          isOtherOwner = !!supplier;
+        }
+
+        if (!isOtherOwner) {
+          const { data: otherAdmin } = await supabase
+            .from('company_users')
+            .select('id')
+            .eq('profile_id', invitingUser.id)
+            .eq('company_id', other_company_id)
+            .eq('company_type', other_company_type)
+            .eq('role', 'company_admin')
+            .eq('status', 'active')
+            .maybeSingle();
+
+          if (!otherAdmin) {
+            throw new Error('Unauthorized: You must be a company admin of the secondary company to grant dual-role access');
+          }
+        }
+      }
+    }
+
+    console.log('Authorization verified for user creation');
+
     // Validate dual-role fields if enabled
     if (also_grant_other_role) {
       if (!other_company_id || !other_company_type || !other_role) {

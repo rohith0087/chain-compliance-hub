@@ -37,6 +37,27 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // ============================================
+    // AUTH: Verify caller is authenticated
+    // ============================================
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Missing authorization header" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Invalid authentication" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const resend = new Resend(resendApiKey);
 
     const { requestIds, supplierId }: BatchEmailRequest = await req.json();
@@ -48,7 +69,69 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Input validation: limit array size to prevent abuse
+    if (requestIds.length > 100) {
+      return new Response(
+        JSON.stringify({ error: "Maximum 100 request IDs allowed per batch" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     console.log(`Processing batch email for ${requestIds.length} requests`);
+
+    // ============================================
+    // AUTHORIZATION: Verify user belongs to the buyer company
+    // ============================================
+    const { data: requests, error: requestsError } = await supabase
+      .from("document_requests")
+      .select(`
+        id, title, description, document_type, category, priority, due_date, buyer_id,
+        buyers ( company_name )
+      `)
+      .in("id", requestIds);
+
+    if (requestsError || !requests || requests.length === 0) {
+      console.error("Error fetching requests:", requestsError);
+      return new Response(
+        JSON.stringify({ error: "Requests not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // All requests must belong to the same buyer
+    const buyerId = requests[0].buyer_id;
+    if (!requests.every(r => r.buyer_id === buyerId)) {
+      return new Response(
+        JSON.stringify({ error: "All requests must belong to the same buyer" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify user is owner or team member of the buyer company
+    const { data: buyerOwner } = await supabase
+      .from("buyers")
+      .select("id")
+      .eq("id", buyerId)
+      .eq("profile_id", user.id)
+      .maybeSingle();
+
+    if (!buyerOwner) {
+      const { data: companyUser } = await supabase
+        .from("company_users")
+        .select("id")
+        .eq("company_id", buyerId)
+        .eq("company_type", "buyer")
+        .eq("profile_id", user.id)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (!companyUser) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized: You do not belong to this buyer company" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     // Check if supplier has email notifications enabled
     const { data: notificationSettings } = await supabase
@@ -62,32 +145,6 @@ const handler = async (req: Request): Promise<Response> => {
       return new Response(
         JSON.stringify({ success: true, message: "Email notifications disabled" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Fetch ALL document requests in one query
-    const { data: requests, error: requestsError } = await supabase
-      .from("document_requests")
-      .select(`
-        id,
-        title,
-        description,
-        document_type,
-        category,
-        priority,
-        due_date,
-        buyer_id,
-        buyers (
-          company_name
-        )
-      `)
-      .in("id", requestIds);
-
-    if (requestsError || !requests || requests.length === 0) {
-      console.error("Error fetching requests:", requestsError);
-      return new Response(
-        JSON.stringify({ error: "Requests not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -130,13 +187,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Get supplier company admins
     const { data: companyAdmins } = await supabase
       .from("company_users")
-      .select(`
-        profile_id,
-        profiles (
-          email,
-          full_name
-        )
-      `)
+      .select(`profile_id, profiles ( email, full_name )`)
       .eq("company_id", supplierId)
       .eq("company_type", "supplier")
       .eq("status", "active")
@@ -185,7 +236,6 @@ const handler = async (req: Request): Promise<Response> => {
       low: { bg: "#16a34a", label: "Low" }
     };
 
-    // Build document rows HTML
     const buildDocumentRows = (docs: typeof sortedRequests) => {
       return docs.map(doc => {
         const priority = priorityStyles[doc.priority || 'medium'] || priorityStyles.medium;
@@ -203,36 +253,26 @@ const handler = async (req: Request): Promise<Response> => {
       }).join('');
     };
 
-    // Send emails to all recipients
     const emailPromises = Array.from(recipientEmails).map(async (email) => {
       const recipientName = recipientNames.get(email) || "Team Member";
 
       const emailHtml = `
         <!DOCTYPE html>
         <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
+        <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: 0 auto; padding: 20px; background-color: #f3f4f6;">
           <div style="background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-            
-            <!-- Header -->
             <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 32px; text-align: center;">
               <h1 style="color: white; margin: 0 0 8px 0; font-size: 24px; font-weight: 600;">📄 New Document Requests</h1>
               <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 16px;">from ${buyerName}</p>
             </div>
-            
-            <!-- Body -->
             <div style="padding: 32px;">
               <p style="font-size: 16px; margin: 0 0 20px 0;">Hi ${recipientName},</p>
-              
               <p style="font-size: 16px; margin: 0 0 24px 0;">
                 <strong>${buyerName}</strong> has requested 
                 <span style="background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 4px; font-weight: 600;">${requests.length} document${requests.length > 1 ? 's' : ''}</span> 
                 from you.
               </p>
-              
               ${earliestDueDate ? `
               <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 16px; margin-bottom: 24px; border-radius: 0 8px 8px 0;">
                 <p style="margin: 0; font-size: 14px; color: #92400e;">
@@ -240,8 +280,6 @@ const handler = async (req: Request): Promise<Response> => {
                 </p>
               </div>
               ` : ''}
-              
-              <!-- Document Table -->
               <div style="background: #f9fafb; border-radius: 8px; overflow: hidden; margin-bottom: 24px;">
                 <div style="background: #e5e7eb; padding: 12px 8px;">
                   <span style="font-weight: 600; font-size: 14px; color: #374151;">📋 Requested Documents (${requests.length})</span>
@@ -254,30 +292,18 @@ const handler = async (req: Request): Promise<Response> => {
                       <th style="padding: 10px 8px; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase;">Priority</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    ${buildDocumentRows(sortedRequests)}
-                  </tbody>
+                  <tbody>${buildDocumentRows(sortedRequests)}</tbody>
                 </table>
               </div>
-              
-              <!-- CTA Button -->
               <div style="text-align: center; margin: 32px 0;">
-                <a href="https://compliance.tracer2c.com/dashboard" 
-                   style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 14px 40px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block; font-size: 16px;">
+                <a href="https://compliance.tracer2c.com/dashboard" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 14px 40px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block; font-size: 16px;">
                   View & Respond to All
                 </a>
               </div>
-              
               <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
-              
-              <p style="font-size: 14px; color: #6b7280; margin: 0;">
-                Best regards,<br>
-                <strong>Compliance Compass</strong>
-              </p>
+              <p style="font-size: 14px; color: #6b7280; margin: 0;">Best regards,<br><strong>Compliance Compass</strong></p>
             </div>
           </div>
-          
-          <!-- Footer -->
           <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
             <p style="margin: 0 0 4px 0;">This is an automated notification from Compliance Compass.</p>
             <p style="margin: 0;">You can manage your notification preferences in Settings.</p>
@@ -296,7 +322,7 @@ const handler = async (req: Request): Promise<Response> => {
         console.log(`Batch email sent successfully`);
         return { email, success: true, result };
       } catch (emailError) {
-        console.error(`Failed to send batch email to ${email}:`, emailError);
+        console.error(`Failed to send batch email:`, emailError);
         return { email, success: false, error: emailError };
       }
     });

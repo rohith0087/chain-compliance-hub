@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { Resend } from "npm:resend@2.0.0";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/corsHeaders.ts";
+import { sanitizeEmailBody } from "../_shared/rateLimiter.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -246,7 +247,9 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       // Build email HTML
-      const formattedBody = body
+      // Sanitize body to prevent HTML injection
+      const sanitizedBody = sanitizeEmailBody(body);
+      const formattedBody = sanitizedBody
         .replace(/\n/g, "<br/>")
         .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
         .replace(/\*(.*?)\*/g, "<em>$1</em>");
@@ -421,7 +424,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Build email HTML
     const recipientName = to_name || "there";
-    const formattedBody = body
+    // Sanitize body to prevent HTML injection
+    const sanitizedBody = sanitizeEmailBody(body);
+    const formattedBody = sanitizedBody
       .replace(/\n/g, "<br/>")
       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
       .replace(/\*(.*?)\*/g, "<em>$1</em>");

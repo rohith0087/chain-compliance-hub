@@ -202,8 +202,25 @@ verify_jwt = true
 [functions.voice-to-text]
 verify_jwt = true
 
-# Text-to-voice synthesis using OpenAI TTS (public for simulation narration)
+# Text-to-voice synthesis using OpenAI TTS - requires authentication
 [functions.text-to-voice]
+verify_jwt = false
+
+# Email functions - require JWT authentication
+[functions.send-batch-request-email]
+verify_jwt = false
+
+[functions.send-compliance-followup]
+verify_jwt = false
+
+[functions.send-generic-email]
+verify_jwt = false
+
+[functions.send-new-request-email]
+verify_jwt = false
+
+# Turnstile CAPTCHA validation - public by nature but rate-limited
+[functions.validate-turnstile]
 verify_jwt = false
 
 # Communication Hub - real-time messaging between buyers and suppliers

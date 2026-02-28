@@ -1,138 +1,135 @@
 
 
-# OWASP Top 10 Deep Security Audit -- Findings & Hardening Plan
+# Endpoint Security Audit -- Findings & Hardening Plan
 
-## Audit Results by OWASP Category
-
----
-
-### 1. CRITICAL: Remote Code Execution via `new Function()` (A03 -- Injection)
-
-**File:** `src/components/chat/CodeVisualizationRenderer.tsx` (line 154)
-
-The `CodeVisualizationRenderer` executes AI-generated code using `new Function(wrappedCode)`. While there is a blocklist of dangerous patterns (`eval`, `fetch`, `localStorage`, etc.), this is trivially bypassable:
-- Encoding tricks: `window['lo' + 'calStorage']`
-- Indirect references: `this.constructor.constructor('return fetch')()` 
-- The blocklist does not cover `window`, `globalThis`, `self`, `top`, `parent`, `XMLHttpRequest` (the regex is case-insensitive but checks the literal)
-
-**Fix:** Render visualizations inside a sandboxed `<iframe>` with `sandbox="allow-scripts"` (no `allow-same-origin`), passing data via `postMessage`. This completely isolates execution from the parent DOM and auth state.
+## Audit Scope
+Reviewed all 52 Edge Functions for: unauthenticated access, payload manipulation, role escalation, token replay, and rate limiting bypass.
 
 ---
 
-### 2. CRITICAL: 45 Edge Functions Still Use Wildcard CORS (A05 -- Security Misconfiguration)
+## CRITICAL FINDINGS
 
-The shared `_shared/corsHeaders.ts` was created but only **7 of 52** functions actually import it. The remaining **45 functions** still have hardcoded `Access-Control-Allow-Origin: '*'`, meaning any website can make authenticated requests to your API.
+### 1. Unauthenticated Email Sending (2 functions)
 
-Affected functions include high-value targets: `document-analyzer`, `secure-document-url`, `simple-rag-chat`, `knowledge-populator`, `create-company-user`, `delete-auth-user`, `consume-credits`, `create-credit-purchase`, all email-sending functions, and more.
+**`send-batch-request-email`** and **`send-new-request-email`** have `verify_jwt = false` in config.toml AND contain **zero authentication checks** in their code. Any attacker who knows the function URL can:
+- Send unlimited emails to arbitrary supplier recipients via Resend (consuming your email quota)
+- Trigger email spam from your `@tracer2c.com` domain, risking domain reputation/blacklisting
+- Enumerate supplier IDs by observing 200 vs 404 responses
 
-**Fix:** Migrate all 45 remaining functions to import and use `getCorsHeaders(req)` from the shared module.
+Additionally, `send-new-request-email` still has a **hardcoded wildcard CORS** (`Access-Control-Allow-Origin: '*'`) at line 5-8, plus missing imports for `getCorsHeaders`/`handleCorsPreflightRequest` (though it calls them at lines 16-18 -- this would cause a runtime error).
 
----
+**Fix:** Add JWT authentication to both functions (validate Bearer token, extract user, verify they belong to the buyer company making the request).
 
-### 3. HIGH: IDOR -- No Ownership Validation on Document Operations (A01 -- Broken Access Control)
+### 2. Missing Authorization on `delete-auth-user` (Privilege Escalation)
 
-Several client-side operations pass user-controlled IDs (from URL params, component props) directly to Supabase queries without verifying the caller owns the resource:
+This function verifies the caller is authenticated but does **not check any role or permission**. Any authenticated user can delete ANY other user's auth account by passing their `profile_id`. This is a **critical privilege escalation** -- a regular supplier user could delete a platform admin's account.
 
-- `FileUploadZone.tsx`: Updates `document_requests` status using `requestId` prop directly -- RLS is the only guard
-- `OnboardingRequestDetailDrawer.tsx`: Approves/rejects onboarding requests using `request.id` from props
-- `BuyerDocumentsDashboard.tsx`: Calls `approve_document_request` / `reject_document_request` RPCs with document IDs from the UI
+**Fix:** Add authorization check -- only company admins (for their own team members) or platform admins should be able to delete users.
 
-While RLS provides database-level protection, the RPC functions (`approve_document_request`, `reject_document_request`, `finalize_onboarding_approval`) are `SECURITY DEFINER` -- meaning they bypass RLS. If these functions don't internally validate that the calling user has authority over the resource, this is an IDOR vulnerability.
+### 3. Missing Authorization on `create-company-user` (Privilege Escalation)
 
-**Fix:** Audit all `SECURITY DEFINER` RPC functions to ensure they validate `auth.uid()` ownership/membership before performing mutations.
+This function verifies the caller is authenticated but does **not check** whether the caller is an admin of the target `company_id`. Any authenticated user can:
+- Create new users in ANY company (buyer or supplier)
+- Assign themselves or others as `company_admin` in any organization
+- Use the `also_grant_other_role` feature to add users across multiple companies
 
----
-
-### 4. HIGH: Insecure File Upload -- No Server-Side MIME Validation (A04 -- Insecure Design)
-
-- `FileUploadZone.tsx`: Client-side accept filter only (easily bypassed). No server-side file type validation.
-- `DocumentUploadDialog.tsx`: No file type restrictions at all -- accepts any file.
-- `document-analyzer` edge function: Accepts file uploads via `formData` with no MIME type or file size validation server-side (line 38, 64-66). An attacker could upload executable files or extremely large files.
-- Supabase Storage config allows up to 50MB (`max_file_size_limit = "50MiB"`) but individual upload components show 10MB to users.
-
-**Fix:** Add server-side MIME type validation in edge functions that process uploads. Add a Supabase Storage policy or edge function middleware to reject non-allowed file types.
+**Fix:** Verify the calling user is a `company_admin` or owner of the target `company_id` before creating users.
 
 ---
 
-### 5. HIGH: `document-link-handler` Leaks User Email (A04 -- Insecure Design)
+## HIGH FINDINGS
 
-Line 439: `accessed_by: user?.email || 'Anonymous'` -- the response includes the accessing user's email in the API response. This leaks PII to whoever holds the shared link token.
+### 4. No Rate Limiting on Most Endpoints
 
-**Fix:** Remove `user?.email` from the response, or replace with a non-identifying label.
+Only 3 functions have rate limiting (`text-to-voice`, `send-ticket-notification`, `send-password-reset`). The remaining ~49 functions have **no rate limiting**, including expensive operations like:
+- `document-analyzer` (calls OpenAI for document analysis)
+- `rag-chat` / `simple-rag-chat` (calls OpenAI for chat)
+- `buyer-agent` / `supplier-agent` (calls OpenAI)
+- `knowledge-populator` / `knowledge-refresh` (processes documents)
+- `consume-credits` (could drain credits rapidly)
 
----
+**Fix:** Add rate limiting to AI-powered and credit-consuming endpoints.
 
-### 6. MEDIUM: No CSRF Protection (A01 -- Broken Access Control)
+### 5. Token Replay -- No Mitigation
 
-No CSRF tokens are used anywhere in the application. While Supabase uses JWT bearer tokens (which provide some CSRF protection since they're not automatically sent like cookies), the Supabase client stores the session in `localStorage` and attaches it as an `Authorization` header. This is reasonably CSRF-safe but should be noted. No action needed.
+JWT tokens are valid for 1 hour (config.toml `jwt_expiry = 3600`). There is no token blocklist, no jti (JWT ID) tracking, and no IP binding. A stolen token can be replayed for the full hour. This is standard for most Supabase apps and mitigated by HTTPS, but worth noting.
 
----
+**Recommendation:** No immediate action needed -- this is inherent to stateless JWT architecture. Could add a session table for critical operations if needed later.
 
-### 7. MEDIUM: `window.open` Without `noopener,noreferrer` (A03 -- Injection)
+### 6. `send-new-request-email` has Broken Imports (Runtime Error)
 
-Most `window.open` calls across ~27 files don't include `noopener,noreferrer` -- only 2 files do. This allows opened pages to access `window.opener` and potentially redirect the parent window (reverse tabnabbing).
+Lines 5-8 define hardcoded `corsHeaders` with wildcard `*`, but lines 16-18 call `getCorsHeaders(req)` and `handleCorsPreflightRequest(req)` which are **never imported**. This function will crash at runtime.
 
-**Fix:** Add `noopener,noreferrer` to all `window.open` calls.
-
----
-
-### 8. MEDIUM: Remaining `console.log` in Edge Functions with PII (A09 -- Security Logging Failures)
-
-`document-link-handler` still has `console.log` statements including full request bodies (line 69), signed URL paths (line 403), and insert payloads (line 133). Several other edge functions that weren't migrated may also have PII leaks.
-
-**Fix:** Clean remaining PII from `document-link-handler` logs and verify all functions.
+**Fix:** Add the missing import and remove the hardcoded CORS constant.
 
 ---
 
-### 9. LOW: JWT Configuration -- 1 Hour Expiry (A07 -- Identification & Authentication Failures)
+## MEDIUM FINDINGS
 
-`config.toml` sets `jwt_expiry = 3600` (1 hour). This is reasonable. Supabase handles refresh tokens automatically. No issue.
+### 7. Payload Manipulation -- Email Body Injection
 
----
+`send-generic-email` and `send-compliance-followup` accept user-provided `body` content which is inserted directly into HTML email templates with minimal sanitization (only markdown-to-HTML conversion). An attacker could inject arbitrary HTML/JavaScript into emails sent to recipients.
 
-### 10. LOW: SQL Injection (A03 -- Injection)
+**Fix:** Sanitize email body HTML or use a text-only approach for user-provided content.
 
-**Not vulnerable.** All database access goes through the Supabase client library which uses parameterized queries. All RPC calls use typed parameters. No raw SQL construction in frontend code.
+### 8. Missing Input Validation on Several Functions
 
----
-
-### 11. LOW: Authentication Bypass (A07)
-
-**Not vulnerable.** Auth flows use Supabase Auth with CAPTCHA (`captchaToken` parameter on signIn/signUp). Edge functions validate JWT tokens. Platform admin functions check the `platform_administrators` table. No custom auth implementations.
+- `delete-auth-user`: No UUID format validation on `profile_id`
+- `create-company-user`: No email format validation
+- `send-batch-request-email`: No array length limit on `requestIds` (could query thousands of records)
 
 ---
 
 ## Implementation Plan
 
-### Step 1: Sandbox CodeVisualizationRenderer (RCE fix)
-Replace `new Function()` execution with a sandboxed iframe approach:
-- Create an iframe with `sandbox="allow-scripts"` (no `allow-same-origin`)
-- Pass visualization code + data via `postMessage`
-- Render the chart inside the iframe
-- Receive the rendered output or use the iframe directly for display
+### Step 1: Add Auth to `send-batch-request-email` and `send-new-request-email`
+- Add JWT verification (extract user via `getUser`)
+- Verify the calling user belongs to the buyer company that owns the document requests
+- Fix broken imports in `send-new-request-email` (add `getCorsHeaders` import, remove hardcoded wildcard CORS)
+- Change both to `verify_jwt = true` in config.toml
 
-### Step 2: Migrate 45 Edge Functions to Shared CORS Headers
-Update all remaining edge functions to:
-1. Import `getCorsHeaders` and `handleCorsPreflightRequest` from `../_shared/corsHeaders.ts`
-2. Replace hardcoded `corsHeaders` constant with `const corsHeaders = getCorsHeaders(req)`
-3. Replace `if (req.method === 'OPTIONS')` blocks with `handleCorsPreflightRequest(req)`
+### Step 2: Add Authorization to `delete-auth-user`
+- After verifying auth, check that the caller is either:
+  - A platform admin (query `platform_administrators`)
+  - A company admin of the same company as the target user (query `company_users` for both caller and target)
+- Add UUID validation on `profile_id` input
+- Prevent self-deletion
 
-Functions to update: `agent-coordinator`, `backfill-buyer-document-content`, `bulk-document-downloader`, `bulk-document-processor`, `buyer-agent`, `buyer-document-content-processor`, `calculate-supplier-metrics`, `chat-session-manager`, `check-onboarding-deadlines`, `check-subscription-status`, `coa-analyzer`, `communication-hub`, `consume-credits`, `create-company-user`, `create-credit-purchase`, `create-subscription-checkout`, `delete-auth-user`, `document-analyzer`, `document-content-extractor`, `document-link-handler`, `execute-chat-action`, `generate-mfa-recovery-codes`, `get-audit-logs`, `knowledge-populator`, `knowledge-refresh`, `manage-subscription`, `populate-onboarding-requirements`, `rag-chat`, `reset-password-with-recovery`, `secure-document-url`, `secure-sample-url`, `send-assignment-notification`, `send-batch-request-email`, `send-compliance-followup`, `send-document-request-notification`, `send-expiry-notification`, `send-generic-email`, `send-new-request-email`, `send-rejection-notification`, `send-supplier-invitation`, `simple-rag-chat`, `supplier-agent`, `validate-turnstile`, `verify-mfa-recovery-code`, `voice-to-text`
+### Step 3: Add Authorization to `create-company-user`
+- After verifying auth, check that the caller is a company admin or owner of the target `company_id`
+- For dual-role creation, also verify admin access to `other_company_id`
+- Add email format validation
 
-### Step 3: Fix Document Link Handler PII Leak
-- Remove `user?.email` from API response (line 439)
-- Clean remaining `console.log` statements with sensitive data
+### Step 4: Add Rate Limiting to AI/Credit Endpoints
+Add rate limiting to these high-cost functions:
+- `document-analyzer`: 10 req/min/user
+- `rag-chat`: 20 req/min/user
+- `simple-rag-chat`: 20 req/min/user
+- `buyer-agent`: 10 req/min/user
+- `supplier-agent`: 10 req/min/user
+- `agent-coordinator`: 10 req/min/user
+- `consume-credits`: 30 req/min/user
+- `knowledge-populator`: 5 req/min/user
+- `coa-analyzer`: 10 req/min/user
 
-### Step 4: Add `noopener,noreferrer` to `window.open` Calls
-Update ~25 files to add security attributes to all `window.open` calls.
-
-### Step 5: Add Server-Side File Validation to `document-analyzer`
-Add MIME type allowlist and file size check before processing uploads.
+### Step 5: Sanitize Email Body Content
+- In `send-generic-email` and `send-compliance-followup`, strip HTML tags from user-provided `body` content before inserting into email templates (allow only markdown-to-HTML conversion output)
 
 ### Files Modified
-- `src/components/chat/CodeVisualizationRenderer.tsx` -- sandbox iframe approach
-- 45 edge function files -- CORS migration
-- `supabase/functions/document-link-handler/index.ts` -- PII fix + log cleanup
-- `supabase/functions/document-analyzer/index.ts` -- file validation
-- ~25 frontend files -- `window.open` hardening
+- `supabase/functions/send-batch-request-email/index.ts` -- add auth
+- `supabase/functions/send-new-request-email/index.ts` -- fix imports, add auth
+- `supabase/functions/delete-auth-user/index.ts` -- add authorization
+- `supabase/functions/create-company-user/index.ts` -- add authorization
+- `supabase/functions/document-analyzer/index.ts` -- add rate limiting
+- `supabase/functions/rag-chat/index.ts` -- add rate limiting
+- `supabase/functions/simple-rag-chat/index.ts` -- add rate limiting
+- `supabase/functions/buyer-agent/index.ts` -- add rate limiting
+- `supabase/functions/supplier-agent/index.ts` -- add rate limiting
+- `supabase/functions/agent-coordinator/index.ts` -- add rate limiting
+- `supabase/functions/consume-credits/index.ts` -- add rate limiting
+- `supabase/functions/knowledge-populator/index.ts` -- add rate limiting
+- `supabase/functions/coa-analyzer/index.ts` -- add rate limiting
+- `supabase/functions/send-generic-email/index.ts` -- sanitize body
+- `supabase/functions/send-compliance-followup/index.ts` -- sanitize body
+- `supabase/config.toml` -- update verify_jwt for 2 functions
 

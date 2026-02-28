@@ -1375,50 +1375,7 @@ async function saveMessage(sessionId: string, role: string, content: string, met
   }
 }
 
-// Create vector search function if it doesn't exist
-async function ensureSearchFunction(): Promise<void> {
-  const searchFunctionSQL = `
-  CREATE OR REPLACE FUNCTION search_knowledge_entries(
-    query_embedding text,
-    company_id_param uuid,
-    company_type_param text,
-    similarity_threshold float DEFAULT 0.7,
-    match_count int DEFAULT 5
-  )
-  RETURNS TABLE (
-    id uuid,
-    title text,
-    content text,
-    entry_type text,
-    metadata jsonb,
-    source_reference text,
-    similarity float
-  )
-  LANGUAGE sql
-  STABLE
-  AS $$
-    SELECT 
-      ke.id,
-      ke.title,
-      ke.content,
-      ke.entry_type,
-      ke.metadata,
-      ke.source_reference,
-      1 - (ke.embedding <=> query_embedding::vector) as similarity
-    FROM ai_knowledge_entries ke
-    WHERE ke.company_id = company_id_param 
-      AND ke.company_type = company_type_param
-      AND (ke.expires_at IS NULL OR ke.expires_at > now())
-      AND 1 - (ke.embedding <=> query_embedding::vector) > similarity_threshold
-    ORDER BY ke.embedding <=> query_embedding::vector
-    LIMIT match_count;
-  $$;`;
-
-  const { error } = await supabase.rpc('exec_sql', { query: searchFunctionSQL });
-  if (error && !error.message.includes('already exists')) {
-    console.error('Failed to create search function:', error);
-  }
-}
+// search_knowledge_entries function is managed via database migrations
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -1431,8 +1388,7 @@ serve(async (req) => {
     console.log('Timestamp:', new Date().toISOString());
     console.log('Version: 2.0 - No tool calling');
     
-    // Ensure vector search function exists
-    await ensureSearchFunction();
+    // Vector search function is managed via database migrations
 
     const requestBody = await req.json();
     const { message, session_id, context_tags }: ChatRequest = requestBody;
@@ -1604,7 +1560,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('RAG chat error:', error);
     return new Response(JSON.stringify({ 
-      error: error.message || 'Internal server error' 
+      error: 'Internal server error' 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

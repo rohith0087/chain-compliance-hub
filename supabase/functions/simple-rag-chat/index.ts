@@ -5668,7 +5668,7 @@ EXAMPLE - Compliance Status Query:
     console.error('Error in simple-rag-chat:', error);
     return new Response(
       JSON.stringify({ 
-        error: error.message,
+        error: 'Internal server error',
         answer: "I encountered an error processing your request. Please try again or rephrase your question."
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

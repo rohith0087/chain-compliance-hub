@@ -663,7 +663,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message,
+        error: 'Internal server error',
         action,
         company_id,
         company_type

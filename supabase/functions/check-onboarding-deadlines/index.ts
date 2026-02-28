@@ -184,7 +184,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error in check-onboarding-deadlines:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Internal server error' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }

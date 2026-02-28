@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import DOMPurify from "dompurify";
+import logger from '@/utils/logger';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -119,11 +120,11 @@ const ComplianceEmailComposer: React.FC<ComplianceEmailComposerProps> = ({
     }
 
     setIsSending(true);
-    console.log("[ComplianceEmailComposer] Starting email send for:", draft.supplier_name);
+    logger.debug("[ComplianceEmailComposer] Starting email send");
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      console.log("[ComplianceEmailComposer] Current user:", user?.id);
+      logger.debug("[ComplianceEmailComposer] Current user:", user?.id);
 
       const payload = {
         emails: [
@@ -144,14 +145,14 @@ const ComplianceEmailComposer: React.FC<ComplianceEmailComposerProps> = ({
           },
         ],
       };
-      console.log("[ComplianceEmailComposer] Sending payload:", JSON.stringify(payload, null, 2));
+      logger.debug("[ComplianceEmailComposer] Sending payload");
 
       const { data, error } = await supabase.functions.invoke("send-compliance-followup", {
         body: payload,
       });
 
-      console.log("[ComplianceEmailComposer] Response data:", data);
-      console.log("[ComplianceEmailComposer] Response error:", error);
+      logger.debug("[ComplianceEmailComposer] Response received");
+      if (error) logger.debug("[ComplianceEmailComposer] Response error:", error);
 
       if (error) {
         console.error("[ComplianceEmailComposer] Function error:", error);

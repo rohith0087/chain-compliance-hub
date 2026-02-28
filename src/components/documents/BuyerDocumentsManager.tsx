@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import logger from '@/utils/logger';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -208,13 +209,13 @@ const BuyerDocumentsManager = ({
   ).sort((a, b) => a.name.localeCompare(b.name));
 
   const handleView = async (doc: any) => {
-    console.log('View document:', doc.id);
-    console.log('Document uploads:', doc.document_uploads);
+    logger.debug('View document:', doc.id);
+    logger.debug('Document uploads:', doc.document_uploads);
     const uploads = doc.document_uploads || [];
     const upload = uploads.length > 1
       ? uploads.slice().sort((a: any, b: any) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())[0]
       : uploads[0];
-    console.log('Selected upload data:', upload);
+    logger.debug('Selected upload data:', upload);
     
     if (!upload?.file_path) {
       try {
@@ -288,13 +289,13 @@ const BuyerDocumentsManager = ({
   };
 
   const handleDownload = async (doc: any) => {
-    console.log('Download document:', doc.id);
-    console.log('Document uploads:', doc.document_uploads);
+    logger.debug('Download document:', doc.id);
+    logger.debug('Document uploads:', doc.document_uploads);
     const uploads = doc.document_uploads || [];
     const upload = uploads.length > 1
       ? uploads.slice().sort((a: any, b: any) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())[0]
       : uploads[0];
-    console.log('Selected upload data:', upload);
+    logger.debug('Selected upload data:', upload);
     
     if (!upload?.file_path) {
       try {
@@ -322,7 +323,7 @@ const BuyerDocumentsManager = ({
       } catch (e) {
         console.error('Custom submission download fallback failed', e);
       }
-      console.log('No file_path found:', upload);
+      logger.debug('No file_path found:', upload);
       toast({
         title: "Error",
         description: "No file available for download",

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import logger from '@/utils/logger';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -42,7 +43,7 @@ export const OnboardingProcess: React.FC<OnboardingProcessProps> = ({
       
       // Fail-safe: If no requirements exist and request is in early stages, populate from buyer defaults
       if (docReqs.length === 0 && ['pending', 'invited', 'onboarding_initiated'].includes(request.status)) {
-        console.log('No document requirements found, attempting to populate from buyer defaults...');
+        logger.debug('No document requirements found, attempting to populate from buyer defaults...');
         
         const { data, error } = await supabase.functions.invoke('populate-onboarding-requirements', {
           body: { onboarding_request_id: request.id }
@@ -51,7 +52,7 @@ export const OnboardingProcess: React.FC<OnboardingProcessProps> = ({
         if (error) {
           console.error('Error populating requirements:', error);
         } else if (data?.success && !data?.skipped) {
-          console.log('Successfully populated requirements from buyer defaults');
+          logger.debug('Successfully populated requirements from buyer defaults');
           // Re-fetch after population
           const [newDocReqs, newFormFields] = await Promise.all([
             getDocumentRequirements(request.id),

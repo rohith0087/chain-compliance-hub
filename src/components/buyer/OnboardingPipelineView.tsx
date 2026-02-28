@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import logger from '@/utils/logger';
 import { Slab } from 'react-loading-indicators';
 import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -159,7 +160,7 @@ export const OnboardingPipelineView = () => {
           table: 'supplier_onboarding_requests'
         },
         (payload) => {
-          console.log('Real-time update:', payload);
+          logger.debug('Real-time update:', payload);
           loadRequests();
         }
       )

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import logger from '@/utils/logger';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,7 +84,7 @@ export const InviteSupplierModal = ({
         try {
           // This would create onboarding request with default settings
           // Implementation would use the proper hook context
-          console.log(`Creating onboarding request for ${email} with defaults`);
+          logger.debug(`Creating onboarding request for ${email} with defaults`);
         } catch (requestError) {
           console.error(`Error creating onboarding request for ${email}:`, requestError);
         }

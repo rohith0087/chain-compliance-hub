@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import logger from '@/utils/logger';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -292,8 +293,8 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
 
   const handleViewDocumentInNewWindow = async (doc: DocumentReference) => {
     try {
-      console.log('handleViewDocumentInNewWindow - Document object:', doc);
-      console.log('Sending to secure-document-url:', { file_path: doc.file_path, document_id: doc.id });
+      logger.debug('handleViewDocumentInNewWindow - Document:', doc.id);
+      logger.debug('Sending to secure-document-url:', { file_path: doc.file_path, document_id: doc.id });
       
       const { data, error } = await supabase.functions.invoke('secure-document-url', {
         body: { 
@@ -302,7 +303,7 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
         }
       });
       
-      console.log('secure-document-url response:', { data, error });
+      logger.debug('secure-document-url response:', { data, error });
       
       if (error) {
         console.error('secure-document-url error:', error);
@@ -326,7 +327,7 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
 
   const handleCopyDocumentLink = async (doc: DocumentReference) => {
     try {
-      console.log('handleCopyDocumentLink - Document object:', doc);
+      logger.debug('handleCopyDocumentLink - Document:', doc.id);
       
       const requestBody = {
         action: 'create_link',
@@ -335,13 +336,13 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
         expires_in_days: 30
       };
       
-      console.log('Sending to document-link-handler:', requestBody);
+      logger.debug('Sending to document-link-handler:', requestBody);
       
       const { data, error } = await supabase.functions.invoke('document-link-handler', {
         body: requestBody
       });
       
-      console.log('document-link-handler response:', { data, error });
+      logger.debug('document-link-handler response:', { data, error });
       
       if (error) {
         console.error('document-link-handler error:', error);

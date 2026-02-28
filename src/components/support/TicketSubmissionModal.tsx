@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import logger from '@/utils/logger';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -134,7 +135,7 @@ export const TicketSubmissionModal = ({ isOpen, onClose, source, user }: TicketS
             companyType: user?.userType === 'buyer' ? 'buyer' : user?.userType === 'supplier' ? 'supplier' : undefined,
           }
         });
-        console.log('Admin notification sent successfully');
+        logger.debug('Admin notification sent successfully');
       } catch (notifError) {
         console.error('Failed to send admin notification:', notifError);
         // Don't fail the ticket submission if notification fails

@@ -1,4 +1,5 @@
 import { SupplierComplianceData, ComparisonData } from './ComplianceDataService';
+import logger from '@/utils/logger';
 import { AIInsights } from './AdvancedPDFExportService';
 
 export class AIInsightsService {
@@ -13,7 +14,7 @@ export class AIInsightsService {
       const openaiKey = apiKey || await this.getOpenAIKey();
       
       if (!openaiKey) {
-        console.log('No OpenAI API key available, using static insights');
+        logger.debug('No OpenAI API key available, using static insights');
         return this.generateStaticInsights(data);
       }
 
@@ -67,7 +68,7 @@ export class AIInsightsService {
       const openaiKey = apiKey || await this.getOpenAIKey();
       
       if (!openaiKey) {
-        console.log('No OpenAI API key available, using static comparison insights');
+        logger.debug('No OpenAI API key available, using static comparison insights');
         return this.generateStaticComparisonInsights(comparisonData);
       }
 

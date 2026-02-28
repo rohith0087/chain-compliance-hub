@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import logger from '@/utils/logger';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -35,7 +36,7 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
 
-  console.log('IndustryBasedSupplierSetup - Valid industries:', VALID_INDUSTRIES);
+  logger.debug('IndustryBasedSupplierSetup - Valid industries:', VALID_INDUSTRIES);
 
   useEffect(() => {
     if (selectedIndustry) {
@@ -46,7 +47,7 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
   const fetchSuppliers = async () => {
     if (!selectedIndustry) return;
     
-    console.log('Fetching suppliers for industry:', selectedIndustry);
+    logger.debug('Fetching suppliers for industry:', selectedIndustry);
     setLoading(true);
     try {
       const { data: suppliersData, error } = await supabase
@@ -60,7 +61,7 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
         throw error;
       }
 
-      console.log('Suppliers found for industry:', suppliersData?.length || 0);
+      logger.debug('Suppliers found for industry:', suppliersData?.length || 0);
       setSuppliers(suppliersData || []);
     } catch (error) {
       console.error('Error fetching suppliers:', error);
@@ -92,7 +93,7 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
       return;
     }
 
-    console.log('Connecting with suppliers:', selectedSuppliers);
+    logger.debug('Connecting with suppliers:', selectedSuppliers);
     setSubmitting(true);
 
     try {
@@ -100,7 +101,7 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
       const connectionPromises = selectedSuppliers.map(async (supplierId) => {
         const supplier = suppliers.find(s => s.id === supplierId);
         
-        console.log('Creating connection for supplier:', supplier?.company_name);
+        logger.debug('Creating connection for supplier:', supplier?.company_name);
         
         // Insert connection record
         const { error: connectionError } = await supabase
@@ -140,7 +141,7 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
         description: `Connected with ${selectedSuppliers.length} supplier(s). ${approvedCount} approved automatically, ${pendingCount} pending approval.`,
       });
 
-      console.log('Connections created successfully');
+      logger.debug('Connections created successfully');
       onComplete();
     } catch (error: any) {
       console.error('Error creating connections:', error);

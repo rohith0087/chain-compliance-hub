@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import logger from '@/utils/logger';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useCompanyPermissions } from '@/hooks/useCompanyPermissions';
@@ -106,7 +107,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
 
       if (teamMember) {
         // Team member - fetch company data using company_id
-        console.log('Refreshing profile for team member, company_id:', teamMember.company_id);
+        logger.debug('Refreshing profile for team member');
         const { data: buyer, error: buyerError } = await supabase
           .from('buyers')
           .select('*')
@@ -122,7 +123,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
         setCompanyId(teamMember.company_id);
       } else {
         // Company owner - fetch using profile_id
-        console.log('Refreshing profile for company owner');
+        logger.debug('Refreshing profile for company owner');
         const { data: buyer, error: buyerError } = await supabase
           .from('buyers')
           .select('*')
@@ -269,13 +270,13 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
   }, [authUser, currentBranch?.id, allBranchesView, impersonatedBuyerId]);
 
   const handleFindSuppliersClick = () => {
-    console.log('Find Suppliers button clicked, switching to suppliers tab');
+    logger.debug('Find Suppliers button clicked, switching to suppliers tab');
     setActiveTab('suppliers');
   };
 
   const handleLogoutClick = async () => {
     try {
-      console.log('Buyer dashboard logout clicked');
+      logger.debug('Buyer dashboard logout clicked');
       await onLogout();
     } catch (error) {
       console.error('Error in buyer dashboard logout:', error);
@@ -283,7 +284,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
   };
 
   const handleCreateRequest = (request: any) => {
-    console.log('Request created:', request);
+    logger.debug('Request created');
     // Handle the created request - could add to local state, refresh data, etc.
   };
 

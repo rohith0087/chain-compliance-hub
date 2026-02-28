@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import logger from '@/utils/logger';
 
 export interface ImpersonatedCompany {
   id: string;
@@ -37,7 +38,7 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!isImpersonating) return;
 
     const timeout = setTimeout(() => {
-      console.log('Impersonation auto-expired after 30 minutes');
+      logger.debug('Impersonation auto-expired after 30 minutes');
       endImpersonation();
     }, 30 * 60 * 1000); // 30 minutes
 
@@ -75,7 +76,6 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (error) {
         console.error('Failed to log impersonation start:', error);
-        // Continue anyway - audit logging failure shouldn't block functionality
       }
 
       setImpersonatedUser(targetUser);
@@ -83,7 +83,7 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
       setImpersonationLogId(logEntry?.id || null);
       setIsImpersonating(true);
 
-      console.log(`Started impersonation: ${targetUser.email} at ${company.name}`);
+      logger.debug('Started impersonation session');
     } catch (err) {
       console.error('Error starting impersonation:', err);
     }
@@ -92,7 +92,6 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
   const endImpersonation = useCallback(async () => {
     if (impersonationLogId && user) {
       try {
-        // Update log with end time
         await supabase
           .from('impersonation_logs')
           .update({ ended_at: new Date().toISOString() })
@@ -107,7 +106,7 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
     setImpersonatedCompany(null);
     setImpersonationLogId(null);
 
-    console.log('Ended impersonation session');
+    logger.debug('Ended impersonation session');
   }, [impersonationLogId, user]);
 
   return (

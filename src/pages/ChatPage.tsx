@@ -1,5 +1,6 @@
 // src/pages/ChatPage.tsx
 import React, { useState, useEffect, useRef } from "react";
+import logger from '@/utils/logger';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -427,7 +428,7 @@ const ChatPage: React.FC = () => {
 
       if (error) throw error;
 
-      console.log('✓ Created new session:', data.session.id);
+      logger.debug('✓ Created new session:', data.session.id);
       
       setCurrentSession(data.session.id);
       setMessages([]);
@@ -504,7 +505,7 @@ const ChatPage: React.FC = () => {
 
       // Capture session_id from response if we didn't have one
       if (data.session_id && !currentSession) {
-        console.log('✓ Session created by edge function:', data.session_id);
+        logger.debug('✓ Session created by edge function:', data.session_id);
         setCurrentSession(data.session_id);
         
         // Update session title based on first question

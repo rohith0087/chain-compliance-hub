@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import logger from '@/utils/logger';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -39,7 +40,7 @@ const SupplierComplianceDashboard = () => {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      console.log('Loading compliance dashboard data for user:', user?.id);
+      logger.debug('Loading compliance dashboard data');
       
       // Check if user is a team member first (company ID resolution pattern)
       const { data: teamMember } = await supabase
@@ -68,14 +69,14 @@ const SupplierComplianceDashboard = () => {
         }
 
         if (!supplierProfile) {
-          console.log('No supplier profile found for user');
+          logger.debug('No supplier profile found for user');
           return;
         }
 
         supplierId = supplierProfile.id;
       }
 
-      console.log('Supplier ID resolved:', supplierId);
+      logger.debug('Supplier ID resolved:', supplierId);
 
       // Load document requests with buyer info
       let requestsQuery = supabase
@@ -98,7 +99,7 @@ const SupplierComplianceDashboard = () => {
       const { data: requests, error: requestsError } = await requestsQuery
         .order('created_at', { ascending: false });
 
-      console.log('Document requests loaded:', requests?.length || 0, 'requests');
+      logger.debug('Document requests loaded:', requests?.length || 0, 'requests');
       if (requestsError) {
         console.error('Error loading document requests:', requestsError);
       } else {
@@ -114,7 +115,7 @@ const SupplierComplianceDashboard = () => {
           .in('request_id', requestIds)
           .order('created_at', { ascending: false });
 
-        console.log('Document uploads loaded:', uploadsData?.length || 0, 'uploads');
+        logger.debug('Document uploads loaded:', uploadsData?.length || 0, 'uploads');
         if (uploadsError) {
           console.error('Error loading document uploads:', uploadsError);
         } else {
@@ -143,7 +144,7 @@ const SupplierComplianceDashboard = () => {
 
       const { data: connections, error: connectionsError } = await connectionsQuery;
 
-      console.log('Connected buyers loaded:', connections?.length || 0, 'connections');
+      logger.debug('Connected buyers loaded:', connections?.length || 0, 'connections');
       if (connectionsError) {
         console.error('Error loading connected buyers:', connectionsError);
       } else {

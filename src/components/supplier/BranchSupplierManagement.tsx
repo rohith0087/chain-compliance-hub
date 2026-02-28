@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import logger from '@/utils/logger';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,7 +53,7 @@ export const BranchSupplierManagement: React.FC<BranchSupplierManagementProps> =
   } = useBranchSupplierConnections(selectedBranchId);
   
   const isAdmin = companyUserRole === 'company_admin' || currentUserRole === 'admin';
-  console.log('BranchSupplierManagement - isAdmin:', isAdmin, 'companyUserRole:', companyUserRole, 'currentUserRole:', currentUserRole);
+  logger.debug('BranchSupplierManagement - isAdmin:', isAdmin, 'companyUserRole:', companyUserRole, 'currentUserRole:', currentUserRole);
 
   const handleAssignSupplier = async () => {
     if (!selectedSupplierId) return;

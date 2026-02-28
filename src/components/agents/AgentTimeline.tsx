@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import logger from '@/utils/logger';
 import { 
   Bot, 
   Brain, 
@@ -127,13 +128,13 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({ companyType, compa
             filter: `company_id=eq.${companyId}`
           },
           (payload) => {
-            console.log('Agent config changed:', payload);
+            logger.debug('Agent config changed:', payload);
             loadAgentData();
           }
         )
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
-            console.log('Agent config channel subscribed successfully');
+            logger.debug('Agent config channel subscribed successfully');
           } else if (status === 'CHANNEL_ERROR') {
             console.error('Agent config channel subscription failed');
           }
@@ -151,20 +152,20 @@ export const AgentTimeline: React.FC<AgentTimelineProps> = ({ companyType, compa
             filter: `entity_id=eq.${companyId}`
           },
           (payload) => {
-            console.log('New agent activity:', payload);
+            logger.debug('New agent activity:', payload);
             setActivities(prev => [payload.new as any, ...prev.slice(0, 49)]);
           }
         )
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
-            console.log('Agent activity channel subscribed successfully');
+            logger.debug('Agent activity channel subscribed successfully');
           } else if (status === 'CHANNEL_ERROR') {
             console.error('Agent activity channel subscription failed');
           }
         });
 
       return () => {
-        console.log('Cleaning up agent timeline subscriptions');
+        logger.debug('Cleaning up agent timeline subscriptions');
         try {
           supabase.removeChannel(configChannel);
           supabase.removeChannel(activityChannel);

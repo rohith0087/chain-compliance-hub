@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import logger from '@/utils/logger';
 
 export interface AddHishōSushiResult {
   success: boolean;
@@ -49,7 +50,7 @@ export async function addHishōSushiData(): Promise<AddHishōSushiResult[]> {
       }];
     }
 
-    console.log('🔄 Checking if HishōSushi exists...');
+    logger.debug('🔄 Checking if HishōSushi exists...');
     
     // Step 2: Check if HishōSushi supplier already exists
     const { data: existingSupplier } = await supabase
@@ -61,7 +62,7 @@ export async function addHishōSushiData(): Promise<AddHishōSushiResult[]> {
     let supplier;
 
     if (existingSupplier) {
-      console.log('✅ Found existing HishōSushi - updating...');
+      logger.debug('✅ Found existing HishōSushi - updating...');
       
       // Update existing supplier
       const { data: updatedSupplier, error: updateError } = await supabase
@@ -87,7 +88,7 @@ export async function addHishōSushiData(): Promise<AddHishōSushiResult[]> {
       supplier = updatedSupplier;
       
       // Delete old facilities for this supplier
-      console.log('🗑️ Deleting old HishōSushi facilities...');
+      logger.debug('🗑️ Deleting old HishōSushi facilities...');
       const { error: deleteError } = await supabase
         .from('company_branches')
         .delete()
@@ -104,7 +105,7 @@ export async function addHishōSushiData(): Promise<AddHishōSushiResult[]> {
         data: supplier
       });
     } else {
-      console.log('➕ Creating new HishōSushi supplier...');
+      logger.debug('➕ Creating new HishōSushi supplier...');
       
       // Insert new supplier
       const { data: newSupplier, error: insertError } = await supabase
@@ -223,7 +224,7 @@ export async function addSeafoodSuppliers(): Promise<AddHishōSushiResult[]> {
     }
 
     // ========== Blue Ocean Seafood Co. ==========
-    console.log('🔄 Checking if Blue Ocean Seafood exists...');
+    logger.debug('🔄 Checking if Blue Ocean Seafood exists...');
     
     const { data: existingBlueOcean } = await supabase
       .from('suppliers')
@@ -234,7 +235,7 @@ export async function addSeafoodSuppliers(): Promise<AddHishōSushiResult[]> {
     let blueOcean;
 
     if (existingBlueOcean) {
-      console.log('✅ Found existing Blue Ocean Seafood - updating...');
+      logger.debug('✅ Found existing Blue Ocean Seafood - updating...');
       
       const { data: updatedBlueOcean, error: updateError } = await supabase
         .from('suppliers')
@@ -257,7 +258,7 @@ export async function addSeafoodSuppliers(): Promise<AddHishōSushiResult[]> {
         blueOcean = updatedBlueOcean;
         
         // Delete old facilities
-        console.log('🗑️ Deleting old Blue Ocean facilities...');
+        logger.debug('🗑️ Deleting old Blue Ocean facilities...');
         await supabase
           .from('company_branches')
           .delete()
@@ -271,7 +272,7 @@ export async function addSeafoodSuppliers(): Promise<AddHishōSushiResult[]> {
         });
       }
     } else {
-      console.log('➕ Creating new Blue Ocean Seafood...');
+      logger.debug('➕ Creating new Blue Ocean Seafood...');
       
       const { data: newBlueOcean, error: insertError } = await supabase
         .from('suppliers')
@@ -362,7 +363,7 @@ export async function addSeafoodSuppliers(): Promise<AddHishōSushiResult[]> {
     }
 
     // ========== Atlantic Fresh Fish Market ==========
-    console.log('🔄 Checking if Atlantic Fresh Fish Market exists...');
+    logger.debug('🔄 Checking if Atlantic Fresh Fish Market exists...');
     
     const { data: existingAtlantic } = await supabase
       .from('suppliers')
@@ -373,7 +374,7 @@ export async function addSeafoodSuppliers(): Promise<AddHishōSushiResult[]> {
     let atlantic;
 
     if (existingAtlantic) {
-      console.log('✅ Found existing Atlantic Fresh - updating...');
+      logger.debug('✅ Found existing Atlantic Fresh - updating...');
       
       const { data: updatedAtlantic, error: updateError } = await supabase
         .from('suppliers')
@@ -396,7 +397,7 @@ export async function addSeafoodSuppliers(): Promise<AddHishōSushiResult[]> {
         atlantic = updatedAtlantic;
         
         // Delete old facilities
-        console.log('🗑️ Deleting old Atlantic Fresh facilities...');
+        logger.debug('🗑️ Deleting old Atlantic Fresh facilities...');
         await supabase
           .from('company_branches')
           .delete()
@@ -410,7 +411,7 @@ export async function addSeafoodSuppliers(): Promise<AddHishōSushiResult[]> {
         });
       }
     } else {
-      console.log('➕ Creating new Atlantic Fresh Fish Market...');
+      logger.debug('➕ Creating new Atlantic Fresh Fish Market...');
       
       const { data: newAtlantic, error: insertError } = await supabase
         .from('suppliers')

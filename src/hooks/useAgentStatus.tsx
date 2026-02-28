@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import logger from '@/utils/logger';
 
 interface AgentStatus {
   agent_type: string;
@@ -29,14 +30,14 @@ export const useAgentStatus = (companyId: string, companyType: 'buyer' | 'suppli
           filter: `company_id=eq.${companyId}`
         },
         () => {
-          console.log('Agent status updated, reloading...');
+          logger.debug('Agent status updated, reloading...');
           loadAgentStatuses();
         }
       )
       .subscribe();
 
     return () => {
-      console.log('Cleaning up agent status subscription');
+      logger.debug('Cleaning up agent status subscription');
       supabase.removeChannel(channel);
     };
   }, [companyId, companyType]);

@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import logger from '@/utils/logger';
 
 export async function addSampleSuppliers() {
   const sampleSuppliers = [
@@ -95,11 +96,11 @@ export async function addSampleSuppliers() {
         console.error(`Error adding ${supplier.company_name}:`, error);
         results.push({ success: false, company: supplier.company_name, error });
       } else {
-        console.log(`Added ${supplier.company_name}`);
+        logger.debug(`Added ${supplier.company_name}`);
         results.push({ success: true, company: supplier.company_name, data });
       }
     } else {
-      console.log(`${supplier.company_name} already exists, skipping`);
+      logger.debug(`${supplier.company_name} already exists, skipping`);
       results.push({ success: true, company: supplier.company_name, skipped: true });
     }
   }
@@ -109,5 +110,5 @@ export async function addSampleSuppliers() {
 
 // Auto-run when imported in dev mode
 if (import.meta.env.DEV) {
-  console.log('Sample suppliers utility loaded. Call addSampleSuppliers() to add data.');
+  logger.debug('Sample suppliers utility loaded. Call addSampleSuppliers() to add data.');
 }

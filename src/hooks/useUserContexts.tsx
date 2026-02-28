@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import logger from '@/utils/logger';
 
 export interface UserContext {
   companyType: 'buyer' | 'supplier';
@@ -156,7 +157,7 @@ export const useUserContexts = (): UseUserContextsReturn => {
     if (newContext) {
       setCurrentContext(newContext);
       localStorage.setItem(CONTEXT_STORAGE_KEY, companyType);
-      console.log('Switched context to:', companyType, newContext);
+      logger.debug('Switched context to:', companyType);
     }
   }, [contexts]);
 

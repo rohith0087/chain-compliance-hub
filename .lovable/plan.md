@@ -1,135 +1,142 @@
+# Secrets & Sensitive Info Exposure Audit -- Findings & Hardening Plan
 
-
-# Endpoint Security Audit -- Findings & Hardening Plan
-
-## Audit Scope
-Reviewed all 52 Edge Functions for: unauthenticated access, payload manipulation, role escalation, token replay, and rate limiting bypass.
+## Audit Results
 
 ---
 
-## CRITICAL FINDINGS
+### 1. CRITICAL: `.env` File Not in `.gitignore` -- API Keys Committed to Git
 
-### 1. Unauthenticated Email Sending (2 functions)
+The `.gitignore` file does NOT include `.env`. The `.env` file contains:
 
-**`send-batch-request-email`** and **`send-new-request-email`** have `verify_jwt = false` in config.toml AND contain **zero authentication checks** in their code. Any attacker who knows the function URL can:
-- Send unlimited emails to arbitrary supplier recipients via Resend (consuming your email quota)
-- Trigger email spam from your `@tracer2c.com` domain, risking domain reputation/blacklisting
-- Enumerate supplier IDs by observing 200 vs 404 responses
+- `VITE_SUPABASE_PUBLISHABLE_KEY` (anon key -- publishable, acceptable)
+- `VITE_GOOGLE_MAPS_API_KEY` -- a Google Maps API key committed in plaintext
+- `VITE_TURNSTILE_SITE_KEY` -- a Cloudflare Turnstile site key (publishable, acceptable)
 
-Additionally, `send-new-request-email` still has a **hardcoded wildcard CORS** (`Access-Control-Allow-Origin: '*'`) at line 5-8, plus missing imports for `getCorsHeaders`/`handleCorsPreflightRequest` (though it calls them at lines 16-18 -- this would cause a runtime error).
+Additionally, these same values are **hardcoded** in `src/integrations/supabase/client.ts` (Supabase URL + anon key). These are publishable keys by design, but the `.env` should still be gitignored as a best practice to prevent accidentally adding private keys later.
 
-**Fix:** Add JWT authentication to both functions (validate Bearer token, extract user, verify they belong to the buyer company making the request).
+The Google Maps API key is also exposed in the compiled frontend JS (via `import.meta.env.VITE_GOOGLE_MAPS_API_KEY`). This is somewhat expected for Maps keys but should have HTTP referrer restrictions configured in the Google Cloud Console.
 
-### 2. Missing Authorization on `delete-auth-user` (Privilege Escalation)
-
-This function verifies the caller is authenticated but does **not check any role or permission**. Any authenticated user can delete ANY other user's auth account by passing their `profile_id`. This is a **critical privilege escalation** -- a regular supplier user could delete a platform admin's account.
-
-**Fix:** Add authorization check -- only company admins (for their own team members) or platform admins should be able to delete users.
-
-### 3. Missing Authorization on `create-company-user` (Privilege Escalation)
-
-This function verifies the caller is authenticated but does **not check** whether the caller is an admin of the target `company_id`. Any authenticated user can:
-- Create new users in ANY company (buyer or supplier)
-- Assign themselves or others as `company_admin` in any organization
-- Use the `also_grant_other_role` feature to add users across multiple companies
-
-**Fix:** Verify the calling user is a `company_admin` or owner of the target `company_id` before creating users.
+**Fix:** Add `.env` to `.gitignore`. Note: Since this is a Lovable project, there is no `.env` file mechanism -- values are embedded at build time. The fix is to add `.env` to gitignore for safety.
 
 ---
 
-## HIGH FINDINGS
+### 2. HIGH: Raw `error.message` Leaked to API Clients in ~40 Edge Functions
 
-### 4. No Rate Limiting on Most Endpoints
+Almost all edge functions return `error.message` directly in HTTP responses:
 
-Only 3 functions have rate limiting (`text-to-voice`, `send-ticket-notification`, `send-password-reset`). The remaining ~49 functions have **no rate limiting**, including expensive operations like:
-- `document-analyzer` (calls OpenAI for document analysis)
-- `rag-chat` / `simple-rag-chat` (calls OpenAI for chat)
-- `buyer-agent` / `supplier-agent` (calls OpenAI)
-- `knowledge-populator` / `knowledge-refresh` (processes documents)
-- `consume-credits` (could drain credits rapidly)
+```javascript
+return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+```
 
-**Fix:** Add rate limiting to AI-powered and credit-consuming endpoints.
+This leaks internal implementation details to attackers, including:
 
-### 5. Token Replay -- No Mitigation
+- Database column names and table structures
+- Supabase internal error messages
+- Authentication flow details (e.g., "User not found")
+- File system paths
 
-JWT tokens are valid for 1 hour (config.toml `jwt_expiry = 3600`). There is no token blocklist, no jti (JWT ID) tracking, and no IP binding. A stolen token can be replayed for the full hour. This is standard for most Supabase apps and mitigated by HTTPS, but worth noting.
+Affected: ~40 out of 52 edge functions including `rag-chat`, `buyer-agent`, `supplier-agent`, `agent-coordinator`, `document-analyzer`, `send-generic-email`, `workflow-engine`, and more.
 
-**Recommendation:** No immediate action needed -- this is inherent to stateless JWT architecture. Could add a session table for critical operations if needed later.
-
-### 6. `send-new-request-email` has Broken Imports (Runtime Error)
-
-Lines 5-8 define hardcoded `corsHeaders` with wildcard `*`, but lines 16-18 call `getCorsHeaders(req)` and `handleCorsPreflightRequest(req)` which are **never imported**. This function will crash at runtime.
-
-**Fix:** Add the missing import and remove the hardcoded CORS constant.
+**Fix:** Replace raw `error.message` in HTTP responses with generic error messages. Keep `error.message` in `console.error` for server-side debugging only.
 
 ---
 
-## MEDIUM FINDINGS
+### 3. HIGH: `rag-chat` Executes Raw SQL via `exec_sql` RPC
 
-### 7. Payload Manipulation -- Email Body Injection
+In `supabase/functions/rag-chat/index.ts` (line 1417), the function calls:
 
-`send-generic-email` and `send-compliance-followup` accept user-provided `body` content which is inserted directly into HTML email templates with minimal sanitization (only markdown-to-HTML conversion). An attacker could inject arbitrary HTML/JavaScript into emails sent to recipients.
+```javascript
+await supabase.rpc('exec_sql', { query: searchFunctionSQL });
+```
 
-**Fix:** Sanitize email body HTML or use a text-only approach for user-provided content.
+This uses a service-role client to execute arbitrary SQL through an `exec_sql` RPC function. While the SQL string is hardcoded (not user-provided), the existence of an `exec_sql` RPC function in the database is itself a critical vulnerability -- if any other code path or function uses it with user input, it enables SQL injection.
 
-### 8. Missing Input Validation on Several Functions
+**Fix:** Remove the `exec_sql` RPC call from `rag-chat`. The `search_knowledge_entries` function already exists as a proper database function (confirmed in the DB schema). Delete the `exec_sql` database function entirely if it exists.
 
-- `delete-auth-user`: No UUID format validation on `profile_id`
-- `create-company-user`: No email format validation
-- `send-batch-request-email`: No array length limit on `requestIds` (could query thousands of records)
+---
+
+### 4. MEDIUM: `AIInsightsService.ts` Has Dead Code Path for Client-Side OpenAI Calls
+
+`src/services/AIInsightsService.ts` still contains the full structure for making direct OpenAI API calls from the browser (lines 6-80), including:
+
+- `OPENAI_API_URL` constant pointing to `https://api.openai.com/v1/chat/completions`
+- `apiKey` parameter on public methods
+- `Authorization: Bearer ${openaiKey}` header construction
+- A `getOpenAIKey()` method (currently returns `null`)
+
+While `getOpenAIKey()` returns `null` today, the code path still accepts an `apiKey` parameter that could be passed from the UI. If any caller passes a key, it would make direct browser-to-OpenAI requests, exposing the key in browser DevTools network tab.
+
+**Fix:** Remove the dead OpenAI client-side code path entirely. Keep only the static insights fallback.
+
+---
+
+### 5. MEDIUM: No Security Headers (X-Content-Type-Options, CSP, etc.)
+
+The `index.html` and edge function responses don't set security headers:
+
+- No `Content-Security-Policy` header
+- No `X-Content-Type-Options: nosniff`
+- No `X-Frame-Options` or `frame-ancestors` CSP directive
+- No `Strict-Transport-Security` header
+
+These should be added to prevent MIME sniffing attacks, clickjacking, and ensure HTTPS enforcement.
+
+**Fix:** Add security headers to edge function responses via the shared CORS utility, and add a CSP meta tag to `index.html`.
+
+---
+
+### 6. LOW: `SYSTEM_INVOCATION_SECRET` -- Properly Handled
+
+The `systemAuth.ts` utility correctly:
+
+- Reads the secret from `Deno.env.get()` (server-side only)
+- Uses constant-time comparison to prevent timing attacks
+- Denies access if the secret is not configured
+- Never logs or exposes the secret value
+
+No issues found.
 
 ---
 
 ## Implementation Plan
 
-### Step 1: Add Auth to `send-batch-request-email` and `send-new-request-email`
-- Add JWT verification (extract user via `getUser`)
-- Verify the calling user belongs to the buyer company that owns the document requests
-- Fix broken imports in `send-new-request-email` (add `getCorsHeaders` import, remove hardcoded wildcard CORS)
-- Change both to `verify_jwt = true` in config.toml
+### Step 1: Add `.env` to `.gitignore`
 
-### Step 2: Add Authorization to `delete-auth-user`
-- After verifying auth, check that the caller is either:
-  - A platform admin (query `platform_administrators`)
-  - A company admin of the same company as the target user (query `company_users` for both caller and target)
-- Add UUID validation on `profile_id` input
-- Prevent self-deletion
+Add `.env` and `.env.*` patterns to the gitignore file.
 
-### Step 3: Add Authorization to `create-company-user`
-- After verifying auth, check that the caller is a company admin or owner of the target `company_id`
-- For dual-role creation, also verify admin access to `other_company_id`
-- Add email format validation
+### Step 2: Sanitize Error Responses in ~40 Edge Functions
 
-### Step 4: Add Rate Limiting to AI/Credit Endpoints
-Add rate limiting to these high-cost functions:
-- `document-analyzer`: 10 req/min/user
-- `rag-chat`: 20 req/min/user
-- `simple-rag-chat`: 20 req/min/user
-- `buyer-agent`: 10 req/min/user
-- `supplier-agent`: 10 req/min/user
-- `agent-coordinator`: 10 req/min/user
-- `consume-credits`: 30 req/min/user
-- `knowledge-populator`: 5 req/min/user
-- `coa-analyzer`: 10 req/min/user
+Replace `error.message` in HTTP response bodies with a generic message while keeping the detailed error in `console.error` for server-side debugging:
 
-### Step 5: Sanitize Email Body Content
-- In `send-generic-email` and `send-compliance-followup`, strip HTML tags from user-provided `body` content before inserting into email templates (allow only markdown-to-HTML conversion output)
+```typescript
+// Before:
+JSON.stringify({ error: error.message })
+
+// After:  
+JSON.stringify({ error: 'Internal server error' })
+```
+
+Keep specific error messages only for client-actionable 400-level errors (e.g., "Missing required field", "Invalid email format").
+
+### Step 3: Remove `exec_sql` RPC Call from `rag-chat`
+
+Remove the `ensureSearchFunction()` call and its function definition from `rag-chat/index.ts`. The database function already exists.
+
+### Step 4: Clean Up `AIInsightsService.ts`
+
+Remove the OpenAI API URL constant, the `apiKey` parameter from methods, and the `getOpenAIKey` method. Keep only static insights generation.
+
+### Step 5: Add Security Headers
+
+- Add `<meta http-equiv="Content-Security-Policy">` to `index.html` (script-src, style-src, connect-src directives)
+- Add `X-Content-Type-Options: nosniff` to edge function response headers via `_shared/corsHeaders.ts`
+- Add `X-Frame-Options: DENY` to edge function responses
 
 ### Files Modified
-- `supabase/functions/send-batch-request-email/index.ts` -- add auth
-- `supabase/functions/send-new-request-email/index.ts` -- fix imports, add auth
-- `supabase/functions/delete-auth-user/index.ts` -- add authorization
-- `supabase/functions/create-company-user/index.ts` -- add authorization
-- `supabase/functions/document-analyzer/index.ts` -- add rate limiting
-- `supabase/functions/rag-chat/index.ts` -- add rate limiting
-- `supabase/functions/simple-rag-chat/index.ts` -- add rate limiting
-- `supabase/functions/buyer-agent/index.ts` -- add rate limiting
-- `supabase/functions/supplier-agent/index.ts` -- add rate limiting
-- `supabase/functions/agent-coordinator/index.ts` -- add rate limiting
-- `supabase/functions/consume-credits/index.ts` -- add rate limiting
-- `supabase/functions/knowledge-populator/index.ts` -- add rate limiting
-- `supabase/functions/coa-analyzer/index.ts` -- add rate limiting
-- `supabase/functions/send-generic-email/index.ts` -- sanitize body
-- `supabase/functions/send-compliance-followup/index.ts` -- sanitize body
-- `supabase/config.toml` -- update verify_jwt for 2 functions
 
+- `.gitignore` -- add `.env`
+- ~40 edge function files -- sanitize error responses
+- `supabase/functions/rag-chat/index.ts` -- remove `exec_sql` RPC
+- `src/services/AIInsightsService.ts` -- remove dead OpenAI code
+- `index.html` -- add CSP meta tag
+- `supabase/functions/_shared/corsHeaders.ts` -- add security headers

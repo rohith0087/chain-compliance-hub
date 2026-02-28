@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/corsHeaders.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
@@ -171,6 +172,12 @@ serve(async (req) => {
     }
 
     console.log('Authenticated user for agent-coordinator');
+
+    // Rate limiting: 10 req/min/user
+    const rateCheck = checkRateLimit(user.id, 10, 60_000);
+    if (!rateCheck.allowed) {
+      return rateLimitResponse(corsHeaders, rateCheck.retryAfterMs);
+    }
 
     const requestBody = await req.json();
     const { action, company_id, company_type } = requestBody;

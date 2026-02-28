@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/corsHeaders.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -4181,6 +4182,12 @@ serve(async (req) => {
         JSON.stringify({ error: 'Invalid authentication' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Rate limiting: 20 req/min/user
+    const rateCheck = checkRateLimit(user.id, 20, 60_000);
+    if (!rateCheck.allowed) {
+      return rateLimitResponse(corsHeaders, rateCheck.retryAfterMs);
     }
 
     console.log('✓ User authenticated');

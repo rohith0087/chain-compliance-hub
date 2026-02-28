@@ -1,11 +1,11 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Shield, AlertCircle, Building2, ShoppingCart, Mail, Eye, EyeOff, Check, X, Lock, Sparkles, KeyRound } from 'lucide-react';
+import { Shield, AlertCircle, Building2, ShoppingCart, Mail, Eye, EyeOff, Check, X, Lock, Sparkles, KeyRound, Timer } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
 import { HelpButton } from '@/components/support/HelpButton';
@@ -15,6 +15,42 @@ import { TurnstileWidget } from './TurnstileWidget';
 import { supabase } from '@/integrations/supabase/client';
 import { BackgroundBeamsWithCollision } from '@/components/ui/background-beams-with-collision';
 import { z } from 'zod';
+
+// --- Rate Limiting Utilities ---
+const LOCKOUT_TIERS = [
+  { threshold: 5, durationMs: 30_000 },   // 5 failures = 30s
+  { threshold: 10, durationMs: 300_000 },  // 10 failures = 5min
+];
+
+const MFA_MAX_ATTEMPTS = 5;
+const MFA_LOCKOUT_MS = 60_000; // 60s
+const MFA_FORCE_SIGNOUT_ATTEMPTS = 8;
+
+const RESET_COOLDOWN_MS = 60_000; // 60s between password resets
+const SIGNUP_COOLDOWN_MS = 30_000; // 30s after signup
+
+function getLockoutDuration(failCount: number): number {
+  for (let i = LOCKOUT_TIERS.length - 1; i >= 0; i--) {
+    if (failCount >= LOCKOUT_TIERS[i].threshold) return LOCKOUT_TIERS[i].durationMs;
+  }
+  return 0;
+}
+
+function useCountdown(endTime: number | null): number {
+  const [remaining, setRemaining] = useState(0);
+  useEffect(() => {
+    if (!endTime) { setRemaining(0); return; }
+    const tick = () => {
+      const left = Math.max(0, endTime - Date.now());
+      setRemaining(left);
+      if (left <= 0) return;
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [endTime]);
+  return remaining;
+}
 
 // Validation schemas with security hardening
 const signInSchema = z.object({
@@ -90,6 +126,24 @@ const AuthPage = () => {
   const [useRecoveryCode, setUseRecoveryCode] = useState(false);
   const [mfaError, setMfaError] = useState<string | null>(null);
   const [mfaLoading, setMfaLoading] = useState(false);
+
+  // --- Rate limiting state ---
+  const [loginFailCount, setLoginFailCount] = useState(0);
+  const [loginLockoutUntil, setLoginLockoutUntil] = useState<number | null>(null);
+  const [mfaFailCount, setMfaFailCount] = useState(0);
+  const [mfaLockoutUntil, setMfaLockoutUntil] = useState<number | null>(null);
+  const [resetCooldownUntil, setResetCooldownUntil] = useState<number | null>(null);
+  const [signupCooldownUntil, setSignupCooldownUntil] = useState<number | null>(null);
+
+  const loginCooldownRemaining = useCountdown(loginLockoutUntil);
+  const mfaCooldownRemaining = useCountdown(mfaLockoutUntil);
+  const resetCooldownRemaining = useCountdown(resetCooldownUntil);
+  const signupCooldownRemaining = useCountdown(signupCooldownUntil);
+
+  const isLoginLocked = loginCooldownRemaining > 0;
+  const isMfaLocked = mfaCooldownRemaining > 0;
+  const isResetCooling = resetCooldownRemaining > 0;
+  const isSignupCooling = signupCooldownRemaining > 0;
   
   const { signIn, signUp, resetPassword } = useAuth();
   const { toast } = useToast();
@@ -121,6 +175,16 @@ const AuthPage = () => {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
+
+    // Check lockout
+    if (isLoginLocked) {
+      toast({
+        title: "Too Many Attempts",
+        description: `Please wait ${Math.ceil(loginCooldownRemaining / 1000)}s before trying again.`,
+        variant: "destructive",
+      });
+      return;
+    }
     
     const validation = signInSchema.safeParse({ email: email.trim(), password });
     if (!validation.success) {
@@ -143,6 +207,12 @@ const AuthPage = () => {
     const { error } = await signIn(email.trim(), password, isTurnstileEnabled ? turnstileToken! : undefined);
     
     if (error) {
+      const newFailCount = loginFailCount + 1;
+      setLoginFailCount(newFailCount);
+      const lockout = getLockoutDuration(newFailCount);
+      if (lockout > 0) {
+        setLoginLockoutUntil(Date.now() + lockout);
+      }
       toast({
         title: "Sign In Failed",
         description: error.message,
@@ -152,6 +222,10 @@ const AuthPage = () => {
       setLoading(false);
       return;
     }
+    
+    // Reset on success
+    setLoginFailCount(0);
+    setLoginLockoutUntil(null);
     
     // Check if user needs MFA verification
     const { data: factorsData } = await supabase.auth.mfa.listFactors();
@@ -168,9 +242,31 @@ const AuthPage = () => {
   const handleMFAVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setMfaError(null);
+
+    // Check MFA lockout
+    if (isMfaLocked) {
+      setMfaError(`Too many attempts. Wait ${Math.ceil(mfaCooldownRemaining / 1000)}s.`);
+      return;
+    }
+
+    const recordMfaFailure = async () => {
+      const newCount = mfaFailCount + 1;
+      setMfaFailCount(newCount);
+      if (newCount >= MFA_FORCE_SIGNOUT_ATTEMPTS) {
+        setMfaError('Too many failed attempts. You have been signed out.');
+        await supabase.auth.signOut();
+        setAuthStep('credentials');
+        setMfaCode('');
+        setMfaFailCount(0);
+        setMfaLockoutUntil(null);
+        return;
+      }
+      if (newCount >= MFA_MAX_ATTEMPTS) {
+        setMfaLockoutUntil(Date.now() + MFA_LOCKOUT_MS);
+      }
+    };
     
     if (useRecoveryCode) {
-      // Handle recovery code verification
       if (!mfaCode.trim()) {
         setMfaError('Please enter a recovery code');
         return;
@@ -184,9 +280,10 @@ const AuthPage = () => {
       });
       
       if (response.data?.valid) {
+        setMfaFailCount(0);
         toast({ title: "Verified", description: `Recovery code accepted. ${response.data.remainingCodes} codes remaining.` });
-        // Redirect will happen via auth state change
       } else {
+        await recordMfaFailure();
         setMfaError(response.data?.error || 'Invalid recovery code');
         setMfaCode('');
       }
@@ -226,11 +323,12 @@ const AuthPage = () => {
     });
     
     if (error) {
+      await recordMfaFailure();
       setMfaError('Invalid verification code');
       setMfaCode('');
     } else {
+      setMfaFailCount(0);
       toast({ title: "Verified", description: "Login successful." });
-      // Auth state change will trigger redirect
     }
     setMfaLoading(false);
   };
@@ -292,6 +390,8 @@ const AuthPage = () => {
       setCompanyName('');
       setSelectedRoles(['supplier']);
       resetTurnstile();
+      // Signup cooldown to prevent re-submission
+      setSignupCooldownUntil(Date.now() + SIGNUP_COOLDOWN_MS);
     }
     setLoading(false);
   };
@@ -309,6 +409,16 @@ const AuthPage = () => {
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isResetCooling) {
+      toast({
+        title: "Please Wait",
+        description: `You can request another reset in ${Math.ceil(resetCooldownRemaining / 1000)}s.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const emailValidation = z.string().trim().email().safeParse(resetEmail);
     if (!emailValidation.success) {
       toast({
@@ -320,6 +430,7 @@ const AuthPage = () => {
     }
     
     setResetLoading(true);
+    setResetCooldownUntil(Date.now() + RESET_COOLDOWN_MS);
     const { error } = await resetPassword(resetEmail.trim());
 
     if (error) {
@@ -331,7 +442,7 @@ const AuthPage = () => {
     } else {
       toast({
         title: "Reset Email Sent",
-        description: "Please check your email for password reset instructions.",
+        description: "If an account exists with this email, you'll receive reset instructions.",
       });
       setResetEmail('');
       setResetDialogOpen(false);
@@ -479,9 +590,16 @@ const AuthPage = () => {
                         />
                       )}
                       
-                      <Button type="submit" className="w-full h-11 font-semibold" disabled={loading || (isTurnstileEnabled && !turnstileToken)}>
-                        {loading ? "Logging In..." : "Login"}
+                      <Button type="submit" className="w-full h-11 font-semibold" disabled={loading || isLoginLocked || (isTurnstileEnabled && !turnstileToken)}>
+                        {isLoginLocked 
+                          ? `Locked (${Math.ceil(loginCooldownRemaining / 1000)}s)` 
+                          : loading ? "Logging In..." : "Login"}
                       </Button>
+                      {isLoginLocked && (
+                        <p className="text-xs text-destructive flex items-center gap-1 justify-center">
+                          <Timer className="w-3 h-3" /> Too many failed attempts. Please wait.
+                        </p>
+                      )}
                       
                       <div className="text-center">
                         <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
@@ -523,8 +641,8 @@ const AuthPage = () => {
                                 >
                                   Cancel
                                 </Button>
-                                <Button type="submit" className="flex-1" disabled={resetLoading}>
-                                  {resetLoading ? "Sending..." : "Send Reset Link"}
+                              <Button type="submit" className="flex-1" disabled={resetLoading || isResetCooling}>
+                                   {isResetCooling ? `Wait ${Math.ceil(resetCooldownRemaining / 1000)}s` : resetLoading ? "Sending..." : "Send Reset Link"}
                                 </Button>
                               </div>
                             </form>
@@ -583,9 +701,11 @@ const AuthPage = () => {
                         <Button 
                           type="submit" 
                           className="w-full h-11 font-semibold" 
-                          disabled={mfaLoading || (useRecoveryCode ? !mfaCode.trim() : mfaCode.length !== 6)}
+                          disabled={mfaLoading || isMfaLocked || (useRecoveryCode ? !mfaCode.trim() : mfaCode.length !== 6)}
                         >
-                          {mfaLoading ? "Verifying..." : "Verify"}
+                          {isMfaLocked 
+                            ? `Locked (${Math.ceil(mfaCooldownRemaining / 1000)}s)` 
+                            : mfaLoading ? "Verifying..." : "Verify"}
                         </Button>
                         
                         <div className="relative">
@@ -811,9 +931,11 @@ const AuthPage = () => {
                     <Button 
                       type="submit" 
                       className="w-full h-11 font-semibold" 
-                      disabled={loading || selectedRoles.length === 0 || (isTurnstileEnabled && !turnstileToken)}
+                      disabled={loading || isSignupCooling || selectedRoles.length === 0 || (isTurnstileEnabled && !turnstileToken)}
                     >
-                      {loading ? "Creating Account..." : "Create Account"}
+                      {isSignupCooling 
+                        ? `Please wait (${Math.ceil(signupCooldownRemaining / 1000)}s)` 
+                        : loading ? "Creating Account..." : "Create Account"}
                     </Button>
                   </form>
                 </TabsContent>

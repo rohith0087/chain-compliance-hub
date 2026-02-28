@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/corsHeaders.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 
 // Hash a code using SHA-256
 async function hashCode(code: string): Promise<string> {
@@ -41,6 +42,10 @@ Deno.serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Rate limit: 5 req/min per user
+    const rl = checkRateLimit(`mfa-recovery:${user.id}`, 5, 60_000);
+    if (!rl.allowed) return rateLimitResponse(corsHeaders, rl.retryAfterMs);
 
     const { code } = await req.json();
 

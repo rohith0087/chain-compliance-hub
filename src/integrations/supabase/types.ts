@@ -5139,7 +5139,6 @@ export type Database = {
         Args: { p_branch_id: string }
         Returns: Json
       }
-      exec_readonly: { Args: { p: Json }; Returns: Json }
       finalize_onboarding_approval: {
         Args: { p_notes?: string; p_onboarding_request_id: string }
         Returns: Json

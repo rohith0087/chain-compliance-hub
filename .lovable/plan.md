@@ -1,49 +1,108 @@
 
 
-# CRITICAL: `exec_readonly` RPC -- Unauthenticated SQL Injection Still Present
+# Security Linter Issues -- Full Breakdown and Remediation Plan
 
-## Finding
-
-The `exec_sql` function was removed, but an equivalent function called **`exec_readonly`** still exists in the database. It is:
-
-1. **A dynamic SQL executor** -- accepts arbitrary SQL via a JSON parameter `{"q": "<sql>", "params": {...}}` and runs it with `EXECUTE`
-2. **SECURITY DEFINER** -- runs with the function owner's elevated privileges, bypassing all RLS policies
-3. **Granted to PUBLIC** -- callable by the anonymous key with no authentication required
-4. **Not used anywhere** in application code (zero references outside `types.ts`)
-
-### Why the "guardrails" are insufficient
-
-The function attempts to block non-SELECT statements via regex, but these checks are trivially bypassed:
-
-- **Data exfiltration**: An attacker can `SELECT * FROM auth.users` to dump all user emails, password hashes, and metadata -- RLS is bypassed because of SECURITY DEFINER
-- **Subquery writes**: `SELECT * FROM (DELETE FROM profiles RETURNING *)` may bypass the keyword check depending on regex ordering
-- **Function calls**: `SELECT exec_readonly('{"q":"..."}'::jsonb)` -- recursive calls or `SELECT pg_sleep(30)` for DoS
-
-### Impact
-
-Any unauthenticated user with the public anon key can read **any table in any schema** (including `auth.users`, `vault.secrets`, etc.) by calling this function directly.
+After running the linter and querying the database, here are all 24 issues grouped by severity:
 
 ---
 
-## Remediation Plan
+## ERRORS (Critical -- Must Fix)
 
-### Step 1: Drop `exec_readonly` from the database
+### 1. RLS Disabled on 2 Tables
+These public tables have **no Row Level Security** at all, meaning any authenticated (or anonymous) user can read/write all data:
 
-Run a migration to permanently remove this function:
+| Table | Risk |
+|-------|------|
+| `assessments` | Full read/write access to all assessment data |
+| `entity_relationships` | Full read/write access to all entity relationship data |
 
+**Fix**: Enable RLS on both tables and add appropriate policies (e.g., users can only access assessments/relationships tied to their company).
+
+### 2. Security Definer View: `profiles_with_roles`
+This view joins `profiles` with `user_roles` and runs with the **view creator's privileges**, bypassing RLS. Any user who can query this view sees all profiles and roles.
+
+**Fix**: Recreate as a regular view (drop `SECURITY DEFINER`) or replace with a security definer **function** that filters by `auth.uid()`.
+
+---
+
+## WARNINGS (Should Fix)
+
+### 3. Functions Missing `search_path` (4 issues)
+These SECURITY DEFINER functions don't set `search_path`, making them vulnerable to search path injection:
+
+| Function |
+|----------|
+| `delete_branch_with_validation` |
+| `platform_admin_reset_password` |
+| + 2 others (likely `grant_pg_net_access`, `handle_new_user` -- from the vector extension functions that share the pattern) |
+
+**Fix**: Add `SET search_path = 'public'` to each function definition.
+
+### 4. Overly Permissive RLS Policies (13 policies with `true`)
+These policies use `WITH CHECK (true)` or `USING (true)` on INSERT/UPDATE/DELETE/ALL, allowing any user to perform the operation:
+
+| Table | Policy | Command | Risk Level |
+|-------|--------|---------|------------|
+| `notifications` | System can create notifications | INSERT | Low -- notifications are created by system functions |
+| `user_activity_logs` | System can insert activity logs | INSERT | Low -- append-only logging |
+| `credit_transactions` | System can insert credit transactions | INSERT | **Medium** -- could forge credit transactions |
+| `auth_audit_logs` | Anyone can insert auth logs | INSERT | Low -- needed for auth flow |
+| `document_activity_logs` | Users can create activity logs | INSERT | Low -- append-only logging |
+| `supplier_response_metrics` | System can manage response metrics | ALL | **Medium** -- full access to all metrics |
+| `ai_knowledge_entries` | System can manage knowledge entries | ALL | **Medium** -- full access to knowledge base |
+| `subscriptions` | System can manage subscriptions | ALL | **High** -- any user could modify subscriptions |
+| `platform_admin_audit_logs` | System can insert audit logs | INSERT | Low -- append-only logging |
+| `supplier_performance_metrics` | System can manage performance metrics | ALL | **Medium** -- full access to metrics |
+| `document_expiry_notifications` | System can insert expiry notifications | INSERT | Low -- system-generated |
+| `support_tickets` | Anyone can create tickets | INSERT | Low -- intentional public access |
+| `communication_audit_logs` | System can insert audit logs | INSERT | Low -- append-only logging |
+
+**Fix**: For the high/medium-risk ones (`subscriptions`, `credit_transactions`, `supplier_response_metrics`, `supplier_performance_metrics`, `ai_knowledge_entries`), replace `true` with proper checks (e.g., restrict to service_role or check `auth.uid()`). Low-risk logging tables can remain as-is or be tightened to `role() = 'service_role'`.
+
+### 5. Extensions in Public Schema (2 issues)
+Extensions like `vector` are installed in the `public` schema instead of a dedicated `extensions` schema. This is a Supabase configuration issue.
+
+**Fix**: This is a manual Supabase dashboard change -- move extensions to the `extensions` schema. Low priority and may require downtime.
+
+### 6. Auth OTP Long Expiry
+OTP tokens have an expiry longer than recommended.
+
+**Fix**: In Supabase Dashboard > Authentication > Settings, reduce OTP expiry to 300 seconds (5 minutes).
+
+### 7. Postgres Version Needs Security Patches
+**Fix**: In Supabase Dashboard > Settings > Infrastructure, upgrade Postgres to the latest available version.
+
+---
+
+## Implementation Plan
+
+### Migration 1: Enable RLS on unprotected tables
 ```sql
-DROP FUNCTION IF EXISTS public.exec_readonly(jsonb);
+ALTER TABLE public.assessments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.entity_relationships ENABLE ROW LEVEL SECURITY;
+-- Add appropriate SELECT/INSERT/UPDATE/DELETE policies
 ```
 
-This function has zero references in application code, so removal has no side effects.
+### Migration 2: Fix mutable search paths
+```sql
+ALTER FUNCTION public.delete_branch_with_validation(uuid) SET search_path = 'public';
+ALTER FUNCTION public.platform_admin_reset_password(...) SET search_path = 'public';
+```
 
-### Step 2: Verify no other dynamic SQL executors exist
+### Migration 3: Tighten permissive policies on sensitive tables
+Replace `USING (true)` / `WITH CHECK (true)` on `subscriptions`, `credit_transactions`, `supplier_response_metrics`, `supplier_performance_metrics`, and `ai_knowledge_entries` with `role() = 'service_role'` checks so only edge functions (using service_role key) can modify them.
 
-Query for any remaining functions that use `EXECUTE` with text parameters -- already checked, `exec_readonly` is the only one of this pattern.
+### Migration 4: Fix security definer view
+Drop and recreate `profiles_with_roles` without SECURITY DEFINER, or restrict access.
+
+### Manual Steps (Supabase Dashboard)
+- Reduce OTP expiry to 300 seconds
+- Upgrade Postgres version
+- Optionally move extensions to `extensions` schema
 
 ---
 
 ### Files affected
-- **Database**: Drop `exec_readonly` function via migration
-- No application code changes needed (function is unused)
+- **Database only**: 3-4 migration files for the SQL changes
+- No application code changes needed
 

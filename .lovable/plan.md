@@ -1,108 +1,76 @@
 
 
-# Security Linter Issues -- Full Breakdown and Remediation Plan
+# Supabase API Schema Disclosure -- Assessment and Remediation Plan
 
-After running the linter and querying the database, here are all 24 issues grouped by severity:
+## Auditor's Recommendation Assessment
 
----
+The auditor is correct that the `/rest/v1/` endpoint exposes the full OpenAPI schema (table names, columns, RPC function signatures) to anyone with the public anon key. However, **Supabase does not provide a built-in toggle to hide this endpoint from the anon role** -- it's a core PostgREST behavior. Blocking it would require an external reverse proxy (Cloudflare Worker, API gateway), which adds infrastructure complexity.
 
-## ERRORS (Critical -- Must Fix)
-
-### 1. RLS Disabled on 2 Tables
-These public tables have **no Row Level Security** at all, meaning any authenticated (or anonymous) user can read/write all data:
-
-| Table | Risk |
-|-------|------|
-| `assessments` | Full read/write access to all assessment data |
-| `entity_relationships` | Full read/write access to all entity relationship data |
-
-**Fix**: Enable RLS on both tables and add appropriate policies (e.g., users can only access assessments/relationships tied to their company).
-
-### 2. Security Definer View: `profiles_with_roles`
-This view joins `profiles` with `user_roles` and runs with the **view creator's privileges**, bypassing RLS. Any user who can query this view sees all profiles and roles.
-
-**Fix**: Recreate as a regular view (drop `SECURITY DEFINER`) or replace with a security definer **function** that filters by `auth.uid()`.
+**That said, the real risk is not schema visibility -- it's what the anon role can actually DO.** And here we found critical issues.
 
 ---
 
-## WARNINGS (Should Fix)
+## CRITICAL FINDING: Dangerous RPC Functions Callable by Anonymous Users
 
-### 3. Functions Missing `search_path` (4 issues)
-These SECURITY DEFINER functions don't set `search_path`, making them vulnerable to search path injection:
+All 80+ RPC functions are granted `EXECUTE` to `PUBLIC` (which includes `anon`). While most use `auth.uid()` internally (which returns NULL for anon, blocking execution), **several have no authentication checks at all**:
 
-| Function |
-|----------|
-| `delete_branch_with_validation` |
-| `platform_admin_reset_password` |
-| + 2 others (likely `grant_pg_net_access`, `handle_new_user` -- from the vector extension functions that share the pattern) |
+### Critical -- No Auth Check (exploitable by anon)
+| Function | Risk | Detail |
+|----------|------|--------|
+| `add_credits` | **CRITICAL** | Accepts arbitrary `user_id` + `credits_amount`. No `auth.uid()` check. An attacker can give any user unlimited credits via the anon key. |
+| `consume_credits` | **HIGH** | Accepts arbitrary `user_id`. Could drain another user's credits. |
 
-**Fix**: Add `SET search_path = 'public'` to each function definition.
+### Medium -- Has Internal Guards but Should Be Restricted
+| Function | Risk | Detail |
+|----------|------|--------|
+| `create_bootstrap_super_admin` | Medium | Has "admin exists" guard but shouldn't be publicly callable |
+| `cleanup_expired_knowledge_entries` | Medium | System maintenance -- no reason to expose |
+| `get_companies_for_knowledge_refresh` | Medium | Internal system function |
+| `get_latest_expiring_documents` | Medium | Leaks document metadata |
 
-### 4. Overly Permissive RLS Policies (13 policies with `true`)
-These policies use `WITH CHECK (true)` or `USING (true)` on INSERT/UPDATE/DELETE/ALL, allowing any user to perform the operation:
-
-| Table | Policy | Command | Risk Level |
-|-------|--------|---------|------------|
-| `notifications` | System can create notifications | INSERT | Low -- notifications are created by system functions |
-| `user_activity_logs` | System can insert activity logs | INSERT | Low -- append-only logging |
-| `credit_transactions` | System can insert credit transactions | INSERT | **Medium** -- could forge credit transactions |
-| `auth_audit_logs` | Anyone can insert auth logs | INSERT | Low -- needed for auth flow |
-| `document_activity_logs` | Users can create activity logs | INSERT | Low -- append-only logging |
-| `supplier_response_metrics` | System can manage response metrics | ALL | **Medium** -- full access to all metrics |
-| `ai_knowledge_entries` | System can manage knowledge entries | ALL | **Medium** -- full access to knowledge base |
-| `subscriptions` | System can manage subscriptions | ALL | **High** -- any user could modify subscriptions |
-| `platform_admin_audit_logs` | System can insert audit logs | INSERT | Low -- append-only logging |
-| `supplier_performance_metrics` | System can manage performance metrics | ALL | **Medium** -- full access to metrics |
-| `document_expiry_notifications` | System can insert expiry notifications | INSERT | Low -- system-generated |
-| `support_tickets` | Anyone can create tickets | INSERT | Low -- intentional public access |
-| `communication_audit_logs` | System can insert audit logs | INSERT | Low -- append-only logging |
-
-**Fix**: For the high/medium-risk ones (`subscriptions`, `credit_transactions`, `supplier_response_metrics`, `supplier_performance_metrics`, `ai_knowledge_entries`), replace `true` with proper checks (e.g., restrict to service_role or check `auth.uid()`). Low-risk logging tables can remain as-is or be tightened to `role() = 'service_role'`.
-
-### 5. Extensions in Public Schema (2 issues)
-Extensions like `vector` are installed in the `public` schema instead of a dedicated `extensions` schema. This is a Supabase configuration issue.
-
-**Fix**: This is a manual Supabase dashboard change -- move extensions to the `extensions` schema. Low priority and may require downtime.
-
-### 6. Auth OTP Long Expiry
-OTP tokens have an expiry longer than recommended.
-
-**Fix**: In Supabase Dashboard > Authentication > Settings, reduce OTP expiry to 300 seconds (5 minutes).
-
-### 7. Postgres Version Needs Security Patches
-**Fix**: In Supabase Dashboard > Settings > Infrastructure, upgrade Postgres to the latest available version.
+### Trigger/Internal Functions -- Should Not Be Exposed as RPC
+Functions like `handle_new_user`, `normalize_request_status`, `sync_document_upload_status`, `update_updated_at_column`, `increment_unread_counts`, `reset_unread_on_read`, `auto_refresh_knowledge_base` are trigger functions that should never be callable via RPC.
 
 ---
 
-## Implementation Plan
+## Remediation Plan
 
-### Migration 1: Enable RLS on unprotected tables
+### Migration 1: Revoke PUBLIC EXECUTE on all functions, grant only to authenticated
+
+The safest approach is to **revoke EXECUTE from PUBLIC on all application functions** and explicitly grant to `authenticated` only. This means:
+- Anonymous users cannot call ANY RPC function
+- Authenticated users can call functions (which then use `auth.uid()` internally for authorization)
+- Service role bypasses grants entirely, so edge functions are unaffected
+
 ```sql
-ALTER TABLE public.assessments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.entity_relationships ENABLE ROW LEVEL SECURITY;
--- Add appropriate SELECT/INSERT/UPDATE/DELETE policies
+-- For each application function:
+REVOKE EXECUTE ON FUNCTION public.add_credits FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.consume_credits FROM PUBLIC;
+-- ... (all ~80 functions)
+GRANT EXECUTE ON FUNCTION public.add_credits TO authenticated;
+-- etc.
 ```
 
-### Migration 2: Fix mutable search paths
-```sql
-ALTER FUNCTION public.delete_branch_with_validation(uuid) SET search_path = 'public';
-ALTER FUNCTION public.platform_admin_reset_password(...) SET search_path = 'public';
-```
+For trigger-only functions, revoke from both `PUBLIC` and `authenticated` (they don't need to be callable via RPC at all).
 
-### Migration 3: Tighten permissive policies on sensitive tables
-Replace `USING (true)` / `WITH CHECK (true)` on `subscriptions`, `credit_transactions`, `supplier_response_metrics`, `supplier_performance_metrics`, and `ai_knowledge_entries` with `role() = 'service_role'` checks so only edge functions (using service_role key) can modify them.
+### Migration 2: Add auth checks to `add_credits` and `consume_credits`
 
-### Migration 4: Fix security definer view
-Drop and recreate `profiles_with_roles` without SECURITY DEFINER, or restrict access.
+Even after revoking anon access, these functions should validate the caller:
+- `add_credits`: Should only be callable by service_role (edge functions). Add a check that `auth.uid()` is not null, or better, restrict EXECUTE to `service_role` only.
+- `consume_credits`: Same -- restrict to service_role or validate `auth.uid() = p_user_id`.
 
-### Manual Steps (Supabase Dashboard)
-- Reduce OTP expiry to 300 seconds
-- Upgrade Postgres version
-- Optionally move extensions to `extensions` schema
+### Response to Auditor
+
+For the schema disclosure finding specifically, you can respond:
+> "We have restricted all RPC function execution to authenticated users only, and sensitive administrative functions are restricted to service_role. While the PostgREST OpenAPI endpoint remains visible (an inherent Supabase/PostgREST architectural characteristic), the attack surface has been eliminated: no table data is accessible to the anon role (all tables have RLS), and no functions are executable by anonymous callers. Schema metadata visibility without actionable access does not constitute an exploitable vulnerability."
 
 ---
 
-### Files affected
-- **Database only**: 3-4 migration files for the SQL changes
-- No application code changes needed
+### Files Affected
+- **Database**: 1 migration file with REVOKE/GRANT statements for all functions
+- No application code changes (authenticated users and service_role are unaffected)
+
+### Manual Steps
+- Consider adding a Cloudflare Worker to block `/rest/v1/` for unauthenticated requests (optional, for full compliance with auditor's letter)
+- Remove `graphql_public` from exposed schemas in Supabase Dashboard if GraphQL is not used
 

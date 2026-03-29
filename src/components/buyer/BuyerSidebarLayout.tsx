@@ -169,7 +169,7 @@ export function BuyerSidebarLayout({
     // Delay before opening to prevent accidental triggers
     hoverTimeoutRef.current = setTimeout(() => {
       setActiveDropdown(value);
-    }, 150);
+    }, 1000);
   }, []);
 
   const handleMouseLeave = useCallback(() => {
@@ -177,10 +177,10 @@ export function BuyerSidebarLayout({
       clearTimeout(hoverTimeoutRef.current);
     }
     
-    // Small delay before closing to allow moving to submenu
+    // Graceful buffer before closing
     hoverTimeoutRef.current = setTimeout(() => {
       setActiveDropdown(null);
-    }, 200);
+    }, 500);
   }, []);
 
   const cancelHoverTimeout = useCallback(() => {
@@ -519,8 +519,8 @@ export function BuyerSidebarLayout({
                         {item.title}
                       </span>
                       {item.submenu && (
-                        <ChevronDown 
-                          className={`ml-auto h-4 w-4 transition-transform duration-200 ${
+                      <ChevronDown 
+                          className={`ml-auto h-4 w-4 transition-transform duration-[400ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
                             isSubmenuExpanded(item) ? 'rotate-180' : ''
                           }`} 
                         />
@@ -531,33 +531,39 @@ export function BuyerSidebarLayout({
                         </Badge>
                       )}
                     </SidebarMenuButton>
-                    {item.submenu && isSubmenuExpanded(item) && (
-                      <SidebarMenuSub
-                        onMouseEnter={cancelHoverTimeout}
-                        onMouseLeave={handleMouseLeave}
-                      >
-                        {item.submenu.map((subItem) => (
-                          <SidebarMenuSubItem key={subItem.value}>
-                            <SidebarMenuSubButton
-                              asChild
-                              isActive={isActiveRoute(subItem.value)}
-                            >
-                              <button
-                                onClick={() => handleMenuClick(subItem.value)}
-                                className="w-full group"
-                              >
-                                {subItem.icon && <subItem.icon className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />}
-                                <span>{subItem.title}</span>
-                                {subItem.badge && (
-                                  <Badge variant="secondary" className="ml-auto">
-                                    {subItem.badge}
-                                  </Badge>
-                                )}
-                              </button>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
+                    {item.submenu && (
+                      <div className={`grid transition-all duration-[400ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
+                        isSubmenuExpanded(item) ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                      }`}>
+                        <div className="overflow-hidden">
+                          <SidebarMenuSub
+                            onMouseEnter={cancelHoverTimeout}
+                            onMouseLeave={handleMouseLeave}
+                          >
+                            {item.submenu.map((subItem) => (
+                              <SidebarMenuSubItem key={subItem.value}>
+                                <SidebarMenuSubButton
+                                  asChild
+                                  isActive={isActiveRoute(subItem.value)}
+                                >
+                                  <button
+                                    onClick={() => handleMenuClick(subItem.value)}
+                                    className="w-full group"
+                                  >
+                                    {subItem.icon && <subItem.icon className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />}
+                                    <span>{subItem.title}</span>
+                                    {subItem.badge && (
+                                      <Badge variant="secondary" className="ml-auto">
+                                        {subItem.badge}
+                                      </Badge>
+                                    )}
+                                  </button>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            ))}
+                          </SidebarMenuSub>
+                        </div>
+                      </div>
                     )}
                   </SidebarMenuItem>
                 ))}

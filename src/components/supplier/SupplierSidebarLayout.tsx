@@ -167,7 +167,7 @@ export function SupplierSidebarLayout({
     
     hoverTimeoutRef.current = setTimeout(() => {
       setActiveDropdown(value);
-    }, 150);
+    }, 1000);
   }, []);
 
   const handleMouseLeave = useCallback(() => {
@@ -177,7 +177,7 @@ export function SupplierSidebarLayout({
     
     hoverTimeoutRef.current = setTimeout(() => {
       setActiveDropdown(null);
-    }, 200);
+    }, 500);
   }, []);
 
   const cancelHoverTimeout = useCallback(() => {

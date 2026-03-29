@@ -48,8 +48,8 @@ const DataPointCard = ({ icon: Icon, stat, label, source, color }: { icon: any; 
         </div>
         <div>
           <p className="text-2xl font-bold text-foreground">{stat}</p>
-          <p className="text-sm text-foreground/80 mt-1 font-medium">{label}</p>
-          <p className="text-xs text-muted-foreground mt-2 italic">{source}</p>
+          <p className="text-sm text-muted-foreground mt-1 font-medium">{label}</p>
+          <p className="text-xs text-muted-foreground/70 mt-2 italic">{source}</p>
         </div>
       </div>
     </CardContent>

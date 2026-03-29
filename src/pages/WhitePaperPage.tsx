@@ -1,10 +1,11 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { motion, useScroll, useTransform, useInView } from 'framer-motion';
 import { 
-  ArrowRight, Shield, Brain, FileCheck, TrendingUp, AlertTriangle, 
+  ArrowRight, Shield, FileSearch, FileCheck, TrendingUp, AlertTriangle, 
   BarChart3, Clock, DollarSign, CheckCircle2, Target, Zap, 
-  Globe, Building2, ChevronDown, ExternalLink, Download,
-  FlaskConical, LineChart, Lock, Users, Layers, Cpu
+  Building2, ChevronDown, ExternalLink, Download,
+  FlaskConical, Activity, Lock, Users, Layers, Server,
+  Receipt, Siren, MapPin, History, Scale
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -72,11 +73,26 @@ const WhitePaperPage = () => {
   const { scrollYProgress } = useScroll({ target: containerRef });
   const progressWidth = useTransform(scrollYProgress, [0, 1], ['0%', '100%']);
 
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.innerHTML = `
+      @media print {
+        .no-print { display: none !important; }
+        body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        section { break-inside: avoid; }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => { document.head.removeChild(style); };
+  }, []);
+
+  const handleDownloadPdf = () => window.print();
+
   return (
     <div ref={containerRef} className="min-h-screen bg-background relative">
       {/* Reading Progress Bar */}
       <motion.div 
-        className="fixed top-0 left-0 h-1 bg-gradient-to-r from-primary via-accent to-primary z-50"
+        className="fixed top-0 left-0 h-1 bg-gradient-to-r from-primary via-accent to-primary z-50 no-print"
         style={{ width: progressWidth }}
       />
 
@@ -144,7 +160,7 @@ const WhitePaperPage = () => {
             <Button size="lg" className="gap-2 px-8 rounded-full" onClick={() => navigate('/')}>
               Request a Demo <ArrowRight className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="lg" className="gap-2 px-8 rounded-full">
+            <Button variant="outline" size="lg" className="gap-2 px-8 rounded-full no-print" onClick={handleDownloadPdf}>
               <Download className="h-4 w-4" /> Download PDF
             </Button>
           </motion.div>
@@ -357,7 +373,7 @@ const WhitePaperPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[
                   { step: '01', title: 'Intake & Classification', desc: 'AI automatically categorizes incoming documents — COAs, certifications, insurance, compliance forms — with intelligent metadata extraction.', icon: Layers },
-                  { step: '02', title: 'AI Validation', desc: 'GPT-4o Vision processes multi-page PDFs and DOCX files, extracting structured data with unit/analyte/method normalization.', icon: Brain },
+                  { step: '02', title: 'AI Validation', desc: 'AI Vision extracts structured data from multi-page PDFs and DOCX files, with unit/analyte/method normalization.', icon: FileSearch },
                   { step: '03', title: 'Compliance Scoring', desc: 'Documents are scored against configurable specs. Flagged items trigger automated workflows and stakeholder alerts.', icon: Shield },
                   { step: '04', title: 'Audit Trail', desc: 'Every action is logged immutably — from upload through approval — creating a forensic-ready compliance record.', icon: Lock },
                 ].map((item, i) => (
@@ -446,7 +462,7 @@ const WhitePaperPage = () => {
                 </div>
                 <ul className="space-y-4">
                   {[
-                    'GPT-4o Vision extracts structured data from multi-page PDFs & DOCX',
+                    'AI-powered extraction from multi-page PDFs & DOCX with 94% accuracy',
                     'Automatic unit normalization: ppm → mg/kg, ppb → µg/kg, % → mg/kg',
                     'Analyte & method mapping to canonical codes via internal dictionaries',
                     'Censored value parsing (ND, <LOD, <LOQ) with threshold extraction',
@@ -546,11 +562,11 @@ const WhitePaperPage = () => {
           <FadeInSection delay={0.2}>
             <div className="mt-16 grid grid-cols-1 lg:grid-cols-5 gap-4">
               {[
-                { factor: 'Trade & Tariff Sensitivity', weight: '0–20 pts', icon: Globe, desc: 'Monitors tariff changes, trade restrictions, and geopolitical risk exposure' },
-                { factor: 'Recall History', weight: '0–20 pts', icon: AlertTriangle, desc: 'Tracks FDA/USDA recalls, severity, frequency, and remediation history' },
+                { factor: 'Trade & Tariff Sensitivity', weight: '0–20 pts', icon: Scale, desc: 'Monitors tariff changes, trade restrictions, and geopolitical risk exposure' },
+                { factor: 'Recall History', weight: '0–20 pts', icon: History, desc: 'Tracks FDA/USDA recalls, severity, frequency, and remediation history' },
                 { factor: 'Regulatory Actions', weight: '0–15 pts', icon: Shield, desc: 'FDA warning letters, consent decrees, import alerts, and enforcement actions' },
                 { factor: 'Document Completeness', weight: '0–15 pts', icon: FileCheck, desc: 'Real-time monitoring of document currency, expiry, and coverage gaps' },
-                { factor: 'Geo Concentration', weight: '0–10 pts', icon: Globe, desc: 'Supply chain diversification analysis and single-source dependency risk' },
+                { factor: 'Geo Concentration', weight: '0–10 pts', icon: MapPin, desc: 'Supply chain diversification analysis and single-source dependency risk' },
               ].map((item, i) => (
                 <Card key={i} className="border-0 bg-card/80 p-5 hover:shadow-lg transition-all duration-300 group">
                   <item.icon className="h-6 w-6 text-primary mb-3 group-hover:scale-110 transition-transform" />
@@ -700,9 +716,9 @@ const WhitePaperPage = () => {
                 { icon: Lock, title: 'Row-Level Security', desc: 'Every database table enforces RLS policies ensuring tenant data isolation. No user can access another organization\'s data.' },
                 { icon: Shield, title: 'Zero-Trust Authentication', desc: 'Multi-factor authentication with Cloudflare Turnstile bot protection, login brute-force lockout, and session management.' },
                 { icon: Users, title: 'Multi-Tenant Architecture', desc: 'Complete data isolation between buyer and supplier organizations with branch-level access controls and role hierarchies.' },
-                { icon: Cpu, title: 'AI Agent Framework', desc: '52 serverless edge functions with rate limiting, input sanitization, and service-role-only access for sensitive operations.' },
-                { icon: LineChart, title: 'Real-Time Monitoring', desc: 'Continuous compliance monitoring with predictive analytics, automated alerts, and executive dashboards.' },
-                { icon: Globe, title: 'Global Compliance', desc: 'Multi-region deployment supporting FDA, EU, FSMA 204, HACCP, GMP, and industry-specific regulatory frameworks.' },
+                { icon: Server, title: 'AI Agent Framework', desc: '52 serverless edge functions with rate limiting, input sanitization, and service-role-only access for sensitive operations.' },
+                { icon: Activity, title: 'Real-Time Monitoring', desc: 'Continuous compliance monitoring with predictive analytics, automated alerts, and executive dashboards.' },
+                { icon: Building2, title: 'Global Compliance', desc: 'Multi-region deployment supporting FDA, EU, FSMA 204, HACCP, GMP, and industry-specific regulatory frameworks.' },
               ].map((item, i) => (
                 <Card key={i} className="border-0 bg-card/80 p-6 hover:shadow-lg transition-all duration-300 group">
                   <div className="rounded-xl p-3 bg-primary/10 w-fit mb-4 group-hover:bg-primary/15 transition-colors">

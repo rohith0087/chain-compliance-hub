@@ -11,8 +11,9 @@ import { demoSubmissions, type COASubmission } from './coaDemoData';
 import { COAScoreCard } from './COAScoreCard';
 import { COAComparisonTable } from './COAComparisonTable';
 import { COAFlagsBanner } from './COAFlagsBanner';
-import { format, parseISO, isSameDay } from 'date-fns';
+import { format, parseISO, isWithinInterval, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
+import type { DateRange } from 'react-day-picker';
 
 const passBadgeStyles: Record<string, string> = {
   pass: 'bg-green-100 text-green-700 border-green-300',
@@ -51,28 +52,52 @@ const dotColors: Record<DateStatus, string> = {
   red: 'bg-red-500',
 };
 
+const dotGlows: Record<DateStatus, string> = {
+  green: '0 0 4px #22c55e',
+  yellow: '0 0 4px #facc15',
+  orange: '0 0 4px #f97316',
+  red: '0 0 4px #ef4444',
+};
+
 export function COAResultsView() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const { data: liveSubmissions, isLoading } = useCOASubmissions();
 
   const submissions: COASubmission[] = liveSubmissions && liveSubmissions.length > 0 ? liveSubmissions : demoSubmissions;
 
-  const dateStatusMap = useMemo(() => computeDateStatusMap(submissions), [submissions]);
+  // Compute status dots based on supplier filter context
+  const dotsSourceSubmissions = useMemo(() => {
+    if (!searchQuery) return submissions;
+    return submissions.filter(s => s.supplier_name.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [submissions, searchQuery]);
 
-  const submissionDates = useMemo(() => {
-    return submissions.map(s => parseISO(s.submission_date));
-  }, [submissions]);
+  const dateStatusMap = useMemo(() => computeDateStatusMap(dotsSourceSubmissions), [dotsSourceSubmissions]);
 
   const filteredSubmissions = useMemo(() => {
     return submissions
       .filter(s => s.supplier_name.toLowerCase().includes(searchQuery.toLowerCase()))
-      .filter(s => !selectedDate || isSameDay(parseISO(s.submission_date), selectedDate));
-  }, [submissions, searchQuery, selectedDate]);
+      .filter(s => {
+        if (!dateRange?.from) return true;
+        const subDate = startOfDay(parseISO(s.submission_date));
+        if (dateRange.to) {
+          return isWithinInterval(subDate, { start: startOfDay(dateRange.from), end: startOfDay(dateRange.to) });
+        }
+        return subDate.getTime() === startOfDay(dateRange.from).getTime();
+      });
+  }, [submissions, searchQuery, dateRange]);
 
-  const hasFilters = searchQuery.length > 0 || !!selectedDate;
+  const hasFilters = searchQuery.length > 0 || !!dateRange?.from;
+
+  const rangeLabel = useMemo(() => {
+    if (!dateRange?.from) return null;
+    const fromStr = format(dateRange.from, 'MMM d, yyyy');
+    if (!dateRange.to) return fromStr;
+    const toStr = format(dateRange.to, 'MMM d, yyyy');
+    return `${fromStr} – ${toStr}`;
+  }, [dateRange]);
 
   if (isLoading) {
     return (
@@ -105,37 +130,45 @@ export function COAResultsView() {
         </div>
 
         <div className="flex items-center gap-2">
-          {selectedDate && (
+          {rangeLabel && (
             <Badge
               variant="secondary"
-              className="gap-1 cursor-pointer hover:bg-secondary/80 transition-colors"
-              onClick={() => setSelectedDate(undefined)}
+              className="gap-1 cursor-pointer hover:bg-secondary/80 transition-colors text-xs"
+              onClick={() => setDateRange(undefined)}
             >
-              {format(selectedDate, 'MMM d, yyyy')}
+              {rangeLabel}
               <X className="h-3 w-3" />
             </Badge>
           )}
 
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
+              <Button
+                variant="outline"
+                size="icon"
+                className={cn(
+                  "h-10 w-10 shrink-0 transition-colors",
+                  dateRange?.from && "border-primary/50 text-primary"
+                )}
+              >
                 <CalendarIcon className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
+            <PopoverContent className="w-auto p-0" align="end" sideOffset={8}>
               <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => {
-                  setSelectedDate(date);
-                  setCalendarOpen(false);
-                }}
+                mode="range"
+                selected={dateRange}
+                onSelect={setDateRange}
+                numberOfMonths={1}
                 className={cn("p-3 pointer-events-auto")}
-                modifiers={{
-                  hasSubmission: submissionDates,
+                classNames={{
+                  day_range_start: "day-range-end rounded-l-full bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                  day_range_end: "day-range-end rounded-r-full bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                  day_range_middle: "aria-selected:bg-primary/10 aria-selected:text-foreground rounded-none",
+                  day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
                 }}
                 components={{
-                  DayContent: ({ date, ...props }) => {
+                  DayContent: ({ date }) => {
                     const dateKey = format(date, 'yyyy-MM-dd');
                     const status = dateStatusMap.get(dateKey);
                     return (
@@ -144,10 +177,10 @@ export function COAResultsView() {
                         {status && (
                           <span
                             className={cn(
-                              'absolute -bottom-1 h-1.5 w-1.5 rounded-full',
+                              'absolute -bottom-1 h-1.5 w-1.5 rounded-full ring-1 ring-background',
                               dotColors[status]
                             )}
-                            style={{ boxShadow: `0 0 4px ${status === 'green' ? '#22c55e' : status === 'yellow' ? '#facc15' : status === 'orange' ? '#f97316' : '#ef4444'}` }}
+                            style={{ boxShadow: dotGlows[status] }}
                           />
                         )}
                       </div>
@@ -157,11 +190,19 @@ export function COAResultsView() {
                 initialFocus
               />
               {/* Legend */}
-              <div className="px-3 pb-3 flex items-center gap-3 text-[10px] text-muted-foreground">
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" /> All pass</span>
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-yellow-400" /> Minor</span>
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-orange-500" /> Moderate</span>
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" /> Critical</span>
+              <div className="px-3 pb-3 pt-1 flex items-center justify-center gap-4 text-[10px] text-muted-foreground border-t border-border/30">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-green-500 ring-1 ring-background" /> All pass
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-yellow-400 ring-1 ring-background" /> Minor
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-orange-500 ring-1 ring-background" /> Moderate
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-red-500 ring-1 ring-background" /> Critical
+                </span>
               </div>
             </PopoverContent>
           </Popover>
@@ -172,7 +213,7 @@ export function COAResultsView() {
             variant="ghost"
             size="sm"
             className="text-xs text-muted-foreground hover:text-foreground shrink-0"
-            onClick={() => { setSearchQuery(''); setSelectedDate(undefined); }}
+            onClick={() => { setSearchQuery(''); setDateRange(undefined); }}
           >
             Clear all
           </Button>

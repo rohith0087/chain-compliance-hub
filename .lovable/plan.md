@@ -1,44 +1,74 @@
 
 
-# COA Analysis Overview -- Rich Dashboard Redesign
+# COA Results -- Calendar Filter & Supplier Search
 
-## Current State
-The Overview tab shows 6 simple stat tiles (Total COAs, Passed, Failed, Total Flags, Avg Score, Overdue). It's functionally correct but provides no analytical depth -- a COA analyst gets no actionable insights from it.
+## What We're Building
 
-## What a COA Analyst Actually Needs
+A polished filter bar above the Results list with two controls:
+1. **Supplier Search** -- debounced text input that filters COA cards in real-time
+2. **Calendar Popover** -- Shadcn Calendar in a Popover with colored status dots per date, clicking a date filters results to that day
 
-A quality/compliance analyst reviewing COAs daily wants to see at a glance:
-1. **Which analytes are failing most** -- so they can address root causes with suppliers
-2. **Which suppliers are problematic** -- pass/fail/partial breakdown per supplier
-3. **Category risk heatmap** -- are failures concentrated in Micro, Heavy Metals, or Allergens?
-4. **Recent submission timeline** -- trend of scores over time
-5. **Critical alerts** -- Salmonella/Listeria detections, scores below 50, overdue schedules
-6. **Score distribution** -- how many COAs fall in each quality band
+## Layout
 
-## Plan
+```text
+┌─────────────────────────────────────────────────────┐
+│  🔍 [Search for a supplier...        ]   📅 [icon] │  ← Filter Bar
+├─────────────────────────────────────────────────────┤
+│  (existing flags banner)                            │
+│  (filtered COA result cards)                        │
+└─────────────────────────────────────────────────────┘
+```
 
-Rebuild `COAOverview.tsx` into a multi-section dashboard using data already available in `demoSubmissions`, `demoSchedules`, and `demoSpecs`. No new data fetching needed -- just smarter presentation of existing data.
+- Search bar on the left (flex-1), calendar icon button on the right
+- Calendar opens in a Popover on icon click
+- Active date filter shown as a removable chip/badge next to the calendar icon
+- "Clear filters" button appears when any filter is active
 
-### Layout (below the existing stat tiles row)
+## Calendar Status Dots
 
-**Row 1: Two columns**
-- **Left -- "Top Failing Analytes"**: Horizontal bar chart showing which analytes have the most failures/flags across all submissions (e.g., Lead: 2 fails, Gluten: 1 fail, Salmonella: 1 critical). Built with simple CSS bars, no charting library needed.
-- **Right -- "Supplier Performance"**: Table with supplier name, COA count, pass rate ring (reuse `COAScoreCard`), last submission date, and trend indicator.
+For each date that has COA submissions, render a small colored dot below the day number:
+- **Green** -- all COAs on that date passed
+- **Yellow** -- minor issues (1-2 analyte failures across submissions)
+- **Orange** -- moderate failures (3-5 analyte failures)
+- **Red** -- majority/critical failures
 
-**Row 2: Two columns**
-- **Left -- "Category Breakdown"**: Cards for Microbiological / Heavy Metals / Allergens showing pass/fail/flag counts per category with color-coded progress bars.
-- **Right -- "Critical Alerts"**: A list of actionable items -- critical pathogen detections, scores <50, overdue schedules, lead exceedances >2x limit. Each with severity badge and link context.
+Dots computed by grouping submissions by date, counting total failed analytes per date, then mapping to color thresholds.
 
-**Row 3: Full width**
-- **"Recent Submissions Timeline"**: Simple timeline/table showing last N submissions with score ring, supplier, product, date, and pass/fail badge. More useful than a chart for small data sets.
+## Technical Details
 
-### Technical Details
-- All data derived from existing `demoSubmissions` and `demoSchedules` arrays (with live data fallback already in place)
-- Reuse `COAScoreCard` for score rings
-- Use existing Card/CardContent components
-- Use Tailwind for bar charts (no library dependency)
-- Keep the top 6 stat tiles as-is, add sections below
+### File: `src/components/buyer/coa/COAResultsView.tsx`
+
+**New state:**
+- `searchQuery: string` -- supplier name filter
+- `selectedDate: Date | undefined` -- calendar date filter
+
+**Filter logic:**
+```
+filteredSubmissions = submissions
+  .filter(s => s.supplier_name.toLowerCase().includes(searchQuery))
+  .filter(s => !selectedDate || isSameDay(parseISO(s.submission_date), selectedDate))
+```
+
+**Calendar rendering:**
+- Use Shadcn `Calendar` inside `Popover`/`PopoverContent`
+- Add `pointer-events-auto` class per Shadcn datepicker guidelines
+- Use `modifiers` and `modifiersClassNames` (or custom `components.DayContent`) to render colored dots
+- Pre-compute a `Map<string, 'green'|'yellow'|'orange'|'red'>` from submissions data
+
+**Search bar:**
+- Simple `Input` with `Search` icon, no debounce needed for small dataset
+
+**Active filter indicators:**
+- When a date is selected, show a badge like "Feb 1, 2026 ×" next to the calendar
+- When search is active, show the search text
+- "Clear all" link when any filter active
+
+### Dependencies
+- `date-fns`: `isSameDay`, `format`, `parseISO` (already imported)
+- Shadcn `Calendar`, `Popover`, `PopoverTrigger`, `PopoverContent` (already exist)
+- `Input` component (already exists)
+- Lucide: `Search`, `CalendarIcon`, `X`
 
 ### Files Modified
-- `src/components/buyer/coa/COAOverview.tsx` -- expand from 47 lines to ~300 lines with new sections
+- `src/components/buyer/coa/COAResultsView.tsx` -- add filter bar, calendar popover, search input, filtering logic
 

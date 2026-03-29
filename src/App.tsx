@@ -32,6 +32,7 @@ import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import SupplierSimulation from "./pages/SupplierSimulation";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import MessagesPage from "./pages/MessagesPage";
+import WhitePaperPage from "./pages/WhitePaperPage";
 import "./i18n";
 import { BranchProvider } from "@/contexts/BranchContext";
 
@@ -255,6 +256,7 @@ const AppRoutes = () => {
                   
                   <Route path="/shared-document/:token" element={<SharedDocumentViewer />} />
                   <Route path="/supplier-simulation" element={<SupplierSimulation />} />
+                  <Route path="/white-paper" element={<WhitePaperPage />} />
                   <Route path="/help" element={<HelpCenterPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>

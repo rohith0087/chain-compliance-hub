@@ -1,35 +1,44 @@
 
 
-# Fix White Paper: Icons, Provider Names, and PDF Download
+# COA Analysis Overview -- Rich Dashboard Redesign
 
-## Issues Found
+## Current State
+The Overview tab shows 6 simple stat tiles (Total COAs, Passed, Failed, Total Flags, Avg Score, Overdue). It's functionally correct but provides no analytical depth -- a COA analyst gets no actionable insights from it.
 
-1. **Provider names**: "GPT-4o Vision" appears on lines 361 and 449 -- needs to be replaced with generic "AI" language
-2. **PDF download**: The "Download PDF" button (line 147) has no `onClick` handler -- does nothing
-3. **Icon refresh**: The current icons are functional but the user wants them to feel less generic/AI-themed
+## What a COA Analyst Actually Needs
 
-## Changes
+A quality/compliance analyst reviewing COAs daily wants to see at a glance:
+1. **Which analytes are failing most** -- so they can address root causes with suppliers
+2. **Which suppliers are problematic** -- pass/fail/partial breakdown per supplier
+3. **Category risk heatmap** -- are failures concentrated in Micro, Heavy Metals, or Allergens?
+4. **Recent submission timeline** -- trend of scores over time
+5. **Critical alerts** -- Salmonella/Listeria detections, scores below 50, overdue schedules
+6. **Score distribution** -- how many COAs fall in each quality band
 
-### 1. Remove Provider Names (WhitePaperPage.tsx)
+## Plan
 
-- Line 361: `'GPT-4o Vision processes multi-page PDFs and DOCX files...'` → `'AI Vision extracts structured data from multi-page PDFs & DOCX files...'`
-- Line 449: `'GPT-4o Vision extracts structured data from multi-page PDFs & DOCX'` → `'AI-powered extraction from multi-page PDFs & DOCX with 94% accuracy'`
+Rebuild `COAOverview.tsx` into a multi-section dashboard using data already available in `demoSubmissions`, `demoSchedules`, and `demoSpecs`. No new data fetching needed -- just smarter presentation of existing data.
 
-### 2. Fix PDF Download
+### Layout (below the existing stat tiles row)
 
-Add a `handleDownloadPdf` function using `window.print()` with a print-specific CSS media query approach. This captures the full styled page as a PDF without needing a heavy library like `@react-pdf/renderer` to rebuild the entire layout.
+**Row 1: Two columns**
+- **Left -- "Top Failing Analytes"**: Horizontal bar chart showing which analytes have the most failures/flags across all submissions (e.g., Lead: 2 fails, Gluten: 1 fail, Salmonella: 1 critical). Built with simple CSS bars, no charting library needed.
+- **Right -- "Supplier Performance"**: Table with supplier name, COA count, pass rate ring (reuse `COAScoreCard`), last submission date, and trend indicator.
 
-- Wire the "Download PDF" button's `onClick` to `window.print()`
-- Add a `@media print` style block that hides the progress bar, buttons, and navigation while making the content full-width
+**Row 2: Two columns**
+- **Left -- "Category Breakdown"**: Cards for Microbiological / Heavy Metals / Allergens showing pass/fail/flag counts per category with color-coded progress bars.
+- **Right -- "Critical Alerts"**: A list of actionable items -- critical pathogen detections, scores <50, overdue schedules, lead exceedances >2x limit. Each with severity badge and link context.
 
-### 3. Refresh Icons
+**Row 3: Full width**
+- **"Recent Submissions Timeline"**: Simple timeline/table showing last N submissions with score ring, supplier, product, date, and pass/fail badge. More useful than a chart for small data sets.
 
-Swap some icons to feel more product-specific and less generic:
-- Section 02 pipeline step 02: `Brain` → `FileSearch` (document scanning vs generic AI brain)
-- Section 04 risk factors: use more distinct icons -- `BarChart3` for trade sensitivity, `History` for recall history instead of repeating `Globe` and `AlertTriangle`
-- Section 06 architecture: `Cpu` → `Server` for AI Agent Framework, `LineChart` → `Activity` for monitoring
-- DataPointCard icons: vary more -- `Receipt` for cost cards, `Siren` for recall cards
+### Technical Details
+- All data derived from existing `demoSubmissions` and `demoSchedules` arrays (with live data fallback already in place)
+- Reuse `COAScoreCard` for score rings
+- Use existing Card/CardContent components
+- Use Tailwind for bar charts (no library dependency)
+- Keep the top 6 stat tiles as-is, add sections below
 
 ### Files Modified
-- `src/pages/WhitePaperPage.tsx` -- all three fixes in one file
+- `src/components/buyer/coa/COAOverview.tsx` -- expand from 47 lines to ~300 lines with new sections
 

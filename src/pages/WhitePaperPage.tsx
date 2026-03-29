@@ -62,7 +62,7 @@ const ROIRow = ({ label, before, after, savings }: { label: string; before: stri
     <p className="text-sm font-medium text-foreground">{label}</p>
     <p className="text-sm text-muted-foreground text-center">{before}</p>
     <p className="text-sm text-primary font-semibold text-center">{after}</p>
-    <p className="text-sm text-emerald-600 font-bold text-center">{savings}</p>
+    <p className="text-sm text-success font-bold text-center">{savings}</p>
   </div>
 );
 
@@ -501,15 +501,15 @@ const WhitePaperPage = () => {
                   <p className="text-sm font-mono text-primary/60 mb-2">CLASSIFICATION</p>
                   <div className="space-y-3 mt-2">
                     <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full bg-emerald-500" />
+                      <div className="h-3 w-3 rounded-full bg-success" />
                       <span className="text-sm"><strong>Pass</strong> — Score ≥ 80, no critical flags</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full bg-amber-500" />
+                      <div className="h-3 w-3 rounded-full bg-warning" />
                       <span className="text-sm"><strong>Partial</strong> — Score ≥ 50 or non-critical flags</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full bg-red-500" />
+                      <div className="h-3 w-3 rounded-full bg-destructive" />
                       <span className="text-sm"><strong>Fail</strong> — Score &lt; 50 or critical flag</span>
                     </div>
                   </div>
@@ -617,7 +617,7 @@ const WhitePaperPage = () => {
                 <p className="text-sm font-bold text-foreground">Metric</p>
                 <p className="text-sm font-bold text-muted-foreground text-center">Manual Process</p>
                 <p className="text-sm font-bold text-primary text-center">With Platform</p>
-                <p className="text-sm font-bold text-emerald-600 text-center">Improvement</p>
+                <p className="text-sm font-bold text-success text-center">Improvement</p>
               </div>
               <div className="p-6">
                 <ROIRow label="Document Processing Cost" before="$15–$26/doc" after="$2–$5/doc" savings="78% Reduction" />

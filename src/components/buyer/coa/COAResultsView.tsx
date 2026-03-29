@@ -7,10 +7,12 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ChevronDown, ChevronUp, Calendar as CalendarIcon, Hash, Loader2, Search, X } from 'lucide-react';
 import { useCOASubmissions } from '@/hooks/useCOA';
-import { demoSubmissions, type COASubmission } from './coaDemoData';
+import { demoSubmissions, type COASubmission, type COAAnalyteResult } from './coaDemoData';
 import { COAScoreCard } from './COAScoreCard';
 import { COAComparisonTable } from './COAComparisonTable';
 import { COAFlagsBanner } from './COAFlagsBanner';
+import { AnalyteReviewDialog, type AnalyteNote } from './AnalyteReviewDialog';
+import { COANotesPanel } from './COANotesPanel';
 import { format, parseISO, isWithinInterval, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { DateRange } from 'react-day-picker';
@@ -66,9 +68,14 @@ export function COAResultsView() {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const { data: liveSubmissions, isLoading } = useCOASubmissions();
 
+  // Notes / review state
+  const [notes, setNotes] = useState<Map<string, AnalyteNote>>(new Map());
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [selectedAnalyte, setSelectedAnalyte] = useState<COAAnalyteResult | null>(null);
+  const [selectedSubmission, setSelectedSubmission] = useState<COASubmission | null>(null);
+
   const submissions: COASubmission[] = liveSubmissions && liveSubmissions.length > 0 ? liveSubmissions : demoSubmissions;
 
-  // Compute status dots based on supplier filter context
   const dotsSourceSubmissions = useMemo(() => {
     if (!searchQuery) return submissions;
     return submissions.filter(s => s.supplier_name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -98,6 +105,36 @@ export function COAResultsView() {
     const toStr = format(dateRange.to, 'MMM d, yyyy');
     return `${fromStr} – ${toStr}`;
   }, [dateRange]);
+
+  // Overrides: Set of analyte IDs that are marked false positive
+  const overridesForSubmission = (submissionId: string): Set<string> => {
+    const set = new Set<string>();
+    for (const [key, n] of notes) {
+      if (n.submissionId === submissionId && n.isFalsePositive) {
+        set.add(n.analyteId);
+      }
+    }
+    return set;
+  };
+
+  const handleAnalyteClick = (analyte: COAAnalyteResult, submission: COASubmission) => {
+    setSelectedAnalyte(analyte);
+    setSelectedSubmission(submission);
+    setReviewDialogOpen(true);
+  };
+
+  const handleSaveNote = (note: AnalyteNote) => {
+    const key = `${note.submissionId}:${note.analyteId}`;
+    setNotes(prev => {
+      const next = new Map(prev);
+      next.set(key, note);
+      return next;
+    });
+  };
+
+  const existingNoteForSelected = selectedAnalyte && selectedSubmission
+    ? notes.get(`${selectedSubmission.id}:${selectedAnalyte.id}`)
+    : undefined;
 
   if (isLoading) {
     return (
@@ -206,6 +243,8 @@ export function COAResultsView() {
               </div>
             </PopoverContent>
           </Popover>
+
+          <COANotesPanel notes={notes} hasActiveFilter={hasFilters} />
         </div>
 
         {hasFilters && (
@@ -276,7 +315,11 @@ export function COAResultsView() {
 
                   {isExpanded && (
                     <div className="border-t border-border/50 p-4 bg-muted/10">
-                      <COAComparisonTable results={sub.analyte_results} />
+                      <COAComparisonTable
+                        results={sub.analyte_results}
+                        onAnalyteClick={(analyte) => handleAnalyteClick(analyte, sub)}
+                        overrides={overridesForSubmission(sub.id)}
+                      />
                     </div>
                   )}
                 </CardContent>
@@ -285,6 +328,17 @@ export function COAResultsView() {
           })}
         </div>
       )}
+
+      <AnalyteReviewDialog
+        open={reviewDialogOpen}
+        onOpenChange={setReviewDialogOpen}
+        analyte={selectedAnalyte}
+        existingNote={existingNoteForSelected}
+        onSave={handleSaveNote}
+        supplierName={selectedSubmission?.supplier_name || ''}
+        submissionId={selectedSubmission?.id || ''}
+        submissionDate={selectedSubmission?.submission_date || ''}
+      />
     </div>
   );
 }

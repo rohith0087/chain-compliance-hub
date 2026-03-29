@@ -1,11 +1,13 @@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { CheckCircle2, XCircle, AlertTriangle, HelpCircle, Info } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, HelpCircle, Info, ShieldCheck } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { COAAnalyteResult } from './coaDemoData';
 
 interface COAComparisonTableProps {
   results: COAAnalyteResult[];
+  onAnalyteClick?: (analyte: COAAnalyteResult) => void;
+  overrides?: Set<string>; // Set of analyte IDs that have been marked as false positive
 }
 
 const statusConfig = {
@@ -15,7 +17,7 @@ const statusConfig = {
   unknown_analyte: { icon: HelpCircle, color: 'text-blue-500', bg: 'bg-blue-100 text-blue-700 border-blue-300', label: 'Unknown' },
 };
 
-export function COAComparisonTable({ results }: COAComparisonTableProps) {
+export function COAComparisonTable({ results, onAnalyteClick, overrides }: COAComparisonTableProps) {
   return (
     <div className="rounded-lg border border-border/50 overflow-hidden">
       <Table>
@@ -32,19 +34,33 @@ export function COAComparisonTable({ results }: COAComparisonTableProps) {
         </TableHeader>
         <TableBody>
           {results.map((r) => {
+            const isOverridden = overrides?.has(r.id);
             const cfg = statusConfig[r.status];
-            const Icon = cfg.icon;
+            const Icon = isOverridden ? ShieldCheck : cfg.icon;
+            const iconColor = isOverridden ? 'text-blue-500' : cfg.color;
+
             return (
-              <TableRow key={r.id} className={r.status === 'fail' ? 'bg-destructive/5' : ''}>
+              <TableRow
+                key={r.id}
+                className={`${r.status === 'fail' && !isOverridden ? 'bg-destructive/5' : ''} ${onAnalyteClick ? 'cursor-pointer hover:bg-muted/40 transition-colors' : ''}`}
+                onClick={() => onAnalyteClick?.(r)}
+              >
                 <TableCell>
                   <Tooltip>
                     <TooltipTrigger>
-                      <Icon className={`h-4 w-4 ${cfg.color}`} />
+                      <Icon className={`h-4 w-4 ${iconColor}`} />
                     </TooltipTrigger>
-                    <TooltipContent>{cfg.label}</TooltipContent>
+                    <TooltipContent>{isOverridden ? 'Overridden (False Positive)' : cfg.label}</TooltipContent>
                   </Tooltip>
                 </TableCell>
-                <TableCell className="font-medium">{r.analyte_name}</TableCell>
+                <TableCell>
+                  <span className="font-medium">{r.analyte_name}</span>
+                  {isOverridden && (
+                    <Badge variant="outline" className="ml-1.5 text-[10px] px-1.5 py-0 border-blue-200 text-blue-600 bg-blue-50">
+                      Overridden
+                    </Badge>
+                  )}
+                </TableCell>
                 <TableCell>
                   <span className="text-muted-foreground">{r.raw_value} {r.raw_unit !== '-' ? r.raw_unit : ''}</span>
                   {r.is_censored && (
@@ -84,7 +100,9 @@ export function COAComparisonTable({ results }: COAComparisonTableProps) {
                 </TableCell>
                 <TableCell>
                   {r.flag_reason ? (
-                    <span className="text-xs text-muted-foreground">{r.flag_reason}</span>
+                    <span className={`text-xs text-muted-foreground ${isOverridden ? 'line-through opacity-60' : ''}`}>
+                      {r.flag_reason}
+                    </span>
                   ) : (
                     <span className="text-muted-foreground text-xs">—</span>
                   )}

@@ -1,43 +1,73 @@
 
 
-# Sidebar Dropdown Hover UX Improvements
+# COA Results -- Analyte Actions (False Positive + Notes) and Notes Tab
 
-## Current State
-Both `BuyerSidebarLayout.tsx` and `SupplierSidebarLayout.tsx` have identical hover logic:
-- **Open delay**: 150ms (too fast, causes accidental triggers)
-- **Close delay**: 200ms (too short, menu disappears if cursor slips)
-- **Animation**: None -- submenu renders/unmounts instantly via conditional `{isSubmenuExpanded(item) && <SidebarMenuSub>}`
-- **Chevron rotation**: 200ms transition only
+## What We're Building
 
-## Changes
+Three connected features:
 
-### 1. Increase hover delays
-- **Open delay**: 150ms → **1000ms** (1 second hover intent)
-- **Close delay**: 200ms → **500ms** (graceful buffer before closing)
+### 1. Clickable Analyte Rows with Action Dialog
+When a user clicks any analyte row in the `COAComparisonTable`, a polished dialog opens with two actions:
+- **Mark as False Positive** -- toggle button that visually marks the analyte as overridden (e.g., agent flagged it as "fail" but user confirms it's actually fine)
+- **Add Note** -- text area to attach a note explaining the override or any observation
 
-Both files, same pattern -- update the `setTimeout` values in `handleMouseEnter` and `handleMouseLeave`.
+The dialog shows the analyte context (name, raw value, spec range, current status) at the top so the user knows exactly what they're annotating.
 
-### 2. Animate submenu expand/collapse
-Currently submenus are conditionally rendered (`&& <SidebarMenuSub>`), causing instant mount/unmount with no transition. Replace with:
-- Always render `<SidebarMenuSub>` but wrap in a container with `max-height`, `opacity`, and `overflow-hidden` transitions
-- Use CSS grid trick (`grid-template-rows: 0fr` → `1fr`) for smooth height animation
-- **Duration**: 400ms with `cubic-bezier(0.4, 0, 0.2, 1)` (ease-out feel -- snappy start, soft settle)
+### 2. Visual Indicators on Overridden Analytes
+After marking false positive:
+- The row gets a subtle visual change (e.g., strikethrough on the flag reason, a small "Overridden" badge)
+- The status icon changes to a distinct icon (e.g., `ShieldCheck` in a muted blue) to distinguish from a normal pass
 
-Implementation: wrap the `SidebarMenuSub` in a `div` with transition classes:
+### 3. Notes Tab (icon beside calendar)
+- A `StickyNote` icon button next to the calendar icon in the filter bar
+- Opens a popover/panel showing all notes across submissions
+- Each note entry shows: analyte name, supplier, date, note text, whether it was a false positive override
+- Serves as a running audit log of analyst decisions
+
+## Dialog Design
+
+```text
+┌──────────────────────────────────────────────┐
+│  Analyte Review                          [×] │
+├──────────────────────────────────────────────┤
+│                                              │
+│  Analyte:    Gluten                          │
+│  Value:      25 ppm  |  Spec Max: 20 ppm    │
+│  Status:     ● Fail                          │
+│  Method:     R5_ELISA                        │
+│                                              │
+│  ─────────────────────────────────────────── │
+│                                              │
+│  [ ] Mark as False Positive                  │
+│      "The AI flagged this incorrectly.       │
+│       This override will be recorded."       │
+│                                              │
+│  Note (optional)                             │
+│  ┌──────────────────────────────────────┐    │
+│  │                                      │    │
+│  │                                      │    │
+│  └──────────────────────────────────────┘    │
+│                                              │
+│              [Cancel]  [Save Review]         │
+└──────────────────────────────────────────────┘
 ```
-<div className={`grid transition-all duration-[400ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
-  isSubmenuExpanded(item) ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-}`}>
-  <div className="overflow-hidden">
-    <SidebarMenuSub ...> ... </SidebarMenuSub>
-  </div>
-</div>
-```
 
-### 3. Match chevron animation duration
-Update ChevronDown transition from `duration-200` to `duration-[400ms]` with the same easing.
+Clean, minimal -- no gradients, no excessive color. Uses existing Shadcn Dialog, Checkbox, Textarea, Button.
+
+## Technical Details
+
+### State Management
+- Use React `useState` in `COAResultsView` to hold a `Map<string, AnalyteNote>` keyed by `{submissionId}:{analyteId}`
+- `AnalyteNote = { isFalsePositive: boolean; note: string; timestamp: string; supplierName: string; analyteName: string; submissionDate: string }`
+- This is client-side for now (demo data); structure ready for Supabase persistence later
 
 ### Files Modified
-- `src/components/buyer/BuyerSidebarLayout.tsx` -- update delays + add animated submenu wrapper
-- `src/components/supplier/SupplierSidebarLayout.tsx` -- same changes
+- **`src/components/buyer/coa/COAComparisonTable.tsx`** -- make rows clickable, accept `onAnalyteClick` callback, show override indicators
+- **`src/components/buyer/coa/COAResultsView.tsx`** -- add notes state, Notes icon button with popover, pass callbacks to table
+- **New: `src/components/buyer/coa/AnalyteReviewDialog.tsx`** -- the review/override dialog component
+- **New: `src/components/buyer/coa/COANotesPanel.tsx`** -- the notes popover panel listing all notes
+
+### No changes to
+- `coaDemoData.ts` types (notes are separate overlay state, not part of analyte data)
+- Calendar or search logic
 

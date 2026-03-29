@@ -1,74 +1,43 @@
 
 
-# COA Results -- Calendar Filter & Supplier Search
+# Sidebar Dropdown Hover UX Improvements
 
-## What We're Building
+## Current State
+Both `BuyerSidebarLayout.tsx` and `SupplierSidebarLayout.tsx` have identical hover logic:
+- **Open delay**: 150ms (too fast, causes accidental triggers)
+- **Close delay**: 200ms (too short, menu disappears if cursor slips)
+- **Animation**: None -- submenu renders/unmounts instantly via conditional `{isSubmenuExpanded(item) && <SidebarMenuSub>}`
+- **Chevron rotation**: 200ms transition only
 
-A polished filter bar above the Results list with two controls:
-1. **Supplier Search** -- debounced text input that filters COA cards in real-time
-2. **Calendar Popover** -- Shadcn Calendar in a Popover with colored status dots per date, clicking a date filters results to that day
+## Changes
 
-## Layout
+### 1. Increase hover delays
+- **Open delay**: 150ms → **1000ms** (1 second hover intent)
+- **Close delay**: 200ms → **500ms** (graceful buffer before closing)
 
-```text
-┌─────────────────────────────────────────────────────┐
-│  🔍 [Search for a supplier...        ]   📅 [icon] │  ← Filter Bar
-├─────────────────────────────────────────────────────┤
-│  (existing flags banner)                            │
-│  (filtered COA result cards)                        │
-└─────────────────────────────────────────────────────┘
+Both files, same pattern -- update the `setTimeout` values in `handleMouseEnter` and `handleMouseLeave`.
+
+### 2. Animate submenu expand/collapse
+Currently submenus are conditionally rendered (`&& <SidebarMenuSub>`), causing instant mount/unmount with no transition. Replace with:
+- Always render `<SidebarMenuSub>` but wrap in a container with `max-height`, `opacity`, and `overflow-hidden` transitions
+- Use CSS grid trick (`grid-template-rows: 0fr` → `1fr`) for smooth height animation
+- **Duration**: 400ms with `cubic-bezier(0.4, 0, 0.2, 1)` (ease-out feel -- snappy start, soft settle)
+
+Implementation: wrap the `SidebarMenuSub` in a `div` with transition classes:
+```
+<div className={`grid transition-all duration-[400ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
+  isSubmenuExpanded(item) ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+}`}>
+  <div className="overflow-hidden">
+    <SidebarMenuSub ...> ... </SidebarMenuSub>
+  </div>
+</div>
 ```
 
-- Search bar on the left (flex-1), calendar icon button on the right
-- Calendar opens in a Popover on icon click
-- Active date filter shown as a removable chip/badge next to the calendar icon
-- "Clear filters" button appears when any filter is active
-
-## Calendar Status Dots
-
-For each date that has COA submissions, render a small colored dot below the day number:
-- **Green** -- all COAs on that date passed
-- **Yellow** -- minor issues (1-2 analyte failures across submissions)
-- **Orange** -- moderate failures (3-5 analyte failures)
-- **Red** -- majority/critical failures
-
-Dots computed by grouping submissions by date, counting total failed analytes per date, then mapping to color thresholds.
-
-## Technical Details
-
-### File: `src/components/buyer/coa/COAResultsView.tsx`
-
-**New state:**
-- `searchQuery: string` -- supplier name filter
-- `selectedDate: Date | undefined` -- calendar date filter
-
-**Filter logic:**
-```
-filteredSubmissions = submissions
-  .filter(s => s.supplier_name.toLowerCase().includes(searchQuery))
-  .filter(s => !selectedDate || isSameDay(parseISO(s.submission_date), selectedDate))
-```
-
-**Calendar rendering:**
-- Use Shadcn `Calendar` inside `Popover`/`PopoverContent`
-- Add `pointer-events-auto` class per Shadcn datepicker guidelines
-- Use `modifiers` and `modifiersClassNames` (or custom `components.DayContent`) to render colored dots
-- Pre-compute a `Map<string, 'green'|'yellow'|'orange'|'red'>` from submissions data
-
-**Search bar:**
-- Simple `Input` with `Search` icon, no debounce needed for small dataset
-
-**Active filter indicators:**
-- When a date is selected, show a badge like "Feb 1, 2026 ×" next to the calendar
-- When search is active, show the search text
-- "Clear all" link when any filter active
-
-### Dependencies
-- `date-fns`: `isSameDay`, `format`, `parseISO` (already imported)
-- Shadcn `Calendar`, `Popover`, `PopoverTrigger`, `PopoverContent` (already exist)
-- `Input` component (already exists)
-- Lucide: `Search`, `CalendarIcon`, `X`
+### 3. Match chevron animation duration
+Update ChevronDown transition from `duration-200` to `duration-[400ms]` with the same easing.
 
 ### Files Modified
-- `src/components/buyer/coa/COAResultsView.tsx` -- add filter bar, calendar popover, search input, filtering logic
+- `src/components/buyer/BuyerSidebarLayout.tsx` -- update delays + add animated submenu wrapper
+- `src/components/supplier/SupplierSidebarLayout.tsx` -- same changes
 

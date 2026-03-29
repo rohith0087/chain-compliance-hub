@@ -649,7 +649,7 @@ const WhitePaperPage = () => {
                   <p className="text-xs mt-4 opacity-60 italic">Source: Floowed ROI Analysis, 2024</p>
                 </CardContent>
               </Card>
-              <Card className="border-0 overflow-hidden bg-gradient-to-br from-emerald-600 to-emerald-500 text-white">
+              <Card className="border-0 overflow-hidden bg-gradient-to-br from-success to-success/80 text-success-foreground">
                 <CardContent className="p-8">
                   <TrendingUp className="h-8 w-8 mb-4 opacity-80" />
                   <p className="text-4xl font-bold">3–6 mo</p>
@@ -661,7 +661,7 @@ const WhitePaperPage = () => {
                   <p className="text-xs mt-4 opacity-60 italic">Source: Floowed ROI Analysis, 2026</p>
                 </CardContent>
               </Card>
-              <Card className="border-0 overflow-hidden bg-gradient-to-br from-violet-600 to-violet-500 text-white">
+              <Card className="border-0 overflow-hidden bg-gradient-to-br from-secondary to-primary text-primary-foreground">
                 <CardContent className="p-8">
                   <BarChart3 className="h-8 w-8 mb-4 opacity-80" />
                   <p className="text-4xl font-bold">50–70%</p>

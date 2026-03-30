@@ -12,6 +12,8 @@ import { ModelTuningPanel } from './ModelTuningPanel';
 import { SupplierProfileSidebar } from './SupplierProfileSidebar';
 import { RequestDetailsModal } from './RequestDetailsModal';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { generateSupplierRiskPDF } from '@/utils/generateSupplierRiskPDF';
+import { useAuth } from '@/hooks/useAuth';
 
 export function SupplierRiskAssessment() {
   const [selectedId, setSelectedId] = useState(suppliers[0].id);

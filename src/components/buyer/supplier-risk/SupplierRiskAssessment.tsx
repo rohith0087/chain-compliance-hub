@@ -59,12 +59,6 @@ export function SupplierRiskAssessment() {
               ))}
             </SelectContent>
           </Select>
-          <Badge className="bg-green-100 text-green-700 border-0 dark:bg-green-900/40 dark:text-green-300 gap-1">
-            <Wifi className="h-3 w-3" /> Connected
-          </Badge>
-          <Badge variant="secondary" className="gap-1">
-            <Activity className="h-3 w-3" /> Monitoring ON
-          </Badge>
           <Badge variant="outline" className="gap-1 text-xs">
             <Clock className="h-3 w-3" /> Last refresh: 12 min ago
           </Badge>

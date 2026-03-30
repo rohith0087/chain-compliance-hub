@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Wifi, Activity, Clock, FileDown, Share2, Flag, ChevronRight, Send } from 'lucide-react';
+import { Clock, FileDown, Share2, Flag, ChevronRight, Send } from 'lucide-react';
 import { suppliers, SupplierRiskProfile } from './riskData';
 import { RiskScoreHero } from './RiskScoreHero';
 import { KeyDrivers } from './KeyDrivers';

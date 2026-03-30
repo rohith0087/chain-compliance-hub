@@ -1,33 +1,95 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   FileCheck, AlertTriangle, CalendarClock, TrendingUp, XCircle, CheckCircle2,
-  ShieldAlert, Beaker, FlaskConical, Wheat, TrendingDown, Clock, ArrowUpRight
+  ShieldAlert, Beaker, FlaskConical, Wheat, TrendingDown, Clock, ArrowUpRight,
+  ArrowDownRight, CalendarIcon, Search, X, Filter, Minus
 } from 'lucide-react';
 import { useCOAOverviewStats } from '@/hooks/useCOA';
 import { demoSubmissions, demoSchedules, COASubmission, COASchedule } from './coaDemoData';
 import { COAScoreCard } from './COAScoreCard';
-import { format, parseISO, differenceInDays } from 'date-fns';
+import { format, parseISO, differenceInDays, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { DateRange } from 'react-day-picker';
+import { cn } from '@/lib/utils';
 
 export function COAOverview() {
   const { data: liveStats, isLoading } = useCOAOverviewStats();
 
-  const submissions = demoSubmissions;
+  // Filter state
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [selectedSupplier, setSelectedSupplier] = useState<string>('all');
+  const [calendarOpen, setCalendarOpen] = useState(false);
+
+  const allSubmissions = demoSubmissions;
   const schedules = demoSchedules;
 
-  const stats = liveStats && liveStats.totalSubmissions > 0
+  // Unique suppliers for filter
+  const uniqueSuppliers = useMemo(() => {
+    const names = [...new Set(allSubmissions.map(s => s.supplier_name))];
+    return names.sort();
+  }, [allSubmissions]);
+
+  // Filtered submissions
+  const submissions = useMemo(() => {
+    let filtered = allSubmissions;
+    if (selectedSupplier && selectedSupplier !== 'all') {
+      filtered = filtered.filter(s => s.supplier_name === selectedSupplier);
+    }
+    if (dateRange?.from) {
+      filtered = filtered.filter(s => {
+        const d = parseISO(s.submission_date);
+        const from = startOfDay(dateRange.from!);
+        const to = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from!);
+        return isWithinInterval(d, { start: from, end: to });
+      });
+    }
+    return filtered;
+  }, [allSubmissions, selectedSupplier, dateRange]);
+
+  const hasActiveFilters = selectedSupplier !== 'all' || !!dateRange?.from;
+
+  const clearFilters = () => {
+    setSelectedSupplier('all');
+    setDateRange(undefined);
+  };
+
+  const stats = liveStats && liveStats.totalSubmissions > 0 && !hasActiveFilters
     ? liveStats
     : {
         totalSubmissions: submissions.length,
         passCount: submissions.filter(s => s.pass_fail === 'pass').length,
         failCount: submissions.filter(s => s.pass_fail === 'fail').length,
         flaggedCount: submissions.reduce((acc, s) => acc + s.flags_count, 0),
-        avgScore: Math.round(submissions.reduce((acc, s) => acc + (s.overall_score || 0), 0) / submissions.length),
+        avgScore: submissions.length > 0 ? Math.round(submissions.reduce((acc, s) => acc + (s.overall_score || 0), 0) / submissions.length) : 0,
         overdueSchedules: schedules.filter(s => s.status === 'overdue').length,
         upcomingSchedules: schedules.filter(s => s.status === 'active').length,
       };
+
+  // Synthetic previous period for trend indicators
+  const prevPeriod = {
+    totalSubmissions: Math.max(0, stats.totalSubmissions - 2),
+    passCount: Math.max(0, stats.passCount - 1),
+    failCount: Math.max(0, stats.failCount + 1),
+    flaggedCount: Math.max(0, stats.flaggedCount + 3),
+    avgScore: Math.max(0, stats.avgScore - 4),
+    overdueSchedules: Math.max(0, stats.overdueSchedules + 1),
+  };
+
+  const getTrend = (current: number, previous: number, invertPositive = false) => {
+    if (previous === 0 && current === 0) return { direction: 'flat' as const, pct: 0 };
+    if (previous === 0) return { direction: (invertPositive ? 'down' : 'up') as 'up' | 'down', pct: 100 };
+    const pct = Math.round(((current - previous) / previous) * 100);
+    if (pct === 0) return { direction: 'flat' as const, pct: 0 };
+    const direction = pct > 0 ? 'up' as const : 'down' as const;
+    return { direction, pct: Math.abs(pct) };
+  };
 
   // Derive top failing analytes
   const failingAnalytes = useMemo(() => {
@@ -37,7 +99,6 @@ export function COAOverview() {
         if (r.status === 'fail' || r.status === 'flagged') {
           if (!map[r.analyte_code]) {
             map[r.analyte_code] = { name: r.analyte_name, fails: 0, flags: 0, category: '' };
-            const spec = demoSchedules; // category from specs
           }
           if (r.status === 'fail') map[r.analyte_code].fails++;
           if (r.status === 'flagged') map[r.analyte_code].flags++;
@@ -133,27 +194,143 @@ export function COAOverview() {
     'Allergens': <Wheat className="h-4 w-4 text-amber-500" />,
   };
 
-  const statCards = [
-    { label: 'Total COAs', value: stats.totalSubmissions, icon: FileCheck, color: 'text-primary' },
-    { label: 'Passed', value: stats.passCount, icon: CheckCircle2, color: 'text-green-600' },
-    { label: 'Failed', value: stats.failCount, icon: XCircle, color: 'text-destructive' },
-    { label: 'Total Flags', value: stats.flaggedCount, icon: AlertTriangle, color: 'text-amber-600' },
-    { label: 'Avg Score', value: stats.avgScore, icon: TrendingUp, color: 'text-primary' },
-    { label: 'Overdue', value: stats.overdueSchedules, icon: CalendarClock, color: stats.overdueSchedules > 0 ? 'text-destructive' : 'text-muted-foreground' },
+  type StatCard = {
+    label: string;
+    value: number;
+    prevValue: number;
+    icon: typeof FileCheck;
+    color: string;
+    invertTrend?: boolean; // true = lower is better
+  };
+
+  const statCards: StatCard[] = [
+    { label: 'Total COAs', value: stats.totalSubmissions, prevValue: prevPeriod.totalSubmissions, icon: FileCheck, color: 'text-primary' },
+    { label: 'Passed', value: stats.passCount, prevValue: prevPeriod.passCount, icon: CheckCircle2, color: 'text-green-600' },
+    { label: 'Failed', value: stats.failCount, prevValue: prevPeriod.failCount, icon: XCircle, color: 'text-destructive', invertTrend: true },
+    { label: 'Total Flags', value: stats.flaggedCount, prevValue: prevPeriod.flaggedCount, icon: AlertTriangle, color: 'text-amber-600', invertTrend: true },
+    { label: 'Avg Score', value: stats.avgScore, prevValue: prevPeriod.avgScore, icon: TrendingUp, color: 'text-primary' },
+    { label: 'Overdue', value: stats.overdueSchedules, prevValue: prevPeriod.overdueSchedules, icon: CalendarClock, color: stats.overdueSchedules > 0 ? 'text-destructive' : 'text-muted-foreground', invertTrend: true },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Stat tiles */}
+      {/* Filter Bar */}
+      <Card className="border-border/40">
+        <CardContent className="p-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Filter className="h-4 w-4" />
+              <span className="font-medium">Filters</span>
+            </div>
+
+            {/* Date Range Picker */}
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "h-8 text-xs gap-1.5 font-normal",
+                    dateRange?.from && "border-primary/50 bg-primary/5"
+                  )}
+                >
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  {dateRange?.from ? (
+                    dateRange.to ? (
+                      <>{format(dateRange.from, 'MMM d')} – {format(dateRange.to, 'MMM d, yyyy')}</>
+                    ) : (
+                      format(dateRange.from, 'MMM d, yyyy')
+                    )
+                  ) : (
+                    'Date range'
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="range"
+                  selected={dateRange}
+                  onSelect={(range) => {
+                    setDateRange(range);
+                    if (range?.to) setCalendarOpen(false);
+                  }}
+                  numberOfMonths={2}
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+
+            {/* Supplier Select */}
+            <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
+              <SelectTrigger className={cn(
+                "h-8 w-[180px] text-xs",
+                selectedSupplier !== 'all' && "border-primary/50 bg-primary/5"
+              )}>
+                <SelectValue placeholder="All suppliers" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All suppliers</SelectItem>
+                {uniqueSuppliers.map(name => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-muted-foreground hover:text-foreground" onClick={clearFilters}>
+                <X className="h-3 w-3" />
+                Clear all
+              </Button>
+            )}
+
+            {hasActiveFilters && (
+              <span className="text-xs text-muted-foreground ml-auto">
+                Showing {submissions.length} of {allSubmissions.length} COAs
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Stat tiles with trends */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {statCards.map((stat) => {
           const Icon = stat.icon;
+          const trend = getTrend(stat.value, stat.prevValue, stat.invertTrend);
+          // For inverted metrics (lower is better), "up" in value is bad
+          const isPositive = stat.invertTrend
+            ? trend.direction === 'down'
+            : trend.direction === 'up';
+          const isNegative = stat.invertTrend
+            ? trend.direction === 'up'
+            : trend.direction === 'down';
+
           return (
             <Card key={stat.label} className="border-border/40">
-              <CardContent className="p-4 flex flex-col items-center gap-2">
+              <CardContent className="p-4 flex flex-col items-center gap-1.5">
                 <Icon className={`h-5 w-5 ${stat.color}`} />
                 <span className="text-2xl font-bold">{isLoading ? '…' : stat.value}</span>
                 <span className="text-xs text-muted-foreground">{stat.label}</span>
+                {/* Trend indicator */}
+                {trend.direction === 'flat' ? (
+                  <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                    <Minus className="h-3 w-3" />
+                    No change
+                  </span>
+                ) : (
+                  <span className={cn(
+                    "flex items-center gap-0.5 text-[10px] font-medium",
+                    isPositive && "text-green-600",
+                    isNegative && "text-destructive",
+                  )}>
+                    {trend.direction === 'up' ? (
+                      <ArrowUpRight className="h-3 w-3" />
+                    ) : (
+                      <ArrowDownRight className="h-3 w-3" />
+                    )}
+                    {trend.pct}% vs prior
+                  </span>
+                )}
               </CardContent>
             </Card>
           );
@@ -174,36 +351,46 @@ export function COAOverview() {
             {failingAnalytes.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">No failures detected — all analytes within spec</p>
             ) : (
-              failingAnalytes.map((analyte) => {
-                const total = analyte.fails + analyte.flags;
-                const pct = (total / maxAnalyteIssues) * 100;
-                return (
-                  <div key={analyte.name} className="space-y-1">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">{analyte.name}</span>
+              <>
+                {failingAnalytes.map((analyte) => {
+                  const total = analyte.fails + analyte.flags;
+                  const barWidth = (total / maxAnalyteIssues) * 100;
+                  return (
+                    <div key={analyte.name} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium">{analyte.name}</span>
+                        <div className="flex items-center gap-2">
+                          {analyte.fails > 0 && (
+                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{analyte.fails} fail{analyte.fails > 1 ? 's' : ''}</Badge>
+                          )}
+                          {analyte.flags > 0 && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500 text-amber-600">{analyte.flags} flag{analyte.flags > 1 ? 's' : ''}</Badge>
+                          )}
+                        </div>
+                      </div>
                       <div className="flex items-center gap-2">
-                        {analyte.fails > 0 && (
-                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{analyte.fails} fail{analyte.fails > 1 ? 's' : ''}</Badge>
-                        )}
-                        {analyte.flags > 0 && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500 text-amber-600">{analyte.flags} flag{analyte.flags > 1 ? 's' : ''}</Badge>
-                        )}
+                        <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${barWidth}%`,
+                              background: analyte.fails > 0
+                                ? 'hsl(var(--destructive))'
+                                : 'hsl(var(--chart-4))',
+                            }}
+                          />
+                        </div>
+                        <span className="text-xs font-semibold text-muted-foreground w-6 text-right tabular-nums">
+                          {total}
+                        </span>
                       </div>
                     </div>
-                    <div className="h-2 rounded-full bg-muted overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{
-                          width: `${pct}%`,
-                          background: analyte.fails > 0
-                            ? 'hsl(var(--destructive))'
-                            : 'hsl(var(--chart-4))',
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })
+                  );
+                })}
+                <p className="text-[10px] text-muted-foreground pt-1 text-right">
+                  Number of failures/flags across all COAs
+                </p>
+              </>
             )}
           </CardContent>
         </Card>

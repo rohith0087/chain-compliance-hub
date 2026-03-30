@@ -4237,6 +4237,14 @@ async function executeToolCall(
         context.authHeader
       );
     
+    // ============= COA & SUPPLIER RISK TOOLS =============
+    case "query_coa_data":
+      console.log('🧪 Querying COA data:', args);
+      return queryCoaData(args);
+    case "query_supplier_risk":
+      console.log('⚠️ Querying supplier risk data:', args);
+      return querySupplierRisk(args);
+    
     default:
       return {
         success: false,

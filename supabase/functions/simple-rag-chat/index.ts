@@ -616,6 +616,67 @@ This tool creates a DRAFT that the user MUST review before sending. For complian
         required: ["draft_id"]
       }
     }
+  },
+  // ============= COA & SUPPLIER RISK TOOLS (Demo Data) =============
+  {
+    type: "function",
+    function: {
+      name: "query_coa_data",
+      read_only: true,
+      description: "Query Certificate of Analysis (COA) data including submissions, analyte results, schedules, specifications, and policies. Use for questions about COA results, analyte failures, lot numbers, COA scores, pass/fail status, lab testing, specifications, or food safety testing data. INFORMATIONAL ONLY.",
+      parameters: {
+        type: "object",
+        properties: {
+          supplier_name: {
+            type: "string",
+            description: "Filter by supplier name (fuzzy matching supported)"
+          },
+          status: {
+            type: "string",
+            enum: ["pass", "fail", "partial"],
+            description: "Filter submissions by pass/fail status"
+          },
+          analyte_name: {
+            type: "string",
+            description: "Filter for a specific analyte (e.g., 'Lead', 'Salmonella', 'E. coli')"
+          },
+          include_specs: {
+            type: "boolean",
+            description: "Include specification definitions in results (default: false)"
+          },
+          include_schedules: {
+            type: "boolean",
+            description: "Include COA schedules in results (default: false)"
+          }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "query_supplier_risk",
+      read_only: true,
+      description: "Query supplier risk assessment data including risk scores, key risk drivers, news signals, recalls, regulatory actions, documents, and questionnaire responses. Use for questions about supplier risk scores, risk drivers, recalls, FDA warnings, risk trends, supplier safety, or risk assessment details. INFORMATIONAL ONLY.",
+      parameters: {
+        type: "object",
+        properties: {
+          supplier_name: {
+            type: "string",
+            description: "Filter by supplier name (fuzzy matching supported)"
+          },
+          risk_level: {
+            type: "string",
+            enum: ["High", "Medium", "Low"],
+            description: "Filter by risk level"
+          },
+          include_details: {
+            type: "boolean",
+            description: "Include full profile details (questionnaire, documents, web signals). Default: false (summary only)"
+          }
+        }
+      }
+    }
   }
 ];
 

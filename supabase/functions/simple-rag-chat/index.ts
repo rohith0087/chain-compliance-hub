@@ -616,6 +616,67 @@ This tool creates a DRAFT that the user MUST review before sending. For complian
         required: ["draft_id"]
       }
     }
+  },
+  // ============= COA & SUPPLIER RISK TOOLS (Demo Data) =============
+  {
+    type: "function",
+    function: {
+      name: "query_coa_data",
+      read_only: true,
+      description: "Query Certificate of Analysis (COA) data including submissions, analyte results, schedules, specifications, and policies. Use for questions about COA results, analyte failures, lot numbers, COA scores, pass/fail status, lab testing, specifications, or food safety testing data. INFORMATIONAL ONLY.",
+      parameters: {
+        type: "object",
+        properties: {
+          supplier_name: {
+            type: "string",
+            description: "Filter by supplier name (fuzzy matching supported)"
+          },
+          status: {
+            type: "string",
+            enum: ["pass", "fail", "partial"],
+            description: "Filter submissions by pass/fail status"
+          },
+          analyte_name: {
+            type: "string",
+            description: "Filter for a specific analyte (e.g., 'Lead', 'Salmonella', 'E. coli')"
+          },
+          include_specs: {
+            type: "boolean",
+            description: "Include specification definitions in results (default: false)"
+          },
+          include_schedules: {
+            type: "boolean",
+            description: "Include COA schedules in results (default: false)"
+          }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "query_supplier_risk",
+      read_only: true,
+      description: "Query supplier risk assessment data including risk scores, key risk drivers, news signals, recalls, regulatory actions, documents, and questionnaire responses. Use for questions about supplier risk scores, risk drivers, recalls, FDA warnings, risk trends, supplier safety, or risk assessment details. INFORMATIONAL ONLY.",
+      parameters: {
+        type: "object",
+        properties: {
+          supplier_name: {
+            type: "string",
+            description: "Filter by supplier name (fuzzy matching supported)"
+          },
+          risk_level: {
+            type: "string",
+            enum: ["High", "Medium", "Low"],
+            description: "Filter by risk level"
+          },
+          include_details: {
+            type: "boolean",
+            description: "Include full profile details (questionnaire, documents, web signals). Default: false (summary only)"
+          }
+        }
+      }
+    }
   }
 ];
 
@@ -1898,7 +1959,7 @@ Respond ONLY with valid JSON:
     
     // Regex-based fallback with READ-ONLY detection
     const readOnlyKeywords = ['check', 'show', 'see', 'what\'s', 'list', 'get', 'find', 'tell me'];
-    const readOnlyTools = ['get_missing_required_documents', 'query_documents', 'query_suppliers', 'get_compliance_metrics', 'get_document_timeseries'];
+    const readOnlyTools = ['get_missing_required_documents', 'query_documents', 'query_suppliers', 'get_compliance_metrics', 'get_document_timeseries', 'query_coa_data', 'query_supplier_risk'];
     
     const isReadOnly = readOnlyKeywords.some(kw => 
       conversationHistory.slice(-3).some(m => 
@@ -3847,6 +3908,249 @@ async function getMissingRequiredDocuments(params: any, buyerId: string) {
   }
 }
 
+// ============= COA DEMO DATA (embedded for Compliance Compass queries) =============
+const COA_DEMO_SUBMISSIONS = [
+  {
+    id: 'sub1', supplier_name: 'BlueRiver Foods', lot_number: 'LOT-2026-0201', product_name: 'Organic Flour Blend',
+    submission_date: '2026-02-01', overall_score: 92, pass_fail: 'pass', flags_count: 1,
+    analytes: [
+      { name: 'Salmonella', value: 'ND', status: 'pass', spec_max: 0, unit: 'CFU/25g', method: 'ISO 6579' },
+      { name: 'E. coli', value: '<10', status: 'pass', spec_max: 100, unit: 'CFU/g', method: 'ISO 16649' },
+      { name: 'Total Plate Count', value: '4200', status: 'pass', spec_max: 10000, unit: 'CFU/g', method: 'ISO 4833' },
+      { name: 'Lead', value: '0.08', status: 'pass', spec_max: 0.1, unit: 'mg/kg', method: 'ICP-MS' },
+      { name: 'Arsenic', value: '0.12', status: 'pass', spec_max: 0.5, unit: 'mg/kg', method: 'ICP-MS' },
+      { name: 'Gluten', value: '25', status: 'fail', spec_max: 20, unit: 'ppm', method: 'R5 ELISA', flag: 'Value 25 ppm exceeds spec max 20 ppm' },
+      { name: 'Aflatoxin B1', value: '1.2', status: 'unknown_analyte', unit: 'µg/kg', method: 'HPLC', flag: 'Analyte not in buyer specifications' },
+    ]
+  },
+  {
+    id: 'sub2', supplier_name: 'GreenLeaf Ingredients', lot_number: 'GL-Q1-2026', product_name: 'Sesame Seed Paste',
+    submission_date: '2026-01-15', overall_score: 78, pass_fail: 'partial', flags_count: 3,
+    analytes: [
+      { name: 'Salmonella', value: 'Negative', status: 'pass', spec_max: 0, unit: 'CFU/25g', method: 'AOAC 2016.02' },
+      { name: 'E. coli', value: '150', status: 'fail', spec_max: 100, unit: 'CFU/g', method: 'AOAC 991.14', flag: 'Value 150 CFU/g exceeds spec max 100 CFU/g' },
+      { name: 'Lead', value: '0.15', status: 'fail', spec_max: 0.1, unit: 'mg/kg', method: 'ICP-OES', flag: 'Value 0.15 mg/kg exceeds spec max 0.1 mg/kg' },
+      { name: 'Sesame', value: 'Present (expected)', status: 'flagged', flag: 'Non-numeric value, manual review needed' },
+      { name: 'Mercury', value: '<0.005', status: 'pass', spec_max: 0.02, unit: 'mg/kg', method: 'ICP-MS' },
+    ]
+  },
+  {
+    id: 'sub3', supplier_name: 'SunHarvest Commodities', lot_number: 'SH-PNT-0226', product_name: 'Raw Peanuts (Grade A)',
+    submission_date: '2026-02-10', overall_score: 45, pass_fail: 'fail', flags_count: 4,
+    analytes: [
+      { name: 'Salmonella', value: 'Detected', status: 'fail', spec_max: 0, unit: 'CFU/25g', method: 'ISO 6579', flag: 'CRITICAL: Salmonella detected in 25g sample' },
+      { name: 'Lead', value: '0.22', status: 'fail', spec_max: 0.1, unit: 'mg/kg', method: 'ICP-MS', flag: 'Value 0.22 mg/kg exceeds spec max 0.1 mg/kg (2.2x over limit)' },
+      { name: 'Cadmium', value: '0.09', status: 'pass', spec_max: 0.1, unit: 'mg/kg', method: 'ICP-MS' },
+      { name: 'Total Plate Count', value: '18500', status: 'fail', spec_max: 10000, unit: 'CFU/g', method: 'ISO 4833', flag: 'Value 18,500 CFU/g exceeds spec max 10,000 CFU/g' },
+      { name: 'Peanut', value: 'Present (expected)', status: 'flagged', flag: 'Expected allergen in product, informational' },
+    ]
+  },
+];
+
+const COA_DEMO_SCHEDULES = [
+  { supplier_name: 'BlueRiver Foods', frequency: 'monthly', next_due: '2026-03-01', last_submitted: '2026-02-01', status: 'active', product: 'Organic Flour Blend' },
+  { supplier_name: 'GreenLeaf Ingredients', frequency: 'quarterly', next_due: '2026-04-15', last_submitted: '2026-01-15', status: 'active', product: 'Sesame Seed Paste' },
+  { supplier_name: 'SunHarvest Commodities', frequency: 'per_lot', next_due: '2026-02-20', last_submitted: null, status: 'active', product: 'Raw Peanuts (Grade A)' },
+  { supplier_name: 'AquaPure Water Co.', frequency: 'monthly', next_due: '2026-02-10', last_submitted: '2026-01-10', status: 'overdue', product: 'Purified Water' },
+];
+
+const COA_DEMO_SPECS_SUMMARY = [
+  { analyte: 'Salmonella', category: 'Microbiological', max: 0, unit: 'CFU/25g', method: 'ISO_6579' },
+  { analyte: 'E. coli', category: 'Microbiological', max: 100, unit: 'CFU/g', method: 'ISO_16649' },
+  { analyte: 'Total Plate Count', category: 'Microbiological', max: 10000, unit: 'CFU/g', method: 'ISO_4833' },
+  { analyte: 'Yeast & Mold', category: 'Microbiological', max: 500, unit: 'CFU/g', method: 'ISO_21527' },
+  { analyte: 'Listeria', category: 'Microbiological', max: 0, unit: 'CFU/25g', method: 'ISO_11290' },
+  { analyte: 'Lead', category: 'Heavy Metals', max: 0.1, unit: 'mg/kg', method: 'ICP_MS' },
+  { analyte: 'Arsenic', category: 'Heavy Metals', max: 0.5, unit: 'mg/kg', method: 'ICP_MS' },
+  { analyte: 'Cadmium', category: 'Heavy Metals', max: 0.1, unit: 'mg/kg', method: 'ICP_MS' },
+  { analyte: 'Mercury', category: 'Heavy Metals', max: 0.02, unit: 'mg/kg', method: 'ICP_MS' },
+  { analyte: 'Peanut', category: 'Allergens', max: 10, unit: 'ppm', method: 'ELISA' },
+  { analyte: 'Gluten', category: 'Allergens', max: 20, unit: 'ppm', method: 'ELISA' },
+  { analyte: 'Milk', category: 'Allergens', max: 10, unit: 'ppm', method: 'ELISA' },
+  { analyte: 'Soy', category: 'Allergens', max: 10, unit: 'ppm', method: 'ELISA' },
+  { analyte: 'Sesame', category: 'Allergens', max: 10, unit: 'ppm', method: 'ELISA' },
+];
+
+function queryCoaData(args: any) {
+  let submissions = [...COA_DEMO_SUBMISSIONS];
+  
+  if (args.supplier_name) {
+    submissions = submissions.filter(s => fuzzyMatch(s.supplier_name, args.supplier_name));
+  }
+  if (args.status) {
+    submissions = submissions.filter(s => s.pass_fail === args.status);
+  }
+  if (args.analyte_name) {
+    const an = args.analyte_name.toLowerCase();
+    submissions = submissions.map(s => ({
+      ...s,
+      analytes: s.analytes.filter(a => a.name.toLowerCase().includes(an))
+    })).filter(s => s.analytes.length > 0);
+  }
+
+  const result: any = {
+    success: true,
+    submissions: submissions.map(s => ({
+      supplier: s.supplier_name,
+      lot: s.lot_number,
+      product: s.product_name,
+      date: s.submission_date,
+      score: s.overall_score,
+      result: s.pass_fail,
+      flags: s.flags_count,
+      analytes: s.analytes,
+    })),
+    total_submissions: submissions.length,
+    summary: {
+      passed: submissions.filter(s => s.pass_fail === 'pass').length,
+      failed: submissions.filter(s => s.pass_fail === 'fail').length,
+      partial: submissions.filter(s => s.pass_fail === 'partial').length,
+      avg_score: Math.round(submissions.reduce((a, s) => a + (s.overall_score || 0), 0) / (submissions.length || 1)),
+    }
+  };
+
+  if (args.include_specs) {
+    result.specifications = COA_DEMO_SPECS_SUMMARY;
+  }
+  if (args.include_schedules) {
+    result.schedules = COA_DEMO_SCHEDULES;
+  }
+
+  return result;
+}
+
+// ============= SUPPLIER RISK DEMO DATA (embedded for Compliance Compass queries) =============
+const RISK_DEMO_SUPPLIERS = [
+  {
+    name: 'BlueRiver Co-Packers', hq: 'Shenzhen, China', industry: 'Food & Beverage (Co-packing)',
+    score: 73, risk_level: 'High', trend: '+8 pts (7 days)', facilities: 4,
+    breakdown: { document: 22, operational: 18, regulatory: 15, market_geo: 12, reputation: 6 },
+    drivers: [
+      { description: '2 recalls in last 3 years', impact: 12, confidence: 'High', source: 'FDA public recall database' },
+      { description: 'Co-packers in High-Trade-Risk regions', impact: 10, confidence: 'High', source: 'Geo-risk model' },
+      { description: 'Open FDA warning letter detected', impact: 8, confidence: 'High', source: 'FDA Warning Letters database' },
+      { description: 'Incomplete compliance program evidence', impact: 6, confidence: 'Medium', source: 'Document review' },
+      { description: 'Insurance coverage below recommended threshold', impact: 4, confidence: 'Low', source: 'Questionnaire' },
+    ],
+    news: [
+      { headline: 'US announces increased tariff on packaging materials from China', source: 'Reuters', time: '2h ago', impact: 10 },
+      { headline: 'FDA issues new guidance on co-packing facility inspections', source: 'FDA.gov', time: '1d ago', impact: 3 },
+      { headline: 'Port congestion in Shenzhen expected through Q2', source: 'Supply Chain Dive', time: '3d ago', impact: 5 },
+    ],
+    recalls: [
+      { event: 'Voluntary Recall', date: 'Jan 15, 2026', product: 'Snack bars (allergen)', severity: 'High', status: 'Open' },
+      { event: 'Market Withdrawal', date: 'Aug 3, 2024', product: 'Beverage concentrate', severity: 'Medium', status: 'Resolved' },
+    ],
+    documents: [
+      { name: 'GFSI Certificate', status: 'Approved', expiry: 'Dec 2026' },
+      { name: 'Product Liability Insurance', status: 'Pending', expiry: 'Mar 2026' },
+      { name: 'FDA Registration', status: 'Approved', expiry: 'Sep 2026' },
+      { name: 'HACCP Plan', status: 'Expired', expiry: 'Nov 2025' },
+      { name: 'Business Continuity Plan', status: 'Pending', expiry: 'N/A' },
+    ],
+    quality_standards: 'GFSI, SQF, HACCP',
+    last_audit: 'Sep 2025 — 3rd party (SGS)',
+    insurance_range: '$2M – $5M',
+    critical_materials: 'Cocoa (Ghana), Whey protein (US), Flavoring (India)',
+  },
+  {
+    name: 'NorthPeak Packaging', hq: 'Chicago, IL', industry: 'Packaging',
+    score: 61, risk_level: 'Medium', trend: '-3 pts (7 days)', facilities: 2,
+    breakdown: { document: 15, operational: 14, regulatory: 10, market_geo: 8, reputation: 14 },
+    drivers: [
+      { description: 'Pending OSHA investigation', impact: 10, confidence: 'High', source: 'OSHA public records' },
+      { description: 'Lapsed ISO 14001 environmental cert', impact: 8, confidence: 'High', source: 'Document review' },
+      { description: 'Employee safety incident (Q4 2025)', impact: 7, confidence: 'Medium', source: 'News monitoring, OSHA' },
+      { description: 'Single-facility concentration risk', impact: 5, confidence: 'Medium', source: 'Questionnaire' },
+    ],
+    news: [
+      { headline: 'OSHA opens investigation into packaging facility incident', source: 'Chicago Tribune', time: '5d ago', impact: 7 },
+    ],
+    recalls: [],
+    documents: [
+      { name: 'ISO 9001 Certificate', status: 'Approved', expiry: 'Jul 2026' },
+      { name: 'ISO 14001 Certificate', status: 'Expired', expiry: 'Aug 2025' },
+      { name: 'General Liability Insurance', status: 'Approved', expiry: 'Jan 2027' },
+      { name: 'W-9', status: 'Approved', expiry: 'N/A' },
+    ],
+    quality_standards: 'ISO 9001',
+    last_audit: 'Jun 2025 — Internal',
+    insurance_range: '$5M – $10M',
+    critical_materials: 'Corrugated board (US), Inks (US), Adhesives (US)',
+  },
+  {
+    name: 'GreenField Ingredients', hq: 'Toronto, Canada', industry: 'Organic & specialty ingredients',
+    score: 38, risk_level: 'Low', trend: '-2 pts (7 days)', facilities: 3,
+    breakdown: { document: 8, operational: 10, regulatory: 5, market_geo: 8, reputation: 7 },
+    drivers: [
+      { description: 'Minor geographic concentration (2 regions)', impact: 5, confidence: 'Low', source: 'Questionnaire' },
+      { description: 'Organic certification renewal upcoming', impact: 4, confidence: 'Medium', source: 'Document tracker' },
+      { description: 'Single-source for specialty botanical', impact: 3, confidence: 'Medium', source: 'Questionnaire' },
+    ],
+    news: [],
+    recalls: [],
+    documents: [
+      { name: 'USDA Organic Certificate', status: 'Approved', expiry: 'Apr 2026' },
+      { name: 'Non-GMO Project Verified', status: 'Approved', expiry: 'Jul 2026' },
+      { name: 'SQF Certificate', status: 'Approved', expiry: 'Nov 2026' },
+      { name: 'COI — General Liability', status: 'Approved', expiry: 'Feb 2027' },
+      { name: 'Kosher Certificate', status: 'Approved', expiry: 'Dec 2026' },
+    ],
+    quality_standards: 'SQF, HACCP, ISO 22000, USDA Organic',
+    last_audit: 'Nov 2025 — 3rd party (NSF)',
+    insurance_range: '$10M+',
+    critical_materials: 'Maca root (Peru), Flaxseed (Canada), Turmeric (India)',
+  },
+];
+
+function querySupplierRisk(args: any) {
+  let suppliers = [...RISK_DEMO_SUPPLIERS];
+
+  if (args.supplier_name) {
+    suppliers = suppliers.filter(s => fuzzyMatch(s.name, args.supplier_name));
+  }
+  if (args.risk_level) {
+    suppliers = suppliers.filter(s => s.risk_level === args.risk_level);
+  }
+
+  const includeDetails = args.include_details === true;
+
+  return {
+    success: true,
+    suppliers: suppliers.map(s => {
+      const summary: any = {
+        name: s.name,
+        hq: s.hq,
+        industry: s.industry,
+        risk_score: s.score,
+        risk_level: s.risk_level,
+        trend: s.trend,
+        facilities: s.facilities,
+        risk_breakdown: s.breakdown,
+        top_drivers: s.drivers,
+        active_recalls: s.recalls.filter(r => r.status === 'Open').length,
+        recent_news_count: s.news.length,
+        document_status: {
+          approved: s.documents.filter(d => d.status === 'Approved').length,
+          pending: s.documents.filter(d => d.status === 'Pending').length,
+          expired: s.documents.filter(d => d.status === 'Expired').length,
+        },
+      };
+      if (includeDetails) {
+        summary.news = s.news;
+        summary.recalls = s.recalls;
+        summary.documents = s.documents;
+        summary.quality_standards = s.quality_standards;
+        summary.last_audit = s.last_audit;
+        summary.insurance_range = s.insurance_range;
+        summary.critical_materials = s.critical_materials;
+      }
+      return summary;
+    }),
+    total: suppliers.length,
+  };
+}
+
 async function executeToolCall(
   toolName: string, 
   args: any, 
@@ -3932,6 +4236,14 @@ async function executeToolCall(
         context.userId,
         context.authHeader
       );
+    
+    // ============= COA & SUPPLIER RISK TOOLS =============
+    case "query_coa_data":
+      console.log('🧪 Querying COA data:', args);
+      return queryCoaData(args);
+    case "query_supplier_risk":
+      console.log('⚠️ Querying supplier risk data:', args);
+      return querySupplierRisk(args);
     
     default:
       return {
@@ -4747,6 +5059,19 @@ CRITICAL - NEVER NARRATE INTENT:
 INSTANT ACTION RULES - QUERY ROUTING:
 
 Match user query → call appropriate tool IMMEDIATELY (no narration):
+
+🧪 COA ANALYSIS:
+- "COA results", "analyte failures", "which lots failed", "COA score", "lab results", "test results"
+- "what failed in COA", "salmonella results", "lead levels", "heavy metals", "allergen testing"
+- "COA submissions", "COA schedule", "overdue COAs", "COA specifications"
+  → query_coa_data
+
+⚠️ SUPPLIER RISK:
+- "supplier risk", "risk score", "risk drivers", "risk assessment", "risk level"
+- "recalls", "FDA warning", "regulatory risk", "risk breakdown", "risk trend"
+- "which supplier is riskiest", "high risk suppliers", "risk profile"
+  → query_supplier_risk
+
 
 📊 CHARTS & TRENDS:
 - "show chart", "line chart", "trend", "over time", "past X days" 

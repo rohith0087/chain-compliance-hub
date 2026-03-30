@@ -1959,7 +1959,7 @@ Respond ONLY with valid JSON:
     
     // Regex-based fallback with READ-ONLY detection
     const readOnlyKeywords = ['check', 'show', 'see', 'what\'s', 'list', 'get', 'find', 'tell me'];
-    const readOnlyTools = ['get_missing_required_documents', 'query_documents', 'query_suppliers', 'get_compliance_metrics', 'get_document_timeseries'];
+    const readOnlyTools = ['get_missing_required_documents', 'query_documents', 'query_suppliers', 'get_compliance_metrics', 'get_document_timeseries', 'query_coa_data', 'query_supplier_risk'];
     
     const isReadOnly = readOnlyKeywords.some(kw => 
       conversationHistory.slice(-3).some(m => 

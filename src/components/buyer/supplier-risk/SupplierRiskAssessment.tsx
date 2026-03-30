@@ -19,6 +19,7 @@ export function SupplierRiskAssessment() {
   const [selectedId, setSelectedId] = useState(suppliers[0].id);
   const [modalOpen, setModalOpen] = useState(false);
   const [animatedScore, setAnimatedScore] = useState(suppliers[0].score);
+  const { profile, user } = useAuth();
 
   const supplier = suppliers.find(s => s.id === selectedId) || suppliers[0];
 
@@ -72,7 +73,11 @@ export function SupplierRiskAssessment() {
           <Button size="sm" onClick={() => setModalOpen(true)}>
             <Send className="h-3.5 w-3.5 mr-1.5" /> Request Details
           </Button>
-          <Button variant="outline" size="sm"><FileDown className="h-3.5 w-3.5 mr-1.5" /> Export PDF</Button>
+          <Button variant="outline" size="sm" onClick={() => generateSupplierRiskPDF({
+            supplier,
+            userName: profile?.full_name || 'Unknown User',
+            userEmail: user?.email || 'N/A',
+          })}><FileDown className="h-3.5 w-3.5 mr-1.5" /> Export PDF</Button>
           <Button variant="outline" size="sm"><Share2 className="h-3.5 w-3.5 mr-1.5" /> Share</Button>
           <Button variant="ghost" size="sm"><Flag className="h-3.5 w-3.5 mr-1.5" /> Report Issue</Button>
         </div>

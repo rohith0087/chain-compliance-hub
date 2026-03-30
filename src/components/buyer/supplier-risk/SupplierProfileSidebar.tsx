@@ -3,8 +3,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Building2, MapPin, Factory, CalendarDays, Clock, Bell, Settings, Download } from 'lucide-react';
 import { SupplierRiskProfile } from './riskData';
+import { generateSupplierRiskPDF } from '@/utils/generateSupplierRiskPDF';
+import { useAuth } from '@/hooks/useAuth';
 
 export function SupplierProfileSidebar({ supplier }: { supplier: SupplierRiskProfile }) {
+  const { profile, user } = useAuth();
   return (
     <div className="space-y-4">
       {/* Profile Card */}
@@ -62,7 +65,11 @@ export function SupplierProfileSidebar({ supplier }: { supplier: SupplierRiskPro
           <Button variant="outline" size="sm" className="w-full justify-start gap-2">
             <Settings className="h-3.5 w-3.5" /> Manage Thresholds
           </Button>
-          <Button variant="outline" size="sm" className="w-full justify-start gap-2">
+          <Button variant="outline" size="sm" className="w-full justify-start gap-2" onClick={() => generateSupplierRiskPDF({
+            supplier,
+            userName: profile?.full_name || 'Unknown User',
+            userEmail: user?.email || 'N/A',
+          })}>
             <Download className="h-3.5 w-3.5" /> Download Report
           </Button>
         </CardContent>

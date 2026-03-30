@@ -1,83 +1,43 @@
 
 
-# Supplier Risk -- Download Report (PDF)
+# Remove Supplier Risk Badges + Add COA/Risk Query to Compliance Compass
 
-## What We're Building
+## Part 1: Remove "Connected" and "Monitoring ON" Badges
 
-Wire the "Download Report" button (sidebar) and "Export PDF" button (header) to generate a detailed, professional PDF report for the currently selected supplier. The PDF includes all risk data, is timestamped, and shows the downloading user's name.
+Remove the two badges from the header in `SupplierRiskAssessment.tsx` (lines 62-67). Keep the "Last refresh" badge as it provides useful temporal context.
 
-## PDF Content Layout
+**File**: `src/components/buyer/supplier-risk/SupplierRiskAssessment.tsx`
 
-```text
-Page 1: Cover + Summary
-─────────────────────────
-  Company logo area / title
-  "Supplier Risk Assessment Report"
-  Supplier: BlueRiver Co-Packers
-  Generated: March 30, 2026 at 12:12 PM
-  Downloaded by: John Smith (john@company.com)
-  ─────────────────
-  Risk Score: 73/100 (High Risk)
-  Trend: +8 pts (last 7 days)
-  Risk Breakdown table (5 categories)
-  Score Explanation bullets
+---
 
-Page 2: Key Risk Drivers + Signals
-─────────────────────────
-  Key Risk Drivers table (description, impact, confidence, source)
-  News Signals (headline, source, timestamp, impact)
-  Web Intelligence Signals
+## Part 2: Add COA and Supplier Risk Querying to Compliance Compass
 
-Page 3: Regulatory & Documents
-─────────────────────────
-  Recall History table
-  Document Compliance table (name, status, expiry)
-  Document Risk Subscore
+The Compliance Compass chat (`simple-rag-chat` edge function) currently queries live Supabase data for documents/suppliers. COA analysis and supplier risk data live as **client-side demo data** (`coaDemoData.ts`, `riskData.ts`). To let users ask questions about these, we embed the demo data directly into two new tool functions in the edge function.
 
-Page 4: Supplier Profile & Questionnaire
-─────────────────────────
-  Profile info (HQ, industry, facilities)
-  Operations Q&A table
-  Quality Q&A table
-  Risk & Resilience Q&A table
-  Monitoring sources
-```
+### New Tools
 
-## Technical Approach
+**Tool 1: `query_coa_data`**
+- Description: Query COA analysis data including submissions, analyte results, schedules, specs, and policies
+- Parameters: `supplier_name` (optional filter), `status` (pass/fail/partial), `analyte_name` (optional)
+- Implementation: Returns hardcoded demo data (3 submissions with full analyte results, 4 schedules, 15 specs) filtered by params
+- The function embeds the demo data as a const inside the edge function
 
-- Use **jsPDF** + **jspdf-autotable** for PDF generation (install both)
-- Generate client-side on button click
-- Get current user from `useAuth()` hook for the "downloaded by" field
-- Use `new Date()` for timestamp
-- Color-code risk levels in tables (red/amber/green backgrounds)
-- Auto-download as `{SupplierName}_Risk_Report_{date}.pdf`
+**Tool 2: `query_supplier_risk`**
+- Description: Query supplier risk assessment data including risk scores, drivers, news signals, recalls, documents, and questionnaire responses
+- Parameters: `supplier_name` (optional), `risk_level` (High/Medium/Low), `include_details` (boolean for full profile vs summary)
+- Implementation: Returns hardcoded demo data (3 suppliers with full risk profiles) filtered by params
 
-## Implementation
+### System Prompt Addition
 
-### 1. New utility: `src/utils/generateSupplierRiskPDF.ts`
-- Accepts `SupplierRiskProfile` + `userName` + `userEmail`
-- Builds multi-page PDF with:
-  - Cover page with title, supplier name, timestamp, user info
-  - Risk score section with breakdown table
-  - Key drivers table with color-coded impact bars
-  - News/web signals section
-  - Recalls table
-  - Documents table with status coloring
-  - Questionnaire data tables
-- Uses jspdf-autotable for clean table rendering
+Add routing guidance:
+- "COA results", "analyte failures", "which lots failed", "COA score" --> `query_coa_data`
+- "supplier risk", "risk score", "risk drivers", "recalls", "risk assessment" --> `query_supplier_risk`
 
-### 2. Update `SupplierProfileSidebar.tsx`
-- Import `useAuth` and the PDF generator
-- Wire "Download Report" button onClick to call the generator
+### Switch Case Addition
 
-### 3. Update `SupplierRiskAssessment.tsx`
-- Wire "Export PDF" button onClick to call the same generator
-
-### Dependencies
-- `jspdf` + `jspdf-autotable` (npm install)
+Add two new cases in the `executeTool` switch statement calling the embedded data functions.
 
 ### Files Modified
-- **New**: `src/utils/generateSupplierRiskPDF.ts`
-- **Edit**: `src/components/buyer/supplier-risk/SupplierProfileSidebar.tsx`
-- **Edit**: `src/components/buyer/supplier-risk/SupplierRiskAssessment.tsx`
+- `src/components/buyer/supplier-risk/SupplierRiskAssessment.tsx` -- remove 2 badges
+- `supabase/functions/simple-rag-chat/index.ts` -- add 2 tool definitions, 2 handler functions, 2 switch cases, system prompt additions
 

@@ -5060,6 +5060,19 @@ INSTANT ACTION RULES - QUERY ROUTING:
 
 Match user query → call appropriate tool IMMEDIATELY (no narration):
 
+🧪 COA ANALYSIS:
+- "COA results", "analyte failures", "which lots failed", "COA score", "lab results", "test results"
+- "what failed in COA", "salmonella results", "lead levels", "heavy metals", "allergen testing"
+- "COA submissions", "COA schedule", "overdue COAs", "COA specifications"
+  → query_coa_data
+
+⚠️ SUPPLIER RISK:
+- "supplier risk", "risk score", "risk drivers", "risk assessment", "risk level"
+- "recalls", "FDA warning", "regulatory risk", "risk breakdown", "risk trend"
+- "which supplier is riskiest", "high risk suppliers", "risk profile"
+  → query_supplier_risk
+
+
 📊 CHARTS & TRENDS:
 - "show chart", "line chart", "trend", "over time", "past X days" 
   → get_document_timeseries

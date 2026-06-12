@@ -251,6 +251,7 @@ function extractImageB64(obj?: any): string | null {
 
 const ChatPage: React.FC = () => {
   const { user, profile } = useAuth();
+  const { t: wsT } = useWorkspaceProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
 

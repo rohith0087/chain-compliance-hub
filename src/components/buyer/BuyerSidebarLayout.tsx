@@ -471,7 +471,7 @@ export function BuyerSidebarLayout({
                     className="hover:bg-secondary/10 hover:text-secondary transition-colors"
                   >
                     <Compass className="h-4 w-4" />
-                    <span>Compliance Compass</span>
+                    <span>{wsTerms.compliance_compass}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem data-guide-id="quick-bulk-invite">

@@ -19,6 +19,7 @@ import ResponseActionButtons from "@/components/chat/ResponseActionButtons";
 import ShareDialog from "@/components/chat/ShareDialog";
 import { CodeVisualizationRenderer } from "@/components/chat/CodeVisualizationRenderer";
 import AdvancedComplianceInsightsDashboard from "@/components/chat/AdvancedComplianceInsightsDashboard";
+import { useWorkspaceProfile } from "@/hooks/useWorkspaceProfile";
 import ComplianceEmailComposer from "@/components/chat/ComplianceEmailComposer";
 import { StructuredResponseRenderer, hasStructuredContent } from "@/components/chat/structured";
 import {

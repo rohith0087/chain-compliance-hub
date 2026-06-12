@@ -14,12 +14,15 @@ import { RequestDetailsModal } from './RequestDetailsModal';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { generateSupplierRiskPDF } from '@/utils/generateSupplierRiskPDF';
 import { useAuth } from '@/hooks/useAuth';
+import { useWorkspaceProfile } from '@/hooks/useWorkspaceProfile';
+import { AuditFindingsTab } from '@/components/buyer/audit/AuditFindingsTab';
 
 export function SupplierRiskAssessment() {
   const [selectedId, setSelectedId] = useState(suppliers[0].id);
   const [modalOpen, setModalOpen] = useState(false);
   const [animatedScore, setAnimatedScore] = useState(suppliers[0].score);
   const { profile, user } = useAuth();
+  const { t, flags, isAuditor } = useWorkspaceProfile();
 
   const supplier = suppliers.find(s => s.id === selectedId) || suppliers[0];
 

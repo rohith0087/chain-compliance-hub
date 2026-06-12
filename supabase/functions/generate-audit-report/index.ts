@@ -135,12 +135,12 @@ Deno.serve(async (req) => {
 
     const bytes = await pdf.save();
     const fileName = `audit-report/${buyerId}/${clientId}/${Date.now()}.pdf`;
-    const { error: upErr } = await sb.storage.from("documents").upload(fileName, bytes, { contentType: "application/pdf", upsert: true });
+    const { error: upErr } = await sb.storage.from("compliance-documents").upload(fileName, bytes, { contentType: "application/pdf", upsert: true });
     if (upErr) {
       console.error("upload err", upErr);
       return new Response(JSON.stringify({ error: "Failed to store report" }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
     }
-    const { data: signed } = await sb.storage.from("documents").createSignedUrl(fileName, 3600);
+    const { data: signed } = await sb.storage.from("compliance-documents").createSignedUrl(fileName, 3600);
 
     if (engagementId) {
       await sb.from("audit_engagement_summaries").upsert({

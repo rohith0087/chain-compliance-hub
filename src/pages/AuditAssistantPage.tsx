@@ -317,7 +317,7 @@ export default function AuditAssistantPage() {
                   ))}
                   {streaming && (
                     <div className="text-xs text-muted-foreground flex items-center gap-2">
-                      <Loader2 className="h-3 w-3 animate-spin" /> Generating\u2026
+                      <Loader2 className="h-3 w-3 animate-spin" /> Generating…
                     </div>
                   )}
                 </div>

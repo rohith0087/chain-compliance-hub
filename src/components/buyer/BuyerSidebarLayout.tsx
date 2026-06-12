@@ -253,6 +253,9 @@ export function BuyerSidebarLayout({
     setCurrentBranch(currentBranch);
   }, [currentBranch, setCurrentBranch]);
 
+  // Workspace profile (terminology pack) driven by buyer industry
+  const wsTerms = getWorkspaceProfileForIndustry(buyerProfile?.industry).terms;
+
   // Define navigation items with role requirements
   const navigationItems: NavigationItem[] = [
     {
@@ -261,12 +264,12 @@ export function BuyerSidebarLayout({
       value: 'dashboard'
     },
     {
-      title: t('common:navigation.suppliers'),
+      title: wsTerms.suppliers,
       icon: Users,
       value: 'suppliers',
       submenu: [
         { title: 'Discovery', value: 'suppliers', icon: Search },
-        { title: 'Supplier Map', value: 'supplier-map', icon: Compass },
+        { title: `${wsTerms.supplier} Map`, value: 'supplier-map', icon: Compass },
         { title: 'Pre-populate Documents', value: 'pre-populate', icon: Upload }
       ]
     },
@@ -288,7 +291,7 @@ export function BuyerSidebarLayout({
       value: 'compliance',
       submenu: [
         { title: 'Overview', value: 'compliance', icon: BarChart3 },
-        { title: 'Supplier Risk', value: 'supplier-risk', icon: AlertTriangle },
+        { title: wsTerms.supplier_risk, value: 'supplier-risk', icon: AlertTriangle },
         { title: 'Item Compliance', value: 'item-compliance', icon: Package },
         { title: 'Facility Matrix', value: 'facility-matrix', icon: Building2 }
       ]

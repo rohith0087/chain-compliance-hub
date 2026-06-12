@@ -84,6 +84,14 @@ export const AUDITOR_PROFILE: WorkspaceProfile = {
   flags: {
     showAuditFindings: true,
     showEngagementDocs: true,
+    hideCOAAnalysis: true,
+    hideItemCompliance: true,
+    hideFacilityMatrix: true,
+    hidePrePopulate: true,
+    hideBuyerSamples: true,
+    hideSupplierMap: true,
+    defaultEntityType: 'Auditor',
+    lockEntityType: true,
   },
 };
 

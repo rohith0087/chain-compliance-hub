@@ -5,15 +5,17 @@ import { Building2, MapPin, Factory, CalendarDays, Clock, Bell, Settings, Downlo
 import { SupplierRiskProfile } from './riskData';
 import { generateSupplierRiskPDF } from '@/utils/generateSupplierRiskPDF';
 import { useAuth } from '@/hooks/useAuth';
+import { useWorkspaceProfile } from '@/hooks/useWorkspaceProfile';
 
 export function SupplierProfileSidebar({ supplier }: { supplier: SupplierRiskProfile }) {
   const { profile, user } = useAuth();
+  const { t } = useWorkspaceProfile();
   return (
     <div className="space-y-4">
       {/* Profile Card */}
       <Card className="border-border/50 shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Supplier Profile</CardTitle>
+          <CardTitle className="text-base">{t.supplier_profile}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center gap-2">
@@ -69,6 +71,7 @@ export function SupplierProfileSidebar({ supplier }: { supplier: SupplierRiskPro
             supplier,
             userName: profile?.full_name || 'Unknown User',
             userEmail: user?.email || 'N/A',
+            terms: t,
           })}>
             <Download className="h-3.5 w-3.5" /> Download Report
           </Button>

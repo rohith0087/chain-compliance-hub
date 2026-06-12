@@ -19,6 +19,7 @@ import ResponseActionButtons from "@/components/chat/ResponseActionButtons";
 import ShareDialog from "@/components/chat/ShareDialog";
 import { CodeVisualizationRenderer } from "@/components/chat/CodeVisualizationRenderer";
 import AdvancedComplianceInsightsDashboard from "@/components/chat/AdvancedComplianceInsightsDashboard";
+import { useWorkspaceProfile } from "@/hooks/useWorkspaceProfile";
 import ComplianceEmailComposer from "@/components/chat/ComplianceEmailComposer";
 import { StructuredResponseRenderer, hasStructuredContent } from "@/components/chat/structured";
 import {
@@ -250,6 +251,7 @@ function extractImageB64(obj?: any): string | null {
 
 const ChatPage: React.FC = () => {
   const { user, profile } = useAuth();
+  const { t: wsT } = useWorkspaceProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -1622,7 +1624,7 @@ const ChatPage: React.FC = () => {
                   >
                     <Menu className="w-5 h-5" />
                   </Button>
-                  <span className="text-sm font-medium text-muted-foreground">Compliance Compass</span>
+                  <span className="text-sm font-medium text-muted-foreground">{wsT.compliance_compass}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-muted-foreground">

@@ -286,6 +286,63 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_findings: {
+        Row: {
+          buyer_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          finding_date: string
+          id: string
+          severity: string
+          status: string
+          supplier_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          finding_date?: string
+          id?: string
+          severity?: string
+          status?: string
+          supplier_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          finding_date?: string
+          id?: string
+          severity?: string
+          status?: string
+          supplier_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_findings_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_findings_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auth_audit_logs: {
         Row: {
           action: string

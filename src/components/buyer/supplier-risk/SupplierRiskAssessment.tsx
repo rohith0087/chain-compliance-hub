@@ -14,12 +14,15 @@ import { RequestDetailsModal } from './RequestDetailsModal';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { generateSupplierRiskPDF } from '@/utils/generateSupplierRiskPDF';
 import { useAuth } from '@/hooks/useAuth';
+import { useWorkspaceProfile } from '@/hooks/useWorkspaceProfile';
+import { AuditFindingsTab } from '@/components/buyer/audit/AuditFindingsTab';
 
 export function SupplierRiskAssessment() {
   const [selectedId, setSelectedId] = useState(suppliers[0].id);
   const [modalOpen, setModalOpen] = useState(false);
   const [animatedScore, setAnimatedScore] = useState(suppliers[0].score);
   const { profile, user } = useAuth();
+  const { t, flags, isAuditor } = useWorkspaceProfile();
 
   const supplier = suppliers.find(s => s.id === selectedId) || suppliers[0];
 
@@ -41,7 +44,7 @@ export function SupplierRiskAssessment() {
       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
         <span>Compliance</span>
         <ChevronRight className="h-3.5 w-3.5" />
-        <span>Supplier Risk</span>
+        <span>{t.supplier_risk}</span>
         <ChevronRight className="h-3.5 w-3.5" />
         <span className="text-foreground font-medium">{supplier.name}</span>
       </div>
@@ -71,6 +74,7 @@ export function SupplierRiskAssessment() {
             supplier,
             userName: profile?.full_name || 'Unknown User',
             userEmail: user?.email || 'N/A',
+            terms: t,
           })}><FileDown className="h-3.5 w-3.5 mr-1.5" /> Export PDF</Button>
           <Button variant="outline" size="sm"><Share2 className="h-3.5 w-3.5 mr-1.5" /> Share</Button>
           <Button variant="ghost" size="sm"><Flag className="h-3.5 w-3.5 mr-1.5" /> Report Issue</Button>
@@ -85,6 +89,9 @@ export function SupplierRiskAssessment() {
           <KeyDrivers drivers={supplier.drivers} />
           <SignalsSection supplier={supplier} />
           <DocumentRiskSection documents={supplier.documents} subscore={supplier.documentSubscore} />
+          {flags.showAuditFindings && (
+            <AuditFindingsTab supplierId={supplier.id} supplierName={supplier.name} />
+          )}
           <ModelTuningPanel onRecalculate={handleRecalculate} />
         </div>
 

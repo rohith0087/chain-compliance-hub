@@ -822,6 +822,91 @@ export const DEFAULT_ONBOARDING_TEMPLATES: DefaultOnboardingTemplate[] = [
         field_options: ['FDA Seafood HACCP', 'MSC Certified', 'BAP Certified', 'ASC Certified', 'Organic Certified']
       }
     ]
+  },
+  {
+    industry: 'Auditor',
+    default_welcome_message: 'Welcome to our audit engagement portal. Please complete the engagement intake so we can scope your audit, confirm independence, and request initial evidence. Thank you for partnering with our audit team.',
+    allow_branch_selection: true,
+    require_branch_selection: false,
+    auto_approve_standard_docs: false,
+    require_all_documents: true,
+    expires_days: 30,
+    document_requirements: [
+      {
+        document_type: 'engagement_letter',
+        document_name: 'Engagement Letter',
+        description: 'Signed engagement letter outlining audit scope, fees, and responsibilities',
+        is_required: true,
+        display_order: 1
+      },
+      {
+        document_type: 'scope_document',
+        document_name: 'Audit Scope Document',
+        description: 'Document defining the scope, period, and standards for the audit',
+        is_required: true,
+        display_order: 2
+      },
+      {
+        document_type: 'independence_confirmation',
+        document_name: 'Independence Confirmation',
+        description: 'Confirmation of auditor independence and absence of conflicts of interest',
+        is_required: true,
+        display_order: 3
+      },
+      {
+        document_type: 'prior_year_workpapers',
+        document_name: 'Prior Year Workpapers',
+        description: 'Workpapers and final report from the prior audit period (if applicable)',
+        is_required: false,
+        display_order: 4
+      },
+      {
+        document_type: 'management_rep_letter',
+        document_name: 'Management Representation Letter',
+        description: 'Letter from management confirming the accuracy of information provided',
+        is_required: true,
+        display_order: 5
+      },
+      {
+        document_type: 'org_chart',
+        document_name: 'Organizational Chart',
+        description: 'Current organizational chart for the audited entity',
+        is_required: false,
+        display_order: 6
+      }
+    ],
+    form_fields: [
+      ...COMMON_FORM_FIELDS,
+      {
+        field_type: 'select',
+        field_label: 'Audit Type',
+        field_description: 'Primary type of audit engagement',
+        is_required: true,
+        field_order: 7,
+        field_options: ['Financial Audit', 'Compliance Audit', 'Operational Audit', 'IT/Security Audit', 'Food Safety Audit', 'Quality / ISO Audit']
+      },
+      {
+        field_type: 'date',
+        field_label: 'Audit Period Start',
+        field_description: 'Start of the period being audited',
+        is_required: true,
+        field_order: 8
+      },
+      {
+        field_type: 'date',
+        field_label: 'Audit Period End',
+        field_description: 'End of the period being audited',
+        is_required: true,
+        field_order: 9
+      },
+      {
+        field_type: 'text',
+        field_label: 'Primary Audit Contact',
+        field_description: 'Name and title of the client-side audit liaison',
+        is_required: true,
+        field_order: 10
+      }
+    ]
   }
 ];
 

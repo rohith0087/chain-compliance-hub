@@ -221,6 +221,11 @@ const AppRoutes = () => {
                       <ChatPage />
                     </ProtectedRoute>
                   } />
+                  <Route path="/audit-assistant" element={
+                    <ProtectedRoute>
+                      <AuditAssistantPage />
+                    </ProtectedRoute>
+                  } />
                   <Route path="/agents" element={
                     <ProtectedRoute>
                       <AgentManagementDashboard />

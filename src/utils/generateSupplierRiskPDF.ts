@@ -73,7 +73,7 @@ function checkPageBreak(doc: jsPDF, y: number, needed: number): number {
   return y;
 }
 
-export function generateSupplierRiskPDF({ supplier, userName, userEmail }: PDFOptions) {
+export function generateSupplierRiskPDF({ supplier, userName, userEmail, terms }: PDFOptions) {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
   const now = new Date();
@@ -81,6 +81,11 @@ export function generateSupplierRiskPDF({ supplier, userName, userEmail }: PDFOp
     year: 'numeric', month: 'long', day: 'numeric',
     hour: '2-digit', minute: '2-digit',
   });
+
+  const titleLabel = terms?.supplier_risk_report || 'Supplier Risk Assessment';
+  const subtitleLabel = terms?.supplier_risk_report
+    ? `${terms.supplier_risk_report}`
+    : 'Comprehensive Risk Report';
 
   // ─── PAGE 1: COVER + SUMMARY ───
   // Header band
@@ -90,10 +95,10 @@ export function generateSupplierRiskPDF({ supplier, userName, userEmail }: PDFOp
   doc.setTextColor(...COLORS.white);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(22);
-  doc.text('Supplier Risk Assessment', 20, 24);
+  doc.text(titleLabel, 20, 24);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
-  doc.text('Comprehensive Risk Report', 20, 35);
+  doc.text(subtitleLabel, 20, 35);
   doc.setFontSize(9);
   doc.text(`Generated: ${timestamp}`, 20, 46);
 

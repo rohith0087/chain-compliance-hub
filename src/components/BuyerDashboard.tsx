@@ -36,6 +36,7 @@ import { MetricChip } from '@/components/dashboard/MetricChip';
 import { AttentionPanel } from '@/components/dashboard/AttentionPanel';
 import { ExpiryPanel } from '@/components/dashboard/ExpiryPanel';
 import { ActivityQuickActionsPanel } from '@/components/dashboard/ActivityQuickActionsPanel';
+import { getWorkspaceProfileForIndustry } from '@/config/workspaceProfiles';
 import { motion } from 'framer-motion';
 import { useCommunicationThreads } from '@/hooks/useCommunicationThreads';
 

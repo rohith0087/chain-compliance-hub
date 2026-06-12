@@ -57,7 +57,11 @@ Deno.serve(async (req) => {
         ? sb.from("audit_findings").select("*").eq("buyer_id", buyerId).eq("supplier_id", clientId).eq("engagement_id", engagementId)
         : sb.from("audit_findings").select("*").eq("buyer_id", buyerId).eq("supplier_id", clientId)
       ).order("severity", { ascending: false }),
-      sb.from("document_uploads").select("file_name, document_type, status, expiration_date").eq("supplier_id", clientId).limit(50),
+      sb.from("document_uploads")
+        .select("file_name, document_name, status, expiration_date, document_requests!inner(supplier_id, buyer_id)")
+        .eq("document_requests.supplier_id", clientId)
+        .eq("document_requests.buyer_id", buyerId)
+        .limit(80),
       engagementId ? sb.from("document_requests").select("title, status, due_date").eq("id", engagementId).maybeSingle() : Promise.resolve({ data: null }),
     ]);
 

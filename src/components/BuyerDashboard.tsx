@@ -425,7 +425,9 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
                     setActiveTab('documents');
                   }}
                   onNavigateToTab={setActiveTab}
+                  industry={buyerProfile?.industry}
                 />
+
               </motion.div>
             </div>
           </div>

@@ -78,6 +78,7 @@ import { CommandPaletteSearch } from './CommandPaletteSearch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { WhatsNewDialog } from '@/components/shared/WhatsNewDialog';
 import { APP_VERSION } from '@/config/version';
+import { getWorkspaceProfileForIndustry } from '@/config/workspaceProfiles';
 
 // Version button component for sidebar footer
 function VersionButton() {

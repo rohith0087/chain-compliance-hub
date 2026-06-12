@@ -300,6 +300,11 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
                                 </SafeSelectItem>
                               ))}
                             </SafeSelect>
+                            {buyerData.industry === 'Auditor' && (
+                              <p className="text-xs text-primary bg-primary/5 border border-primary/20 rounded p-2 mt-1">
+                                Auditor workspace enabled. Your dashboard will use auditor terminology (Clients, Audit Risk, Engagement, Evidence) and unlock the Audit Findings tab on each client.
+                              </p>
+                            )}
                           </div>
                         </div>
 

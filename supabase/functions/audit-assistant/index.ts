@@ -84,8 +84,10 @@ function makeTools(sb: ReturnType<typeof createClient>, ctx: AuditCtx) {
         const cid = clientId || ctx.clientId;
         if (!cid) return { error: "No client selected" };
         let q = sb.from("document_uploads")
-          .select("id, document_type, file_name, status, expiration_date, created_at, request_id, ai_summary")
-          .eq("supplier_id", cid).order("created_at", { ascending: false }).limit(100);
+          .select("id, document_name, file_name, status, expiration_date, created_at, request_id, content_summary, document_requests!inner(supplier_id, buyer_id, title)")
+          .eq("document_requests.supplier_id", cid)
+          .eq("document_requests.buyer_id", ctx.buyerId)
+          .order("created_at", { ascending: false }).limit(100);
         const eid = engagementId || ctx.engagementId;
         if (eid) q = q.eq("request_id", eid);
         const { data, error } = await q;
@@ -101,7 +103,7 @@ function makeTools(sb: ReturnType<typeof createClient>, ctx: AuditCtx) {
             const days = Math.ceil((new Date(d.expiration_date).getTime() - today.getTime()) / 86400000);
             expiry = days < 0 ? `EXPIRED ${Math.abs(days)}d ago` : days <= 30 ? `Expires in ${days}d` : `OK (${days}d left)`;
           }
-          return { ...d, expiry_label: expiry };
+          return { id: d.id, name: d.document_name || d.file_name, status: d.status, expiration_date: d.expiration_date, summary: d.content_summary, request_id: d.request_id, expiry_label: expiry };
         });
         return { count: enriched.length, evidence: enriched };
       },

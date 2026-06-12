@@ -21,6 +21,14 @@ export interface WorkspaceTerms {
 export interface WorkspaceFlags {
   showAuditFindings: boolean;
   showEngagementDocs: boolean;
+  hideCOAAnalysis: boolean;
+  hideItemCompliance: boolean;
+  hideFacilityMatrix: boolean;
+  hidePrePopulate: boolean;
+  hideBuyerSamples: boolean;
+  hideSupplierMap: boolean;
+  defaultEntityType?: string;
+  lockEntityType?: boolean;
 }
 
 export interface WorkspaceProfile {

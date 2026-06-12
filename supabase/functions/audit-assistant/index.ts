@@ -3,7 +3,7 @@
 // Indian: Companies Act 2013, CARO 2020, ICAI Standards on Auditing, GST, Income Tax, SEBI LODR.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.0";
-import { streamText, tool, stepCountIs, convertToModelMessages, type UIMessage } from "npm:ai@4.3.16";
+import { streamText, tool, stepCountIs, convertToCoreMessages, type UIMessage } from "npm:ai@4.3.16";
 import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible@0.2.14";
 import { z } from "npm:zod@3.23.8";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/corsHeaders.ts";
@@ -243,7 +243,7 @@ Deno.serve(async (req) => {
       baseURL: "https://ai.gateway.lovable.dev/v1",
       headers: { "Lovable-API-Key": LOVABLE_API_KEY, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
     });
-    const model = provider("google/gemini-2.5-flash");
+    const model = provider("google/gemini-3-flash-preview");
 
     const ctx: AuditCtx = { userId: user.id, buyerId, clientId, engagementId };
     const tools = makeTools(sb, ctx);
@@ -255,7 +255,7 @@ Deno.serve(async (req) => {
     const result = streamText({
       model,
       system: SYSTEM_PROMPT + contextNote,
-      messages: convertToModelMessages(messages),
+      messages: convertToCoreMessages(messages),
       tools,
       stopWhen: stepCountIs(50),
     });

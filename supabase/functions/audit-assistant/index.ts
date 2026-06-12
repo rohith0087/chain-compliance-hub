@@ -3,7 +3,7 @@
 // Indian: Companies Act 2013, CARO 2020, ICAI Standards on Auditing, GST, Income Tax, SEBI LODR.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.0";
-import { streamText, tool, stepCountIs, convertToCoreMessages, type UIMessage } from "npm:ai@4.3.16";
+import { streamText, tool, stepCountIs, type UIMessage } from "npm:ai@4.3.16";
 import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible@0.2.14";
 import { z } from "npm:zod@3.23.8";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/corsHeaders.ts";
@@ -255,7 +255,7 @@ Deno.serve(async (req) => {
     const result = streamText({
       model,
       system: SYSTEM_PROMPT + contextNote,
-      messages: convertToCoreMessages(messages),
+      messages: messages as any,
       tools,
       stopWhen: stepCountIs(50),
     });

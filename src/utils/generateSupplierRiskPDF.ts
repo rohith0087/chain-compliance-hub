@@ -2,10 +2,17 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { SupplierRiskProfile } from '@/components/buyer/supplier-risk/riskData';
 
+interface PDFLabelPack {
+  supplier_risk_report?: string;
+  supplier?: string;
+  supplier_profile?: string;
+}
+
 interface PDFOptions {
   supplier: SupplierRiskProfile;
   userName: string;
   userEmail: string;
+  terms?: PDFLabelPack;
 }
 
 const COLORS = {

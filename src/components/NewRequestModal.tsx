@@ -67,6 +67,16 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
     }
   }, [isOpen, user]);
 
+  // Apply auditor workspace defaults: lock entity type to "Auditor"
+  const wsProfile = getWorkspaceProfileForIndustry(buyerProfile?.industry);
+  const wsFlags = wsProfile.flags;
+  React.useEffect(() => {
+    if (wsFlags.defaultEntityType && selectedSupplierType !== wsFlags.defaultEntityType) {
+      setSelectedSupplierType(wsFlags.defaultEntityType);
+      setSelectedDocuments([]);
+    }
+  }, [wsFlags.defaultEntityType]);
+
   // Combine static documents with custom templates
   React.useEffect(() => {
     const transformedCustomTemplates: ComplianceDocument[] = customTemplates.map(template => ({

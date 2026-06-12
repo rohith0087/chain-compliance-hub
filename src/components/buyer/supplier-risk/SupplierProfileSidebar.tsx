@@ -71,6 +71,7 @@ export function SupplierProfileSidebar({ supplier }: { supplier: SupplierRiskPro
             supplier,
             userName: profile?.full_name || 'Unknown User',
             userEmail: user?.email || 'N/A',
+            terms: t,
           })}>
             <Download className="h-3.5 w-3.5" /> Download Report
           </Button>

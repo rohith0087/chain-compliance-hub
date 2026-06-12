@@ -16,6 +16,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useBranchSupplierConnections } from '@/hooks/useBranchSupplierConnections';
+import { getWorkspaceProfileForIndustry } from '@/config/workspaceProfiles';
 
 interface NewRequestModalProps {
   isOpen: boolean;
@@ -65,6 +66,16 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
       fetchBuyerData();
     }
   }, [isOpen, user]);
+
+  // Apply auditor workspace defaults: lock entity type to "Auditor"
+  const wsProfile = getWorkspaceProfileForIndustry(buyerProfile?.industry);
+  const wsFlags = wsProfile.flags;
+  React.useEffect(() => {
+    if (wsFlags.defaultEntityType && selectedSupplierType !== wsFlags.defaultEntityType) {
+      setSelectedSupplierType(wsFlags.defaultEntityType);
+      setSelectedDocuments([]);
+    }
+  }, [wsFlags.defaultEntityType]);
 
   // Combine static documents with custom templates
   React.useEffect(() => {
@@ -444,23 +455,31 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
           <div className="space-y-6">
             {/* Entity Type Selection */}
             <div className="space-y-2">
-              <Label htmlFor="entity-type">Entity Type</Label>
+              <Label htmlFor="entity-type">{wsFlags.lockEntityType ? 'Engagement Type' : 'Entity Type'}</Label>
               <Select 
                 value={selectedSupplierType} 
                 onValueChange={(value) => {
                   setSelectedSupplierType(value);
                   setSelectedDocuments([]); // Clear selected documents when entity type changes
                 }}
+                disabled={wsFlags.lockEntityType}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select entity type" />
                 </SelectTrigger>
               <SelectContent>
-                <SelectItem value="General Supplier">General Supplier</SelectItem>
-                <SelectItem value="Egg Processing">Egg Processing / Hatchery</SelectItem>
+                {wsFlags.lockEntityType ? (
+                  <SelectItem value="Auditor">Auditor</SelectItem>
+                ) : (
+                  <>
+                    <SelectItem value="General Supplier">General Supplier</SelectItem>
+                    <SelectItem value="Egg Processing">Egg Processing / Hatchery</SelectItem>
+                  </>
+                )}
               </SelectContent>
               </Select>
             </div>
+
 
             {/* Document Selection */}
             <DocumentSelectionStep

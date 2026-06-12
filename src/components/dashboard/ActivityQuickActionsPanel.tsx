@@ -19,6 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useBranchContext } from '@/contexts/BranchContext';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { getWorkspaceProfileForIndustry } from '@/config/workspaceProfiles';
 
 interface ActivityQuickActionsPanelProps {
   buyerId: string;
@@ -26,6 +27,7 @@ interface ActivityQuickActionsPanelProps {
   onInviteSupplier: () => void;
   onNavigateToDocuments: (filter?: string) => void;
   onNavigateToTab: (tab: string) => void;
+  industry?: string | null;
 }
 
 interface ActivityItem {
@@ -61,8 +63,12 @@ export function ActivityQuickActionsPanel({
   onNewRequest,
   onInviteSupplier,
   onNavigateToDocuments,
-  onNavigateToTab
+  onNavigateToTab,
+  industry
 }: ActivityQuickActionsPanelProps) {
+  const wsProfile = getWorkspaceProfileForIndustry(industry);
+  const wsTerms = wsProfile.terms;
+  const wsFlags = wsProfile.flags;
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { currentBranch, allBranchesView } = useBranchContext();
@@ -160,10 +166,11 @@ export function ActivityQuickActionsPanel({
 
   const quickActions = [
     { label: 'New Request', icon: Plus, onClick: onNewRequest, color: 'bg-primary hover:bg-primary/90 text-primary-foreground' },
-    { label: 'COA Analysis', icon: FlaskConical, onClick: () => onNavigateToTab('coa-analysis'), color: 'bg-teal-500 hover:bg-teal-600 text-white' },
-    { label: 'Supplier Risk', icon: ShieldAlert, onClick: () => onNavigateToTab('supplier-risk'), color: 'bg-secondary hover:bg-secondary/90 text-secondary-foreground' },
-    { label: 'Suppliers', icon: Users, onClick: () => onNavigateToTab('suppliers'), color: 'bg-muted hover:bg-muted/80 text-foreground' },
-  ];
+    !wsFlags.hideCOAAnalysis && { label: 'COA Analysis', icon: FlaskConical, onClick: () => onNavigateToTab('coa-analysis'), color: 'bg-teal-500 hover:bg-teal-600 text-white' },
+    { label: wsTerms.supplier_risk, icon: ShieldAlert, onClick: () => onNavigateToTab('supplier-risk'), color: 'bg-secondary hover:bg-secondary/90 text-secondary-foreground' },
+    { label: wsTerms.suppliers, icon: Users, onClick: () => onNavigateToTab('suppliers'), color: 'bg-muted hover:bg-muted/80 text-foreground' },
+  ].filter(Boolean) as { label: string; icon: any; onClick: () => void; color: string }[];
+
 
   return (
     <div className="h-full flex flex-col gap-4">

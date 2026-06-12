@@ -21,6 +21,14 @@ export interface WorkspaceTerms {
 export interface WorkspaceFlags {
   showAuditFindings: boolean;
   showEngagementDocs: boolean;
+  hideCOAAnalysis: boolean;
+  hideItemCompliance: boolean;
+  hideFacilityMatrix: boolean;
+  hidePrePopulate: boolean;
+  hideBuyerSamples: boolean;
+  hideSupplierMap: boolean;
+  defaultEntityType?: string;
+  lockEntityType?: boolean;
 }
 
 export interface WorkspaceProfile {
@@ -48,6 +56,12 @@ export const DEFAULT_PROFILE: WorkspaceProfile = {
   flags: {
     showAuditFindings: false,
     showEngagementDocs: false,
+    hideCOAAnalysis: false,
+    hideItemCompliance: false,
+    hideFacilityMatrix: false,
+    hidePrePopulate: false,
+    hideBuyerSamples: false,
+    hideSupplierMap: false,
   },
 };
 
@@ -70,6 +84,14 @@ export const AUDITOR_PROFILE: WorkspaceProfile = {
   flags: {
     showAuditFindings: true,
     showEngagementDocs: true,
+    hideCOAAnalysis: true,
+    hideItemCompliance: true,
+    hideFacilityMatrix: true,
+    hidePrePopulate: true,
+    hideBuyerSamples: true,
+    hideSupplierMap: true,
+    defaultEntityType: 'Auditor',
+    lockEntityType: true,
   },
 };
 

@@ -1624,7 +1624,7 @@ const ChatPage: React.FC = () => {
                   >
                     <Menu className="w-5 h-5" />
                   </Button>
-                  <span className="text-sm font-medium text-muted-foreground">Compliance Compass</span>
+                  <span className="text-sm font-medium text-muted-foreground">{wsT.compliance_compass}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-muted-foreground">

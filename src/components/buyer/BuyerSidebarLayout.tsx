@@ -303,7 +303,7 @@ export function BuyerSidebarLayout({
     //   value: 'assignments'
     // },
     {
-      title: 'Onboarding Pipeline',
+      title: wsTerms.onboarding_pipeline,
       icon: GitBranch,
       value: 'onboarding'
     },

@@ -286,14 +286,69 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_engagement_summaries: {
+        Row: {
+          auditor_user_id: string | null
+          buyer_id: string
+          client_id: string
+          created_at: string
+          engagement_id: string | null
+          id: string
+          plan_md: string | null
+          report_generated_at: string | null
+          report_url: string | null
+          risk_matrix: Json | null
+          updated_at: string
+        }
+        Insert: {
+          auditor_user_id?: string | null
+          buyer_id: string
+          client_id: string
+          created_at?: string
+          engagement_id?: string | null
+          id?: string
+          plan_md?: string | null
+          report_generated_at?: string | null
+          report_url?: string | null
+          risk_matrix?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          auditor_user_id?: string | null
+          buyer_id?: string
+          client_id?: string
+          created_at?: string
+          engagement_id?: string | null
+          id?: string
+          plan_md?: string | null
+          report_generated_at?: string | null
+          report_url?: string | null
+          risk_matrix?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_engagement_summaries_engagement_id_fkey"
+            columns: ["engagement_id"]
+            isOneToOne: false
+            referencedRelation: "document_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_findings: {
         Row: {
           buyer_id: string
+          clause_reference: string | null
           created_at: string
           created_by: string | null
           description: string | null
+          engagement_id: string | null
+          evidence_doc_ids: string[] | null
           finding_date: string
+          framework: string | null
           id: string
+          recommendation: string | null
           severity: string
           status: string
           supplier_id: string
@@ -302,11 +357,16 @@ export type Database = {
         }
         Insert: {
           buyer_id: string
+          clause_reference?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
+          engagement_id?: string | null
+          evidence_doc_ids?: string[] | null
           finding_date?: string
+          framework?: string | null
           id?: string
+          recommendation?: string | null
           severity?: string
           status?: string
           supplier_id: string
@@ -315,11 +375,16 @@ export type Database = {
         }
         Update: {
           buyer_id?: string
+          clause_reference?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
+          engagement_id?: string | null
+          evidence_doc_ids?: string[] | null
           finding_date?: string
+          framework?: string | null
           id?: string
+          recommendation?: string | null
           severity?: string
           status?: string
           supplier_id?: string
@@ -332,6 +397,13 @@ export type Database = {
             columns: ["buyer_id"]
             isOneToOne: false
             referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_findings_engagement_id_fkey"
+            columns: ["engagement_id"]
+            isOneToOne: false
+            referencedRelation: "document_requests"
             referencedColumns: ["id"]
           },
           {
@@ -5479,6 +5551,7 @@ export type Database = {
         Returns: boolean
       }
       supplier_can_view_buyer: { Args: { buyer_id: string }; Returns: boolean }
+      user_can_act_for_buyer: { Args: { _buyer_id: string }; Returns: boolean }
       user_has_branch_access: {
         Args: { p_branch_id: string; p_user_id: string }
         Returns: boolean

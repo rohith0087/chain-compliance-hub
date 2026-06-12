@@ -396,7 +396,7 @@ export function BuyerSidebarLayout({
         onShowBulkInvite();
         break;
       case 'chat':
-        navigate('/chat');
+        navigate(wsFlags.showAuditFindings ? '/audit-assistant' : '/chat');
         break;
       case 'subscription':
         navigate('/subscription');

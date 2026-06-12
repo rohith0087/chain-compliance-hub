@@ -19,6 +19,7 @@ import AuthPage from "./components/auth/AuthPage";
 import ResetPassword from "./pages/ResetPassword";
 import DynamicDashboard from "./components/dashboard/DynamicDashboard";
 import ChatPage from "./pages/ChatPage";
+import AuditAssistantPage from "./pages/AuditAssistantPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import AgentManagementDashboard from "./components/agents/AgentManagementDashboard";
 import PlatformAdminLogin from "./pages/PlatformAdminLogin";
@@ -219,6 +220,11 @@ const AppRoutes = () => {
                   <Route path="/chat" element={
                     <ProtectedRoute>
                       <ChatPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/audit-assistant" element={
+                    <ProtectedRoute>
+                      <AuditAssistantPage />
                     </ProtectedRoute>
                   } />
                   <Route path="/agents" element={

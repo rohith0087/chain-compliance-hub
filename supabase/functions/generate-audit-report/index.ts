@@ -2,24 +2,13 @@
 // Called by the audit-assistant edge function or directly from UI.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.0";
-import { PDFDocument, StandardFonts, rgb } from "npm:pdf-lib@1.17.1";
+import jsPDF from "npm:jspdf@2.5.1";
+import autoTable from "npm:jspdf-autotable@3.8.2";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/corsHeaders.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SYSTEM_SECRET = Deno.env.get("SYSTEM_INVOCATION_SECRET");
-
-function wrap(text: string, max: number): string[] {
-  const words = (text ?? "").split(/\s+/);
-  const lines: string[] = [];
-  let cur = "";
-  for (const w of words) {
-    if ((cur + " " + w).trim().length > max) { lines.push(cur); cur = w; }
-    else cur = (cur ? cur + " " : "") + w;
-  }
-  if (cur) lines.push(cur);
-  return lines;
-}
 
 Deno.serve(async (req) => {
   const preflight = handleCorsPreflightRequest(req);
@@ -68,72 +57,102 @@ Deno.serve(async (req) => {
     const findings = (findingsRes.data ?? []) as any[];
     const evidence = (evidenceRes.data ?? []) as any[];
 
-    const pdf = await PDFDocument.create();
-    const font = await pdf.embedFont(StandardFonts.Helvetica);
-    const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-    const navy = rgb(0.11, 0.22, 0.42);
-    const grey = rgb(0.35, 0.4, 0.45);
-    let page = pdf.addPage([595, 842]);
-    let y = 800;
-    const margin = 50;
+    const pdf = new jsPDF({ unit: "pt", format: "a4" });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 44;
+    const navy: [number, number, number] = [28, 55, 90];
+    const textColor: [number, number, number] = [24, 32, 44];
+    const grey: [number, number, number] = [97, 110, 128];
+    const light: [number, number, number] = [241, 245, 249];
 
-    const addPage = () => { page = pdf.addPage([595, 842]); y = 800; };
-    const ensure = (need = 40) => { if (y - need < 60) addPage(); };
-    const heading = (t: string, size = 16) => { ensure(size + 20); page.drawText(t, { x: margin, y, size, font: bold, color: navy }); y -= size + 8; };
-    const text = (t: string, size = 10, color = rgb(0.1, 0.1, 0.1)) => {
-      for (const line of wrap(t, Math.floor(495 / (size * 0.55)))) {
-        ensure(size + 4);
-        page.drawText(line, { x: margin, y, size, font, color });
-        y -= size + 4;
-      }
+    pdf.setFillColor(...navy);
+    pdf.rect(0, 0, pageWidth, 88, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(24);
+    pdf.text("AUDIT REPORT", margin, 48);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(11);
+    pdf.text(`Auditor: ${buyer.data?.company_name ?? "—"}`, margin, 68);
+    pdf.text(`Client: ${client.data?.company_name ?? "—"}`, margin, 84);
+
+    pdf.setTextColor(...textColor);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(11);
+    let y = 124;
+
+    const writeSection = (title: string, body: string) => {
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(15);
+      pdf.setTextColor(...navy);
+      pdf.text(title, margin, y);
+      y += 18;
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(10.5);
+      pdf.setTextColor(...textColor);
+      const lines = pdf.splitTextToSize(body, pageWidth - margin * 2);
+      pdf.text(lines, margin, y);
+      y += lines.length * 14 + 16;
     };
 
-    // Cover
-    page.drawRectangle({ x: 0, y: 780, width: 595, height: 62, color: navy });
-    page.drawText("AUDIT REPORT", { x: margin, y: 805, size: 22, font: bold, color: rgb(1, 1, 1) });
-    y = 760;
-    text(`Auditor: ${buyer.data?.company_name ?? "—"}`, 12);
-    text(`Client: ${client.data?.company_name ?? "—"} (${client.data?.industry ?? "n/a"}, ${client.data?.country ?? ""})`, 12);
-    if (engagementRes.data) text(`Engagement: ${(engagementRes.data as any).title}`, 12);
-    text(`Issued: ${new Date().toLocaleDateString()}`, 10, grey);
-    y -= 12;
-
-    // Executive summary
-    heading("Executive Summary");
     const sev = { Critical: 0, Major: 0, Minor: 0 } as Record<string, number>;
     findings.forEach((f) => { sev[f.severity] = (sev[f.severity] || 0) + 1; });
-    text(`This report summarizes the audit performed by ${buyer.data?.company_name ?? "the auditor"} on ${client.data?.company_name ?? "the client"}. A total of ${findings.length} findings were identified: ${sev.Critical} critical, ${sev.Major} major, and ${sev.Minor} minor. ${evidence.length} pieces of evidence were reviewed.`);
 
-    // Scope & methodology
-    heading("Scope & Methodology");
-    text("The engagement was performed in accordance with applicable Standards on Auditing (ICAI), CARO 2020 where relevant, and supporting international frameworks (ISO 9001/27001, SOC 2, HACCP). Evidence was obtained via documentation review, inquiry, and observation. Findings are rated by severity using likelihood × impact analysis.");
+    writeSection(
+      "Executive Summary",
+      `This report summarizes the audit performed by ${buyer.data?.company_name ?? "the auditor"} on ${client.data?.company_name ?? "the client"}. A total of ${findings.length} findings were identified: ${sev.Critical} critical, ${sev.Major} major, and ${sev.Minor} minor. ${evidence.length} pieces of evidence were reviewed.${engagementRes.data ? ` Engagement: ${(engagementRes.data as any).title}.` : ""} Issued: ${new Date().toLocaleDateString()}.`
+    );
 
-    // Findings
-    heading("Findings");
-    if (findings.length === 0) text("No findings recorded.", 10, grey);
-    findings.forEach((f, i) => {
-      ensure(80);
-      page.drawText(`${i + 1}. ${f.title}`, { x: margin, y, size: 12, font: bold, color: navy });
-      y -= 16;
-      const sevColor = f.severity === "Critical" ? rgb(0.7, 0.1, 0.1) : f.severity === "Major" ? rgb(0.85, 0.45, 0.05) : rgb(0.4, 0.5, 0.2);
-      page.drawText(`[${f.severity}]${f.framework ? "  " + f.framework : ""}${f.clause_reference ? " — " + f.clause_reference : ""}`, { x: margin, y, size: 9, font: bold, color: sevColor });
-      y -= 14;
-      if (f.description) text(`Observation: ${f.description}`);
-      if (f.recommendation) text(`Recommendation: ${f.recommendation}`);
-      y -= 6;
+    writeSection(
+      "Scope & Methodology",
+      "The engagement was performed in accordance with applicable Standards on Auditing (ICAI), CARO 2020 where relevant, and supporting international frameworks including ISO 9001, ISO 27001, SOC 2, and HACCP where applicable. Evidence was obtained through documentation review, inquiry, and observation. Findings are rated using likelihood and impact based scoping."
+    );
+
+    autoTable(pdf, {
+      startY: y,
+      theme: "grid",
+      styles: { fontSize: 9, cellPadding: 6, textColor },
+      headStyles: { fillColor: navy, textColor: 255, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: light },
+      head: [["#", "Finding", "Severity", "Framework", "Clause", "Recommendation"]],
+      body: findings.length
+        ? findings.map((f, i) => [
+            String(i + 1),
+            f.title ?? "—",
+            f.severity ?? "—",
+            f.framework ?? "—",
+            f.clause_reference ?? "—",
+            (f.recommendation ?? "—").slice(0, 160),
+          ])
+        : [["—", "No findings recorded", "—", "—", "—", "—"]],
+      margin: { left: margin, right: margin },
     });
 
-    // Evidence appendix
-    heading("Evidence Appendix");
-    if (evidence.length === 0) text("No evidence recorded.", 10, grey);
-    evidence.forEach((d) => {
-      ensure(16);
-      const exp = d.expiration_date ? ` (exp ${new Date(d.expiration_date).toLocaleDateString()})` : "";
-      page.drawText(`• ${d.document_name || d.file_name || "Document"} [${d.status}]${exp}`.slice(0, 100), { x: margin, y, size: 9, font, color: grey });
-      y -= 12;
+    const findingsEndY = (pdf as any).lastAutoTable?.finalY ?? y;
+    autoTable(pdf, {
+      startY: findingsEndY + 24,
+      theme: "grid",
+      styles: { fontSize: 8.5, cellPadding: 5, textColor },
+      headStyles: { fillColor: [71, 85, 105], textColor: 255, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: light },
+      head: [["Evidence", "Status", "Expiration"]],
+      body: evidence.length
+        ? evidence.map((d) => [
+            d.document_name || d.file_name || "Document",
+            d.status || "—",
+            d.expiration_date ? new Date(d.expiration_date).toLocaleDateString() : "—",
+          ])
+        : [["No evidence recorded", "—", "—"]],
+      margin: { left: margin, right: margin, bottom: 42 },
+      didDrawPage: () => {
+        pdf.setFontSize(9);
+        pdf.setTextColor(...grey);
+        pdf.text(String(pdf.getCurrentPageInfo().pageNumber), pageWidth - margin, pageHeight - 18, { align: "right" });
+      },
     });
 
-    const bytes = await pdf.save();
+    const bytes = pdf.output("arraybuffer");
     const fileName = `audit-report/${buyerId}/${clientId}/${Date.now()}.pdf`;
     const { error: upErr } = await sb.storage.from("compliance-documents").upload(fileName, bytes, { contentType: "application/pdf", upsert: true });
     if (upErr) {

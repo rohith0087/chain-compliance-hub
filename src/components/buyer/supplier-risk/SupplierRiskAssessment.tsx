@@ -74,6 +74,7 @@ export function SupplierRiskAssessment() {
             supplier,
             userName: profile?.full_name || 'Unknown User',
             userEmail: user?.email || 'N/A',
+            terms: t,
           })}><FileDown className="h-3.5 w-3.5 mr-1.5" /> Export PDF</Button>
           <Button variant="outline" size="sm"><Share2 className="h-3.5 w-3.5 mr-1.5" /> Share</Button>
           <Button variant="ghost" size="sm"><Flag className="h-3.5 w-3.5 mr-1.5" /> Report Issue</Button>

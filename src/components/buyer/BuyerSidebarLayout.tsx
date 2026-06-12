@@ -254,7 +254,30 @@ export function BuyerSidebarLayout({
   }, [currentBranch, setCurrentBranch]);
 
   // Workspace profile (terminology pack) driven by buyer industry
-  const wsTerms = getWorkspaceProfileForIndustry(buyerProfile?.industry).terms;
+  const wsProfile = getWorkspaceProfileForIndustry(buyerProfile?.industry);
+  const wsTerms = wsProfile.terms;
+  const wsFlags = wsProfile.flags;
+
+  const suppliersSubmenu = [
+    { title: 'Discovery', value: 'suppliers', icon: Search },
+    !wsFlags.hideSupplierMap && { title: `${wsTerms.supplier} Map`, value: 'supplier-map', icon: Compass },
+    !wsFlags.hidePrePopulate && { title: 'Pre-populate Documents', value: 'pre-populate', icon: Upload }
+  ].filter(Boolean) as { title: string; value: string; icon: any }[];
+
+  const requestsSubmenu = [
+    { title: t('common:navigation.documents'), value: 'documents', icon: FileCheck },
+    { title: 'Templates', value: 'templates', icon: FileText },
+    !wsFlags.hideBuyerSamples && { title: 'Buyer Samples', value: 'sample-templates', icon: FileImage },
+    { title: 'Document Sets', value: 'document-sets', icon: FolderKanban },
+    !wsFlags.hideCOAAnalysis && { title: 'COA Analysis', value: 'coa-analysis', icon: FlaskConical }
+  ].filter(Boolean) as { title: string; value: string; icon: any }[];
+
+  const complianceSubmenu = [
+    { title: 'Overview', value: 'compliance', icon: BarChart3 },
+    { title: wsTerms.supplier_risk, value: 'supplier-risk', icon: AlertTriangle },
+    !wsFlags.hideItemCompliance && { title: 'Item Compliance', value: 'item-compliance', icon: Package },
+    !wsFlags.hideFacilityMatrix && { title: 'Facility Matrix', value: 'facility-matrix', icon: Building2 }
+  ].filter(Boolean) as { title: string; value: string; icon: any }[];
 
   // Define navigation items with role requirements
   const navigationItems: NavigationItem[] = [
@@ -267,34 +290,19 @@ export function BuyerSidebarLayout({
       title: wsTerms.suppliers,
       icon: Users,
       value: 'suppliers',
-      submenu: [
-        { title: 'Discovery', value: 'suppliers', icon: Search },
-        { title: `${wsTerms.supplier} Map`, value: 'supplier-map', icon: Compass },
-        { title: 'Pre-populate Documents', value: 'pre-populate', icon: Upload }
-      ]
+      submenu: suppliersSubmenu
     },
     {
       title: 'Requests & Documents',
       icon: FileCheck,
       value: 'requests',
-      submenu: [
-        { title: t('common:navigation.documents'), value: 'documents', icon: FileCheck },
-        { title: 'Templates', value: 'templates', icon: FileText },
-        { title: 'Buyer Samples', value: 'sample-templates', icon: FileImage },
-        { title: 'Document Sets', value: 'document-sets', icon: FolderKanban },
-        { title: 'COA Analysis', value: 'coa-analysis', icon: FlaskConical }
-      ]
+      submenu: requestsSubmenu
     },
     {
       title: t('common:navigation.compliance'),
       icon: BarChart3,
       value: 'compliance',
-      submenu: [
-        { title: 'Overview', value: 'compliance', icon: BarChart3 },
-        { title: wsTerms.supplier_risk, value: 'supplier-risk', icon: AlertTriangle },
-        { title: 'Item Compliance', value: 'item-compliance', icon: Package },
-        { title: 'Facility Matrix', value: 'facility-matrix', icon: Building2 }
-      ]
+      submenu: complianceSubmenu
     },
     // Assignments tab - phased out for next build
     // {

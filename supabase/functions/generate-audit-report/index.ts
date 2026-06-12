@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
     evidence.forEach((d) => {
       ensure(16);
       const exp = d.expiration_date ? ` (exp ${new Date(d.expiration_date).toLocaleDateString()})` : "";
-      page.drawText(`• ${d.document_type ?? "Document"} — ${d.file_name ?? "n/a"} [${d.status}]${exp}`.slice(0, 100), { x: margin, y, size: 9, font, color: grey });
+      page.drawText(`• ${d.document_name || d.file_name || "Document"} [${d.status}]${exp}`.slice(0, 100), { x: margin, y, size: 9, font, color: grey });
       y -= 12;
     });
 

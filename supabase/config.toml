@@ -1,5 +1,11 @@
 project_id = "edwerzutsknhuplidhsj"
 
+[functions.audit-assistant]
+verify_jwt = false
+
+[functions.generate-audit-report]
+verify_jwt = false
+
 [api]
 enabled = true
 port = 54321

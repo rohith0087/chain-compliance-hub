@@ -63,8 +63,12 @@ export function ActivityQuickActionsPanel({
   onNewRequest,
   onInviteSupplier,
   onNavigateToDocuments,
-  onNavigateToTab
+  onNavigateToTab,
+  industry
 }: ActivityQuickActionsPanelProps) {
+  const wsProfile = getWorkspaceProfileForIndustry(industry);
+  const wsTerms = wsProfile.terms;
+  const wsFlags = wsProfile.flags;
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { currentBranch, allBranchesView } = useBranchContext();

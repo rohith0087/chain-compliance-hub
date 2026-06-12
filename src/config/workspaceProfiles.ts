@@ -56,6 +56,12 @@ export const DEFAULT_PROFILE: WorkspaceProfile = {
   flags: {
     showAuditFindings: false,
     showEngagementDocs: false,
+    hideCOAAnalysis: false,
+    hideItemCompliance: false,
+    hideFacilityMatrix: false,
+    hidePrePopulate: false,
+    hideBuyerSamples: false,
+    hideSupplierMap: false,
   },
 };
 

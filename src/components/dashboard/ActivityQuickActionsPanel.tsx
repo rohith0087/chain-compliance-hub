@@ -19,6 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useBranchContext } from '@/contexts/BranchContext';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { getWorkspaceProfileForIndustry } from '@/config/workspaceProfiles';
 
 interface ActivityQuickActionsPanelProps {
   buyerId: string;
@@ -26,6 +27,7 @@ interface ActivityQuickActionsPanelProps {
   onInviteSupplier: () => void;
   onNavigateToDocuments: (filter?: string) => void;
   onNavigateToTab: (tab: string) => void;
+  industry?: string | null;
 }
 
 interface ActivityItem {

@@ -455,23 +455,31 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
           <div className="space-y-6">
             {/* Entity Type Selection */}
             <div className="space-y-2">
-              <Label htmlFor="entity-type">Entity Type</Label>
+              <Label htmlFor="entity-type">{wsFlags.lockEntityType ? 'Engagement Type' : 'Entity Type'}</Label>
               <Select 
                 value={selectedSupplierType} 
                 onValueChange={(value) => {
                   setSelectedSupplierType(value);
                   setSelectedDocuments([]); // Clear selected documents when entity type changes
                 }}
+                disabled={wsFlags.lockEntityType}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select entity type" />
                 </SelectTrigger>
               <SelectContent>
-                <SelectItem value="General Supplier">General Supplier</SelectItem>
-                <SelectItem value="Egg Processing">Egg Processing / Hatchery</SelectItem>
+                {wsFlags.lockEntityType ? (
+                  <SelectItem value="Auditor">Auditor</SelectItem>
+                ) : (
+                  <>
+                    <SelectItem value="General Supplier">General Supplier</SelectItem>
+                    <SelectItem value="Egg Processing">Egg Processing / Hatchery</SelectItem>
+                  </>
+                )}
               </SelectContent>
               </Select>
             </div>
+
 
             {/* Document Selection */}
             <DocumentSelectionStep

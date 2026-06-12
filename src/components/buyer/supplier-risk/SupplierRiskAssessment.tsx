@@ -44,7 +44,7 @@ export function SupplierRiskAssessment() {
       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
         <span>Compliance</span>
         <ChevronRight className="h-3.5 w-3.5" />
-        <span>Supplier Risk</span>
+        <span>{t.supplier_risk}</span>
         <ChevronRight className="h-3.5 w-3.5" />
         <span className="text-foreground font-medium">{supplier.name}</span>
       </div>

@@ -110,10 +110,10 @@ function makeTools(sb: ReturnType<typeof createClient>, ctx: AuditCtx) {
     }),
 
     getDocumentContent: tool({
-      description: "Get the AI-extracted content/summary for a single evidence document.",
+      description: "Get the AI-extracted summary for a single evidence document.",
       inputSchema: z.object({ documentId: z.string().uuid() }),
       execute: async ({ documentId }) => {
-        const { data } = await sb.from("document_uploads").select("id, file_name, document_type, ai_summary, extracted_content, status, expiration_date").eq("id", documentId).maybeSingle();
+        const { data } = await sb.from("document_uploads").select("id, file_name, document_name, content_summary, status, expiration_date").eq("id", documentId).maybeSingle();
         return data ?? { error: "Document not found" };
       },
     }),
@@ -124,19 +124,21 @@ function makeTools(sb: ReturnType<typeof createClient>, ctx: AuditCtx) {
       execute: async () => {
         if (!ctx.clientId) return { error: "No client selected" };
         const { data: docs } = await sb.from("document_uploads")
-          .select("id, document_type, status, expiration_date")
-          .eq("supplier_id", ctx.clientId);
+          .select("id, document_name, file_name, status, expiration_date, document_requests!inner(supplier_id, buyer_id)")
+          .eq("document_requests.supplier_id", ctx.clientId)
+          .eq("document_requests.buyer_id", ctx.buyerId);
         const today = new Date();
         const matrix: { area: string; risk: "High" | "Medium" | "Low"; likelihood: number; impact: number; note: string }[] = [];
         (docs ?? []).forEach((d: any) => {
+          const area = d.document_name || d.file_name || "Evidence";
           const status = (d.status ?? "").toLowerCase();
-          if (status === "rejected") matrix.push({ area: d.document_type, risk: "High", likelihood: 5, impact: 4, note: "Rejected — control gap" });
+          if (status === "rejected") matrix.push({ area, risk: "High", likelihood: 5, impact: 4, note: "Rejected — control gap" });
           else if (d.expiration_date) {
             const days = Math.ceil((new Date(d.expiration_date).getTime() - today.getTime()) / 86400000);
-            if (days < 0) matrix.push({ area: d.document_type, risk: "High", likelihood: 5, impact: 5, note: `Expired ${Math.abs(days)}d ago` });
-            else if (days <= 30) matrix.push({ area: d.document_type, risk: "Medium", likelihood: 4, impact: 3, note: `Expires in ${days}d` });
+            if (days < 0) matrix.push({ area, risk: "High", likelihood: 5, impact: 5, note: `Expired ${Math.abs(days)}d ago` });
+            else if (days <= 30) matrix.push({ area, risk: "Medium", likelihood: 4, impact: 3, note: `Expires in ${days}d` });
           } else if (status === "pending" || status === "submitted") {
-            matrix.push({ area: d.document_type, risk: "Medium", likelihood: 3, impact: 3, note: "Awaiting review" });
+            matrix.push({ area, risk: "Medium", likelihood: 3, impact: 3, note: "Awaiting review" });
           }
         });
         return { count: matrix.length, matrix };

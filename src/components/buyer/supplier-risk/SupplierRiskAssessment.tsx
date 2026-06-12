@@ -89,6 +89,9 @@ export function SupplierRiskAssessment() {
           <KeyDrivers drivers={supplier.drivers} />
           <SignalsSection supplier={supplier} />
           <DocumentRiskSection documents={supplier.documents} subscore={supplier.documentSubscore} />
+          {flags.showAuditFindings && (
+            <AuditFindingsTab supplierId={supplier.id} supplierName={supplier.name} />
+          )}
           <ModelTuningPanel onRecalculate={handleRecalculate} />
         </div>
 

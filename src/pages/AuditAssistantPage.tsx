@@ -165,17 +165,34 @@ export default function AuditAssistantPage() {
     }
     setGeneratingReport(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-audit-report', {
-        body: { buyerId, clientId, engagementId: engagementId || undefined },
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-audit-report`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ buyerId, clientId, engagementId: engagementId || undefined }),
       });
-      if (error) throw error;
+      const text = await res.text();
+      let data: any = {};
+      try { data = text ? JSON.parse(text) : {}; } catch { /* non-json */ }
+      if (!res.ok) {
+        throw new Error(data?.error || text || `HTTP ${res.status}`);
+      }
       if (data?.url) {
         setReportUrl(data.url);
         setReportAt(new Date());
         toast({ title: 'Report generated', description: `${data.findings ?? 0} findings included.` });
+      } else {
+        throw new Error('No report URL returned');
       }
     } catch (e: any) {
-      toast({ title: 'Report failed', description: e.message, variant: 'destructive' });
+      toast({
+        title: 'Report failed',
+        description: e?.message?.slice(0, 200) || 'Unknown error',
+        variant: 'destructive',
+      });
     } finally {
       setGeneratingReport(false);
     }

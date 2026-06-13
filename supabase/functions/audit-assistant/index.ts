@@ -154,101 +154,52 @@ async function buildContextSummary(sb: DbClient, ctx: AuditCtx) {
   ].join("\n\n");
 }
 
-async function createPlainTextGatewayStream(messages: Array<{ role: "user" | "assistant"; content: string }>, system: string, cors: Record<string, string>) {
+async function callGateway(messages: Array<{ role: "user" | "assistant"; content: string }>, system: string, cors: Record<string, string>) {
   const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "Lovable-API-Key": LOVABLE_API_KEY,
-      "X-Lovable-AIG-SDK": "vercel-ai-sdk",
     },
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
-      stream: true,
+      stream: false,
       messages: [{ role: "system", content: system }, ...messages],
     }),
   });
 
-  if (!upstream.ok || !upstream.body) {
+  if (!upstream.ok) {
     const errorText = await upstream.text().catch(() => "");
-    return new Response(JSON.stringify({ error: errorText || `AI request failed (${upstream.status})` }), {
+    let message = errorText || `AI request failed (${upstream.status})`;
+    if (upstream.status === 429) message = "Rate limit reached. Please wait a moment and try again.";
+    if (upstream.status === 402) message = "AI credits exhausted. Please add credits in workspace settings.";
+    return new Response(JSON.stringify({ error: message }), {
       status: upstream.status || 500,
       headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 
-  const reader = upstream.body.getReader();
-  const decoder = new TextDecoder();
-  const encoder = new TextEncoder();
+  const json = await upstream.json();
+  const content = json?.choices?.[0]?.message?.content;
+  let text = "";
+  if (typeof content === "string") {
+    text = content;
+  } else if (Array.isArray(content)) {
+    text = content
+      .filter((p: any) => p?.type === "text" && typeof p?.text === "string")
+      .map((p: any) => p.text)
+      .join("");
+  }
 
-  const body = new ReadableStream({
-    async start(controller) {
-      let buffer = "";
+  if (!text.trim()) {
+    return new Response(JSON.stringify({ error: "The assistant returned an empty response. Please try again." }), {
+      status: 502,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
+  }
 
-      const flushLines = () => {
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-
-        for (const rawLine of lines) {
-          const line = rawLine.trim();
-          if (!line.startsWith("data:")) continue;
-
-          const payload = line.slice(5).trim();
-          if (!payload) continue;
-          if (payload === "[DONE]") {
-            controller.close();
-            return true;
-          }
-
-          try {
-            const json = JSON.parse(payload);
-            const delta = json?.choices?.[0]?.delta?.content;
-
-            if (typeof delta === "string" && delta) {
-              controller.enqueue(encoder.encode(delta));
-            } else if (Array.isArray(delta)) {
-              for (const part of delta) {
-                if (part?.type === "text" && typeof part?.text === "string" && part.text) {
-                  controller.enqueue(encoder.encode(part.text));
-                }
-              }
-            }
-          } catch {
-            // Ignore malformed SSE frames and continue streaming.
-          }
-        }
-
-        return false;
-      };
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          if (flushLines()) return;
-        }
-
-        buffer += decoder.decode();
-        flushLines();
-        controller.close();
-      } catch (error) {
-        controller.error(error);
-      } finally {
-        reader.releaseLock();
-      }
-    },
-    cancel(reason) {
-      return reader.cancel(reason);
-    },
-  });
-
-  return new Response(body, {
-    headers: {
-      ...cors,
-      "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-cache",
-    },
+  return new Response(JSON.stringify({ text }), {
+    headers: { ...cors, "Content-Type": "application/json" },
   });
 }
 

@@ -1,10 +1,4 @@
-// Audit Assistant: streaming AI chat with audit-domain tools.
-// Frameworks: ISO 9001/14001/27001, SOC 2, HACCP/GFSI,
-// Indian: Companies Act 2013, CARO 2020, ICAI Standards on Auditing, GST, Income Tax, SEBI LODR.
-
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.0";
-import { streamText, tool, type UIMessage } from "npm:ai@4.3.16";
-import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible@0.2.14";
 import { z } from "npm:zod@3.23.8";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/corsHeaders.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
@@ -15,22 +9,26 @@ const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
 const SYSTEM_PROMPT = `You are an expert senior auditor and the user's Audit Assistant.
 
-You help auditors plan engagements, review client evidence, identify gaps, draft findings, and produce audit reports.
+You help auditors plan engagements, review client evidence, identify gaps, draft findings, and explain audit posture.
 
 Frameworks you are fluent in (cite the specific clause / standard whenever possible):
 - ISO 9001, ISO 14001, ISO 27001 / 27002, ISO 22000
 - SOC 2 (Trust Services Criteria)
 - HACCP, GFSI, BRC, FSSC 22000
-- Indian compliance: Companies Act 2013, CARO 2020 (Companies Auditor's Report Order),
-  ICAI Standards on Auditing (SA 200 series), GST Act, Income Tax Act 1961,
-  SEBI LODR, FSSAI, Factories Act 1948, Labour Codes.
+- Indian compliance: Companies Act 2013, CARO 2020, ICAI Standards on Auditing, GST Act, Income Tax Act 1961, SEBI LODR, FSSAI, Factories Act 1948, Labour Codes
 
 Rules:
-1. Always use tools to ground answers in the auditor's actual client + engagement data. Never invent evidence.
-2. When proposing a finding, ALWAYS map it to a specific control / clause and provide a recommendation.
-3. Cite evidence by document title and id. If evidence is missing or expired, flag it.
-4. Use markdown. Be concise but precise. Use tables for risk matrices and findings lists.
-5. When the user asks to save a finding, call createFinding. When they ask for the report, call generateAuditReport.`;
+1. Ground every answer in the supplied client, engagement, evidence, and findings context. Never invent documents.
+2. When proposing a finding, map it to a specific control or clause and provide a concise recommendation.
+3. Cite evidence by document title and id when available. If evidence is missing or expired, say so clearly.
+4. Use markdown. Be concise, precise, and practical for a working auditor.
+5. If the user asks for a database-changing action you cannot execute here, explain the next manual step instead of pretending it was saved.`;
+
+const RequestSchema = z.object({
+  messages: z.array(z.any()).default([]),
+  clientId: z.string().uuid().optional(),
+  engagementId: z.string().uuid().optional(),
+});
 
 interface AuditCtx {
   userId: string;
@@ -40,172 +38,216 @@ interface AuditCtx {
 }
 
 async function resolveBuyerId(sb: ReturnType<typeof createClient>, userId: string): Promise<string | null> {
-  const { data: tm } = await sb.from("company_users").select("company_id").eq("profile_id", userId).eq("company_type", "buyer").eq("status", "active").maybeSingle();
+  const { data: tm } = await sb
+    .from("company_users")
+    .select("company_id")
+    .eq("profile_id", userId)
+    .eq("company_type", "buyer")
+    .eq("status", "active")
+    .maybeSingle();
   if (tm?.company_id) return tm.company_id as string;
   const { data: owner } = await sb.from("buyers").select("id").eq("profile_id", userId).maybeSingle();
   return (owner?.id as string) ?? null;
 }
 
-function makeTools(sb: ReturnType<typeof createClient>, ctx: AuditCtx) {
-  return {
-    getClientProfile: tool({
-      description: "Fetch the active client (supplier) profile, industry, contacts.",
-      inputSchema: z.object({ clientId: z.string().uuid().optional() }),
-      execute: async ({ clientId }) => {
-        const id = clientId || ctx.clientId;
-        if (!id) return { error: "No client selected" };
-        const { data: c } = await sb.from("suppliers").select("id, company_name, industry, contact_email, contact_phone, country, address").eq("id", id).maybeSingle();
-        return c ?? { error: "Client not found" };
-      },
-    }),
+function messageText(message: any): string {
+  if (typeof message?.content === "string") return message.content;
+  if (Array.isArray(message?.parts)) {
+    return message.parts
+      .filter((part: any) => part?.type === "text" && typeof part?.text === "string")
+      .map((part: any) => part.text)
+      .join("\n")
+      .trim();
+  }
+  return "";
+}
 
-    listEngagements: tool({
-      description: "List engagements (document requests) for the active client.",
-      inputSchema: z.object({ clientId: z.string().uuid().optional() }),
-      execute: async ({ clientId }) => {
-        const id = clientId || ctx.clientId;
-        if (!id) return { error: "No client selected" };
-        const { data } = await sb.from("document_requests")
-          .select("id, title, status, due_date, created_at, supplier_type")
-          .eq("buyer_id", ctx.buyerId).eq("supplier_id", id)
-          .order("created_at", { ascending: false }).limit(50);
-        return { engagements: data ?? [] };
-      },
-    }),
+function messageRole(role: string): "user" | "assistant" {
+  return role === "assistant" ? "assistant" : "user";
+}
 
-    listEvidence: tool({
-      description: "List evidence documents for the active client (and optionally engagement). Includes status and expiration.",
-      inputSchema: z.object({
-        clientId: z.string().uuid().optional(),
-        engagementId: z.string().uuid().optional(),
-        statusFilter: z.enum(["all", "approved", "pending", "rejected", "expired"]).optional(),
-      }),
-      execute: async ({ clientId, engagementId, statusFilter }) => {
-        const cid = clientId || ctx.clientId;
-        if (!cid) return { error: "No client selected" };
-        let q = sb.from("document_uploads")
-          .select("id, document_name, file_name, status, expiration_date, created_at, request_id, content_summary, document_requests!inner(supplier_id, buyer_id, title)")
-          .eq("document_requests.supplier_id", cid)
-          .eq("document_requests.buyer_id", ctx.buyerId)
-          .order("created_at", { ascending: false }).limit(100);
-        const eid = engagementId || ctx.engagementId;
-        if (eid) q = q.eq("request_id", eid);
-        const { data, error } = await q;
-        if (error) return { error: error.message };
-        let docs = data ?? [];
-        if (statusFilter && statusFilter !== "all") {
-          docs = docs.filter((d: any) => (d.status ?? "").toLowerCase().includes(statusFilter));
+function expiryLabel(expirationDate?: string | null): string {
+  if (!expirationDate) return "No expiry";
+  const days = Math.ceil((new Date(expirationDate).getTime() - Date.now()) / 86400000);
+  if (days < 0) return `Expired ${Math.abs(days)}d ago`;
+  if (days <= 30) return `Expires in ${days}d`;
+  return `Valid for ${days}d`;
+}
+
+async function buildContextSummary(sb: ReturnType<typeof createClient>, ctx: AuditCtx) {
+  if (!ctx.clientId) {
+    return "No client is selected. Ask the user to choose a client from the left panel before giving engagement-specific advice.";
+  }
+
+  const [clientRes, engagementRes, findingsRes, evidenceRes] = await Promise.all([
+    sb.from("suppliers").select("id, company_name, industry, country").eq("id", ctx.clientId).maybeSingle(),
+    ctx.engagementId
+      ? sb.from("document_requests").select("id, title, status, due_date").eq("id", ctx.engagementId).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    (ctx.engagementId
+      ? sb.from("audit_findings").select("id, title, severity, framework, clause_reference, recommendation, status, created_at").eq("buyer_id", ctx.buyerId).eq("supplier_id", ctx.clientId).eq("engagement_id", ctx.engagementId)
+      : sb.from("audit_findings").select("id, title, severity, framework, clause_reference, recommendation, status, created_at").eq("buyer_id", ctx.buyerId).eq("supplier_id", ctx.clientId)
+    )
+      .order("created_at", { ascending: false })
+      .limit(12),
+    (() => {
+      let query = sb
+        .from("document_uploads")
+        .select("id, document_name, file_name, status, expiration_date, content_summary, created_at, request_id, document_requests!inner(supplier_id, buyer_id, title)")
+        .eq("document_requests.supplier_id", ctx.clientId!)
+        .eq("document_requests.buyer_id", ctx.buyerId)
+        .order("created_at", { ascending: false })
+        .limit(24);
+      if (ctx.engagementId) query = query.eq("request_id", ctx.engagementId);
+      return query;
+    })(),
+  ]);
+
+  const client = clientRes.data;
+  const engagement = engagementRes.data as any;
+  const findings = (findingsRes.data ?? []) as any[];
+  const evidence = (evidenceRes.data ?? []) as any[];
+
+  const evidenceCounts = evidence.reduce(
+    (acc, item) => {
+      const status = String(item.status ?? "unknown").toLowerCase();
+      acc.total += 1;
+      acc[status] = (acc[status] ?? 0) + 1;
+      if (item.expiration_date && new Date(item.expiration_date).getTime() < Date.now()) acc.expired += 1;
+      return acc;
+    },
+    { total: 0, expired: 0 } as Record<string, number>,
+  );
+
+  const findingsText = findings.length
+    ? findings
+        .map((finding, index) => {
+          const clause = finding.clause_reference || finding.framework || "No clause mapped";
+          return `${index + 1}. [${finding.severity ?? "Unrated"}] ${finding.title ?? "Untitled finding"} | ${clause} | status: ${finding.status ?? "Open"} | rec: ${finding.recommendation ?? "—"}`;
+        })
+        .join("\n")
+    : "No findings recorded for this context.";
+
+  const evidenceText = evidence.length
+    ? evidence
+        .map((doc, index) => {
+          const name = doc.document_name || doc.file_name || "Untitled document";
+          const summary = typeof doc.content_summary === "string" ? doc.content_summary.slice(0, 180) : "No summary";
+          return `${index + 1}. ${name} (id: ${doc.id}) | status: ${doc.status ?? "unknown"} | ${expiryLabel(doc.expiration_date)} | summary: ${summary}`;
+        })
+        .join("\n")
+    : "No evidence documents found for this context.";
+
+  return [
+    `Active client: ${client?.company_name ?? "Unknown client"}`,
+    `Industry: ${client?.industry ?? "Unknown"}`,
+    `Country: ${client?.country ?? "Unknown"}`,
+    engagement ? `Engagement: ${engagement.title ?? "Untitled"} | status: ${engagement.status ?? "unknown"} | due: ${engagement.due_date ?? "n/a"}` : "Engagement: none selected",
+    `Findings count: ${findings.length}`,
+    `Evidence count: ${evidenceCounts.total} | approved: ${evidenceCounts.approved ?? 0} | pending: ${evidenceCounts.pending ?? 0} | rejected: ${evidenceCounts.rejected ?? 0} | expired: ${evidenceCounts.expired ?? 0}`,
+    "Recent findings:",
+    findingsText,
+    "Recent evidence:",
+    evidenceText,
+  ].join("\n\n");
+}
+
+async function createPlainTextGatewayStream(messages: Array<{ role: "user" | "assistant"; content: string }>, system: string, cors: Record<string, string>) {
+  const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Lovable-API-Key": LOVABLE_API_KEY,
+      "X-Lovable-AIG-SDK": "vercel-ai-sdk",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      stream: true,
+      messages: [{ role: "system", content: system }, ...messages],
+    }),
+  });
+
+  if (!upstream.ok || !upstream.body) {
+    const errorText = await upstream.text().catch(() => "");
+    return new Response(JSON.stringify({ error: errorText || `AI request failed (${upstream.status})` }), {
+      status: upstream.status || 500,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
+  }
+
+  const reader = upstream.body.getReader();
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+
+  const body = new ReadableStream({
+    async start(controller) {
+      let buffer = "";
+
+      const flushLines = () => {
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const rawLine of lines) {
+          const line = rawLine.trim();
+          if (!line.startsWith("data:")) continue;
+
+          const payload = line.slice(5).trim();
+          if (!payload) continue;
+          if (payload === "[DONE]") {
+            controller.close();
+            return true;
+          }
+
+          try {
+            const json = JSON.parse(payload);
+            const delta = json?.choices?.[0]?.delta?.content;
+
+            if (typeof delta === "string" && delta) {
+              controller.enqueue(encoder.encode(delta));
+            } else if (Array.isArray(delta)) {
+              for (const part of delta) {
+                if (part?.type === "text" && typeof part?.text === "string" && part.text) {
+                  controller.enqueue(encoder.encode(part.text));
+                }
+              }
+            }
+          } catch {
+            // Ignore malformed SSE frames and continue streaming.
+          }
         }
-        const today = new Date();
-        const enriched = docs.map((d: any) => {
-          let expiry: string | null = null;
-          if (d.expiration_date) {
-            const days = Math.ceil((new Date(d.expiration_date).getTime() - today.getTime()) / 86400000);
-            expiry = days < 0 ? `EXPIRED ${Math.abs(days)}d ago` : days <= 30 ? `Expires in ${days}d` : `OK (${days}d left)`;
-          }
-          return { id: d.id, name: d.document_name || d.file_name, status: d.status, expiration_date: d.expiration_date, summary: d.content_summary, request_id: d.request_id, expiry_label: expiry };
-        });
-        return { count: enriched.length, evidence: enriched };
-      },
-    }),
 
-    getDocumentContent: tool({
-      description: "Get the AI-extracted summary for a single evidence document.",
-      inputSchema: z.object({ documentId: z.string().uuid() }),
-      execute: async ({ documentId }) => {
-        const { data } = await sb.from("document_uploads").select("id, file_name, document_name, content_summary, status, expiration_date").eq("id", documentId).maybeSingle();
-        return data ?? { error: "Document not found" };
-      },
-    }),
+        return false;
+      };
 
-    assessRisk: tool({
-      description: "Compute an audit risk matrix from the current evidence: missing, expired, expiring-soon, rejected items. Returns rated rows.",
-      inputSchema: z.object({}),
-      execute: async () => {
-        if (!ctx.clientId) return { error: "No client selected" };
-        const { data: docs } = await sb.from("document_uploads")
-          .select("id, document_name, file_name, status, expiration_date, document_requests!inner(supplier_id, buyer_id)")
-          .eq("document_requests.supplier_id", ctx.clientId)
-          .eq("document_requests.buyer_id", ctx.buyerId);
-        const today = new Date();
-        const matrix: { area: string; risk: "High" | "Medium" | "Low"; likelihood: number; impact: number; note: string }[] = [];
-        (docs ?? []).forEach((d: any) => {
-          const area = d.document_name || d.file_name || "Evidence";
-          const status = (d.status ?? "").toLowerCase();
-          if (status === "rejected") matrix.push({ area, risk: "High", likelihood: 5, impact: 4, note: "Rejected — control gap" });
-          else if (d.expiration_date) {
-            const days = Math.ceil((new Date(d.expiration_date).getTime() - today.getTime()) / 86400000);
-            if (days < 0) matrix.push({ area, risk: "High", likelihood: 5, impact: 5, note: `Expired ${Math.abs(days)}d ago` });
-            else if (days <= 30) matrix.push({ area, risk: "Medium", likelihood: 4, impact: 3, note: `Expires in ${days}d` });
-          } else if (status === "pending" || status === "submitted") {
-            matrix.push({ area, risk: "Medium", likelihood: 3, impact: 3, note: "Awaiting review" });
-          }
-        });
-        return { count: matrix.length, matrix };
-      },
-    }),
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          if (flushLines()) return;
+        }
 
-    createFinding: tool({
-      description: "Save a new audit finding to the database. Use after the user confirms.",
-      inputSchema: z.object({
-        title: z.string().min(3),
-        description: z.string(),
-        severity: z.enum(["Minor", "Major", "Critical"]),
-        framework: z.string().optional().describe("e.g. 'CARO 2020 §3(ix)' or 'ISO 27001 A.8.2'"),
-        clauseReference: z.string().optional(),
-        recommendation: z.string(),
-        evidenceDocIds: z.array(z.string().uuid()).optional(),
-      }),
-      execute: async (input) => {
-        if (!ctx.clientId) return { error: "No client selected" };
-        const { data, error } = await sb.from("audit_findings").insert({
-          buyer_id: ctx.buyerId,
-          supplier_id: ctx.clientId,
-          engagement_id: ctx.engagementId ?? null,
-          title: input.title,
-          description: input.description,
-          severity: input.severity,
-          status: "Open",
-          framework: input.framework ?? null,
-          clause_reference: input.clauseReference ?? null,
-          recommendation: input.recommendation,
-          evidence_doc_ids: input.evidenceDocIds ?? [],
-          finding_date: new Date().toISOString().slice(0, 10),
-          created_by: ctx.userId,
-        }).select("id").single();
-        if (error) return { error: error.message };
-        return { ok: true, findingId: data!.id };
-      },
-    }),
+        buffer += decoder.decode();
+        flushLines();
+        controller.close();
+      } catch (error) {
+        controller.error(error);
+      } finally {
+        reader.releaseLock();
+      }
+    },
+    cancel(reason) {
+      return reader.cancel(reason);
+    },
+  });
 
-    listFindings: tool({
-      description: "List existing audit findings for the active client / engagement.",
-      inputSchema: z.object({}),
-      execute: async () => {
-        if (!ctx.clientId) return { findings: [] };
-        let q = sb.from("audit_findings").select("*").eq("buyer_id", ctx.buyerId).eq("supplier_id", ctx.clientId);
-        if (ctx.engagementId) q = q.eq("engagement_id", ctx.engagementId);
-        const { data } = await q.order("created_at", { ascending: false }).limit(50);
-        return { findings: data ?? [] };
-      },
-    }),
-
-    generateAuditReport: tool({
-      description: "Generate the PDF audit report for the active engagement. Returns a download URL.",
-      inputSchema: z.object({}),
-      execute: async () => {
-        if (!ctx.clientId) return { error: "No client selected" };
-        const res = await fetch(`${SUPABASE_URL}/functions/v1/generate-audit-report`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_KEY}` },
-          body: JSON.stringify({ buyerId: ctx.buyerId, clientId: ctx.clientId, engagementId: ctx.engagementId, userId: ctx.userId }),
-        });
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok) return { error: json.error || "Report generation failed" };
-        return json;
-      },
-    }),
-  };
+  return new Response(body, {
+    headers: {
+      ...cors,
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-cache",
+    },
+  });
 }
 
 Deno.serve(async (req) => {
@@ -215,53 +257,79 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...cors, "Content-Type": "application/json" } });
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
 
-    const sbUser = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY") ?? "", { global: { headers: { Authorization: authHeader } } });
-    const { data: { user } } = await sbUser.auth.getUser();
-    if (!user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...cors, "Content-Type": "application/json" } });
+    const sbUser = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const {
+      data: { user },
+    } = await sbUser.auth.getUser();
+
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
 
     const rl = checkRateLimit(`audit-assistant:${user.id}`, 60, 60_000);
     if (!rl.allowed) return rateLimitResponse(cors, rl.retryAfterMs);
 
-    const sb = createClient(SUPABASE_URL, SERVICE_KEY);
-    const buyerId = await resolveBuyerId(sb, user.id);
-    if (!buyerId) return new Response(JSON.stringify({ error: "Not a buyer/auditor account" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
-
-    const body = await req.json();
-    const messages: UIMessage[] = body.messages ?? [];
-    const clientId: string | undefined = body.clientId;
-    const engagementId: string | undefined = body.engagementId;
-
-    if (clientId) {
-      const { data: ok } = await sb.from("buyer_supplier_connections").select("id").eq("buyer_id", buyerId).eq("supplier_id", clientId).maybeSingle();
-      if (!ok) return new Response(JSON.stringify({ error: "Client not connected to this auditor" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+    const parsed = RequestSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: parsed.error.flatten() }), {
+        status: 400,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
     }
 
-    const provider = createOpenAICompatible({
-      name: "lovable",
-      baseURL: "https://ai.gateway.lovable.dev/v1",
-      headers: { "Lovable-API-Key": LOVABLE_API_KEY, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
-    });
-    const model = provider("google/gemini-3-flash-preview");
+    const sb = createClient(SUPABASE_URL, SERVICE_KEY);
+    const buyerId = await resolveBuyerId(sb, user.id);
+    if (!buyerId) {
+      return new Response(JSON.stringify({ error: "Not a buyer/auditor account" }), {
+        status: 403,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
+    const { messages, clientId, engagementId } = parsed.data;
+
+    if (clientId) {
+      const { data: ok } = await sb
+        .from("buyer_supplier_connections")
+        .select("id")
+        .eq("buyer_id", buyerId)
+        .eq("supplier_id", clientId)
+        .maybeSingle();
+      if (!ok) {
+        return new Response(JSON.stringify({ error: "Client not connected to this auditor" }), {
+          status: 403,
+          headers: { ...cors, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    const gatewayMessages = messages
+      .map((message: any) => ({ role: messageRole(message?.role), content: messageText(message) }))
+      .filter((message: { content: string }) => message.content.trim().length > 0)
+      .slice(-12);
 
     const ctx: AuditCtx = { userId: user.id, buyerId, clientId, engagementId };
-    const tools = makeTools(sb, ctx);
+    const contextSummary = await buildContextSummary(sb, ctx);
+    const system = `${SYSTEM_PROMPT}\n\nWorking context:\n${contextSummary}`;
 
-    const contextNote = clientId
-      ? `\n\nActive context: clientId=${clientId}${engagementId ? `, engagementId=${engagementId}` : ""}. Use the tools to fetch real data before answering.`
-      : `\n\nNo client is currently selected. Ask the user to pick a client from the left panel before doing engagement-specific work.`;
-
-    const result = streamText({
-      model,
-      system: SYSTEM_PROMPT + contextNote,
-      messages: messages as any,
-      tools,
-    });
-
-    return result.toTextStreamResponse({ headers: cors });
+    return await createPlainTextGatewayStream(gatewayMessages, system, cors);
   } catch (err) {
     console.error("audit-assistant error", err);
-    return new Response(JSON.stringify({ error: (err as Error).message }), { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: (err as Error).message }), {
+      status: 500,
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+    });
   }
 });

@@ -279,7 +279,7 @@ export default function AuditAssistantPage() {
 
         {/* CENTER */}
         <main className="col-span-6 flex flex-col bg-background">
-          <ScrollArea className="flex-1" ref={scrollRef as any}>
+          <div ref={scrollRef} className="flex-1 overflow-y-auto">
             <div className="px-8 py-6">
               {messages.length === 0 ? (
                 <div className="max-w-xl mx-auto text-center py-12">

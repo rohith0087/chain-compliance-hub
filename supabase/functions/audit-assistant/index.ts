@@ -222,7 +222,7 @@ Deno.serve(async (req) => {
     if (!user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...cors, "Content-Type": "application/json" } });
 
     const rl = checkRateLimit(`audit-assistant:${user.id}`, 60, 60_000);
-    if (!rl.allowed) return rateLimitResponse(rl.resetIn, cors);
+    if (!rl.allowed) return rateLimitResponse(cors, rl.retryAfterMs);
 
     const sb = createClient(SUPABASE_URL, SERVICE_KEY);
     const buyerId = await resolveBuyerId(sb, user.id);

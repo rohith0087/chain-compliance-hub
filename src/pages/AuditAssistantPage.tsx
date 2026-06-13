@@ -112,7 +112,7 @@ export default function AuditAssistantPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const controller = new AbortController();
-      const firstChunkTimeout = window.setTimeout(() => controller.abort('Assistant took too long to start responding.'), 20000);
+      const timeout = window.setTimeout(() => controller.abort('Request timed out.'), 90000);
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/audit-assistant`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
@@ -123,30 +123,20 @@ export default function AuditAssistantPage() {
           engagementId: engagementId || undefined,
         }),
       });
-      if (!res.ok || !res.body) {
-        const err = await res.text();
-        throw new Error(err || `HTTP ${res.status}`);
+      window.clearTimeout(timeout);
+      const raw = await res.text();
+      let data: any = {};
+      try { data = raw ? JSON.parse(raw) : {}; } catch { /* non-json */ }
+      if (!res.ok) {
+        throw new Error(data?.error || raw || `HTTP ${res.status}`);
       }
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let acc = '';
-      let receivedFirstChunk = false;
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (!receivedFirstChunk) {
-          receivedFirstChunk = true;
-          window.clearTimeout(firstChunkTimeout);
-        }
-        acc += decoder.decode(value, { stream: true });
-        setMessages(prev => prev.map(m => m.id === assistantMsg.id ? { ...m, content: acc } : m));
-      }
-      window.clearTimeout(firstChunkTimeout);
-      if (!acc.trim()) {
+      const text = (data?.text || '').toString();
+      if (!text.trim()) {
         throw new Error('The assistant returned an empty response. Please try again.');
       }
+      setMessages(prev => prev.map(m => m.id === assistantMsg.id ? { ...m, content: text } : m));
     } catch (e: any) {
-      toast({ title: 'AI error', description: e?.message || 'Failed to stream response' });
+      toast({ title: 'AI error', description: e?.message?.slice(0, 200) || 'Failed to get response' });
       setMessages(prev => prev.filter(m => m.id !== assistantMsg.id));
     } finally {
       setStreaming(false);

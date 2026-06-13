@@ -259,7 +259,7 @@ Deno.serve(async (req) => {
       tools,
     });
 
-    return result.toDataStreamResponse({ headers: cors });
+    return result.toTextStreamResponse({ headers: cors });
   } catch (err) {
     console.error("audit-assistant error", err);
     return new Response(JSON.stringify({ error: (err as Error).message }), { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });

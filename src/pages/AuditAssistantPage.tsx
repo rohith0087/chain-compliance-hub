@@ -126,29 +126,12 @@ export default function AuditAssistantPage() {
       }
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = '';
       let acc = '';
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const payload = line.slice(6).trim();
-          if (!payload || payload === '[DONE]') continue;
-          try {
-            const evt = JSON.parse(payload);
-            if (evt.type === 'text-delta' && evt.delta) {
-              acc += evt.delta;
-              setMessages(prev => prev.map(m => m.id === assistantMsg.id ? { ...m, content: acc } : m));
-            } else if (evt.type === 'tool-input-available' && evt.toolName) {
-              acc += `\n\n_Using ${evt.toolName}\u2026_\n`;
-              setMessages(prev => prev.map(m => m.id === assistantMsg.id ? { ...m, content: acc } : m));
-            }
-          } catch { /* ignore non-JSON */ }
-        }
+        acc += decoder.decode(value, { stream: true });
+        setMessages(prev => prev.map(m => m.id === assistantMsg.id ? { ...m, content: acc } : m));
       }
     } catch (e: any) {
       toast({ title: 'AI error', description: e.message || 'Failed to stream response', variant: 'destructive' });

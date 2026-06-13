@@ -210,9 +210,9 @@ export default function AuditAssistantPage() {
         </div>
       </header>
 
-      <div className="flex-1 grid grid-cols-12 overflow-hidden">
+      <div className="flex-1 min-h-0 grid grid-cols-12 overflow-hidden">
         {/* LEFT */}
-        <aside className="col-span-3 border-r bg-card overflow-y-auto">
+        <aside className="col-span-3 min-h-0 border-r bg-card overflow-y-auto">
           <div className="p-4 space-y-4">
             <div className="space-y-1.5">
               <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Client</label>
@@ -278,8 +278,8 @@ export default function AuditAssistantPage() {
         </aside>
 
         {/* CENTER */}
-        <main className="col-span-6 flex flex-col bg-background">
-          <div ref={scrollRef} className="flex-1 overflow-y-auto">
+        <main className="col-span-6 min-h-0 min-w-0 flex flex-col bg-background">
+          <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
             <div className="px-8 py-6">
               {messages.length === 0 ? (
                 <div className="max-w-xl mx-auto text-center py-12">
@@ -359,7 +359,7 @@ export default function AuditAssistantPage() {
         </main>
 
         {/* RIGHT */}
-        <aside className="col-span-3 border-l bg-card overflow-hidden flex flex-col">
+        <aside className="col-span-3 min-h-0 border-l bg-card overflow-hidden flex flex-col">
           <Tabs defaultValue="evidence" className="h-full flex flex-col">
             <div className="p-3 border-b">
               <TabsList className="grid grid-cols-3 w-full h-9">
@@ -368,7 +368,7 @@ export default function AuditAssistantPage() {
                 <TabsTrigger value="report" className="text-xs gap-1"><FileBarChart className="h-3 w-3" />Report</TabsTrigger>
               </TabsList>
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 min-h-0 overflow-y-auto">
               <TabsContent value="evidence" className="px-3 pb-3 mt-3">
                 {clientId ? <EvidencePanel buyerId={buyerId!} clientId={clientId} engagementId={engagementId || undefined} /> : (
                   <div className="text-xs text-muted-foreground p-3 text-center">Select a client to view evidence.</div>

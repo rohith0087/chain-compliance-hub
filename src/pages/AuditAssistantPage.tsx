@@ -324,7 +324,7 @@ export default function AuditAssistantPage() {
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           <div className="border-t bg-card p-3">
             <div className="max-w-2xl mx-auto">

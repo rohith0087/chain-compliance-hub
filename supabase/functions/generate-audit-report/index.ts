@@ -3,7 +3,8 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.0";
 import { jsPDF } from "npm:jspdf@2.5.1";
-import autoTable from "npm:jspdf-autotable@3.8.2";
+import autoTableMod from "npm:jspdf-autotable@3.8.2";
+const autoTable: any = (autoTableMod as any)?.default ?? autoTableMod;
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/corsHeaders.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;

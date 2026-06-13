@@ -5,9 +5,26 @@ const ALLOWED_ORIGINS = [
   'https://id-preview--d13fec6e-29ed-4735-a9d4-57941fe886cc.lovable.app',
 ];
 
+// Allow Lovable preview/sandbox origins (lovableproject.com, lovable.app, lovable.dev)
+// so the in-editor preview can call edge functions without CORS rejection.
+function isAllowedOrigin(origin: string): boolean {
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  try {
+    const host = new URL(origin).hostname;
+    return (
+      host.endsWith('.lovableproject.com') ||
+      host.endsWith('.lovable.app') ||
+      host.endsWith('.lovable.dev')
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function getCorsHeaders(req?: Request): Record<string, string> {
   const origin = req?.headers.get('Origin') || '';
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  const allowedOrigin = isAllowedOrigin(origin) ? origin : ALLOWED_ORIGINS[0];
 
   return {
     'Access-Control-Allow-Origin': allowedOrigin,

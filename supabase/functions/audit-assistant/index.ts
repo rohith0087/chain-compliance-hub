@@ -277,7 +277,7 @@ Deno.serve(async (req) => {
     const contextSummary = await buildContextSummary(sb, ctx);
     const system = `${SYSTEM_PROMPT}\n\nWorking context:\n${contextSummary}`;
 
-    return await createPlainTextGatewayStream(gatewayMessages, system, cors);
+    return await callGateway(gatewayMessages, system, cors);
   } catch (err) {
     console.error("audit-assistant error", err);
     return new Response(JSON.stringify({ error: (err as Error).message }), {

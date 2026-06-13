@@ -37,7 +37,9 @@ interface AuditCtx {
   engagementId?: string;
 }
 
-async function resolveBuyerId(sb: ReturnType<typeof createClient>, userId: string): Promise<string | null> {
+type DbClient = ReturnType<typeof createClient<any>>;
+
+async function resolveBuyerId(sb: DbClient, userId: string): Promise<string | null> {
   const { data: tm } = await sb
     .from("company_users")
     .select("company_id")
@@ -74,7 +76,7 @@ function expiryLabel(expirationDate?: string | null): string {
   return `Valid for ${days}d`;
 }
 
-async function buildContextSummary(sb: ReturnType<typeof createClient>, ctx: AuditCtx) {
+async function buildContextSummary(sb: DbClient, ctx: AuditCtx) {
   if (!ctx.clientId) {
     return "No client is selected. Ask the user to choose a client from the left panel before giving engagement-specific advice.";
   }

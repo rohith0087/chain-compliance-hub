@@ -644,7 +644,6 @@ const AuthPage = () => {
                                   required
                                 />
                               </div>
-                              </div>
                               {isTurnstileEnabled && (
                                 <TurnstileWidget
                                   siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}

@@ -119,6 +119,7 @@ const AuthPage = () => {
   const [activeTab, setActiveTab] = useState('login');
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const turnstileRef = useRef<{ reset: () => void } | null>(null);
+  const [resetTurnstileToken, setResetTurnstileToken] = useState<string | null>(null);
   
   // 2FA inline state
   const [authStep, setAuthStep] = useState<'credentials' | 'mfa'>('credentials');
@@ -429,9 +430,18 @@ const AuthPage = () => {
       return;
     }
     
+    if (isTurnstileEnabled && !resetTurnstileToken) {
+      toast({
+        title: "Verification Required",
+        description: "Please complete the security check.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setResetLoading(true);
     setResetCooldownUntil(Date.now() + RESET_COOLDOWN_MS);
-    const { error } = await resetPassword(resetEmail.trim());
+    const { error } = await resetPassword(resetEmail.trim(), isTurnstileEnabled ? resetTurnstileToken! : undefined);
 
     if (error) {
       toast({
@@ -439,12 +449,14 @@ const AuthPage = () => {
         description: error.message,
         variant: "destructive",
       });
+      setResetTurnstileToken(null);
     } else {
       toast({
         title: "Reset Email Sent",
         description: "If an account exists with this email, you'll receive reset instructions.",
       });
       setResetEmail('');
+      setResetTurnstileToken(null);
       setResetDialogOpen(false);
     }
     setResetLoading(false);
@@ -632,6 +644,14 @@ const AuthPage = () => {
                                   required
                                 />
                               </div>
+                              {isTurnstileEnabled && (
+                                <TurnstileWidget
+                                  siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                                  onSuccess={(token) => setResetTurnstileToken(token)}
+                                  onExpire={() => setResetTurnstileToken(null)}
+                                  onError={() => setResetTurnstileToken(null)}
+                                />
+                              )}
                               <div className="flex gap-2">
                                 <Button 
                                   type="button" 
@@ -641,7 +661,7 @@ const AuthPage = () => {
                                 >
                                   Cancel
                                 </Button>
-                              <Button type="submit" className="flex-1" disabled={resetLoading || isResetCooling}>
+                              <Button type="submit" className="flex-1" disabled={resetLoading || isResetCooling || (isTurnstileEnabled && !resetTurnstileToken)}>
                                    {isResetCooling ? `Wait ${Math.ceil(resetCooldownRemaining / 1000)}s` : resetLoading ? "Sending..." : "Send Reset Link"}
                                 </Button>
                               </div>

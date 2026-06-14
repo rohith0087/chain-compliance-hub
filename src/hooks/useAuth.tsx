@@ -45,7 +45,7 @@ interface AuthContextType {
   signIn: (email: string, password: string, captchaToken?: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName: string, roles?: ('buyer' | 'supplier')[], companyName?: string, captchaToken?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<{ error: any }>;
+  resetPassword: (email: string, captchaToken?: string) => Promise<{ error: any }>;
   updatePassword: (password: string) => Promise<{ error: any }>;
   loading: boolean;
 }
@@ -262,9 +262,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = async (email: string, captchaToken?: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: 'https://compliance.tracer2c.com/reset-password',
+      captchaToken,
     });
     return { error };
   };

@@ -147,7 +147,7 @@ export function SupplierSidebarLayout({
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation(['supplier', 'common']);
-  const { t: wsT } = useWorkspaceProfile();
+  const { t: wsT, flags } = useWorkspaceProfile();
   const { profile, user: authUser } = useAuth();
   const { hasRole } = useUserRoles();
   const sidebar = useSidebar();

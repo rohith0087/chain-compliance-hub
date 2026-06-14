@@ -138,6 +138,7 @@ export const AUDITEE_PROFILE: WorkspaceProfile = {
     hidePrePopulate: true,
     hideBuyerSamples: true,
     hideSupplierMap: true,
+    hideQuickActions: true,
     showEvidenceLibrary: true,
   },
 };

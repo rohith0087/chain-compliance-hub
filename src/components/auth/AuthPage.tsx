@@ -119,6 +119,7 @@ const AuthPage = () => {
   const [activeTab, setActiveTab] = useState('login');
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const turnstileRef = useRef<{ reset: () => void } | null>(null);
+  const [resetTurnstileToken, setResetTurnstileToken] = useState<string | null>(null);
   
   // 2FA inline state
   const [authStep, setAuthStep] = useState<'credentials' | 'mfa'>('credentials');

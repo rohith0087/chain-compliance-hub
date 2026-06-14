@@ -17,6 +17,7 @@ export const INDUSTRIES = [
   'Real Estate',
   'Poultry',
   'Auditor',
+  'Auditee',
   'Sushi & Japanese Cuisine'
 ] as const;
 

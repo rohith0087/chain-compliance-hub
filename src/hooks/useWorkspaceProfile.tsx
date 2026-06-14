@@ -29,8 +29,8 @@ export function useWorkspaceProfile() {
         return;
       }
       try {
-        // Team member?
-        const { data: tm } = await supabase
+        // Try buyer team member first
+        const { data: buyerTm } = await supabase
           .from('company_users')
           .select('company_id')
           .eq('profile_id', user.id)
@@ -39,13 +39,34 @@ export function useWorkspaceProfile() {
           .maybeSingle();
 
         let buyerQuery = supabase.from('buyers').select('industry').limit(1);
-        if (tm?.company_id) {
-          buyerQuery = buyerQuery.eq('id', tm.company_id);
+        if (buyerTm?.company_id) {
+          buyerQuery = buyerQuery.eq('id', buyerTm.company_id);
         } else {
           buyerQuery = buyerQuery.eq('profile_id', user.id);
         }
-        const { data } = await buyerQuery.maybeSingle();
-        if (!cancelled) setIndustry(data?.industry ?? null);
+        const { data: buyerData } = await buyerQuery.maybeSingle();
+        if (buyerData?.industry) {
+          if (!cancelled) setIndustry(buyerData.industry);
+          return;
+        }
+
+        // Fall back to supplier industry
+        const { data: supplierTm } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('profile_id', user.id)
+          .eq('company_type', 'supplier')
+          .eq('status', 'active')
+          .maybeSingle();
+
+        let supplierQuery = supabase.from('suppliers').select('industry').limit(1);
+        if (supplierTm?.company_id) {
+          supplierQuery = supplierQuery.eq('id', supplierTm.company_id);
+        } else {
+          supplierQuery = supplierQuery.eq('profile_id', user.id);
+        }
+        const { data: supplierData } = await supplierQuery.maybeSingle();
+        if (!cancelled) setIndustry(supplierData?.industry ?? null);
       } catch {
         if (!cancelled) setIndustry(null);
       } finally {
@@ -68,6 +89,7 @@ export function useWorkspaceProfile() {
     t: profile.terms,
     flags: profile.flags,
     isAuditor: profile.id === 'auditor',
+    isAuditee: profile.id === 'auditee',
     industry,
     loading,
   };

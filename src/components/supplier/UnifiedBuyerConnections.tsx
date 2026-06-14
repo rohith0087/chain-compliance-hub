@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useBranchContext } from '@/contexts/BranchContext';
+import { useWorkspaceProfile } from '@/hooks/useWorkspaceProfile';
 import { formatDistanceToNow } from 'date-fns';
 
 interface UnifiedBuyerConnectionsProps {
@@ -34,6 +35,7 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
   const { user } = useAuth();
   const { toast } = useToast();
   const { currentBranch, allBranchesView } = useBranchContext();
+  const { t: wsT } = useWorkspaceProfile();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -294,7 +296,7 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div className="flex-1 min-w-0">
-          <h2 className="text-2xl font-bold">Buyer Connections</h2>
+          <h2 className="text-2xl font-bold">{wsT.buyer_connections}</h2>
           <p className="text-muted-foreground mt-1">Manage your connections</p>
         </div>
         <div className="shrink-0">
@@ -303,7 +305,7 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
       </div>
       <Tabs defaultValue="connected" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="connected">Connected Buyers ({allConnections.length})</TabsTrigger>
+          <TabsTrigger value="connected">{wsT.connected_buyers} ({allConnections.length})</TabsTrigger>
           <TabsTrigger value="pending">Pending Requests ({requests.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="connected" className="space-y-4">
@@ -315,7 +317,7 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
             <Button variant={filterTab === 'active_onboarding' ? 'default' : 'ghost'} size="sm" onClick={() => setFilterTab('active_onboarding')}>Active Onboarding ({connectedBuyers.filter(c => ['onboarding_pending', 'onboarding_in_progress', 'under_review', 'onboarding_requested'].includes(getConnectionDisplayStatus(c).status)).length})</Button>
             <Button variant={filterTab === 'connected_only' ? 'default' : 'ghost'} size="sm" onClick={() => setFilterTab('connected_only')}>Connected Only ({connectedBuyers.filter(c => ['connected_no_onboarding', 'fully_connected'].includes(getConnectionDisplayStatus(c).status)).length})</Button>
           </div>
-          {filteredConnectedBuyers.length > 0 ? <div className="space-y-4">{filteredConnectedBuyers.map(c => renderBuyerCard(c, false))}</div> : <Card><CardContent className="py-12 text-center"><Users className="w-12 h-12 text-gray-400 mb-4 mx-auto" /><p className="text-gray-600">No buyers found</p></CardContent></Card>}
+          {filteredConnectedBuyers.length > 0 ? <div className="space-y-4">{filteredConnectedBuyers.map(c => renderBuyerCard(c, false))}</div> : <Card><CardContent className="py-12 text-center"><Users className="w-12 h-12 text-gray-400 mb-4 mx-auto" /><p className="text-gray-600">No {wsT.buyers.toLowerCase()} found</p></CardContent></Card>}
         </TabsContent>
         <TabsContent value="pending" className="space-y-4">
           {requests.length > 0 ? <div className="space-y-4">{requests.map(c => renderBuyerCard(c, true))}</div> : <Card><CardContent className="py-12 text-center"><Clock className="w-12 h-12 text-gray-400 mb-4 mx-auto" /><p className="text-gray-600">No pending requests</p></CardContent></Card>}
@@ -327,9 +329,9 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
         <Dialog open={showOnboardingProcess} onOpenChange={setShowOnboardingProcess}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Onboarding Process</DialogTitle>
+              <DialogTitle>{wsT.onboarding} Process</DialogTitle>
               <DialogDescription>
-                Complete the onboarding requirements for this buyer
+                Complete the onboarding requirements for this {wsT.buyer.toLowerCase()}
               </DialogDescription>
             </DialogHeader>
             <OnboardingProcess

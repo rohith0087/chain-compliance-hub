@@ -35,6 +35,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useTranslation } from 'react-i18next';
+import { useWorkspaceProfile } from '@/hooks/useWorkspaceProfile';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
 import { useCompanyPermissions } from '@/hooks/useCompanyPermissions';
 import { useBranchContext } from '@/contexts/BranchContext';
@@ -146,6 +147,7 @@ export function SupplierSidebarLayout({
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation(['supplier', 'common']);
+  const { t: wsT } = useWorkspaceProfile();
   const { profile, user: authUser } = useAuth();
   const { hasRole } = useUserRoles();
   const sidebar = useSidebar();
@@ -318,7 +320,7 @@ export function SupplierSidebarLayout({
       ownerOnly: true // Only visible to company owners
     },
     {
-      title: 'Buyer Connections',
+      title: wsT.buyer_connections,
       icon: Users,
       value: 'connections',
       badge: connectedBuyers > 0 ? connectedBuyers : undefined

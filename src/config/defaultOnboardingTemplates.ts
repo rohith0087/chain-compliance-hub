@@ -907,6 +907,99 @@ export const DEFAULT_ONBOARDING_TEMPLATES: DefaultOnboardingTemplate[] = [
         field_order: 10
       }
     ]
+  },
+  // Auditee template — supplier-side equivalent of Auditor; for clients preparing to be audited
+  {
+    industry: 'Auditee',
+    default_welcome_message: 'Welcome to your audit readiness portal. Please complete this intake so your audit team can scope the engagement, confirm key contacts, and receive initial evidence. Thank you for partnering with us throughout the audit.',
+    allow_branch_selection: true,
+    require_branch_selection: false,
+    auto_approve_standard_docs: false,
+    require_all_documents: true,
+    expires_days: 30,
+    document_requirements: [
+      {
+        document_type: 'prior_audit_report',
+        document_name: 'Prior Year Audit Report',
+        description: 'Most recent finalized audit report (if available)',
+        is_required: false,
+        display_order: 1
+      },
+      {
+        document_type: 'financial_statements',
+        document_name: 'Latest Financial Statements',
+        description: 'Most recent financial statements for the audit period',
+        is_required: true,
+        display_order: 2
+      },
+      {
+        document_type: 'org_chart',
+        document_name: 'Organizational Chart',
+        description: 'Current organizational chart of the entity being audited',
+        is_required: true,
+        display_order: 3
+      },
+      {
+        document_type: 'internal_controls',
+        document_name: 'Internal Controls Documentation',
+        description: 'Documentation of key internal controls and processes',
+        is_required: true,
+        display_order: 4
+      },
+      {
+        document_type: 'policies_procedures',
+        document_name: 'Policies & Procedures Manual',
+        description: 'Current policies and procedures relevant to the audit scope',
+        is_required: true,
+        display_order: 5
+      },
+      {
+        document_type: 'prior_management_letter',
+        document_name: 'Prior Management Letter',
+        description: 'Management letter from the prior audit (if applicable)',
+        is_required: false,
+        display_order: 6
+      },
+      {
+        document_type: 'evidence_index',
+        document_name: 'Evidence Index / PBC List',
+        description: 'Prepared-By-Client list or evidence index for the engagement',
+        is_required: false,
+        display_order: 7
+      }
+    ],
+    form_fields: [
+      ...COMMON_FORM_FIELDS,
+      {
+        field_type: 'date',
+        field_label: 'Fiscal Year End',
+        field_description: 'Last day of the fiscal year being audited',
+        is_required: true,
+        field_order: 7
+      },
+      {
+        field_type: 'text',
+        field_label: 'Primary Audit Contact',
+        field_description: 'Name and title of the internal audit liaison',
+        is_required: true,
+        field_order: 8
+      },
+      {
+        field_type: 'select',
+        field_label: 'Audit Scope',
+        field_description: 'Type of audit being prepared for',
+        is_required: true,
+        field_order: 9,
+        field_options: ['Financial Audit', 'Compliance Audit', 'Operational Audit', 'IT/Security Audit', 'Food Safety Audit', 'Quality / ISO Audit']
+      },
+      {
+        field_type: 'text',
+        field_label: 'Prior Auditor (if any)',
+        field_description: 'Name of the firm that performed the prior audit',
+        is_required: false,
+        field_order: 10
+      }
+    ]
   }
 ];
 

@@ -35,6 +35,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useTranslation } from 'react-i18next';
+import { useWorkspaceProfile } from '@/hooks/useWorkspaceProfile';
 import { useCompanyBranches } from '@/hooks/useCompanyBranches';
 import { useCompanyPermissions } from '@/hooks/useCompanyPermissions';
 import { useBranchContext } from '@/contexts/BranchContext';

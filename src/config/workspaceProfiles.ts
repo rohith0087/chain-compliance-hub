@@ -36,6 +36,7 @@ export interface WorkspaceFlags {
   hidePrePopulate: boolean;
   hideBuyerSamples: boolean;
   hideSupplierMap: boolean;
+  hideQuickActions?: boolean;
   defaultEntityType?: string;
   lockEntityType?: boolean;
   showEvidenceLibrary?: boolean;

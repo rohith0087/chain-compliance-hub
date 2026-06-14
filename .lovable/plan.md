@@ -1,27 +1,17 @@
-## Problem
+## Disable Cloudflare Turnstile for Development
 
-Supabase auth has CAPTCHA protection enabled. Login and Signup already pass a Turnstile token, but the "Forgot Password" dialog calls `resetPassword(email)` without a token, so Supabase rejects it with `captcha protection: request disallowed (no captcha_token found)`.
+### Problem
+Cloudflare Turnstile CAPTCHA is currently enforced on login, signup, and password reset flows, adding friction during active development and testing.
 
-## Fix
+### Solution
+The app already supports toggling Turnstile via the `VITE_TURNSTILE_ENABLED` environment variable. Both `AuthPage.tsx` and `PlatformAdminLogin.tsx` conditionally render the widget and skip token validation when this flag is disabled.
 
-1. **`src/hooks/useAuth.tsx`**
-   - Update `resetPassword` signature to accept an optional `captchaToken`:
-     ```ts
-     resetPassword: (email: string, captchaToken?: string) => Promise<{ error: any }>
-     ```
-   - Pass it to Supabase:
-     ```ts
-     supabase.auth.resetPasswordForEmail(email, {
-       redirectTo: `${window.location.origin}/reset-password`,
-       captchaToken,
-     })
-     ```
+### Plan
+1. **Set `VITE_TURNSTILE_ENABLED="false"`** in `.env`
+2. **Verify** no other flows are hardcoded to require Turnstile (WhitePaperPage only mentions it in marketing copy, so no change needed)
 
-2. **`src/components/auth/AuthPage.tsx`** — Forgot Password dialog
-   - Add a separate Turnstile token state for the reset dialog (`resetTurnstileToken`) with its own widget ref, so it doesn't collide with login/signup widgets.
-   - Render `<TurnstileWidget>` inside the reset dialog when `isTurnstileEnabled`, between the email field and the action buttons.
-   - Disable the "Send Reset Link" button until a token is present (when Turnstile is enabled).
-   - Pass the token into `resetPassword(resetEmail.trim(), isTurnstileEnabled ? resetTurnstileToken! : undefined)`.
-   - Reset the widget on error and after successful submit / dialog close.
+### To Re-enable Later
+Simply flip the same env variable back to `"true"` before pre-production / go-live. No code changes required.
 
-No backend or migration changes — the captcha is enforced by Supabase Auth itself; we only need to supply the token.
+### Files Changed
+- `.env` (1 line change)

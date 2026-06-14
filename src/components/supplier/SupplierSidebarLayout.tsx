@@ -428,7 +428,7 @@ export function SupplierSidebarLayout({
         </SidebarHeader>
 
         <SidebarContent>
-          {/* Quick Actions */}
+          {!flags.hideQuickActions && (
           <SidebarGroup>
             <SidebarGroupLabel>Quick Actions</SidebarGroupLabel>
             <SidebarGroupContent>
@@ -466,6 +466,7 @@ export function SupplierSidebarLayout({
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+          )}
 
           {/* Main Navigation */}
           <SidebarGroup>

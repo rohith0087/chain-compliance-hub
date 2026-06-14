@@ -430,9 +430,18 @@ const AuthPage = () => {
       return;
     }
     
+    if (isTurnstileEnabled && !resetTurnstileToken) {
+      toast({
+        title: "Verification Required",
+        description: "Please complete the security check.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setResetLoading(true);
     setResetCooldownUntil(Date.now() + RESET_COOLDOWN_MS);
-    const { error } = await resetPassword(resetEmail.trim());
+    const { error } = await resetPassword(resetEmail.trim(), isTurnstileEnabled ? resetTurnstileToken! : undefined);
 
     if (error) {
       toast({
@@ -440,12 +449,14 @@ const AuthPage = () => {
         description: error.message,
         variant: "destructive",
       });
+      setResetTurnstileToken(null);
     } else {
       toast({
         title: "Reset Email Sent",
         description: "If an account exists with this email, you'll receive reset instructions.",
       });
       setResetEmail('');
+      setResetTurnstileToken(null);
       setResetDialogOpen(false);
     }
     setResetLoading(false);

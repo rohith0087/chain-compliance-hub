@@ -80,6 +80,7 @@ export const DEFAULT_PROFILE: WorkspaceProfile = {
     hidePrePopulate: false,
     hideBuyerSamples: false,
     hideSupplierMap: false,
+    hideQuickActions: false,
   },
 };
 

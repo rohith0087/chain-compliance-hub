@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useWorkspaceProfile } from '@/hooks/useWorkspaceProfile';
 import { toast } from 'sonner';
 
 interface ConnectWithBuyerModalProps {
@@ -19,12 +20,13 @@ export const ConnectWithBuyerModal = ({ onConnectionRequest }: ConnectWithBuyerM
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
+  const { t: wsT } = useWorkspaceProfile();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!buyerId.trim()) {
-      toast.error('Please enter a buyer ID');
+      toast.error(`Please enter a ${wsT.buyer.toLowerCase()} ID`);
       return;
     }
 
@@ -78,26 +80,26 @@ export const ConnectWithBuyerModal = ({ onConnectionRequest }: ConnectWithBuyerM
       <DialogTrigger asChild>
         <Button size="default">
           <Plus className="h-4 w-4 mr-2" />
-          Connect with Buyer
+          Connect with {wsT.buyer}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Connect with Buyer</DialogTitle>
+          <DialogTitle>Connect with {wsT.buyer}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="buyerId">Buyer ID</Label>
+            <Label htmlFor="buyerId">{wsT.buyer} ID</Label>
             <Input
               id="buyerId"
-              placeholder="Enter buyer ID (e.g., BUY-1234-5678)"
+              placeholder={`Enter ${wsT.buyer.toLowerCase()} ID (e.g., BUY-1234-5678)`}
               value={buyerId}
               onChange={(e) => setBuyerId(e.target.value)}
               disabled={isLoading}
               className="font-mono"
             />
             <p className="text-sm text-muted-foreground">
-              Enter the unique buyer identification number provided by the buyer
+              Enter the unique {wsT.buyer.toLowerCase()} identification number provided by the {wsT.buyer.toLowerCase()}
             </p>
           </div>
           

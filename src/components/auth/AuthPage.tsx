@@ -644,6 +644,15 @@ const AuthPage = () => {
                                   required
                                 />
                               </div>
+                              </div>
+                              {isTurnstileEnabled && (
+                                <TurnstileWidget
+                                  siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                                  onSuccess={(token) => setResetTurnstileToken(token)}
+                                  onExpire={() => setResetTurnstileToken(null)}
+                                  onError={() => setResetTurnstileToken(null)}
+                                />
+                              )}
                               <div className="flex gap-2">
                                 <Button 
                                   type="button" 
@@ -653,7 +662,7 @@ const AuthPage = () => {
                                 >
                                   Cancel
                                 </Button>
-                              <Button type="submit" className="flex-1" disabled={resetLoading || isResetCooling}>
+                              <Button type="submit" className="flex-1" disabled={resetLoading || isResetCooling || (isTurnstileEnabled && !resetTurnstileToken)}>
                                    {isResetCooling ? `Wait ${Math.ceil(resetCooldownRemaining / 1000)}s` : resetLoading ? "Sending..." : "Send Reset Link"}
                                 </Button>
                               </div>

@@ -262,9 +262,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = async (email: string, captchaToken?: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: 'https://compliance.tracer2c.com/reset-password',
+      captchaToken,
     });
     return { error };
   };

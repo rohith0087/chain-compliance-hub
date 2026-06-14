@@ -147,7 +147,7 @@ export function SupplierSidebarLayout({
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation(['supplier', 'common']);
-  const { t: wsT } = useWorkspaceProfile();
+  const { t: wsT, flags } = useWorkspaceProfile();
   const { profile, user: authUser } = useAuth();
   const { hasRole } = useUserRoles();
   const sidebar = useSidebar();
@@ -428,7 +428,7 @@ export function SupplierSidebarLayout({
         </SidebarHeader>
 
         <SidebarContent>
-          {/* Quick Actions */}
+          {!flags.hideQuickActions && (
           <SidebarGroup>
             <SidebarGroupLabel>Quick Actions</SidebarGroupLabel>
             <SidebarGroupContent>
@@ -466,6 +466,7 @@ export function SupplierSidebarLayout({
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+          )}
 
           {/* Main Navigation */}
           <SidebarGroup>

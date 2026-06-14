@@ -36,6 +36,7 @@ export interface WorkspaceFlags {
   hidePrePopulate: boolean;
   hideBuyerSamples: boolean;
   hideSupplierMap: boolean;
+  hideQuickActions?: boolean;
   defaultEntityType?: string;
   lockEntityType?: boolean;
   showEvidenceLibrary?: boolean;
@@ -79,6 +80,7 @@ export const DEFAULT_PROFILE: WorkspaceProfile = {
     hidePrePopulate: false,
     hideBuyerSamples: false,
     hideSupplierMap: false,
+    hideQuickActions: false,
   },
 };
 
@@ -136,6 +138,7 @@ export const AUDITEE_PROFILE: WorkspaceProfile = {
     hidePrePopulate: true,
     hideBuyerSamples: true,
     hideSupplierMap: true,
+    hideQuickActions: true,
     showEvidenceLibrary: true,
   },
 };

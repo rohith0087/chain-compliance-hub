@@ -146,6 +146,7 @@ export function SupplierSidebarLayout({
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation(['supplier', 'common']);
+  const { t: wsT } = useWorkspaceProfile();
   const { profile, user: authUser } = useAuth();
   const { hasRole } = useUserRoles();
   const sidebar = useSidebar();
@@ -318,7 +319,7 @@ export function SupplierSidebarLayout({
       ownerOnly: true // Only visible to company owners
     },
     {
-      title: 'Buyer Connections',
+      title: wsT.buyer_connections,
       icon: Users,
       value: 'connections',
       badge: connectedBuyers > 0 ? connectedBuyers : undefined

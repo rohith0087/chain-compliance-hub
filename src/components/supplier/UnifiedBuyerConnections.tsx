@@ -137,18 +137,18 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
     if (connection.status === 'pending') return connection.initiated_by === 'supplier' ? { status: 'requested', label: 'Connection Requested', color: 'bg-purple-100 text-purple-800', icon: <Clock className="w-4 h-4 text-purple-500" />, action: 'awaiting_buyer' } : { status: 'pending_approval', label: 'Pending Your Approval', color: 'bg-orange-100 text-orange-800', icon: <AlertCircle className="w-4 h-4 text-orange-500" />, action: 'approve_reject' };
     if (connection.status === 'rejected') return { status: 'rejected', label: 'Connection Rejected', color: 'bg-red-100 text-red-800', icon: <XCircle className="w-4 h-4 text-red-500" />, action: 'none' };
     if (connection.status === 'approved') {
-      if (!onboardingRequest) return { status: 'connected_no_onboarding', label: 'Connected - No Onboarding', color: 'bg-gray-100 text-gray-800', icon: <CheckCircle className="w-4 h-4 text-gray-500" />, action: 'request_onboarding', description: 'Buyer has not initiated onboarding process yet' };
+      if (!onboardingRequest) return { status: 'connected_no_onboarding', label: 'Connected - No Onboarding', color: 'bg-gray-100 text-gray-800', icon: <CheckCircle className="w-4 h-4 text-gray-500" />, action: 'request_onboarding', description: `${wsT.buyer} has not initiated onboarding process yet` };
       
       // Check if under_review or partially_approved but has rejected documents (needs resubmission)
       const hasRejectedDocuments = (onboardingRequest.status === 'under_review' || onboardingRequest.status === 'partially_approved') && onboardingRequest.rejection_reason;
       
       const statusMap: any = { 
-        requested: { status: 'onboarding_requested', label: 'Onboarding Requested', color: 'bg-purple-100 text-purple-800', icon: <Clock className="w-4 h-4 text-purple-500" />, action: 'awaiting_buyer', description: 'Waiting for buyer to approve' }, 
+        requested: { status: 'onboarding_requested', label: 'Onboarding Requested', color: 'bg-purple-100 text-purple-800', icon: <Clock className="w-4 h-4 text-purple-500" />, action: 'awaiting_buyer', description: `Waiting for ${wsT.buyer.toLowerCase()} to approve` }, 
         pending: { status: 'onboarding_pending', label: 'Onboarding Pending', color: 'bg-amber-100 text-amber-800', icon: <AlertCircle className="w-4 h-4 text-amber-500" />, action: 'start_onboarding', description: onboardingRequest.rejection_reason ? `Changes requested: ${onboardingRequest.rejection_reason}` : 'Ready to start onboarding' }, 
         onboarding_initiated: { status: 'onboarding_in_progress', label: 'Onboarding In Progress', color: 'bg-blue-100 text-blue-800', icon: <Clock className="w-4 h-4 text-blue-500" />, action: 'continue_onboarding', description: 'Complete remaining steps' }, 
         under_review: hasRejectedDocuments 
           ? { status: 'changes_requested', label: 'Changes Requested', color: 'bg-orange-100 text-orange-800', icon: <AlertCircle className="w-4 h-4 text-orange-500" />, action: 'continue_onboarding', description: `Revisions needed: ${onboardingRequest.rejection_reason}` }
-          : { status: 'under_review', label: 'Under Review', color: 'bg-yellow-100 text-yellow-800', icon: <Clock className="w-4 h-4 text-yellow-500" />, action: 'awaiting_buyer', description: 'Buyer is reviewing' }, 
+          : { status: 'under_review', label: 'Under Review', color: 'bg-yellow-100 text-yellow-800', icon: <Clock className="w-4 h-4 text-yellow-500" />, action: 'awaiting_buyer', description: `${wsT.buyer} is reviewing` }, 
         partially_approved: { 
           status: 'changes_requested', 
           label: 'Changes Requested', 
@@ -170,7 +170,7 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
     try {
       const { data: buyerProfileData } = await supabase.from('buyers').select('profile_id').eq('id', connection.buyer_id).single();
       if (buyerProfileData?.profile_id) {
-        await supabase.from('notifications').insert({ user_id: buyerProfileData.profile_id, title: 'Onboarding Request from Supplier', message: `${supplierProfile.company_name} is requesting onboarding.`, type: 'onboarding_request', reference_id: connection.id });
+        await supabase.from('notifications').insert({ user_id: buyerProfileData.profile_id, title: `Onboarding Request from ${wsT.supplier}`, message: `${supplierProfile.company_name} is requesting onboarding.`, type: 'onboarding_request', reference_id: connection.id });
         toast({ title: "Request Sent", description: `Onboarding request sent to ${connection.buyers.company_name}` });
         fetchData();
       }

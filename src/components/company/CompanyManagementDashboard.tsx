@@ -165,6 +165,10 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
       
       if (error) throw error;
       toast.success('Company settings saved successfully');
+
+      // Reload the page so the workspace profile hook re-fetches the updated
+      // industry and applies the correct terminology (e.g. Auditor → Auditee profile).
+      setTimeout(() => window.location.reload(), 800);
     } catch (error) {
       console.error('Error saving company settings:', error);
       toast.error('Failed to save company settings');
@@ -172,6 +176,7 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
       setSavingCompany(false);
     }
   };
+
 
   // Check permission - only company owner can access
   if (!loading && !canViewCompanyManagement()) {

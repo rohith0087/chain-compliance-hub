@@ -48,6 +48,7 @@ import SupplierComplianceDashboard from '@/components/dashboard/SupplierComplian
 import UnifiedBuyerConnections from '@/components/supplier/UnifiedBuyerConnections';
 import { useAuth } from '@/hooks/useAuth';
 import { useCompanySetup } from '@/hooks/useCompanySetup';
+import { useWorkspaceProfile } from '@/hooks/useWorkspaceProfile';
 import { supabase } from '@/integrations/supabase/client';
 import SupplierDocumentsDashboard from '@/components/documents/SupplierDocumentsDashboard';
 import { CompanyManagementDashboard } from '@/components/company/CompanyManagementDashboard';
@@ -77,6 +78,7 @@ interface SupplierDashboardProps {
 
 const SupplierDashboard = ({ user, onLogout, onRoleSwitch, impersonatedSupplierId }: SupplierDashboardProps) => {
   const { t } = useTranslation(['supplier', 'common']);
+  const { t: wsT } = useWorkspaceProfile();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('supplierDashboard_activeTab') || 'overview';
@@ -687,7 +689,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch, impersonatedSupplierI
                             }}
                           />
                           <MetricChip 
-                            label="Buyers" 
+                            label={wsT.buyers} 
                             value={connectedBuyers.length} 
                             color="purple"
                             onClick={() => setActiveTab('buyers')}
@@ -1016,7 +1018,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch, impersonatedSupplierI
           <CompanyManagementDashboard 
             companyId={supplierProfile?.id}
             companyType="supplier"
-            companyName={supplierProfile?.company_name || 'Supplier'}
+            companyName={supplierProfile?.company_name || wsT.supplier_profile}
           />
         );
       default:

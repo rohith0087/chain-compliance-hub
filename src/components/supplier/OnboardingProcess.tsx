@@ -11,6 +11,7 @@ import { OnboardingDocumentUpload } from './OnboardingDocumentUpload';
 import { OnboardingFormCompletion } from './OnboardingFormCompletion';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useWorkspaceProfile } from '@/hooks/useWorkspaceProfile';
 
 interface OnboardingProcessProps {
   request: any;
@@ -28,6 +29,7 @@ export const OnboardingProcess: React.FC<OnboardingProcessProps> = ({
   const [loading, setLoading] = useState(true);
   const { getDocumentRequirements, getFormFields, updateRequestStatus } = useOnboardingRequests();
   const { toast } = useToast();
+  const { t: wsT } = useWorkspaceProfile();
 
   useEffect(() => {
     fetchRequirements();
@@ -264,7 +266,7 @@ export const OnboardingProcess: React.FC<OnboardingProcessProps> = ({
               <div>
                 <h3 className="font-semibold text-green-800">All Steps Completed!</h3>
                 <p className="text-sm text-green-700">
-                  You've completed all onboarding requirements. Submit for buyer review.
+                  You've completed all onboarding requirements. Submit for {wsT.buyer.toLowerCase()} review.
                 </p>
               </div>
               <Button

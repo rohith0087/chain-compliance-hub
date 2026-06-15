@@ -16,8 +16,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSupplierItems, ITEM_CATEGORIES } from '@/hooks/useSupplierItems';
 import { cn } from '@/lib/utils';
-import { format, parseISO } from 'date-fns';
+import { parseISO, format } from 'date-fns';
 import SampleDocumentViewer from '@/components/shared/SampleDocumentViewer';
+import { useWorkspaceProfile } from '@/hooks/useWorkspaceProfile';
 
 interface LibraryDocument {
   id: string;
@@ -57,8 +58,10 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
   const [librarySearchTerm, setLibrarySearchTerm] = useState('');
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   
+  
   const { toast } = useToast();
   const { user } = useAuth();
+  const { t: wsT } = useWorkspaceProfile();
 
   const isResubmission = request.status === 'rejected';
   const latestUpload = request.document_uploads?.[0];
@@ -223,8 +226,14 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
       // If uploading a new file from machine
       else if (file) {
         const fileExt = file.name.split('.').pop();
-        const generatedName = `${request.id}_${Date.now()}.${fileExt}`;
-        fileName = generatedName;
+        
+        // Use the friendly documentName (e.g. "Test Client - GST Registration - 2026")
+        // Clean it up to be a safe filename
+        const safeDocName = documentName.trim() 
+          ? documentName.trim().replace(/[^a-zA-Z0-9_\-\s]/g, '_').replace(/\s+/g, ' ').trim() 
+          : request.document_type.replace(/[^a-zA-Z0-9_\-\s]/g, '_');
+          
+        fileName = `${safeDocName}.${fileExt}`;
 
         // Resolve supplier ID (prefer from request, fallback to lookup by profile_id)
         let resolvedSupplierId: string | null = request?.supplier_id || null;
@@ -241,8 +250,9 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
           resolvedSupplierId = supplierRow.id;
         }
 
-        // Store key without bucket prefix under supplier namespace to satisfy RLS
-        const fileKey = `${resolvedSupplierId}/${generatedName}`;
+        // Store key without bucket prefix under supplier namespace to satisfy RLS.
+        // Include a timestamp to ensure the storage path is unique.
+        const fileKey = `${resolvedSupplierId}/${Date.now()}_${fileName.replace(/\s+/g, '_')}`;
         filePath = fileKey;
         fileSize = file.size;
         mimeType = file.type;
@@ -686,11 +696,11 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
                       id="document-name"
                       value={documentName}
                       onChange={(e) => setDocumentName(e.target.value)}
-                      placeholder={`${supplierCompanyName || 'Supplier'} - ${request.document_type || 'Document'} - ${new Date().getFullYear()}`}
+                      placeholder={`${supplierCompanyName || wsT.supplier} - ${request.document_type || 'Document'} - ${new Date().getFullYear()}`}
                       className="bg-background"
                     />
                     <p className="text-xs text-muted-foreground">
-                      A clear name helps buyers identify your document easily
+                      A clear name helps {wsT.buyers.toLowerCase()} identify your document easily
                     </p>
                   </div>
 

@@ -120,10 +120,10 @@ export const AUDITEE_PROFILE: WorkspaceProfile = {
   terms: {
     ...DEFAULT_TERMS,
     // Supplier-side relabels: connected buyers are auditing firms / customers
-    buyer: 'Customer',
-    buyers: 'Customers',
-    connected_buyers: 'Active Customers',
-    buyer_connections: 'Customer Connections',
+    buyer: 'Auditor',
+    buyers: 'Auditors',
+    connected_buyers: 'Active Auditors',
+    buyer_connections: 'Auditor Connections',
     document_request: 'Evidence Request',
     document_requests: 'Evidence Requests',
     supplier_compliance: 'Audit Readiness',

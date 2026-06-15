@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Upload, X, FileText, Loader2, Trash2, FolderOpen, Calendar, Tag, Info } from 'lucide-react';
 import { toast } from 'sonner';
+import { useWorkspaceProfile } from '@/hooks/useWorkspaceProfile';
 import { cn } from '@/lib/utils';
 
 interface DocumentUploadModalProps {
@@ -67,6 +68,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [supplierCompanyName, setSupplierCompanyName] = useState<string>('');
+  const { t: wsT } = useWorkspaceProfile();
 
   // Fetch supplier company name for default document names
   useEffect(() => {
@@ -410,7 +412,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                           <Input
                             value={fileEntry.document_name}
                             onChange={(e) => updateFileEntry(fileEntry.id, { document_name: e.target.value })}
-                            placeholder={`${supplierCompanyName || 'Supplier'} - Document - ${new Date().getFullYear()}`}
+                            placeholder={`${supplierCompanyName || wsT.supplier} - Document - ${new Date().getFullYear()}`}
                             className="h-9 bg-background"
                           />
                         </div>

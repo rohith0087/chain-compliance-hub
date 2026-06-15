@@ -13,6 +13,9 @@ function isAllowedOrigin(origin: string): boolean {
   try {
     const host = new URL(origin).hostname;
     return (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host.startsWith('192.168.') ||
       host.endsWith('.lovableproject.com') ||
       host.endsWith('.lovable.app') ||
       host.endsWith('.lovable.dev')

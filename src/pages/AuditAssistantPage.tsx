@@ -15,45 +15,65 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import {
   ArrowLeft, Send, FileText, AlertTriangle, FileBarChart, Loader2,
-  Compass, FileSearch, ShieldAlert, FilePlus, ListChecks, Download,
+  Compass, FileSearch, ShieldAlert, FilePlus, ListChecks, Download, ListTodo,
+  PanelRightClose, PanelRight
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { motion } from 'framer-motion';
 import { FindingsPanel } from '@/components/audit/FindingsPanel';
 import { EvidencePanel } from '@/components/audit/EvidencePanel';
 import auditLogo from '@/assets/audit-assistant-logo.png';
+
+// Framer motion variants
+const easeOut = [0.16, 1, 0.3, 1] as const;
+const fadeInUp = {
+  hidden: { opacity: 0, y: 15 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: easeOut } }
+};
+const staggerContainer = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.1 } }
+};
 
 type ChatMsg = { id: string; role: 'user' | 'assistant'; content: string };
 
 const QUICK_PROMPTS = [
   {
+    icon: ListTodo,
+    title: 'Pending Tasks Today',
+    desc: 'Get a neatly organized list of pending items and deadlines.',
+    prompt: 'What are all the pending tasks today? Please give me a neatly displayed, prioritized list of all pending document requests, missing evidence, and open findings. Use a clear markdown structure with status indicators (like emojis or checkboxes) so I know exactly what needs my attention today.',
+  },
+  {
     icon: Compass,
-    title: 'Engagement plan',
-    desc: 'Draft a plan mapped to CARO 2020 + ISO 27001 for this client.',
-    prompt: 'Draft an engagement plan for this client based on their industry and CARO 2020 + ISO 27001.',
+    title: 'Statutory & CARO',
+    desc: 'Check Companies Act 2013 and CARO 2020 compliance gaps.',
+    prompt: 'Review the evidence and identify any compliance gaps under the Companies Act 2013 and CARO 2020.',
   },
   {
     icon: FileSearch,
-    title: 'Evidence gaps',
-    desc: 'List missing or expired documents for the active engagement.',
-    prompt: 'List all missing or expired evidence for the active engagement.',
-  },
-  {
-    icon: ShieldAlert,
-    title: 'Risk matrix',
-    desc: 'Generate a risk matrix from current evidence and findings.',
-    prompt: 'Generate a risk matrix from current evidence and findings.',
-  },
-  {
-    icon: FilePlus,
-    title: 'Draft findings',
-    desc: 'Write 3 findings for the most critical gaps with clause refs.',
-    prompt: 'Draft 3 audit findings for the most critical gaps with framework references.',
+    title: 'GST & Tax Audit',
+    desc: 'Verify GST returns, reconciliations, and Tax Audit (Sec 44AB) requirements.',
+    prompt: 'List missing or expired documents related to GST compliance, reconciliations, and Income Tax Act requirements.',
   },
   {
     icon: ListChecks,
-    title: 'Compliance posture',
-    desc: 'Summarize this client\u2019s posture in 5 concise bullets.',
-    prompt: "Summarize this client's compliance posture in 5 bullet points.",
+    title: 'Internal Audit (IFC)',
+    desc: 'Assess Internal Financial Controls and operational process gaps.',
+    prompt: 'Analyze the current evidence to assess the effectiveness of Internal Financial Controls (IFC) and highlight operational risks.',
+  },
+  {
+    icon: ShieldAlert,
+    title: 'Secretarial & ROC',
+    desc: 'Check board minutes, ROC filings, and SEBI LODR (if applicable).',
+    prompt: 'Summarize the compliance posture regarding Secretarial Audit, ROC filings, and board meeting documentation.',
+  },
+  {
+    icon: FilePlus,
+    title: 'Draft Findings',
+    desc: 'Auto-draft non-compliance findings with specific clause references.',
+    prompt: 'Draft 3 critical audit findings based on missing evidence, citing specific Indian framework clauses (e.g., CARO, GST Act, or ICAI SAs).',
   },
 ];
 
@@ -73,6 +93,7 @@ export default function AuditAssistantPage() {
   const [reportUrl, setReportUrl] = useState<string | null>(null);
   const [reportAt, setReportAt] = useState<Date | null>(null);
   const [generatingReport, setGeneratingReport] = useState(false);
+  const [showRightPanel, setShowRightPanel] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { connections, loading: connLoading } = useBuyerSupplierConnections(buyerId ?? undefined);
@@ -113,7 +134,7 @@ export default function AuditAssistantPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const controller = new AbortController();
       const timeout = window.setTimeout(() => controller.abort('Request timed out.'), 90000);
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/audit-assistant`, {
+      const res = await fetch(`/api/functions/audit-assistant`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
         signal: controller.signal,
@@ -151,7 +172,7 @@ export default function AuditAssistantPage() {
     setGeneratingReport(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-audit-report`, {
+      const res = await fetch(`/api/functions/generate-audit-report`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -182,10 +203,41 @@ export default function AuditAssistantPage() {
     }
   };
 
+  const handleCreateFinding = async (title: string, recommendation: string, severity: string) => {
+    if (!buyerId || !clientId) {
+      toast({ title: 'Missing client context', variant: 'destructive' });
+      return;
+    }
+    
+    let mappedSeverity = 'Minor';
+    const s = severity.toLowerCase();
+    if (s.includes('high') || s.includes('critical')) mappedSeverity = 'Critical';
+    else if (s.includes('med') || s.includes('major')) mappedSeverity = 'Major';
+
+    const { error } = await supabase.from('audit_findings').insert({
+      buyer_id: buyerId,
+      supplier_id: clientId,
+      engagement_id: engagementId || null,
+      title: title.trim().slice(0, 200),
+      recommendation: recommendation.trim(),
+      severity: mappedSeverity,
+      status: 'Open',
+      finding_date: new Date().toISOString().slice(0, 10),
+      created_by: user?.id,
+    });
+
+    if (error) {
+      toast({ title: 'Error saving finding', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Finding created', description: title });
+      // remove the match from the UI state so it can't be clicked twice? It's fine for now.
+    }
+  };
+
   return (
-    <div className="h-screen flex flex-col bg-muted/30">
+    <div className="theme-minimalist h-screen flex flex-col bg-background font-sans">
       {/* HEADER */}
-      <header className="h-14 border-b bg-card px-4 flex items-center gap-3 shrink-0">
+      <header className="h-16 border-b border-border/60 bg-card/80 backdrop-blur-md px-6 flex items-center gap-4 shrink-0 z-10 shadow-subtle">
         <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="gap-1">
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -207,6 +259,10 @@ export default function AuditAssistantPage() {
               {activeEngagement.title}
             </Badge>
           )}
+          <div className="w-px h-5 bg-border mx-2" />
+          <Button variant="ghost" size="icon" onClick={() => setShowRightPanel(p => !p)} title="Toggle Right Panel">
+            {showRightPanel ? <PanelRightClose className="h-4 w-4 text-muted-foreground" /> : <PanelRight className="h-4 w-4 text-muted-foreground" />}
+          </Button>
         </div>
       </header>
 
@@ -248,74 +304,141 @@ export default function AuditAssistantPage() {
               </Card>
             )}
 
-            <div className="pt-2">
-              <div className="mb-2">
-                <div className="text-[11px] font-semibold uppercase text-muted-foreground tracking-wide">Suggested actions</div>
-                <p className="text-[11px] text-muted-foreground/80 mt-0.5">Tap to run with the selected context.</p>
+            <div className="pt-4">
+              <div className="mb-4">
+                <div className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/5 px-3 py-1 mb-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
+                  <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-accent font-medium">
+                    Suggested actions
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">Tap to run with the selected context.</p>
               </div>
-              <div className="space-y-1.5">
-                {QUICK_PROMPTS.map(({ icon: Icon, title, desc, prompt }, i) => (
-                  <button
-                    key={i}
-                    onClick={() => sendMessage(prompt)}
-                    disabled={streaming || !clientId}
-                    className="group w-full text-left p-2.5 rounded-lg border border-border bg-background hover:border-primary/40 hover:bg-accent/30 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <div className="flex items-start gap-2.5">
-                      <div className="h-7 w-7 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary/15">
-                        <Icon className="h-3.5 w-3.5" />
+                <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-2">
+                  {QUICK_PROMPTS.map(({ icon: Icon, title, desc, prompt }, i) => (
+                    <motion.button
+                      key={i}
+                      variants={fadeInUp}
+                      onClick={() => sendMessage(prompt)}
+                      disabled={streaming || !clientId}
+                      className="group w-full text-left p-3 rounded-xl border border-border bg-card shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-accent to-accent-secondary text-white flex items-center justify-center shrink-0 shadow-accent">
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-semibold text-foreground group-hover:text-accent transition-colors">{title}</div>
+                          <div className="text-xs text-muted-foreground mt-1 leading-snug">{desc}</div>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-semibold leading-tight">{title}</div>
-                        <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{desc}</div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+                    </motion.button>
+                  ))}
+                </motion.div>
             </div>
           </div>
         </aside>
 
         {/* CENTER */}
-        <main className="col-span-6 min-h-0 min-w-0 flex flex-col bg-background">
-          <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-            <div className="px-8 py-6">
+        <main className={`min-h-0 min-w-0 flex flex-col bg-background relative transition-all duration-300 ${showRightPanel ? 'col-span-6' : 'col-span-9'}`}>
+          {/* Subtle dot pattern background for texture */}
+          <div className="absolute inset-0 pointer-events-none dot-pattern opacity-40 mix-blend-multiply" />
+          <div className="absolute top-0 right-0 w-96 h-96 bg-accent/5 rounded-full blur-[100px] pointer-events-none" />
+          
+          <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain relative z-10">
+            <div className="px-8 py-10">
               {messages.length === 0 ? (
-                <div className="max-w-xl mx-auto text-center py-12">
-                  <img src={auditLogo} alt="" width={72} height={72} className="mx-auto mb-4 opacity-90" />
-                  <h2 className="text-lg font-semibold">How can I help with this audit?</h2>
-                  <p className="text-sm text-muted-foreground mt-1.5 max-w-md mx-auto">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: easeOut }} className="max-w-xl mx-auto text-center py-16">
+                  <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-gradient-to-br from-accent/10 to-transparent mb-6 shadow-sm ring-1 ring-accent/10">
+                    <img src={auditLogo} alt="" width={48} height={48} className="opacity-90" />
+                  </div>
+                  <h2 className="text-4xl font-display font-medium text-foreground tracking-tight leading-tight">
+                    How can I help with <span className="gradient-text italic">this audit?</span>
+                  </h2>
+                  <p className="text-base text-muted-foreground mt-4 max-w-md mx-auto leading-relaxed">
                     Pick a client, then ask about engagement planning, evidence gaps, findings, or Indian &amp; global audit frameworks.
                   </p>
-                  <div className="mt-6 flex flex-wrap gap-2 justify-center">
+                  <div className="mt-10 flex flex-wrap gap-3 justify-center">
                     {QUICK_PROMPTS.slice(0, 3).map((p, i) => (
                       <button
                         key={i}
                         onClick={() => sendMessage(p.prompt)}
                         disabled={!clientId}
-                        className="text-xs px-3 py-1.5 rounded-full border bg-card hover:border-primary/40 hover:bg-accent/30 transition disabled:opacity-40"
+                        className="text-sm px-4 py-2 rounded-full border border-border bg-card shadow-sm hover:shadow-md hover:border-accent/40 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-40"
                       >
                         {p.title}
                       </button>
                     ))}
                   </div>
-                </div>
+                </motion.div>
               ) : (
-                <div className="space-y-5 max-w-2xl mx-auto">
-                  {messages.map(m => (
-                    <div key={m.id} className={m.role === 'user' ? 'flex justify-end' : ''}>
-                      {m.role === 'user' ? (
-                        <div className="bg-primary text-primary-foreground rounded-2xl rounded-br-sm px-4 py-2.5 max-w-[80%] text-sm">
-                          {m.content}
-                        </div>
-                      ) : (
-                        <div className="prose prose-sm dark:prose-invert max-w-none">
-                          <ReactMarkdown>{m.content || '_Thinking\u2026_'}</ReactMarkdown>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                <div className="space-y-6 max-w-3xl mx-auto">
+                  {messages.map((m, index) => {
+                    const rawContent = m.content || '';
+                    const createMatches = [...rawContent.matchAll(/\[CREATE_FINDING:\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^\]]+)\]/g)];
+                    const displayContent = rawContent.replace(/\[CREATE_FINDING:[^\]]+\]/g, '').trim();
+
+                    return (
+                      <motion.div 
+                        key={m.id} 
+                        initial={{ opacity: 0, y: 15 }} 
+                        animate={{ opacity: 1, y: 0 }} 
+                        transition={{ duration: 0.4, ease: easeOut }}
+                        className={m.role === 'user' ? 'flex justify-end' : 'space-y-4'}
+                      >
+                        {m.role === 'user' ? (
+                          <div className="bg-gradient-accent text-white shadow-accent rounded-2xl rounded-tr-sm px-5 py-3 max-w-[85%] text-[15px] leading-relaxed">
+                            {displayContent}
+                          </div>
+                        ) : (
+                          <div className="flex gap-4">
+                            <div className="w-8 h-8 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center shrink-0 mt-1">
+                              <img src={auditLogo} alt="AI" className="w-5 h-5 opacity-80" />
+                            </div>
+                            <div className="flex-1 min-w-0 space-y-4">
+                              <div className="prose prose-sm md:prose-base prose-slate dark:prose-invert max-w-none overflow-x-auto text-foreground/90 leading-relaxed
+                                prose-p:leading-relaxed prose-pre:bg-muted prose-pre:border
+                                prose-th:border prose-th:bg-muted/50 prose-th:p-2 prose-th:text-left
+                                prose-td:border prose-td:p-2 prose-table:w-full prose-table:border-collapse
+                                prose-li:my-0.5">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayContent || '_Thinking\u2026_'}</ReactMarkdown>
+                              </div>
+                              {createMatches.length > 0 && (
+                                <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col gap-3 mt-6 pt-5 border-t border-border/60">
+                                  <div className="inline-flex items-center gap-2">
+                                    <span className="font-mono text-[10px] uppercase tracking-wider text-accent font-semibold">Actionable Insights</span>
+                                    <div className="h-px flex-1 bg-gradient-to-r from-accent/20 to-transparent" />
+                                  </div>
+                                  {createMatches.map((match, idx) => {
+                                    const [_, title, rec, sev] = match;
+                                    return (
+                                      <div key={idx} className="bg-card border border-border shadow-sm hover:shadow-md hover:border-accent/40 transition-all rounded-xl p-4 text-sm flex items-start justify-between gap-4">
+                                        <div className="flex-1">
+                                          <div className="font-semibold text-foreground flex items-center gap-2">
+                                            <AlertTriangle className="h-4 w-4 text-accent" />
+                                            {title.trim()}
+                                            <Badge variant="secondary" className="text-[10px] uppercase font-mono tracking-wider">{sev.trim()}</Badge>
+                                          </div>
+                                          <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{rec.trim()}</p>
+                                        </div>
+                                        <Button 
+                                          size="sm" 
+                                          className="shrink-0 bg-gradient-accent text-white shadow-sm hover:shadow-accent hover:-translate-y-0.5 transition-all" 
+                                          onClick={() => handleCreateFinding(title, rec, sev)}
+                                        >
+                                          Save Finding
+                                        </Button>
+                                      </div>
+                                    );
+                                  })}
+                                </motion.div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
                   {streaming && (
                     <div className="text-xs text-muted-foreground flex items-center gap-2">
                       <Loader2 className="h-3 w-3 animate-spin" /> Generating…
@@ -326,40 +449,36 @@ export default function AuditAssistantPage() {
             </div>
           </div>
 
-          <div className="border-t bg-card p-3">
-            <div className="max-w-2xl mx-auto">
-              {activeClient && (
-                <div className="text-[11px] text-muted-foreground mb-1.5 px-1">
-                  Asking about <span className="font-medium text-foreground">{activeClient.company_name}</span>
-                  {activeEngagement && <> &middot; <span className="font-medium text-foreground">{activeEngagement.title}</span></>}
-                </div>
-              )}
-              <div className="relative">
+          <div className="p-4 bg-gradient-to-t from-background via-background to-transparent pt-12 relative z-20">
+            <div className="max-w-3xl mx-auto">
+              <div className="relative flex items-end bg-card shadow-lg shadow-accent/5 ring-1 ring-border rounded-3xl pl-5 pr-2 py-2 hover:shadow-xl hover:ring-border/80 transition-all focus-within:ring-accent/50 focus-within:shadow-accent/10">
                 <Textarea
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); } }}
                   placeholder={clientId ? 'Ask the Audit Assistant\u2026' : 'Pick a client to start\u2026'}
-                  rows={2}
-                  className="resize-none pr-12 rounded-xl"
+                  rows={1}
+                  className="resize-none border-0 shadow-none focus-visible:ring-0 bg-transparent py-2.5 min-h-0 flex-1 px-0 text-[15px] max-h-32"
                   disabled={streaming}
                 />
                 <Button
                   onClick={() => sendMessage(input)}
                   disabled={!input.trim() || streaming}
                   size="icon"
-                  className="absolute bottom-2 right-2 h-8 w-8 rounded-lg"
+                  className="h-10 w-10 rounded-full shrink-0 ml-2 bg-foreground hover:bg-foreground/90 text-background shadow-sm mb-0.5"
                 >
-                  {streaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {streaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 ml-0.5" />}
                 </Button>
               </div>
-              <div className="text-[10px] text-muted-foreground mt-1.5 px-1">Enter to send, Shift+Enter for new line</div>
+              <div className="text-[11px] text-muted-foreground mt-3 text-center font-medium">
+                {activeClient ? `Asking about ${activeClient.company_name}${activeEngagement ? ` · ${activeEngagement.title}` : ''}` : 'Ask the Audit Assistant to analyze documents and draft findings.'}
+              </div>
             </div>
           </div>
         </main>
 
         {/* RIGHT */}
-        <aside className="col-span-3 min-h-0 border-l bg-card overflow-hidden flex flex-col">
+        <aside className={`min-h-0 border-l bg-card overflow-hidden flex flex-col transition-all duration-300 ${showRightPanel ? 'col-span-3 opacity-100' : 'hidden opacity-0'}`}>
           <Tabs defaultValue="evidence" className="h-full flex flex-col">
             <div className="p-3 border-b">
               <TabsList className="grid grid-cols-3 w-full h-9">

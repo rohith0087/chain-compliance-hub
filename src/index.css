@@ -225,3 +225,75 @@
     display: none; /* Chrome, Safari and Opera */
   }
 }
+
+/* Minimalist Modern Theme Variables */
+.theme-minimalist {
+  --background: 210 20% 98%; /* #FAFAFA / #F8F9FA */
+  --foreground: 222 47% 11%; /* Slate-900 #0F172A */
+  --muted: 210 40% 96.1%; /* Slate-100 */
+  --muted-foreground: 215.4 16.3% 46.9%; /* Slate-500 */
+  --accent: 221 100% 50%; /* #0052FF */
+  --accent-secondary: 224 100% 65%; /* #4D7CFF */
+  --accent-foreground: 0 0% 100%;
+  --border: 214.3 31.8% 91.4%; /* Slate-200 */
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --ring: 221 100% 50%;
+  
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-display: 'Calistoga', Georgia, serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  font-family: var(--font-sans);
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.theme-minimalist h1,
+.theme-minimalist h2,
+.theme-minimalist h3,
+.theme-minimalist .font-display {
+  font-family: var(--font-display);
+}
+
+.theme-minimalist .font-mono {
+  font-family: var(--font-mono);
+}
+
+.theme-minimalist .gradient-text {
+  background: linear-gradient(to right, hsl(var(--accent)), hsl(var(--accent-secondary)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.theme-minimalist .bg-gradient-accent {
+  background: linear-gradient(135deg, hsl(var(--accent)), hsl(var(--accent-secondary)));
+}
+
+.theme-minimalist .dot-pattern {
+  background-image: radial-gradient(circle, hsl(var(--foreground) / 0.1) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.theme-minimalist .dot-pattern-light {
+  background-image: radial-gradient(circle, hsl(var(--background) / 0.15) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.theme-minimalist .shadow-accent {
+  box-shadow: 0 4px 14px rgba(0, 82, 255, 0.25);
+}
+
+.theme-minimalist .shadow-accent-lg {
+  box-shadow: 0 8px 24px rgba(0, 82, 255, 0.35);
+}
+
+.theme-minimalist .border-gradient-accent {
+  background: linear-gradient(135deg, hsl(var(--accent)), hsl(var(--accent-secondary)), hsl(var(--accent)));
+  padding: 1px;
+}
+
+.theme-minimalist * {
+  border-color: hsl(var(--border));
+}

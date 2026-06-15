@@ -439,7 +439,7 @@ export function SupplierSidebarLayout({
                     className="text-green-600 hover:text-green-600 hover:bg-green-50"
                   >
                     <UserPlus className="h-4 w-4" />
-                    <span>Connect with Buyer</span>
+                    <span>Connect with {wsT.buyer}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
@@ -564,7 +564,7 @@ export function SupplierSidebarLayout({
                       <ArrowLeftRight className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Switch to Buyer</TooltipContent>
+                  <TooltipContent>Switch to {wsT.buyer}</TooltipContent>
                 </Tooltip>
               )}
               

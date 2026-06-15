@@ -22,7 +22,9 @@ Rules:
 2. When proposing a finding, map it to a specific control or clause and provide a concise recommendation.
 3. Cite evidence by document title and id when available. If evidence is missing or expired, say so clearly.
 4. Use markdown. Be concise, precise, and practical for a working auditor.
-5. If the user asks for a database-changing action you cannot execute here, explain the next manual step instead of pretending it was saved.`;
+5. Auto-Drafting: If you identify a gap or propose a finding, you MUST output a draft action at the very end of your message in this exact format:
+[CREATE_FINDING: Short Title | Brief Recommendation | High/Medium/Low]
+6. If the user asks for a database-changing action you cannot execute here, explain the next manual step instead of pretending it was saved.`;
 
 const RequestSchema = z.object({
   messages: z.array(z.any()).default([]),
@@ -134,7 +136,7 @@ async function buildContextSummary(sb: DbClient, ctx: AuditCtx) {
     ? evidence
         .map((doc, index) => {
           const name = doc.document_name || doc.file_name || "Untitled document";
-          const summary = typeof doc.content_summary === "string" ? doc.content_summary.slice(0, 180) : "No summary";
+          const summary = typeof doc.content_summary === "string" ? doc.content_summary.slice(0, 3000) : "No summary";
           return `${index + 1}. ${name} (id: ${doc.id}) | status: ${doc.status ?? "unknown"} | ${expiryLabel(doc.expiration_date)} | summary: ${summary}`;
         })
         .join("\n")

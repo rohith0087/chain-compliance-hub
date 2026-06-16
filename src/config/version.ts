@@ -1,4 +1,4 @@
-export const APP_VERSION = "1.2";
+export const APP_VERSION = "1.3";
 
 export interface ReleaseNote {
   version: string;
@@ -8,6 +8,17 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    version: "1.3",
+    date: "February 2026",
+    title: "Auditors Update",
+    highlights: [
+      "New seamless workflow from desk audit to physical inspection",
+      "Interactive flow diagrams for auditor onboarding",
+      "Audit Assistant improvements to automatically correlate corner cases",
+      "Major UI redesign for analytical dashboards"
+    ]
+  },
   {
     version: "1.2",
     date: "January 2026",

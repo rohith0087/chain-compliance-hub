@@ -7,8 +7,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { RELEASE_NOTES } from '@/config/version';
+import { AuditorFlowPresentation } from '@/components/presentations/AuditorFlowPresentation';
 
 interface WhatsNewDialogProps {
   open: boolean;
@@ -16,6 +18,12 @@ interface WhatsNewDialogProps {
 }
 
 export function WhatsNewDialog({ open, onOpenChange }: WhatsNewDialogProps) {
+  const [showPresentation, setShowPresentation] = React.useState(false);
+
+  if (showPresentation) {
+    return <AuditorFlowPresentation onClose={() => setShowPresentation(false)} />;
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -59,7 +67,7 @@ export function WhatsNewDialog({ open, onOpenChange }: WhatsNewDialogProps) {
                 </h4>
 
                 {/* Highlights */}
-                <ul className="space-y-1.5">
+                <ul className="space-y-1.5 mb-4">
                   {release.highlights.map((highlight, i) => (
                     <li 
                       key={i}
@@ -70,6 +78,17 @@ export function WhatsNewDialog({ open, onOpenChange }: WhatsNewDialogProps) {
                     </li>
                   ))}
                 </ul>
+
+                {/* Presentation Button for v1.3 */}
+                {release.version === "1.3" && (
+                  <Button 
+                    onClick={() => setShowPresentation(true)}
+                    className="w-full bg-gradient-to-r from-accent to-blue-500 hover:from-accent/90 hover:to-blue-500/90 text-white border-0"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    View Interactive Workflow
+                  </Button>
+                )}
               </div>
             ))}
           </div>

@@ -83,7 +83,7 @@ async function buildContextSummary(sb: DbClient, ctx: AuditCtx) {
     return "No client is selected. Ask the user to choose a client from the left panel before giving engagement-specific advice.";
   }
 
-  const [clientRes, engagementRes, findingsRes, evidenceRes] = await Promise.all([
+  const [clientRes, engagementRes, findingsRes, evidenceRes, auditorRes, auditingCompanyRes] = await Promise.all([
     sb.from("suppliers").select("id, company_name, industry, country").eq("id", ctx.clientId).maybeSingle(),
     ctx.engagementId
       ? sb.from("document_requests").select("id, title, status, due_date").eq("id", ctx.engagementId).maybeSingle()
@@ -97,7 +97,7 @@ async function buildContextSummary(sb: DbClient, ctx: AuditCtx) {
     (() => {
       let query = sb
         .from("document_uploads")
-        .select("id, document_name, file_name, status, expiration_date, content_summary, created_at, request_id, document_requests!inner(supplier_id, buyer_id, title)")
+        .select("id, document_name, file_name, status, expiration_date, content_summary, created_at, request_id, document_requests!inner(supplier_id, buyer_id, title, notes)")
         .eq("document_requests.supplier_id", ctx.clientId!)
         .eq("document_requests.buyer_id", ctx.buyerId)
         .order("created_at", { ascending: false })
@@ -105,12 +105,16 @@ async function buildContextSummary(sb: DbClient, ctx: AuditCtx) {
       if (ctx.engagementId) query = query.eq("request_id", ctx.engagementId);
       return query;
     })(),
+    sb.from("profiles").select("full_name, email").eq("id", ctx.userId).maybeSingle(),
+    sb.from("buyers").select("company_name").eq("id", ctx.buyerId).maybeSingle(),
   ]);
 
   const client = clientRes.data;
   const engagement = engagementRes.data as any;
   const findings = (findingsRes.data ?? []) as any[];
   const evidence = (evidenceRes.data ?? []) as any[];
+  const auditor = auditorRes.data;
+  const auditingCompany = auditingCompanyRes.data;
 
   const evidenceCounts = evidence.reduce(
     (acc, item) => {
@@ -137,12 +141,14 @@ async function buildContextSummary(sb: DbClient, ctx: AuditCtx) {
         .map((doc, index) => {
           const name = doc.document_name || doc.file_name || "Untitled document";
           const summary = typeof doc.content_summary === "string" ? doc.content_summary.slice(0, 3000) : "No summary";
-          return `${index + 1}. ${name} (id: ${doc.id}) | status: ${doc.status ?? "unknown"} | ${expiryLabel(doc.expiration_date)} | summary: ${summary}`;
+          const notes = doc.document_requests?.notes ? ` | auditor_notes: ${doc.document_requests.notes}` : "";
+          return `${index + 1}. ${name} (id: ${doc.id}) | status: ${doc.status ?? "unknown"} | ${expiryLabel(doc.expiration_date)} | summary: ${summary}${notes}`;
         })
         .join("\n")
     : "No evidence documents found for this context.";
 
   return [
+    `Context about YOU (the auditor's identity): You are speaking with ${auditor?.full_name ?? "an auditor"} who works for ${auditingCompany?.company_name ?? "the auditing company"}. Address them naturally when appropriate.`,
     `Active client: ${client?.company_name ?? "Unknown client"}`,
     `Industry: ${client?.industry ?? "Unknown"}`,
     `Country: ${client?.country ?? "Unknown"}`,

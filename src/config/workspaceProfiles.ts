@@ -40,6 +40,10 @@ export interface WorkspaceFlags {
   defaultEntityType?: string;
   lockEntityType?: boolean;
   showEvidenceLibrary?: boolean;
+  hideBulkInvite?: boolean;
+  hideCompliance?: boolean;
+  hideMessages?: boolean;
+  renameSubscriptionToBilling?: boolean;
 }
 
 export interface WorkspaceProfile {
@@ -112,6 +116,10 @@ export const AUDITOR_PROFILE: WorkspaceProfile = {
     hideSupplierMap: true,
     defaultEntityType: 'Auditor',
     lockEntityType: true,
+    hideBulkInvite: true,
+    hideCompliance: true,
+    hideMessages: true,
+    renameSubscriptionToBilling: true,
   },
 };
 

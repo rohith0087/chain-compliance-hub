@@ -298,7 +298,7 @@ export function BuyerSidebarLayout({
       value: 'requests',
       submenu: requestsSubmenu
     },
-    {
+    !wsFlags.hideCompliance && {
       title: t('common:navigation.compliance'),
       icon: BarChart3,
       value: 'compliance',
@@ -315,7 +315,7 @@ export function BuyerSidebarLayout({
       icon: GitBranch,
       value: 'onboarding'
     },
-    {
+    !wsFlags.hideMessages && {
       title: 'Messages',
       icon: MessageSquare,
       value: 'messages',
@@ -332,7 +332,7 @@ export function BuyerSidebarLayout({
       value: 'company'
     },
     {
-      title: 'Subscription & Billing',
+      title: wsFlags.renameSubscriptionToBilling ? 'Billing' : 'Subscription & Billing',
       icon: CreditCard,
       value: 'subscription'
     }
@@ -482,15 +482,17 @@ export function BuyerSidebarLayout({
                     <span>{wsTerms.compliance_compass}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                <SidebarMenuItem data-guide-id="quick-bulk-invite">
-                  <SidebarMenuButton 
-                    onClick={() => handleSpecialAction('bulk-invite')}
-                    className="hover:bg-accent/10 hover:text-accent transition-colors"
-                  >
-                    <Send className="h-4 w-4" />
-                    <span>Bulk Invite</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {!wsFlags.hideBulkInvite && (
+                  <SidebarMenuItem data-guide-id="quick-bulk-invite">
+                    <SidebarMenuButton 
+                      onClick={() => handleSpecialAction('bulk-invite')}
+                      className="hover:bg-accent/10 hover:text-accent transition-colors"
+                    >
+                      <Send className="h-4 w-4" />
+                      <span>Bulk Invite</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

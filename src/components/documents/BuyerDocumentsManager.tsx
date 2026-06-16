@@ -20,6 +20,7 @@ import { resolveStoragePath } from '@/utils/storagePath';
 import { BulkDownloadOptionsDialog } from './BulkDownloadOptionsDialog';
 import { BulkDownloadOverlay } from './BulkDownloadOverlay';
 import ApprovedDocumentSummaryModal from './ApprovedDocumentSummaryModal';
+import { DocumentNotesModal } from './DocumentNotesModal';
 
 interface BuyerDocumentsManagerProps {
   documents: any[];
@@ -73,6 +74,8 @@ const BuyerDocumentsManager = ({
   const [organizeFolders, setOrganizeFolders] = useState(true);
   const [summaryModalOpen, setSummaryModalOpen] = useState(false);
   const [summaryDocument, setSummaryDocument] = useState<any>(null);
+  const [notesModalOpen, setNotesModalOpen] = useState(false);
+  const [selectedNotesDocument, setSelectedNotesDocument] = useState<any>(null);
   const { toast } = useToast();
 
   // Enhanced filter logic with new filter options
@@ -703,6 +706,10 @@ const BuyerDocumentsManager = ({
                   onWithdraw={() => onWithdraw(doc.id, doc.title || doc.document_type)}
                   onCreateLink={() => handleCreateLink(doc)}
                   onOpenSummary={doc.status === 'approved' ? () => handleOpenSummary(doc) : undefined}
+                  onEditNotes={() => {
+                    setSelectedNotesDocument(doc);
+                    setNotesModalOpen(true);
+                  }}
                   approveLoading={approveLoading === doc.id}
                   declineLoading={declineLoading === doc.id}
                   withdrawLoading={withdrawLoading === doc.id}
@@ -762,6 +769,17 @@ const BuyerDocumentsManager = ({
           }
         }}
          onRefresh={onRefresh}
+      />
+
+      <DocumentNotesModal
+        isOpen={notesModalOpen}
+        onClose={() => setNotesModalOpen(false)}
+        document={selectedNotesDocument}
+        onNotesSaved={(docId, newNotes) => {
+          const doc = documents.find(d => d.id === docId);
+          if (doc) doc.notes = newNotes;
+          if (onRefresh) onRefresh();
+        }}
       />
     </div>
   );

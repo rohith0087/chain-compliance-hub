@@ -130,6 +130,96 @@ export const getComplianceDocuments = (userType: string): ComplianceDocument[] =
         regulatoryBody: 'FSSAI',
         template: { sections: [{ name: 'Pest Management', required: true }] }
       },
+      {
+        id: 'fostac-certificate',
+        title: 'FoSTaC Training Certificate',
+        category: 'Food Safety',
+        description: 'Food Safety Training and Certification for supervisors',
+        icon: Award,
+        required: true,
+        regulatoryBody: 'FSSAI',
+        template: { sections: [{ name: 'Training Certificates', required: true }] }
+      },
+      {
+        id: 'gmp-manual',
+        title: 'GMP Manual',
+        category: 'Food Safety',
+        description: 'Good Manufacturing Practices documented procedures',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'FSSAI',
+        template: { sections: [{ name: 'GMP Guidelines', required: true }] }
+      },
+      {
+        id: 'ghp-manual',
+        title: 'GHP Manual',
+        category: 'Food Safety',
+        description: 'Good Hygiene Practices documented procedures',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'FSSAI',
+        template: { sections: [{ name: 'Hygiene Practices', required: true }] }
+      },
+      {
+        id: 'medical-fitness',
+        title: 'Medical Fitness Certificates',
+        category: 'Food Safety',
+        description: 'Annual medical fitness certificates for all food handlers',
+        icon: CheckCircle,
+        required: true,
+        regulatoryBody: 'FSSAI',
+        template: { sections: [{ name: 'Health Records', required: true }] }
+      },
+      {
+        id: 'product-recall-plan',
+        title: 'Product Recall Plan',
+        category: 'Food Safety',
+        description: 'Documented traceability and product recall procedure',
+        icon: AlertTriangle,
+        required: true,
+        regulatoryBody: 'FSSAI',
+        template: { sections: [{ name: 'Recall Procedure', required: true }] }
+      },
+      {
+        id: 'cleaning-sanitation-records',
+        title: 'Cleaning & Sanitation Records',
+        category: 'Food Safety',
+        description: 'Daily cleaning logs and sanitation SOP adherence',
+        icon: CheckSquare,
+        required: true,
+        regulatoryBody: 'FSSAI',
+        template: { sections: [{ name: 'Sanitation Logs', required: true }] }
+      },
+      {
+        id: 'calibration-certificates',
+        title: 'Calibration Certificates',
+        category: 'Food Safety',
+        description: 'Calibration records for weighing scales and thermometers',
+        icon: CheckCircle,
+        required: true,
+        regulatoryBody: 'FSSAI / NABL',
+        template: { sections: [{ name: 'Equipment Calibration', required: true }] }
+      },
+      {
+        id: 'equipment-maintenance-logs',
+        title: 'Equipment Maintenance Logs',
+        category: 'Food Safety',
+        description: 'Preventive maintenance schedule and records for food machinery',
+        icon: FileText,
+        required: true,
+        regulatoryBody: 'FSSAI',
+        template: { sections: [{ name: 'Maintenance Records', required: true }] }
+      },
+      {
+        id: 'waste-disposal-records',
+        title: 'Waste Disposal Records',
+        category: 'Food Safety',
+        description: 'Documentation for solid and liquid waste management',
+        icon: CheckSquare,
+        required: true,
+        regulatoryBody: 'FSSAI / Pollution Control Board',
+        template: { sections: [{ name: 'Waste Management', required: true }] }
+      },
       // Regulatory Compliance Documents
       {
         id: 'factory-license',

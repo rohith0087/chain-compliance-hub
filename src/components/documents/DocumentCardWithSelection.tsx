@@ -15,7 +15,8 @@ import {
   ThumbsUp,
   ThumbsDown,
   Link,
-  Ban
+  Ban,
+  MessageSquare
 } from 'lucide-react';
 import DocumentVersionHistory from './DocumentVersionHistory';
 
@@ -46,6 +47,7 @@ interface DocumentCardWithSelectionProps {
     expiration_date?: string;
     file_name?: string;
     file_size?: number;
+    notes?: string;
     supplier_id?: string;
     document_uploads?: DocumentUpload[];
     uploader?: {
@@ -66,6 +68,7 @@ interface DocumentCardWithSelectionProps {
   onCreateLink?: () => void;
   onWithdraw?: () => void;
   onOpenSummary?: () => void;
+  onEditNotes?: () => void;
   showActions?: boolean;
   userRole?: 'buyer' | 'supplier';
   approveLoading?: boolean;
@@ -87,6 +90,7 @@ const DocumentCardWithSelection = ({
   onCreateLink,
   onWithdraw,
   onOpenSummary,
+  onEditNotes,
   showActions = true,
   userRole = 'buyer',
   approveLoading = false,
@@ -249,6 +253,12 @@ const DocumentCardWithSelection = ({
                       Download
                     </>
                   )}
+                </Button>
+              )}
+              {onEditNotes && (
+                <Button variant="outline" size="sm" onClick={onEditNotes}>
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  {document.notes ? 'Edit Notes' : 'Notes'}
                 </Button>
               )}
               {onUpload && document.status === 'pending' && userRole === 'supplier' && (

@@ -36,6 +36,7 @@ import { MetricChip } from '@/components/dashboard/MetricChip';
 import { AttentionPanel } from '@/components/dashboard/AttentionPanel';
 import { ExpiryPanel } from '@/components/dashboard/ExpiryPanel';
 import { ActivityQuickActionsPanel } from '@/components/dashboard/ActivityQuickActionsPanel';
+import { AuditorDashboardPanel } from '@/components/dashboard/auditor/AuditorDashboardPanel';
 import { getWorkspaceProfileForIndustry } from '@/config/workspaceProfiles';
 import { motion } from 'framer-motion';
 import { useCommunicationThreads } from '@/hooks/useCommunicationThreads';
@@ -305,10 +306,18 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
         companyId={companyId}
         unreadMessages={totalUnread}
       >
-        {/* Dashboard Content - Single Page No Scroll */}
+        {/* Dashboard Content */}
         {activeTab === 'dashboard' && companyId && (
-          <div className="h-[calc(100vh-80px)] overflow-hidden flex flex-col animate-fade-in">
-            {/* Top Metrics Bar - Fixed Height */}
+          getWorkspaceProfileForIndustry(buyerProfile?.industry).id === 'auditor' ? (
+            <div className="animate-fade-in p-6 h-[calc(100vh-80px)] overflow-y-auto">
+              <AuditorDashboardPanel 
+                buyerId={companyId} 
+                onNavigateToTab={setActiveTab} 
+              />
+            </div>
+          ) : (
+            <div className="h-[calc(100vh-80px)] overflow-hidden flex flex-col animate-fade-in">
+              {/* Top Metrics Bar - Fixed Height */}
             <motion.div 
               className="flex-shrink-0 mb-4"
               initial={{ opacity: 0, y: -10 }}
@@ -431,6 +440,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
               </motion.div>
             </div>
           </div>
+          )
         )}
 
         {/* Compliance Content */}

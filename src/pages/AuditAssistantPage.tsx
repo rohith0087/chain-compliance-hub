@@ -38,42 +38,64 @@ const staggerContainer = {
 
 type ChatMsg = { id: string; role: 'user' | 'assistant'; content: string };
 
+const ThinkingIndicator = () => {
+  const [text, setText] = useState('Thinking');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setText('Almost done...'), 3500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <div className="flex items-center text-muted-foreground italic text-[15px]">
+      {text}
+      {text === 'Thinking' && (
+        <span className="inline-flex ml-0.5 mt-1">
+          <span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span>
+          <span className="animate-bounce" style={{ animationDelay: '150ms' }}>.</span>
+          <span className="animate-bounce" style={{ animationDelay: '300ms' }}>.</span>
+        </span>
+      )}
+    </div>
+  );
+};
+
 const QUICK_PROMPTS = [
   {
     icon: ListTodo,
-    title: 'Pending Tasks Today',
-    desc: 'Get a neatly organized list of pending items and deadlines.',
-    prompt: 'What are all the pending tasks today? Please give me a neatly displayed, prioritized list of all pending document requests, missing evidence, and open findings. Use a clear markdown structure with status indicators (like emojis or checkboxes) so I know exactly what needs my attention today.',
+    title: 'GMP Desk Audit',
+    desc: 'Analyze the submitted GMP manual for critical gaps against FSSAI requirements.',
+    prompt: 'Analyze the submitted Good Manufacturing Practice (GMP) manual for critical gaps against FSSAI requirements. Highlight any areas where pest control, hygiene, or documentation procedures are lacking.',
   },
   {
     icon: Compass,
-    title: 'Statutory & CARO',
-    desc: 'Check Companies Act 2013 and CARO 2020 compliance gaps.',
-    prompt: 'Review the evidence and identify any compliance gaps under the Companies Act 2013 and CARO 2020.',
+    title: 'SOP Compliance Check',
+    desc: 'Review the uploaded SOPs for Pest Control and Sanitation.',
+    prompt: 'Review the uploaded SOPs for Pest Control and Sanitation. Identify any missing standard operating procedures or areas that do not meet industry standards.',
   },
   {
     icon: FileSearch,
-    title: 'GST & Tax Audit',
-    desc: 'Verify GST returns, reconciliations, and Tax Audit (Sec 44AB) requirements.',
-    prompt: 'List missing or expired documents related to GST compliance, reconciliations, and Income Tax Act requirements.',
+    title: 'Year-Over-Year Correlation',
+    desc: 'Compare current hygiene records with last year.',
+    prompt: 'Compare this year\'s hygiene and sanitation logs with last year\'s records for this client. Are there recurring non-conformances? Please provide a detailed comparison.',
   },
   {
     icon: ListChecks,
-    title: 'Internal Audit (IFC)',
-    desc: 'Assess Internal Financial Controls and operational process gaps.',
-    prompt: 'Analyze the current evidence to assess the effectiveness of Internal Financial Controls (IFC) and highlight operational risks.',
+    title: 'HACCP & CCPs',
+    desc: 'Identify missing documentation related to Critical Control Points.',
+    prompt: 'Identify any missing documentation related to Critical Control Points (CCP) monitoring and verification activities according to HACCP principles.',
   },
   {
     icon: ShieldAlert,
-    title: 'Secretarial & ROC',
-    desc: 'Check board minutes, ROC filings, and SEBI LODR (if applicable).',
-    prompt: 'Summarize the compliance posture regarding Secretarial Audit, ROC filings, and board meeting documentation.',
+    title: 'Allergen Management',
+    desc: 'Check the allergen control policies and separation matrix.',
+    prompt: 'Review the allergen control policies. Is there a clear separation matrix and documentation on preventing cross-contamination?',
   },
   {
     icon: FilePlus,
-    title: 'Draft Findings',
-    desc: 'Auto-draft non-compliance findings with specific clause references.',
-    prompt: 'Draft 3 critical audit findings based on missing evidence, citing specific Indian framework clauses (e.g., CARO, GST Act, or ICAI SAs).',
+    title: 'Draft Desk Audit Report',
+    desc: 'Draft an initial desk audit summary highlighting major concerns.',
+    prompt: 'Based on the submitted SOPs, GMPs, and records, draft an initial desk audit summary highlighting major areas of concern that require physical inspection.',
   },
 ];
 
@@ -86,6 +108,7 @@ export default function AuditAssistantPage() {
   const [buyerId, setBuyerId] = useState<string | null>(null);
   const [clientId, setClientId] = useState<string>('');
   const [engagementId, setEngagementId] = useState<string>('');
+  const [auditYear, setAuditYear] = useState<string>(new Date().getFullYear().toString());
   const [engagements, setEngagements] = useState<any[]>([]);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState('');
@@ -142,6 +165,7 @@ export default function AuditAssistantPage() {
           messages: newMessages.map(m => ({ id: m.id, role: m.role, parts: [{ type: 'text', text: m.content }] })),
           clientId: clientId || undefined,
           engagementId: engagementId || undefined,
+          auditYear: auditYear || undefined,
         }),
       });
       window.clearTimeout(timeout);
@@ -237,7 +261,7 @@ export default function AuditAssistantPage() {
   return (
     <div className="theme-minimalist h-screen flex flex-col bg-background font-sans">
       {/* HEADER */}
-      <header className="h-16 border-b border-border/60 bg-card/80 backdrop-blur-md px-6 flex items-center gap-4 shrink-0 z-10 shadow-subtle">
+      <header className="h-12 border-b border-border/60 bg-card/80 backdrop-blur-md px-4 flex items-center gap-4 shrink-0 z-10 shadow-subtle">
         <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="gap-1">
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -259,6 +283,11 @@ export default function AuditAssistantPage() {
               {activeEngagement.title}
             </Badge>
           )}
+          {auditYear && (
+            <Badge variant="outline" className="font-normal bg-accent text-accent-foreground">
+              {auditYear}
+            </Badge>
+          )}
           <div className="w-px h-5 bg-border mx-2" />
           <Button variant="ghost" size="icon" onClick={() => setShowRightPanel(p => !p)} title="Toggle Right Panel">
             {showRightPanel ? <PanelRightClose className="h-4 w-4 text-muted-foreground" /> : <PanelRight className="h-4 w-4 text-muted-foreground" />}
@@ -278,6 +307,17 @@ export default function AuditAssistantPage() {
                   {connections.map(c => (
                     <SelectItem key={c.supplier_id} value={c.supplier_id}>{c.supplier?.company_name ?? 'Unknown'}</SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Audit Year</label>
+              <Select value={auditYear} onValueChange={setAuditYear}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="Select Year" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2024">2024</SelectItem>
+                  <SelectItem value="2023">2023</SelectItem>
+                  <SelectItem value="2022">2022</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -353,10 +393,10 @@ export default function AuditAssistantPage() {
                     <img src={auditLogo} alt="" width={48} height={48} className="opacity-90" />
                   </div>
                   <h2 className="text-4xl font-display font-medium text-foreground tracking-tight leading-tight">
-                    How can I help with <span className="gradient-text italic">this audit?</span>
+                    How can I help with <span className="gradient-text italic pr-1">this audit?</span>
                   </h2>
                   <p className="text-base text-muted-foreground mt-4 max-w-md mx-auto leading-relaxed">
-                    Pick a client, then ask about engagement planning, evidence gaps, findings, or Indian &amp; global audit frameworks.
+                    Pick a client and an audit year, then ask about GMPs, SOPs, hygiene records, and missing food safety documents.
                   </p>
                   <div className="mt-10 flex flex-wrap gap-3 justify-center">
                     {QUICK_PROMPTS.slice(0, 3).map((p, i) => (
@@ -396,13 +436,17 @@ export default function AuditAssistantPage() {
                               <img src={auditLogo} alt="AI" className="w-5 h-5 opacity-80" />
                             </div>
                             <div className="flex-1 min-w-0 space-y-4">
-                              <div className="prose prose-sm md:prose-base prose-slate dark:prose-invert max-w-none overflow-x-auto text-foreground/90 leading-relaxed
-                                prose-p:leading-relaxed prose-pre:bg-muted prose-pre:border
-                                prose-th:border prose-th:bg-muted/50 prose-th:p-2 prose-th:text-left
-                                prose-td:border prose-td:p-2 prose-table:w-full prose-table:border-collapse
-                                prose-li:my-0.5">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayContent || '_Thinking\u2026_'}</ReactMarkdown>
-                              </div>
+                                <div className="prose prose-sm md:prose-base prose-slate dark:prose-invert max-w-none overflow-x-auto text-foreground/90 leading-relaxed
+                                  prose-p:leading-relaxed prose-pre:bg-muted prose-pre:border
+                                  prose-th:border prose-th:bg-muted/50 prose-th:p-2 prose-th:text-left
+                                  prose-td:border prose-td:p-2 prose-table:w-full prose-table:border-collapse
+                                  prose-li:my-0.5">
+                                  {displayContent ? (
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayContent}</ReactMarkdown>
+                                  ) : (
+                                    <ThinkingIndicator />
+                                  )}
+                                </div>
                               {createMatches.length > 0 && (
                                 <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col gap-3 mt-6 pt-5 border-t border-border/60">
                                   <div className="inline-flex items-center gap-2">
@@ -439,11 +483,6 @@ export default function AuditAssistantPage() {
                       </motion.div>
                     );
                   })}
-                  {streaming && (
-                    <div className="text-xs text-muted-foreground flex items-center gap-2">
-                      <Loader2 className="h-3 w-3 animate-spin" /> Generating…
-                    </div>
-                  )}
                 </div>
               )}
             </div>

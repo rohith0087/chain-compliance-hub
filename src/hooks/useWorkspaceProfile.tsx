@@ -123,6 +123,7 @@ export function useWorkspaceProfile() {
   return {
     profile,
     t: profile.terms,
+    terms: profile.terms,
     flags: profile.flags,
     isAuditor: profile.id === 'auditor',
     isAuditee: profile.id === 'auditee',

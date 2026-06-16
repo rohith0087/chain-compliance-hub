@@ -20,6 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useBuyerSetup } from '@/hooks/useBuyerSetup';
+import { useWorkspaceProfile } from '@/hooks/useWorkspaceProfile';
 import { VALID_INDUSTRIES } from '@/config/industries';
 import { SafeSelect, SafeSelectItem } from '@/components/ui/SafeSelect';
 import { createSafeSelectValue } from '@/utils/selectValidation';
@@ -75,6 +76,7 @@ const SupplierDiscovery = () => {
   const [selectedConnectionRequest, setSelectedConnectionRequest] = useState<ConnectionRequest | null>(null);
   const { user } = useAuth();
   const { getBuyerProfile } = useBuyerSetup();
+  const { terms } = useWorkspaceProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -325,8 +327,8 @@ const SupplierDiscovery = () => {
       toast({
         title: "Connection Approved",
         description: onboardingType === 'none' 
-          ? "Supplier has been connected successfully" 
-          : "Supplier connected and onboarding initiated",
+          ? `${terms.supplier} has been connected successfully` 
+          : `${terms.supplier} connected and onboarding initiated`,
       });
       
       // Navigate to custom onboarding setup if selected
@@ -412,7 +414,7 @@ const SupplierDiscovery = () => {
         <CardContent className="p-6 text-center">
           <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">Complete Your Buyer Profile</h3>
-          <p className="text-muted-foreground">Please set up your buyer profile to discover and connect with suppliers.</p>
+          <p className="text-muted-foreground">Please set up your buyer profile to discover and connect with {terms.suppliers.toLowerCase()}.</p>
         </CardContent>
       </Card>
     );
@@ -427,7 +429,7 @@ const SupplierDiscovery = () => {
         />
         <div className="text-center">
           <Button variant="outline" onClick={() => setShowIndustrySetup(false)}>
-            Browse All Suppliers Instead
+            Browse All {terms.suppliers} Instead
           </Button>
         </div>
       </div>
@@ -443,8 +445,8 @@ const SupplierDiscovery = () => {
             Back
           </Button>
           <div>
-            <h2 className="text-xl font-semibold">Branch Supplier Management</h2>
-            <p className="text-sm text-muted-foreground">Manage supplier assignments across branches</p>
+            <h2 className="text-xl font-semibold">Branch {terms.supplier} Management</h2>
+            <p className="text-sm text-muted-foreground">Manage {terms.supplier.toLowerCase()} assignments across branches</p>
           </div>
         </div>
         {buyerProfile && <BranchSupplierDashboard buyerId={buyerProfile.id} />}
@@ -457,9 +459,9 @@ const SupplierDiscovery = () => {
       {/* Minimal Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Supplier Discovery</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{terms.supplier} Discovery</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Find and connect with suppliers for your organization
+            Find and connect with {terms.suppliers.toLowerCase()} for your organization
           </p>
         </div>
         
@@ -477,7 +479,7 @@ const SupplierDiscovery = () => {
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setCurrentView('branches')}>
                 <Users className="h-4 w-4 mr-2" />
-                Branch Suppliers
+                Branch {terms.suppliers}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -489,7 +491,7 @@ const SupplierDiscovery = () => {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search suppliers..."
+            placeholder={`Search ${terms.suppliers.toLowerCase()}...`}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -516,7 +518,7 @@ const SupplierDiscovery = () => {
             value="connected" 
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3"
           >
-            My Suppliers
+            My {terms.suppliers}
             <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
               {suppliers.length}
             </Badge>
@@ -549,12 +551,12 @@ const SupplierDiscovery = () => {
             <Card className="border-dashed">
               <CardContent className="py-12 text-center">
                 <Building2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-                <h3 className="font-medium mb-1">No connected suppliers</h3>
+                <h3 className="font-medium mb-1">No connected {terms.suppliers.toLowerCase()}</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Start by discovering and connecting with suppliers
+                  Start by discovering and connecting with {terms.suppliers.toLowerCase()}
                 </p>
                 <Button variant="outline" size="sm" onClick={() => setActiveTab('discover')}>
-                  Discover Suppliers
+                  Discover {terms.suppliers}
                 </Button>
               </CardContent>
             </Card>
@@ -578,11 +580,11 @@ const SupplierDiscovery = () => {
             <Card className="border-dashed">
               <CardContent className="py-12 text-center">
                 <Search className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-                <h3 className="font-medium mb-1">No suppliers found</h3>
+                <h3 className="font-medium mb-1">No {terms.suppliers.toLowerCase()} found</h3>
                 <p className="text-sm text-muted-foreground">
                   {searchTerm || selectedIndustry !== 'all'
                     ? "Try adjusting your filters"
-                    : "All available suppliers are already connected or pending"}
+                    : `All available ${terms.suppliers.toLowerCase()} are already connected or pending`}
                 </p>
               </CardContent>
             </Card>

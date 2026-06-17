@@ -150,12 +150,21 @@ const SupplierComplianceExportModal: React.FC<SupplierComplianceExportModalProps
         description: `Generated professional ${selectedSuppliers.length > 1 ? 'comparison' : 'detailed'} report for ${selectedSuppliers.length} supplier(s).`
       });
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Export failed:', error);
+      const msg = error?.message || '';
+      const isCredits = /credit|insufficient/i.test(msg);
       toast({
-        title: "Export Failed",
-        description: "There was an error generating the report. Please try again.",
-        variant: "destructive"
+        title: isCredits ? "Not enough credits" : "Export Failed",
+        description: isCredits
+          ? `${msg}. Top up your credits to generate this report.`
+          : (msg || "There was an error generating the report. Please try again."),
+        variant: "destructive",
+        action: isCredits ? (
+          <ToastAction altText="Buy credits" onClick={() => { window.location.href = '/subscription'; }}>
+            Buy credits
+          </ToastAction>
+        ) : undefined,
       });
     } finally {
       setIsExporting(false);

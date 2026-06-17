@@ -53,24 +53,9 @@ export class AdvancedPDFExportService {
           ? "detailed"
           : "standard";
 
-    // Consume credits before generating report
-    const { data: creditResult, error } = await supabase.functions.invoke("consume-credits", {
-      body: {
-        reportType,
-        description: `${reportType} compliance report for ${data.supplier.company_name}`,
-        referenceId: data.supplier.id,
-        referenceType: "supplier",
-      },
-    });
+    // Credits gate bypassed for now — re-enable by restoring the consume-credits invoke.
 
-    if (error) {
-      console.error("Error consuming credits:", error);
-      throw new Error("Failed to process credit payment for report generation");
-    }
 
-    if (!creditResult?.success) {
-      throw new Error(creditResult?.error || "Insufficient credits for report generation");
-    }
 
     this.resetDocument();
 
@@ -113,24 +98,8 @@ export class AdvancedPDFExportService {
   }
 
   async generateComparisonReport(comparisonData: ComparisonData, aiInsights: AIInsights, options: any): Promise<void> {
-    // Consume credits for comparison report
-    const { data: creditResult, error } = await supabase.functions.invoke("consume-credits", {
-      body: {
-        reportType: "comparison",
-        description: `Multi-supplier comparison report`,
-        referenceId: comparisonData.suppliers?.[0]?.supplier?.id || "",
-        referenceType: "buyer",
-      },
-    });
+    // Credits gate bypassed for now — re-enable by restoring the consume-credits invoke.
 
-    if (error) {
-      console.error("Error consuming credits:", error);
-      throw new Error("Failed to process credit payment for report generation");
-    }
-
-    if (!creditResult?.success) {
-      throw new Error(creditResult?.error || "Insufficient credits for report generation");
-    }
 
     this.resetDocument();
 

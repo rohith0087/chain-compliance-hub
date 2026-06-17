@@ -1409,8 +1409,37 @@ const ChatPage: React.FC = () => {
   const suggestedInsights = [
     "Suppliers with expiring certifications this quarter",
     "Top compliance risks by document type",
-    "Documents frequently missing across suppliers",
+    "What needs my attention today? Show expiring documents, pending approvals, overdue requests, and the top things I should act on right now.",
   ];
+
+  async function clearAllHistory() {
+    if (!user) return;
+    const ok = window.confirm("Delete all chat history? This cannot be undone.");
+    if (!ok) return;
+    try {
+      const { data: sessions, error: fetchErr } = await supabase
+        .from("chat_sessions")
+        .select("id")
+        .eq("user_id", user.id);
+      if (fetchErr) throw fetchErr;
+      const ids = (sessions || []).map((s: any) => s.id);
+      if (ids.length > 0) {
+        await supabase.from("chat_messages").delete().in("session_id", ids);
+        const { error: delErr } = await supabase
+          .from("chat_sessions")
+          .delete()
+          .eq("user_id", user.id);
+        if (delErr) throw delErr;
+      }
+      setChatSessions([]);
+      setCurrentSession(null);
+      setMessages([]);
+      toast({ title: "Chat history cleared" });
+    } catch (e: any) {
+      console.error("Failed to clear history:", e);
+      toast({ title: "Error", description: e.message || "Failed to clear history", variant: "destructive" });
+    }
+  }
 
   const handleQuickAction = (query: string) => {
     setInputMessage(query);

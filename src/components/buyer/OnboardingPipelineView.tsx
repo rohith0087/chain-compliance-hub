@@ -298,7 +298,7 @@ export const OnboardingPipelineView = () => {
         .update({ 
           status: 'pending',
           responded_at: new Date().toISOString()
-        })
+        } as any)
         .eq('id', requestId);
 
       if (updateError) throw updateError;
@@ -337,7 +337,7 @@ export const OnboardingPipelineView = () => {
           status: 'rejected',
           responded_at: new Date().toISOString(),
           rejection_reason: reason
-        })
+        } as any)
         .eq('id', requestId);
 
       if (error) throw error;

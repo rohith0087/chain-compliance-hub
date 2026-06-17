@@ -104,7 +104,7 @@ export const useDocumentAssignments = () => {
     try {
       const { error } = await supabase
         .from('document_assignments')
-        .update(updates)
+        .update(updates as any)
         .eq('id', id);
 
       if (error) throw error;

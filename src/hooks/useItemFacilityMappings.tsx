@@ -102,7 +102,7 @@ export const useItemFacilityMappings = (supplierId?: string) => {
     try {
       const { error } = await supabase
         .from('item_facility_mappings')
-        .update(updates)
+        .update(updates as any)
         .eq('id', id);
 
       if (error) throw error;

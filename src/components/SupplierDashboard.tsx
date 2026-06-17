@@ -1052,7 +1052,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch, impersonatedSupplierI
           setShowSettingsModal(open);
           if (!open) handleProfileUpdated();
         }}
-        companyId={companyId}
+        companyId={supplierProfile?.id}
         companyType="supplier"
         companyName={supplierProfile?.company_name || 'Your Company'}
       />

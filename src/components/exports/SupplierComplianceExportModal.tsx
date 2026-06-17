@@ -197,8 +197,8 @@ const SupplierComplianceExportModal: React.FC<SupplierComplianceExportModalProps
         <ScrollArea className="flex-1 overflow-y-auto">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4 pb-4">
           {/* Left Column - Supplier Selection */}
-          <div className="lg:col-span-2 space-y-4">
-            <Card>
+          <div className="lg:col-span-2 space-y-4 h-full flex flex-col">
+            <Card className="flex-1 flex flex-col">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center justify-between">
                   <span className="flex items-center gap-2">
@@ -214,7 +214,7 @@ const SupplierComplianceExportModal: React.FC<SupplierComplianceExportModalProps
                   </Button>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 flex-1 flex flex-col">
                 <div className="relative">
                   <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                   <Input
@@ -225,7 +225,7 @@ const SupplierComplianceExportModal: React.FC<SupplierComplianceExportModalProps
                   />
                 </div>
 
-                <ScrollArea className="h-64">
+                <ScrollArea className="flex-1">
                   <div className="space-y-2">
                     {filteredSuppliers.map((supplier) => (
                       <div

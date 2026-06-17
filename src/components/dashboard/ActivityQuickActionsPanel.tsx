@@ -95,10 +95,24 @@ export function ActivityQuickActionsPanel({
           return;
         }
 
+        // Fetch upload IDs associated with the requests to filter logs
+        const requestIdsList = requestIds.map(r => r.id);
+        const { data: uploads } = await supabase
+          .from('document_uploads')
+          .select('id')
+          .in('request_id', requestIdsList);
+        
+        const uploadIdsList = uploads?.map(u => u.id) || [];
+        
+        let orQuery = `document_request_id.in.(${requestIdsList.join(',')})`;
+        if (uploadIdsList.length > 0) {
+          orQuery += `,document_upload_id.in.(${uploadIdsList.join(',')})`;
+        }
+
         const { data: activityData, error } = await supabase
           .from('document_activity_logs')
           .select('*')
-          .or(`document_request_id.in.(${requestIds.map(r => r.id).join(',')}),document_upload_id.in.(select id from document_uploads where request_id in (${requestIds.map(r => r.id).join(',')}))`)
+          .or(orQuery)
           .order('created_at', { ascending: false })
           .limit(15);
 

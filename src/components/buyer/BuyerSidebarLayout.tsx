@@ -327,9 +327,9 @@ export function BuyerSidebarLayout({
     //   value: 'agents'
     // },
     {
-      title: t('dashboard:company.title'),
-      icon: Building2,
-      value: 'company'
+      title: 'Settings',
+      icon: Settings,
+      value: 'settings'
     },
     {
       title: wsFlags.renameSubscriptionToBilling ? 'Billing' : 'Subscription & Billing',
@@ -339,7 +339,7 @@ export function BuyerSidebarLayout({
   ].filter(item => {
     // Filter out items based on permissions
     // Company Management and Subscription require company owner (not just admin)
-    if (item.value === 'company' || item.value === 'subscription') {
+    if (item.value === 'settings' || item.value === 'subscription') {
       return isCompanyOwner();
     }
     // Messages is always available - it navigates to /messages
@@ -375,6 +375,11 @@ export function BuyerSidebarLayout({
     // Navigate to /messages instead of changing tabs
     if (value === 'messages') {
       navigate('/messages');
+      return;
+    }
+    // Open Settings Modal
+    if (value === 'settings') {
+      onShowSettings();
       return;
     }
     // Switch to All Branches view when clicking Onboarding Pipeline
@@ -682,7 +687,10 @@ export function BuyerSidebarLayout({
                 <DropdownMenuContent align="end" className="w-64 bg-popover">
                   <div 
                     className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted rounded-md transition-colors"
-                    onClick={() => navigate('/profile-settings')}
+                    onClick={() => {
+                      onShowSettings();
+                      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); // Close menu
+                    }}
                   >
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={profile?.avatar_url} />

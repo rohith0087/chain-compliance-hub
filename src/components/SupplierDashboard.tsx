@@ -38,7 +38,7 @@ import { useNavigate } from 'react-router-dom';
 import { ComplianceRing } from '@/components/dashboard/ComplianceRing';
 import { MetricChip } from '@/components/dashboard/MetricChip';
 import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { SupplierSettingsModal } from '@/components/settings/SupplierSettingsModal';
+import { UnifiedSettingsModal } from '@/components/settings/UnifiedSettingsModal';
 import { SupplierSidebarLayout } from '@/components/supplier/SupplierSidebarLayout';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
@@ -1046,10 +1046,15 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch, impersonatedSupplierI
       </SupplierSidebarLayout>
 
       {/* Settings Modal */}
-      <SupplierSettingsModal
-        isOpen={showSettingsModal}
-        onClose={() => setShowSettingsModal(false)}
-        onProfileUpdated={handleProfileUpdated}
+      <UnifiedSettingsModal
+        open={showSettingsModal}
+        onOpenChange={(open) => {
+          setShowSettingsModal(open);
+          if (!open) handleProfileUpdated();
+        }}
+        companyId={companyId}
+        companyType="supplier"
+        companyName={supplierProfile?.company_name || 'Your Company'}
       />
 
       {/* Connect with Buyer Modal */}

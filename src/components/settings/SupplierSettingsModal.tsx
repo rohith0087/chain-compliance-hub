@@ -18,6 +18,7 @@ import { VALID_INDUSTRIES } from '@/config/industries';
 import { useSupplierNotificationSettings } from '@/hooks/useSupplierNotificationSettings';
 import { Bell, Mail, MessageSquare } from 'lucide-react';
 import { AddressFields, AddressData, emptyAddressData } from '@/components/shared/AddressFields';
+import { IntegrationsDirectoryModal } from './IntegrationsDirectoryModal';
 
 interface SupplierSettingsModalProps {
   isOpen: boolean;
@@ -64,7 +65,8 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [supplierId, setSupplierId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('account'); // Default to account for non-owners
+  const [activeTab, setActiveTab] = useState('account');
+  const [showIntegrations, setShowIntegrations] = useState(false);
 
   useEffect(() => {
     if (isOpen && user) {
@@ -267,11 +269,12 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className={`grid w-full ${isOwner ? 'grid-cols-4' : 'grid-cols-3'} flex-shrink-0 sticky top-0 z-10 bg-background`}>
+          <TabsList className={`grid w-full grid-cols-5 flex-shrink-0 sticky top-0 z-10 bg-background`}>
             {isOwner && <TabsTrigger value="company">Company</TabsTrigger>}
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="password">Password</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="integrations">Integrations</TabsTrigger>
           </TabsList>
           
           <div className="flex-1 overflow-y-auto mt-4">
@@ -469,9 +472,28 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="integrations" className="space-y-4 mt-0 p-1">
+            <Card>
+              <CardContent className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-semibold text-foreground">Connect Workflow Tools</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Integrate TraceR2C with your calendar, email, and productivity apps.</p>
+                </div>
+                <Button onClick={() => setShowIntegrations(true)}>
+                  Browse Integrations
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
           </div>
         </Tabs>
       </DialogContent>
+
+      <IntegrationsDirectoryModal 
+        open={showIntegrations} 
+        onOpenChange={setShowIntegrations} 
+      />
     </Dialog>
   );
 };

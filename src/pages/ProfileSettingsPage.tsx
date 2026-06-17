@@ -7,11 +7,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { AccountSettingsForm } from '@/components/settings/AccountSettingsForm';
 import { PasswordChangeForm } from '@/components/settings/PasswordChangeForm';
+import { IntegrationsDirectoryModal } from '@/components/settings/IntegrationsDirectoryModal';
 import { useAuth } from '@/hooks/useAuth';
 
 const ProfileSettingsPage = () => {
   const navigate = useNavigate();
   const { profile, user } = useAuth();
+  const [showIntegrations, setShowIntegrations] = React.useState(false);
 
   const getInitials = () => {
     if (profile?.full_name) {
@@ -79,8 +81,37 @@ const ProfileSettingsPage = () => {
             </div>
             <PasswordChangeForm />
           </section>
+
+          <Separator />
+
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 flex items-center justify-center">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground"><path d="m19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11Z"/><path d="m5 2 5 5"/><path d="M2 13h15"/><path d="M22 20v-5h-5"/></svg>
+                </div>
+                <h2 className="text-lg font-semibold">Integrations</h2>
+              </div>
+            </div>
+            <Card>
+              <CardContent className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-semibold text-foreground">Connect Workflow Tools</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Integrate TraceR2C with your calendar, email, and productivity apps.</p>
+                </div>
+                <Button onClick={() => setShowIntegrations(true)}>
+                  Browse Integrations
+                </Button>
+              </CardContent>
+            </Card>
+          </section>
         </div>
       </main>
+
+      <IntegrationsDirectoryModal 
+        open={showIntegrations} 
+        onOpenChange={setShowIntegrations} 
+      />
     </div>
   );
 };

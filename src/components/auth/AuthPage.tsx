@@ -216,7 +216,7 @@ const AuthPage = () => {
       }
       toast({
         title: "Sign In Failed",
-        description: error.message,
+        description: error?.message || (typeof error === 'object' && Object.keys(error).length === 0 ? "Invalid email or password." : JSON.stringify(error)),
         variant: "destructive",
       });
       resetTurnstile();

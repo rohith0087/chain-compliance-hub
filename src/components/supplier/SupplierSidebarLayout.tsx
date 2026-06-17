@@ -337,9 +337,9 @@ export function SupplierSidebarLayout({
       value: 'compliance'
     },
     {
-      title: t('supplier:tabs.company'),
-      icon: Building2,
-      value: 'company',
+      title: 'Settings',
+      icon: Settings,
+      value: 'settings',
       ownerOnly: true // Only visible to company owners
     }
   ];
@@ -358,6 +358,11 @@ export function SupplierSidebarLayout({
     // Navigate to /messages instead of changing tabs
     if (value === 'messages') {
       navigate('/messages');
+      return;
+    }
+    // Open Settings Modal
+    if (value === 'settings') {
+      onShowSettings();
       return;
     }
     onTabChange(value);
@@ -607,7 +612,10 @@ export function SupplierSidebarLayout({
                 <DropdownMenuContent align="end" className="w-64 bg-popover">
                   <div 
                     className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted rounded-md transition-colors"
-                    onClick={() => navigate('/profile-settings')}
+                    onClick={() => {
+                      onShowSettings();
+                      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+                    }}
                   >
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={profile?.avatar_url} />

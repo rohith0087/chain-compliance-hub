@@ -11,7 +11,7 @@ import BuyerComplianceDashboard from '@/components/dashboard/BuyerComplianceDash
 import AgentManagementDashboard from '@/components/agents/AgentManagementDashboard';
 import BuyerDocumentsDashboard from '@/components/documents/BuyerDocumentsDashboard';
 import BuyerConnectionRequests from '@/components/buyer/BuyerConnectionRequests';
-import { BuyerSettingsModal } from '@/components/settings/BuyerSettingsModal';
+import { UnifiedSettingsModal } from '@/components/settings/UnifiedSettingsModal';
 import { CompanyManagementDashboard } from '@/components/company/CompanyManagementDashboard';
 import CustomTemplateManager from '@/components/buyer/CustomTemplateManager';
 import { BulkInviteModal } from '@/components/buyer/BulkInviteModal';
@@ -569,10 +569,15 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
         currentBranch={currentBranch}
       />
 
-      <BuyerSettingsModal
+      <UnifiedSettingsModal
         open={showSettings}
-        onOpenChange={setShowSettings}
-        onSettingsUpdated={refreshBuyerProfile}
+        onOpenChange={(open) => {
+          setShowSettings(open);
+          if (!open) refreshBuyerProfile();
+        }}
+        companyId={companyId}
+        companyType="buyer"
+        companyName={buyerProfile?.company_name || 'Your Company'}
       />
 
       {companyId && profile && (

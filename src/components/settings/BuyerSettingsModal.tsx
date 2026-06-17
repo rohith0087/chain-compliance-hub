@@ -16,6 +16,7 @@ import { LogoUploadWidget } from './LogoUploadWidget';
 import { DefaultOnboardingSettings } from './DefaultOnboardingSettings';
 import { NotificationSettingsForm } from './NotificationSettingsForm';
 import { AddressFields, AddressData, emptyAddressData } from '@/components/shared/AddressFields';
+import { IntegrationsDirectoryModal } from './IntegrationsDirectoryModal';
 
 interface BuyerSettingsModalProps {
   open: boolean;
@@ -41,6 +42,7 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
   const [isOwner, setIsOwner] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
+  const [showIntegrations, setShowIntegrations] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -222,12 +224,12 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
   };
 
   // Determine default tab and grid columns based on ownership/admin status
-  // Owner tabs: Company, Onboarding, Notifications, Account, Password (5 tabs - Logo is now in Company)
-  // Admin tabs: Onboarding, Account, Password (3 tabs)
-  // Other team members: Account, Password (2 tabs)
+  // Owner tabs: Company, Onboarding, Notifications, Account, Password, Integrations (6 tabs)
+  // Admin tabs: Onboarding, Account, Password, Integrations (4 tabs)
+  // Other team members: Account, Password, Integrations (3 tabs)
   const canAccessOnboarding = isOwner || isAdmin;
   const defaultTab = isOwner ? 'company' : (isAdmin ? 'defaults' : 'account');
-  const gridCols = isOwner ? 'grid-cols-5' : (isAdmin ? 'grid-cols-3' : 'grid-cols-2');
+  const gridCols = isOwner ? 'grid-cols-6' : (isAdmin ? 'grid-cols-4' : 'grid-cols-3');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -251,6 +253,7 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
             )}
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="password">Password</TabsTrigger>
+            <TabsTrigger value="integrations">Integrations</TabsTrigger>
           </TabsList>
 
           <div className="flex-1 overflow-y-auto mt-4">
@@ -370,12 +373,31 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
               <AccountSettingsForm />
             </TabsContent>
 
-            <TabsContent value="password" className="mt-0">
+            <TabsContent value="password" className="flex-1 overflow-y-auto p-4 mt-0">
               <PasswordChangeForm />
+            </TabsContent>
+
+            <TabsContent value="integrations" className="flex-1 overflow-y-auto p-4 mt-0">
+              <Card>
+                <CardContent className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div>
+                    <h3 className="font-semibold text-foreground">Connect Workflow Tools</h3>
+                    <p className="text-sm text-muted-foreground mt-1">Integrate TraceR2C with your calendar, email, and productivity apps.</p>
+                  </div>
+                  <Button onClick={() => setShowIntegrations(true)}>
+                    Browse Integrations
+                  </Button>
+                </CardContent>
+              </Card>
             </TabsContent>
           </div>
         </Tabs>
       </DialogContent>
+
+      <IntegrationsDirectoryModal 
+        open={showIntegrations} 
+        onOpenChange={setShowIntegrations} 
+      />
     </Dialog>
   );
 };

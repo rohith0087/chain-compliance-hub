@@ -28,12 +28,16 @@ interface CompanyManagementDashboardProps {
   companyId: string;
   companyType: 'buyer' | 'supplier';
   companyName: string;
+  defaultTab?: string;
+  embedded?: boolean;
 }
 
 export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProps> = ({
   companyId,
   companyType,
-  companyName
+  companyName,
+  defaultTab = 'overview',
+  embedded = false
 }) => {
   const {
     branches,
@@ -53,7 +57,7 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
 
   const { canViewCompanyManagement, role, isOwner } = useCompanyPermissions(companyId, companyType);
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const [savingCompany, setSavingCompany] = useState(false);
   
   // State for company settings form
@@ -227,19 +231,19 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
     );
   }
 
-  const activityItems = getActivityItems();
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{companyName}</h1>
-          <p className="text-muted-foreground">
-            Manage your company structure, branches, and team members
-          </p>
+  const activityItems = getActivityItems();  return (
+    <div className={embedded ? "w-full" : "max-w-6xl mx-auto space-y-6"}>
+      {!embedded && (
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{companyName} Settings</h1>
+            <p className="text-muted-foreground mt-1">Manage your company profile, branches, and team members</p>
+          </div>
         </div>
-        
+      )}
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+
         {branches.length > 1 && (
           <BranchSelector
             branches={branches}
@@ -248,10 +252,7 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
             loading={loading}
           />
         )}
-      </div>
 
-      {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="inline-flex h-12 items-center gap-1 rounded-full bg-white border border-border/40 p-1.5 justify-start shadow-sm">
             <TabsTrigger 
               value="overview"
@@ -259,23 +260,27 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
             >
               Overview
             </TabsTrigger>
-            <TabsTrigger 
-              value="branches"
-              className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground"
-            >
-              Branches
-            </TabsTrigger>
-            <TabsTrigger 
-              value="users" 
-              className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground flex items-center gap-2"
-            >
-              Users
-              {stats.pendingInvitations > 0 && (
-                <Badge variant="secondary" className="h-5 px-1.5 text-xs rounded-full">
-                  {stats.pendingInvitations}
-                </Badge>
-              )}
-            </TabsTrigger>
+            {!embedded && (
+              <>
+                <TabsTrigger 
+                  value="branches"
+                  className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground"
+                >
+                  Branches
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="users" 
+                  className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground flex items-center gap-2"
+                >
+                  Users
+                  {stats.pendingInvitations > 0 && (
+                    <Badge variant="secondary" className="h-5 px-1.5 text-xs rounded-full">
+                      {stats.pendingInvitations}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              </>
+            )}
             <TabsTrigger 
               value="permissions"
               className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground"
@@ -298,13 +303,15 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
                   <FileText className="h-3.5 w-3.5" />
                   Onboarding
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="notifications" 
-                  className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground flex items-center gap-1"
-                >
-                  <Bell className="h-3.5 w-3.5" />
-                  Notifications
-                </TabsTrigger>
+                {!embedded && (
+                  <TabsTrigger 
+                    value="notifications" 
+                    className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground flex items-center gap-1"
+                  >
+                    <Bell className="h-3.5 w-3.5" />
+                    Notifications
+                  </TabsTrigger>
+                )}
               </>
             )}
         </TabsList>

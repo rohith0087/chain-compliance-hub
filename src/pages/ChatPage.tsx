@@ -1462,10 +1462,22 @@ const ChatPage: React.FC = () => {
           <div className="h-full flex flex-col">
             <div className="p-6 border-b border-border flex items-center justify-between">
               <h2 className="font-semibold text-foreground">Chat History</h2>
-              <Button size="sm" variant="outline" onClick={startNewChat}>
-                <Plus className="w-4 h-4 mr-1" />
-                New
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={clearAllHistory}
+                  disabled={chatSessions.length === 0}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Clear All
+                </Button>
+                <Button size="sm" variant="outline" onClick={startNewChat}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  New
+                </Button>
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto">
               <div className="p-4 space-y-2">

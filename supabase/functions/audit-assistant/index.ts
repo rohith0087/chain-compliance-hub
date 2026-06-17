@@ -170,7 +170,7 @@ async function callGateway(messages: Array<{ role: "user" | "assistant"; content
       "Lovable-API-Key": LOVABLE_API_KEY,
     },
     body: JSON.stringify({
-      model: "gpt-4o",
+      model: "google/gemini-2.5-flash",
       stream: false,
       messages: [{ role: "system", content: system }, ...messages],
     }),

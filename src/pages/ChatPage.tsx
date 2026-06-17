@@ -51,6 +51,7 @@ import {
   Users,
   TrendingUp,
   Home,
+  Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
@@ -1409,8 +1410,37 @@ const ChatPage: React.FC = () => {
   const suggestedInsights = [
     "Suppliers with expiring certifications this quarter",
     "Top compliance risks by document type",
-    "Documents frequently missing across suppliers",
+    "What needs my attention today? Show expiring documents, pending approvals, overdue requests, and the top things I should act on right now.",
   ];
+
+  async function clearAllHistory() {
+    if (!user) return;
+    const ok = window.confirm("Delete all chat history? This cannot be undone.");
+    if (!ok) return;
+    try {
+      const { data: sessions, error: fetchErr } = await supabase
+        .from("chat_sessions")
+        .select("id")
+        .eq("user_id", user.id);
+      if (fetchErr) throw fetchErr;
+      const ids = (sessions || []).map((s: any) => s.id);
+      if (ids.length > 0) {
+        await supabase.from("chat_messages").delete().in("session_id", ids);
+        const { error: delErr } = await supabase
+          .from("chat_sessions")
+          .delete()
+          .eq("user_id", user.id);
+        if (delErr) throw delErr;
+      }
+      setChatSessions([]);
+      setCurrentSession(null);
+      setMessages([]);
+      toast({ title: "Chat history cleared" });
+    } catch (e: any) {
+      console.error("Failed to clear history:", e);
+      toast({ title: "Error", description: e.message || "Failed to clear history", variant: "destructive" });
+    }
+  }
 
   const handleQuickAction = (query: string) => {
     setInputMessage(query);
@@ -1432,10 +1462,22 @@ const ChatPage: React.FC = () => {
           <div className="h-full flex flex-col">
             <div className="p-6 border-b border-border flex items-center justify-between">
               <h2 className="font-semibold text-foreground">Chat History</h2>
-              <Button size="sm" variant="outline" onClick={startNewChat}>
-                <Plus className="w-4 h-4 mr-1" />
-                New
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={clearAllHistory}
+                  disabled={chatSessions.length === 0}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Clear All
+                </Button>
+                <Button size="sm" variant="outline" onClick={startNewChat}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  New
+                </Button>
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto">
               <div className="p-4 space-y-2">

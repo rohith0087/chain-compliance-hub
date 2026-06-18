@@ -5,7 +5,7 @@ ON CONFLICT (id) DO NOTHING;
 
 -- STORAGE POLICIES: onboarding documents visibility and upload
 -- Allow suppliers (by auth uid or email) involved in an onboarding request to upload files to a path that starts with that request id
-CREATE POLICY IF NOT EXISTS "Suppliers can upload onboarding docs"
+CREATE POLICY "Suppliers can upload onboarding docs"
 ON storage.objects
 FOR INSERT
 TO authenticated
@@ -25,7 +25,7 @@ WITH CHECK (
 );
 
 -- Allow suppliers and buyers involved in the onboarding request to read the uploaded objects
-CREATE POLICY IF NOT EXISTS "Suppliers and buyers can view onboarding docs"
+CREATE POLICY "Suppliers and buyers can view onboarding docs"
 ON storage.objects
 FOR SELECT
 TO authenticated
@@ -47,7 +47,7 @@ USING (
 );
 
 -- Optional: allow uploader to delete/replace their own files
-CREATE POLICY IF NOT EXISTS "Uploaders can delete their onboarding docs"
+CREATE POLICY "Uploaders can delete their onboarding docs"
 ON storage.objects
 FOR DELETE
 TO authenticated
@@ -61,7 +61,7 @@ USING (
 
 -- COMPANY BRANCHES RLS: allow suppliers in onboarding context to view buyer branches
 ALTER TABLE public.company_branches ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "Suppliers in onboarding can view buyer branches"
+CREATE POLICY "Suppliers in onboarding can view buyer branches"
 ON public.company_branches
 FOR SELECT
 TO authenticated
@@ -84,7 +84,7 @@ USING (
 ALTER TABLE public.onboarding_document_submissions ENABLE ROW LEVEL SECURITY;
 
 -- Suppliers can insert their own submissions for requests they are attached to (by profile or email)
-CREATE POLICY IF NOT EXISTS "Supplier can insert onboarding submissions"
+CREATE POLICY "Supplier can insert onboarding submissions"
 ON public.onboarding_document_submissions
 FOR INSERT
 TO authenticated
@@ -102,7 +102,7 @@ WITH CHECK (
 );
 
 -- Suppliers and buyer can view submissions for requests they are attached to
-CREATE POLICY IF NOT EXISTS "Supplier and buyer can view onboarding submissions"
+CREATE POLICY "Supplier and buyer can view onboarding submissions"
 ON public.onboarding_document_submissions
 FOR SELECT
 TO authenticated

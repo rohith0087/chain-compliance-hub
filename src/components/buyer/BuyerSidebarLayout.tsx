@@ -32,7 +32,8 @@ import {
   MessageSquare,
   HelpCircle,
   ArrowLeftRight,
-  FlaskConical
+  FlaskConical,
+  ListTree
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
@@ -128,6 +129,8 @@ interface BuyerSidebarLayoutProps {
   buyerProfile: any;
   companyId?: string;
   unreadMessages?: number;
+  requirementEngineEnabled?: boolean;
+  evidenceVerificationEnabled?: boolean;
 }
 
 export function BuyerSidebarLayout({
@@ -143,7 +146,9 @@ export function BuyerSidebarLayout({
   onShowBulkInvite,
   buyerProfile,
   companyId,
-  unreadMessages = 0
+  unreadMessages = 0,
+  requirementEngineEnabled = false,
+  evidenceVerificationEnabled = false
 }: BuyerSidebarLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -274,6 +279,8 @@ export function BuyerSidebarLayout({
 
   const complianceSubmenu = [
     { title: 'Overview', value: 'compliance', icon: BarChart3 },
+    requirementEngineEnabled && { title: 'Requirements', value: 'requirements', icon: ListTree },
+    evidenceVerificationEnabled && { title: 'Evidence Verification', value: 'evidence-verification', icon: ClipboardCheck },
     { title: wsTerms.supplier_risk, value: 'supplier-risk', icon: AlertTriangle },
     !wsFlags.hideItemCompliance && { title: 'Item Compliance', value: 'item-compliance', icon: Package },
     !wsFlags.hideFacilityMatrix && { title: 'Facility Matrix', value: 'facility-matrix', icon: Building2 }

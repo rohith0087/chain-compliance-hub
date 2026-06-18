@@ -27,6 +27,27 @@ export function validateSystemSecret(req: Request): boolean {
   return mismatch === 0;
 }
 
+/**
+ * Confirms the bearer token presented to a verify_jwt=true function is a
+ * service-role key, not just any signed JWT (a regular user's session JWT
+ * also passes the gateway's verify_jwt check). Use for cron-only endpoints
+ * that perform expensive or batch operations and must not be triggerable by
+ * an arbitrary authenticated user.
+ */
+export function isServiceRoleRequest(req: Request): boolean {
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) return false;
+  const token = authHeader.slice('Bearer '.length);
+  const segments = token.split('.');
+  if (segments.length !== 3) return false;
+  try {
+    const payload = JSON.parse(atob(segments[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return payload?.role === 'service_role';
+  } catch {
+    return false;
+  }
+}
+
 export function systemAuthErrorResponse(corsHeaders: Record<string, string>): Response {
   return new Response(
     JSON.stringify({ error: 'Unauthorized: Invalid or missing system secret' }),

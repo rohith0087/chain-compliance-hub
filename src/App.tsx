@@ -37,6 +37,26 @@ import MessagesPage from "./pages/MessagesPage";
 import WhitePaperPage from "./pages/WhitePaperPage";
 import "./i18n";
 import { BranchProvider } from "@/contexts/BranchContext";
+import RequirementEngineView from "@/components/buyer/RequirementEngineView";
+import { useRequirementEngineFeature } from "@/hooks/useRequirementEngineFeature";
+import EvidenceVerificationView from "@/components/buyer/EvidenceVerificationView";
+import { useEvidenceVerificationFeature } from "@/hooks/useEvidenceVerificationFeature";
+
+const REQUIREMENT_TEST_BUYER_ID = '00000000-0000-4000-8000-000000000001';
+
+const RequirementEngineTestRoute = () => {
+  const { enabled, loading } = useRequirementEngineFeature(REQUIREMENT_TEST_BUYER_ID);
+  if (loading) return <div>Loading requirement feature…</div>;
+  if (!enabled) return <div>Requirement engine disabled</div>;
+  return <RequirementEngineView buyerId={REQUIREMENT_TEST_BUYER_ID} onNavigateToDocuments={() => undefined} />;
+};
+
+const EvidenceVerificationTestRoute = () => {
+  const { enabled, loading } = useEvidenceVerificationFeature(REQUIREMENT_TEST_BUYER_ID);
+  if (loading) return <div>Loading evidence verification feature…</div>;
+  if (!enabled) return <div>Evidence verification disabled</div>;
+  return <EvidenceVerificationView buyerId={REQUIREMENT_TEST_BUYER_ID} />;
+};
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -214,6 +234,12 @@ const AppRoutes = () => {
                     </PublicRoute>
                   } />
                   <Route path="/reset-password" element={<ResetPassword />} />
+                  {import.meta.env.MODE === 'test' && (
+                    <>
+                      <Route path="/__test/requirements" element={<RequirementEngineTestRoute />} />
+                      <Route path="/__test/evidence" element={<EvidenceVerificationTestRoute />} />
+                    </>
+                  )}
                   <Route path="/dashboard" element={
                     <ProtectedRoute>
                       <DynamicDashboard />

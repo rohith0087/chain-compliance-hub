@@ -6191,6 +6191,27 @@ export type Database = {
         }
         Returns: string
       }
+      verify_evidence_claim_v1: {
+        Args: { p_claim_id: string }
+        Returns: undefined
+      }
+      reject_evidence_claim_v1: {
+        Args: { p_claim_id: string; p_reason: string }
+        Returns: undefined
+      }
+      correct_evidence_claim_v1: {
+        Args: {
+          p_claim_id: string
+          p_field_name: string
+          p_new_value: string
+          p_reason: string
+        }
+        Returns: undefined
+      }
+      resolve_evidence_conflict_v1: {
+        Args: { p_conflict_id: string; p_resolution_notes: string }
+        Returns: undefined
+      }
       consume_credits: {
         Args: {
           p_credits_amount: number

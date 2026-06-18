@@ -40,6 +40,10 @@ import { AuditorDashboardPanel } from '@/components/dashboard/auditor/AuditorDas
 import { getWorkspaceProfileForIndustry } from '@/config/workspaceProfiles';
 import { motion } from 'framer-motion';
 import { useCommunicationThreads } from '@/hooks/useCommunicationThreads';
+import { useRequirementEngineFeature } from '@/hooks/useRequirementEngineFeature';
+import RequirementEngineView from '@/components/buyer/RequirementEngineView';
+import { useEvidenceVerificationFeature } from '@/hooks/useEvidenceVerificationFeature';
+import EvidenceVerificationView from '@/components/buyer/EvidenceVerificationView';
 
 import { supabase } from '@/integrations/supabase/client';
 
@@ -78,6 +82,20 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
   const { user: authUser, profile } = useAuth();
   const { t } = useTranslation(['dashboard', 'common']);
   const { currentBranch, allBranchesView } = useBranchContext();
+  const { enabled: requirementEngineEnabled, loading: requirementEngineLoading } = useRequirementEngineFeature(companyId);
+  const { enabled: evidenceVerificationEnabled, loading: evidenceVerificationLoading } = useEvidenceVerificationFeature(companyId);
+
+  useEffect(() => {
+    if (!requirementEngineLoading && !requirementEngineEnabled && activeTab === 'requirements') {
+      setActiveTab('compliance');
+    }
+  }, [activeTab, requirementEngineEnabled, requirementEngineLoading]);
+
+  useEffect(() => {
+    if (!evidenceVerificationLoading && !evidenceVerificationEnabled && activeTab === 'evidence-verification') {
+      setActiveTab('compliance');
+    }
+  }, [activeTab, evidenceVerificationEnabled, evidenceVerificationLoading]);
   
   // Get permissions to check if user is company owner
   const { isOwner, loading: permissionsLoading } = useCompanyPermissions(companyId, 'buyer');
@@ -305,6 +323,8 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
         buyerProfile={buyerProfile}
         companyId={companyId}
         unreadMessages={totalUnread}
+        requirementEngineEnabled={requirementEngineEnabled}
+        evidenceVerificationEnabled={evidenceVerificationEnabled}
       >
         {/* Dashboard Content */}
         {activeTab === 'dashboard' && companyId && (
@@ -446,6 +466,21 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
         {/* Compliance Content */}
         {activeTab === 'compliance' && (
           <BuyerComplianceDashboard />
+        )}
+
+        {activeTab === 'requirements' && companyId && requirementEngineEnabled && (
+          <RequirementEngineView
+            buyerId={companyId}
+            onNavigateToDocuments={(documentType) => {
+              if (documentType) sessionStorage.setItem('buyer_docs_filter_document_type', documentType);
+              setDocumentsKey(prev => prev + 1);
+              setActiveTab('documents');
+            }}
+          />
+        )}
+
+        {activeTab === 'evidence-verification' && companyId && evidenceVerificationEnabled && (
+          <EvidenceVerificationView buyerId={companyId} />
         )}
 
         {/* Agents Content */}

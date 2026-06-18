@@ -265,3 +265,8 @@ verify_jwt = true
 
 [functions.publish-requirements-v1]
 verify_jwt = true
+
+# Phase 2 evidence extraction processor - cron-triggered, validates the bearer
+# is a service-role JWT inside the function (isServiceRoleRequest).
+[functions.process-evidence-extraction-jobs-v1]
+verify_jwt = true

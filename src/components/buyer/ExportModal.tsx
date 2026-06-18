@@ -20,7 +20,7 @@ export const ExportModal = ({ isOpen, onClose, data, analytics }: ExportModalPro
   const [format, setFormat] = useState<'csv' | 'excel' | 'pdf'>('csv');
   const [dateRange, setDateRange] = useState('all');
   
-  const handleExport = () => {
+  const handleExport = async () => {
     try {
       const filename = `onboarding-pipeline-${new Date().toISOString().split('T')[0]}`;
       
@@ -29,7 +29,7 @@ export const ExportModal = ({ isOpen, onClose, data, analytics }: ExportModalPro
           exportToCSV(data, filename);
           break;
         case 'excel':
-          exportToExcel(data, analytics, filename);
+          await exportToExcel(data, analytics, filename);
           break;
         case 'pdf':
           exportToPDF(data, analytics, filename);

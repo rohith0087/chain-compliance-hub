@@ -1,0 +1,24 @@
+{
+  "projectRef": "edwerzutsknhuplidhsj",
+  "capturedAt": "2026-06-18",
+  "functions": [
+    "agent-coordinator", "audit-assistant", "backfill-buyer-document-content",
+    "bulk-document-downloader", "bulk-document-processor", "buyer-agent",
+    "buyer-document-content-processor", "calculate-supplier-metrics", "chat-session-manager",
+    "check-document-expiry", "check-onboarding-deadlines", "check-subscription-status",
+    "cleanup-all-auth-users", "coa-analyzer", "coa-schedule-reminder", "communication-hub",
+    "consume-credits", "create-company-user", "create-credit-purchase",
+    "create-subscription-checkout", "delete-auth-user", "document-analyzer",
+    "document-content-extractor", "document-link-handler", "elevenlabs-tts",
+    "execute-chat-action", "generate-audit-report", "generate-mfa-recovery-codes",
+    "get-audit-logs", "get-openai-key", "knowledge-populator", "knowledge-refresh",
+    "manage-subscription", "populate-onboarding-requirements", "rag-chat",
+    "reset-password-with-recovery", "secure-document-url", "secure-sample-url",
+    "send-assignment-notification", "send-batch-request-email", "send-compliance-followup",
+    "send-document-request-notification", "send-expiry-notification", "send-generic-email",
+    "send-new-request-email", "send-password-reset", "send-rejection-notification",
+    "send-supplier-invitation", "send-ticket-notification", "send-user-invitation",
+    "simple-rag-chat", "supplier-agent", "text-to-voice", "validate-turnstile",
+    "verify-mfa-recovery-code", "voice-to-text", "workflow-engine"
+  ]
+}

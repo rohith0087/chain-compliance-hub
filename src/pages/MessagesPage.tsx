@@ -142,7 +142,7 @@ const MessagesPage = () => {
   }
 
   if (!user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/auth" replace />;
   }
 
   if (!companyInfo) {

@@ -1,5 +1,5 @@
 import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
+import JSZip from 'jszip';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
@@ -30,25 +30,80 @@ export const exportToCSV = (data: ExportData[], filename: string = 'onboarding-p
   document.body.removeChild(link);
 };
 
-export const exportToExcel = (data: ExportData[], analytics: any, filename: string = 'onboarding-pipeline') => {
-  const wb = XLSX.utils.book_new();
-  
-  // Main data sheet
-  const ws = XLSX.utils.json_to_sheet(data);
-  XLSX.utils.book_append_sheet(wb, ws, 'Pipeline Data');
-  
-  // Analytics sheet
-  const analyticsData = [
-    { Metric: 'Total Requests', Value: analytics.total },
-    { Metric: 'In Progress', Value: analytics.inProgress },
-    { Metric: 'Completed', Value: analytics.completed },
-    { Metric: 'Conversion Rate', Value: `${analytics.conversionRate}%` },
-    { Metric: 'Avg Time to Complete (days)', Value: analytics.avgTimeToComplete },
+const escapeXml = (value: unknown) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&apos;');
+
+const columnName = (index: number) => {
+  let name = '';
+  for (let current = index + 1; current > 0; current = Math.floor((current - 1) / 26)) {
+    name = String.fromCharCode(65 + ((current - 1) % 26)) + name;
+  }
+  return name;
+};
+
+const worksheetXml = (rows: unknown[][]) => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetData>${rows.map((row, rowIndex) => `
+    <row r="${rowIndex + 1}">${row.map((cell, columnIndex) => `
+      <c r="${columnName(columnIndex)}${rowIndex + 1}" t="inlineStr"><is><t xml:space="preserve">${escapeXml(cell)}</t></is></c>`).join('')}
+    </row>`).join('')}
+  </sheetData>
+</worksheet>`;
+
+export const exportToExcel = async (data: ExportData[], analytics: any, filename: string = 'onboarding-pipeline') => {
+  const zip = new JSZip();
+  const pipelineHeaders = Object.keys(data[0] ?? {
+    supplier_company_name: '', supplier_email: '', status: '', created_at: '', progress: '',
+  });
+  const pipelineRows = [pipelineHeaders, ...data.map((row) => pipelineHeaders.map((key) => row[key as keyof ExportData]))];
+  const analyticsRows = [
+    ['Metric', 'Value'],
+    ['Total Requests', analytics.total],
+    ['In Progress', analytics.inProgress],
+    ['Completed', analytics.completed],
+    ['Conversion Rate', `${analytics.conversionRate}%`],
+    ['Avg Time to Complete (days)', analytics.avgTimeToComplete],
   ];
-  const wsAnalytics = XLSX.utils.json_to_sheet(analyticsData);
-  XLSX.utils.book_append_sheet(wb, wsAnalytics, 'Analytics');
-  
-  XLSX.writeFile(wb, `${filename}.xlsx`);
+
+  zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+  <Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+</Types>`);
+  zip.file('_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`);
+  zip.file('xl/workbook.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets><sheet name="Pipeline Data" sheetId="1" r:id="rId1"/><sheet name="Analytics" sheetId="2" r:id="rId2"/></sheets>
+</workbook>`);
+  zip.file('xl/_rels/workbook.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>
+</Relationships>`);
+  zip.file('xl/worksheets/sheet1.xml', worksheetXml(pipelineRows));
+  zip.file('xl/worksheets/sheet2.xml', worksheetXml(analyticsRows));
+
+  const blob = await zip.generateAsync({
+    type: 'blob',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    compression: 'DEFLATE',
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${filename}.xlsx`;
+  link.click();
+  URL.revokeObjectURL(url);
 };
 
 export const exportToPDF = (data: ExportData[], analytics: any, filename: string = 'onboarding-pipeline') => {

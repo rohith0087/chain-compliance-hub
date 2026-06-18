@@ -1,0 +1,18 @@
+{
+  "errors": 998,
+  "warnings": 134,
+  "rules": {
+    "error:@typescript-eslint/ban-ts-comment": 1,
+    "error:@typescript-eslint/no-empty-object-type": 1,
+    "error:@typescript-eslint/no-explicit-any": 944,
+    "error:@typescript-eslint/no-non-null-asserted-optional-chain": 3,
+    "error:@typescript-eslint/no-require-imports": 2,
+    "error:@typescript-eslint/no-unused-expressions": 1,
+    "error:no-case-declarations": 13,
+    "error:no-empty": 3,
+    "error:no-useless-escape": 12,
+    "error:prefer-const": 18,
+    "warning:react-hooks/exhaustive-deps": 116,
+    "warning:react-refresh/only-export-components": 18
+  }
+}

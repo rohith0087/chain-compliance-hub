@@ -158,7 +158,7 @@ const ResetPassword = () => {
       });
 
       // Redirect to login page
-      navigate('/');
+      navigate('/auth');
     } catch (err: any) {
       setMfaError(err.message || 'An error occurred');
     } finally {
@@ -178,7 +178,7 @@ const ResetPassword = () => {
         description: "Your password reset link has expired. Please request a new one.",
         variant: "destructive",
       });
-      setTimeout(() => navigate('/'), 2000);
+      setTimeout(() => navigate('/auth'), 2000);
       return;
     }
     
@@ -218,7 +218,7 @@ const ResetPassword = () => {
       }
 
       // Redirect to login page
-      navigate('/');
+      navigate('/auth');
     }
     setLoading(false);
   };

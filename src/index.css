@@ -297,3 +297,103 @@
 .theme-minimalist * {
   border-color: hsl(var(--border));
 }
+
+/* ============================================================================
+ * TraceR2C marketing landing — scoped design system ("Customs hall")
+ * Everything is namespaced under .r2c so it never leaks into the app shell.
+ * ========================================================================== */
+.r2c {
+  --r2c-bg: #ECEDEA;        /* cool steel */
+  --r2c-surface: #ECEDEA;
+  --r2c-surface-2: #F4F4F1;
+  --r2c-ink: #14181F;       /* charcoal-navy */
+  --r2c-muted: #5A5F66;     /* steel grey */
+  --r2c-line: #D3D8D9;      /* cool hairline */
+
+  /* Primary brand — deep pine */
+  --r2c-stamp: #16493A;
+  --r2c-stamp-deep: #0F4C4A;
+
+  /* functional status spectrum */
+  --r2c-verified: #1F6B4A;  /* pass / compliant */
+  --r2c-caution: #B8731A;   /* pending / review */
+  --r2c-recall: #D8462A;    /* ALERT/RECALL */
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  background: var(--r2c-bg);
+  color: var(--r2c-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.r2c .font-display {
+  font-family: 'Archivo', 'IBM Plex Sans', sans-serif;
+  font-stretch: 125%;        /* Archivo Expanded */
+  letter-spacing: -0.01em;
+}
+.r2c .font-serif {
+  font-family: 'Instrument Serif', Georgia, serif;  /* wordmark only */
+  letter-spacing: 0;
+}
+.r2c .font-data {
+  font-family: 'IBM Plex Mono', ui-monospace, 'JetBrains Mono', monospace;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Hairline grid backdrop reused by hero + CTA */
+.r2c-grid {
+  background-image:
+    linear-gradient(to right, rgba(20, 24, 31, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(20, 24, 31, 0.05) 1px, transparent 1px);
+  background-size: 38px 38px;
+}
+
+/* Scan beam that sweeps the evidence card once on reveal */
+@keyframes r2c-scan {
+  0%   { transform: translateY(-8%); opacity: 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { transform: translateY(108%); opacity: 0; }
+}
+.r2c-scan {
+  animation: r2c-scan 1100ms var(--ease-in-out) forwards;
+}
+
+/* Masked line reveal for headings — CSS-driven so it always settles visible
+   (a JS rAF tween can freeze off-screen if the tab is backgrounded mid-scroll). */
+.r2c-rise { display: block; overflow: hidden; padding-bottom: 0.1em; }
+.r2c-rise > span {
+  display: block;
+  transform: translateY(115%);
+  transition: transform 700ms var(--ease-out-soft);
+  transition-delay: var(--rise-delay, 0s);
+}
+.r2c-rise.is-in > span { transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) {
+  .r2c-rise > span { transform: none !important; transition: none !important; }
+}
+
+/* Animated underline for nav + text links */
+.r2c-link { position: relative; }
+.r2c-link::after {
+  content: '';
+  position: absolute;
+  left: 0; bottom: -3px;
+  height: 1.5px; width: 100%;
+  background: var(--r2c-ink);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 280ms var(--ease-out-soft);
+}
+.r2c-link:hover::after { transform: scaleX(1); transform-origin: left; }
+
+@media (prefers-reduced-motion: reduce) {
+  .r2c *, .r2c *::before, .r2c *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .r2c-scan { display: none; }
+}

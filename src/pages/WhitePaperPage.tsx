@@ -157,7 +157,7 @@ const WhitePaperPage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.45 }}
           >
-            <Button size="lg" className="gap-2 px-8 rounded-full" onClick={() => navigate('/')}>
+            <Button size="lg" className="gap-2 px-8 rounded-full" onClick={() => navigate('/auth')}>
               Request a Demo <ArrowRight className="h-4 w-4" />
             </Button>
             <Button variant="outline" size="lg" className="gap-2 px-8 rounded-full no-print" onClick={handleDownloadPdf}>
@@ -771,7 +771,7 @@ const WhitePaperPage = () => {
               <Button 
                 size="lg" 
                 className="gap-2 px-8 rounded-full bg-white text-primary hover:bg-white/90 font-semibold"
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/auth')}
               >
                 Request a Demo <ArrowRight className="h-4 w-4" />
               </Button>

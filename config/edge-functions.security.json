@@ -1,0 +1,29 @@
+{
+  "jwtDisabledAllowlist": {
+    "generate-audit-report": "Validates either a signed-in user with buyer access or SYSTEM_INVOCATION_SECRET.",
+    "document-link-handler": "Validates a scoped document access token and validates user JWTs for authenticated operations.",
+    "workflow-engine": "Requires SYSTEM_INVOCATION_SECRET.",
+    "check-document-expiry": "Requires SYSTEM_INVOCATION_SECRET.",
+    "send-ticket-notification": "Validates the caller JWT inside the function.",
+    "send-password-reset": "Validates the caller JWT inside the function.",
+    "text-to-voice": "Validates the caller JWT inside the function.",
+    "send-batch-request-email": "Validates the caller JWT inside the function.",
+    "send-compliance-followup": "Validates the caller JWT inside the function.",
+    "send-generic-email": "Validates the caller JWT inside the function.",
+    "send-new-request-email": "Validates the caller JWT inside the function.",
+    "validate-turnstile": "Public anti-bot verification endpoint; validates the Turnstile response with Cloudflare.",
+    "coa-schedule-reminder": "Requires SYSTEM_INVOCATION_SECRET."
+  },
+  "systemSecretFunctions": [
+    "generate-audit-report",
+    "workflow-engine",
+    "check-document-expiry",
+    "coa-schedule-reminder"
+  ],
+  "sharedCorsRequired": [
+    "cleanup-all-auth-users",
+    "elevenlabs-tts",
+    "get-openai-key",
+    "send-user-invitation"
+  ]
+}

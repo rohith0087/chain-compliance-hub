@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -104,7 +105,29 @@ const checkPasswordRequirements = (password: string) => [
 // Check if Turnstile is enabled via environment variable
 const isTurnstileEnabled = import.meta.env.VITE_TURNSTILE_ENABLED === 'true';
 
+const Wordmark = ({ size = 24, className = "", invertLogo = false }: { size?: number, className?: string, invertLogo?: boolean }) => (
+  <span className={`flex items-center gap-3 ${className}`}>
+    <img src="/logo.png" alt="TraceR2C Logo" className={`object-contain ${invertLogo ? 'brightness-0 invert' : ''}`} style={{ width: size * 1.6, height: size * 1.6 }} />
+    <span className="flex items-baseline gap-2">
+      <span className="font-serif leading-none" style={{ fontSize: size }}>
+        TraceR2C
+      </span>
+      <span className="hidden font-data text-[10px] uppercase tracking-[0.2em] opacity-70 sm:inline">
+        / compliance OS
+      </span>
+    </span>
+  </span>
+);
+
 const AuthPage = () => {
+  const navigate = useNavigate();
+
+  const nav = [
+    { label: 'Platform', href: '/#platform' },
+    { label: 'How it reads', href: '/#how' },
+    { label: 'Solutions', href: '/#solutions' },
+  ];
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -463,60 +486,61 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="r2c min-h-screen flex bg-[var(--r2c-bg)] text-[var(--r2c-ink)] relative">
+      
       {/* Left Hero Section */}
-      <div className={`hidden lg:flex lg:w-1/2 relative overflow-hidden transition-all duration-500 ${
-        activeTab === 'login' 
-          ? 'bg-gradient-to-br from-primary via-primary/90 to-accent' 
-          : 'bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-500'
-      }`}>
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden transition-all duration-500 bg-[var(--r2c-ink)]">
+        
+        {/* Top Left Logo */}
+        <div className="absolute top-8 left-8 xl:left-12 z-50">
+          <button onClick={() => navigate('/')} aria-label="TraceR2C home" className="text-white hover:opacity-80 transition-opacity">
+            <Wordmark size={24} invertLogo className="text-white" />
+          </button>
+        </div>
+
         <ParticleBackground />
         
-        <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
-          <h1 className="text-4xl xl:text-5xl font-bold text-white mb-6 leading-tight">
-            Streamline Your<br />
-            <span className="text-white/90">Compliance Management</span>
-          </h1>
-          
-          <p className="text-lg text-white/80 mb-10 max-w-md">
-            Secure document management, automated workflows, and real-time compliance tracking for modern enterprises.
-          </p>
-          
-          <div className="space-y-4">
-            {[
-              { icon: Shield, text: 'Enterprise-grade security' },
-              { icon: Sparkles, text: 'AI-powered document analysis' },
-              { icon: Lock, text: 'End-to-end encryption' },
-            ].map((feature, i) => (
-              <div key={i} className="flex items-center gap-3 text-white/90">
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                  <feature.icon className="w-5 h-5" />
-                </div>
-                <span className="text-sm font-medium">{feature.text}</span>
-              </div>
-            ))}
-          </div>
+        {/* Architectural Pencil Art */}
+        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+          <img 
+            src="/login-art.jpg" 
+            alt="Industry Architecture Blueprint" 
+            className="w-full h-full object-cover mix-blend-screen opacity-90"
+          />
         </div>
-        
-        {/* Decorative elements */}
-        <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-black/10 to-transparent"></div>
-        <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-white/5 rounded-full blur-3xl"></div>
-        <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/5 rounded-full blur-3xl"></div>
       </div>
 
       {/* Right Form Section */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center bg-background relative overflow-hidden">
-        <BackgroundBeamsWithCollision className="absolute inset-0 z-0" />
-        <div className="w-full max-w-md relative z-10 p-6 sm:p-8">
+      <div className="w-full lg:w-1/2 flex items-center justify-center bg-[var(--r2c-bg)] relative overflow-hidden">
+        
+        {/* Top Right Actions */}
+        <div className="absolute top-8 right-8 xl:right-12 z-50 hidden sm:flex items-center gap-8">
+          <nav className="hidden items-center gap-8 lg:flex">
+            {[
+              { label: 'Platform', href: '/#platform' },
+              { label: 'How it reads', href: '/#how' },
+              { label: 'Solutions', href: '/#solutions' },
+            ].map((n) => (
+              <a key={n.label} href={n.href} className="font-data text-[12px] uppercase tracking-wider text-[var(--r2c-ink)] hover:text-[var(--r2c-stamp)] transition-colors">
+                {n.label}
+              </a>
+            ))}
+          </nav>
+          <button
+            onClick={() => navigate('/')}
+            className="group inline-flex items-center gap-2 rounded-full bg-[var(--r2c-stamp)] px-6 py-2.5 text-[14px] font-medium text-white transition-all duration-200 hover:bg-[var(--r2c-stamp-deep)]"
+          >
+            Book a demo
+          </button>
+        </div>
+
+        <div className="w-full max-w-md relative z-10 p-6 sm:p-8 mt-16 lg:mt-0">
           {/* Mobile Logo */}
-          <div className="flex lg:hidden items-center justify-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-lg">T</span>
-            </div>
-            <span className="text-xl font-bold text-foreground">Tracer2C</span>
+          <div className="flex lg:hidden items-center justify-center gap-3 mb-8 mt-12">
+            <Wordmark size={28} />
           </div>
 
-          <Card className="border-0 shadow-xl bg-card/80 backdrop-blur-md">
+          <Card className="border-2 border-[var(--r2c-line)] shadow-[0_16px_32px_-12px_rgba(20,24,31,0.5)] bg-[var(--r2c-surface)] backdrop-blur-md mt-16 lg:mt-0">
             <CardContent className="p-6 sm:p-8">
               <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-foreground">
@@ -532,11 +556,11 @@ const AuthPage = () => {
 
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 {authStep === 'credentials' && (
-                  <TabsList className="grid w-full grid-cols-2 mb-6">
-                    <TabsTrigger value="login" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <TabsList className="grid w-full grid-cols-2 mb-6 bg-[var(--r2c-surface-2)]">
+                    <TabsTrigger value="login" className="data-[state=active]:bg-[var(--r2c-stamp)] data-[state=active]:text-white text-[var(--r2c-muted)]">
                       Login
                     </TabsTrigger>
-                    <TabsTrigger value="signup" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                    <TabsTrigger value="signup" className="data-[state=active]:bg-[var(--r2c-stamp)] data-[state=active]:text-white text-[var(--r2c-muted)]">
                       Sign Up
                     </TabsTrigger>
                   </TabsList>
@@ -602,7 +626,7 @@ const AuthPage = () => {
                         />
                       )}
                       
-                      <Button type="submit" className="w-full h-11 font-semibold" disabled={loading || isLoginLocked || (isTurnstileEnabled && !turnstileToken)}>
+                      <Button type="submit" className="w-full h-11 font-semibold bg-[var(--r2c-stamp)] hover:bg-[var(--r2c-stamp-deep)] text-white" disabled={loading || isLoginLocked || (isTurnstileEnabled && !turnstileToken)}>
                         {isLoginLocked 
                           ? `Locked (${Math.ceil(loginCooldownRemaining / 1000)}s)` 
                           : loading ? "Logging In..." : "Login"}
@@ -620,10 +644,10 @@ const AuthPage = () => {
                               Forgot your password?
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="sm:max-w-md">
+                          <DialogContent className="r2c sm:max-w-md bg-[var(--r2c-surface)]/80 backdrop-blur-2xl border-[var(--r2c-line)] text-[var(--r2c-ink)] shadow-[0_16px_32px_-12px_rgba(20,24,31,0.5)]">
                             <DialogHeader>
                               <DialogTitle className="flex items-center gap-2">
-                                <Mail className="w-5 h-5 text-primary" />
+                                <Mail className="w-5 h-5 text-[var(--r2c-stamp)]" />
                                 Reset Password
                               </DialogTitle>
                               <DialogDescription>
@@ -656,12 +680,12 @@ const AuthPage = () => {
                                 <Button 
                                   type="button" 
                                   variant="outline" 
-                                  className="flex-1"
+                                  className="flex-1 border-[var(--r2c-line)] hover:bg-[var(--r2c-surface-2)] text-[var(--r2c-ink)]"
                                   onClick={() => setResetDialogOpen(false)}
                                 >
                                   Cancel
                                 </Button>
-                              <Button type="submit" className="flex-1" disabled={resetLoading || isResetCooling || (isTurnstileEnabled && !resetTurnstileToken)}>
+                              <Button type="submit" className="flex-1 bg-[var(--r2c-stamp)] hover:bg-[var(--r2c-stamp-deep)] text-white" disabled={resetLoading || isResetCooling || (isTurnstileEnabled && !resetTurnstileToken)}>
                                    {isResetCooling ? `Wait ${Math.ceil(resetCooldownRemaining / 1000)}s` : resetLoading ? "Sending..." : "Send Reset Link"}
                                 </Button>
                               </div>
@@ -720,7 +744,7 @@ const AuthPage = () => {
                         
                         <Button 
                           type="submit" 
-                          className="w-full h-11 font-semibold" 
+                          className="w-full h-11 font-semibold bg-[var(--r2c-stamp)] hover:bg-[var(--r2c-stamp-deep)] text-white" 
                           disabled={mfaLoading || isMfaLocked || (useRecoveryCode ? !mfaCode.trim() : mfaCode.length !== 6)}
                         >
                           {isMfaLocked 
@@ -950,7 +974,7 @@ const AuthPage = () => {
                     
                     <Button 
                       type="submit" 
-                      className="w-full h-11 font-semibold" 
+                      className="w-full h-11 font-semibold bg-[var(--r2c-stamp)] hover:bg-[var(--r2c-stamp-deep)] text-white" 
                       disabled={loading || isSignupCooling || selectedRoles.length === 0 || (isTurnstileEnabled && !turnstileToken)}
                     >
                       {isSignupCooling 

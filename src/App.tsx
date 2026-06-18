@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MFAGuard } from "@/components/auth/MFAGuard";
 import { TourProvider } from "@/components/support/TourProvider";
 
+import Index from "./pages/Index";
 import AuthPage from "./components/auth/AuthPage";
 import ResetPassword from "./pages/ResetPassword";
 import DynamicDashboard from "./components/dashboard/DynamicDashboard";
@@ -55,7 +56,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (!user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/auth" replace />;
   }
   
   // Wrap with MFA guard to enforce mandatory 2FA
@@ -131,7 +132,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (!user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/auth" replace />;
   }
   
   if (!hasRole('admin')) {
@@ -186,7 +187,7 @@ const SuperAdminRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (!user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/auth" replace />;
   }
 
   if (!isSuperAdmin) {
@@ -206,7 +207,8 @@ const AppRoutes = () => {
               <TourProvider>
                 <ImpersonationBanner />
                 <Routes>
-                  <Route path="/" element={
+                  <Route path="/" element={<Index />} />
+                  <Route path="/auth" element={
                     <PublicRoute>
                       <AuthPage />
                     </PublicRoute>

@@ -48,7 +48,7 @@ const AdminDashboard = () => {
         description: t('admin:accessDeniedDescription'),
         variant: "destructive"
       });
-      navigate('/');
+      navigate('/auth');
       return;
     }
   }, [user, isAdmin, loading, navigate, toast]);

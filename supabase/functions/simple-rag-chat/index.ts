@@ -2330,15 +2330,25 @@ async function exportCSV(params: any, buyerId: string) {
       };
     }
     
-    const { data: urlData } = supabase.storage
+    const { data: urlData, error: signedUrlError } = await supabase.storage
       .from('exports')
-      .getPublicUrl(filename);
+      .createSignedUrl(filename, 15 * 60);
+
+    if (signedUrlError || !urlData?.signedUrl) {
+      return {
+        success: true,
+        row_count: data.length,
+        download_type: 'inline',
+        csv_content: csvContent,
+        filename
+      };
+    }
     
     return {
       success: true,
       row_count: data.length,
       download_type: 'url',
-      url: urlData.publicUrl,
+      url: urlData.signedUrl,
       filename
     };
     

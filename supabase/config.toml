@@ -1,7 +1,7 @@
 project_id = "edwerzutsknhuplidhsj"
 
 [functions.audit-assistant]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-audit-report]
 verify_jwt = false
@@ -98,6 +98,16 @@ verify_jwt = true
 
 # User invitation - requires company admin role
 [functions.send-user-invitation]
+verify_jwt = true
+
+# Deprecated endpoints remain authenticated until they are removed from production.
+[functions.get-openai-key]
+verify_jwt = true
+
+[functions.cleanup-all-auth-users]
+verify_jwt = true
+
+[functions.elevenlabs-tts]
 verify_jwt = true
 
 # User management - requires authenticated caller

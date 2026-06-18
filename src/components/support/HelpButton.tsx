@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { HelpCircle } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { HelpCenterWorkspace } from './HelpCenterWorkspace';
 import { useTour } from './TourProvider';
@@ -46,10 +46,10 @@ export const HelpButton = ({ source, user, isOpen: externalOpen, onOpenChange }:
         onClick={() => setIsOpen(true)}
         size="icon"
         variant="outline"
-        className="fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 border-0"
+        className="fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full shadow-lg bg-[var(--r2c-stamp)] text-white hover:bg-[var(--r2c-stamp-deep)] border-0"
         aria-label="Get Help"
       >
-        <HelpCircle className="h-6 w-6" />
+        <MessageSquare className="h-6 w-6" />
       </Button>
 
       <HelpCenterWorkspace

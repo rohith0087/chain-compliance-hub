@@ -1810,6 +1810,68 @@ export type Database = {
         }
         Relationships: []
       }
+      company_requirement_configurations: {
+        Row: {
+          buyer_id: string
+          configuration: Json
+          created_at: string
+          created_by: string | null
+          display_order: number
+          id: string
+          requirement_id: string
+          updated_at: string
+        }
+        Insert: {
+          buyer_id: string
+          configuration?: Json
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          id?: string
+          requirement_id: string
+          updated_at?: string
+        }
+        Update: {
+          buyer_id?: string
+          configuration?: Json
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          id?: string
+          requirement_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_requirement_configurations_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_requirement_configurations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_requirement_configurations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_requirement_configurations_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_users: {
         Row: {
           branch_id: string | null
@@ -3098,6 +3160,357 @@ export type Database = {
           },
         ]
       }
+      evidence_claim_corrections: {
+        Row: {
+          claim_id: string
+          corrected_by: string
+          created_at: string
+          field_name: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          reason: string | null
+        }
+        Insert: {
+          claim_id: string
+          corrected_by: string
+          created_at?: string
+          field_name: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          reason?: string | null
+        }
+        Update: {
+          claim_id?: string
+          corrected_by?: string
+          created_at?: string
+          field_name?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_claim_corrections_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_claim_corrections_corrected_by_fkey"
+            columns: ["corrected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_claim_corrections_corrected_by_fkey"
+            columns: ["corrected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evidence_claims: {
+        Row: {
+          buyer_id: string
+          certificate_number: string | null
+          confidence: number | null
+          covered_facilities: Json
+          covered_products: Json
+          created_at: string
+          document_upload_id: string
+          expiry_date: string | null
+          extraction_job_id: string | null
+          extraction_model_version: string
+          id: string
+          is_duplicate_of: string | null
+          issue_date: string | null
+          issuer: string | null
+          rejected_reason: string | null
+          source_page: number | null
+          source_text: string | null
+          standards: string[]
+          status: string
+          supplier_id: string
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          buyer_id: string
+          certificate_number?: string | null
+          confidence?: number | null
+          covered_facilities?: Json
+          covered_products?: Json
+          created_at?: string
+          document_upload_id: string
+          expiry_date?: string | null
+          extraction_job_id?: string | null
+          extraction_model_version: string
+          id?: string
+          is_duplicate_of?: string | null
+          issue_date?: string | null
+          issuer?: string | null
+          rejected_reason?: string | null
+          source_page?: number | null
+          source_text?: string | null
+          standards?: string[]
+          status?: string
+          supplier_id: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          buyer_id?: string
+          certificate_number?: string | null
+          confidence?: number | null
+          covered_facilities?: Json
+          covered_products?: Json
+          created_at?: string
+          document_upload_id?: string
+          expiry_date?: string | null
+          extraction_job_id?: string | null
+          extraction_model_version?: string
+          id?: string
+          is_duplicate_of?: string | null
+          issue_date?: string | null
+          issuer?: string | null
+          rejected_reason?: string | null
+          source_page?: number | null
+          source_text?: string | null
+          standards?: string[]
+          status?: string
+          supplier_id?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_claims_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_claims_document_upload_id_fkey"
+            columns: ["document_upload_id"]
+            isOneToOne: false
+            referencedRelation: "document_uploads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_claims_extraction_job_id_fkey"
+            columns: ["extraction_job_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_extraction_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_claims_is_duplicate_of_fkey"
+            columns: ["is_duplicate_of"]
+            isOneToOne: false
+            referencedRelation: "evidence_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_claims_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_claims_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_claims_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evidence_conflicts: {
+        Row: {
+          claim_id: string
+          conflict_type: string
+          conflicting_claim_id: string
+          created_at: string
+          id: string
+          resolution_notes: string | null
+          resolved: boolean
+          resolved_at: string | null
+          resolved_by: string | null
+        }
+        Insert: {
+          claim_id: string
+          conflict_type: string
+          conflicting_claim_id: string
+          created_at?: string
+          id?: string
+          resolution_notes?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Update: {
+          claim_id?: string
+          conflict_type?: string
+          conflicting_claim_id?: string
+          created_at?: string
+          id?: string
+          resolution_notes?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_conflicts_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_conflicts_conflicting_claim_id_fkey"
+            columns: ["conflicting_claim_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_conflicts_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_conflicts_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evidence_extraction_jobs: {
+        Row: {
+          attempts: number
+          buyer_id: string
+          completed_at: string | null
+          created_at: string
+          document_upload_id: string
+          extraction_model_version: string
+          id: string
+          idempotency_key: string
+          last_error: string | null
+          max_attempts: number
+          scheduled_at: string
+          started_at: string | null
+          status: string
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          buyer_id: string
+          completed_at?: string | null
+          created_at?: string
+          document_upload_id: string
+          extraction_model_version: string
+          id?: string
+          idempotency_key: string
+          last_error?: string | null
+          max_attempts?: number
+          scheduled_at?: string
+          started_at?: string | null
+          status?: string
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          buyer_id?: string
+          completed_at?: string | null
+          created_at?: string
+          document_upload_id?: string
+          extraction_model_version?: string
+          id?: string
+          idempotency_key?: string
+          last_error?: string | null
+          max_attempts?: number
+          scheduled_at?: string
+          started_at?: string | null
+          status?: string
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_extraction_jobs_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_extraction_jobs_document_upload_id_fkey"
+            columns: ["document_upload_id"]
+            isOneToOne: false
+            referencedRelation: "document_uploads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_extraction_jobs_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feature_flags: {
+        Row: {
+          created_at: string
+          default_enabled: boolean
+          description: string
+          key: string
+          lifecycle: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_enabled?: boolean
+          description: string
+          key: string
+          lifecycle?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_enabled?: boolean
+          description?: string
+          key?: string
+          lifecycle?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       impersonation_logs: {
         Row: {
           created_at: string
@@ -3205,6 +3618,44 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "supplier_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legacy_requirement_mappings: {
+        Row: {
+          buyer_id: string
+          created_at: string
+          evidence_definition: Json
+          id: string
+          requirement_key: string
+          source_id: string
+          source_type: string
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string
+          evidence_definition?: Json
+          id?: string
+          requirement_key: string
+          source_id: string
+          source_type: string
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string
+          evidence_definition?: Json
+          id?: string
+          requirement_key?: string
+          source_id?: string
+          source_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legacy_requirement_mappings_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
             referencedColumns: ["id"]
           },
         ]
@@ -3608,6 +4059,61 @@ export type Database = {
         }
         Relationships: []
       }
+      organization_feature_flags: {
+        Row: {
+          configured_at: string
+          configured_by: string | null
+          enabled: boolean
+          expires_at: string | null
+          feature_key: string
+          metadata: Json
+          organization_id: string
+          organization_type: string
+        }
+        Insert: {
+          configured_at?: string
+          configured_by?: string | null
+          enabled: boolean
+          expires_at?: string | null
+          feature_key: string
+          metadata?: Json
+          organization_id: string
+          organization_type: string
+        }
+        Update: {
+          configured_at?: string
+          configured_by?: string | null
+          enabled?: boolean
+          expires_at?: string | null
+          feature_key?: string
+          metadata?: Json
+          organization_id?: string
+          organization_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_feature_flags_configured_by_fkey"
+            columns: ["configured_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_feature_flags_configured_by_fkey"
+            columns: ["configured_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_feature_flags_feature_key_fkey"
+            columns: ["feature_key"]
+            isOneToOne: false
+            referencedRelation: "feature_flags"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       platform_admin_audit_logs: {
         Row: {
           action_type: string
@@ -3792,6 +4298,435 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      requirement_evaluation_results: {
+        Row: {
+          citation: string | null
+          created_at: string
+          effective_from: string | null
+          effective_to: string | null
+          evaluation_id: string
+          explanation: string
+          framework_code: string
+          framework_version: string
+          id: string
+          legacy_mapping_id: string | null
+          matched_facts: Json
+          missing_inputs: Json
+          outcome: string
+          required_evidence: Json
+          requirement_key: string
+          requirement_version_id: string | null
+          source_url: string | null
+          title: string
+        }
+        Insert: {
+          citation?: string | null
+          created_at?: string
+          effective_from?: string | null
+          effective_to?: string | null
+          evaluation_id: string
+          explanation: string
+          framework_code: string
+          framework_version: string
+          id?: string
+          legacy_mapping_id?: string | null
+          matched_facts?: Json
+          missing_inputs?: Json
+          outcome: string
+          required_evidence?: Json
+          requirement_key: string
+          requirement_version_id?: string | null
+          source_url?: string | null
+          title: string
+        }
+        Update: {
+          citation?: string | null
+          created_at?: string
+          effective_from?: string | null
+          effective_to?: string | null
+          evaluation_id?: string
+          explanation?: string
+          framework_code?: string
+          framework_version?: string
+          id?: string
+          legacy_mapping_id?: string | null
+          matched_facts?: Json
+          missing_inputs?: Json
+          outcome?: string
+          required_evidence?: Json
+          requirement_key?: string
+          requirement_version_id?: string | null
+          source_url?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requirement_evaluation_results_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "requirement_evaluations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_evaluation_results_legacy_mapping_id_fkey"
+            columns: ["legacy_mapping_id"]
+            isOneToOne: false
+            referencedRelation: "legacy_requirement_mappings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_evaluation_results_requirement_version_id_fkey"
+            columns: ["requirement_version_id"]
+            isOneToOne: false
+            referencedRelation: "requirement_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      requirement_evaluations: {
+        Row: {
+          actor_id: string
+          buyer_id: string
+          correlation_id: string
+          created_at: string
+          effective_at: string
+          evaluator_version: string
+          id: string
+          idempotency_key: string
+          input_snapshot: Json
+          request_hash: string
+          subject_id: string
+          subject_type: string
+        }
+        Insert: {
+          actor_id: string
+          buyer_id: string
+          correlation_id: string
+          created_at?: string
+          effective_at: string
+          evaluator_version: string
+          id?: string
+          idempotency_key: string
+          input_snapshot: Json
+          request_hash: string
+          subject_id: string
+          subject_type: string
+        }
+        Update: {
+          actor_id?: string
+          buyer_id?: string
+          correlation_id?: string
+          created_at?: string
+          effective_at?: string
+          evaluator_version?: string
+          id?: string
+          idempotency_key?: string
+          input_snapshot?: Json
+          request_hash?: string
+          subject_id?: string
+          subject_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requirement_evaluations_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_evaluations_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_evaluations_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      requirement_framework_versions: {
+        Row: {
+          content_hash: string
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          effective_to: string | null
+          framework_id: string
+          id: string
+          published_at: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_urls: Json
+          status: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          content_hash: string
+          created_at?: string
+          created_by?: string | null
+          effective_from: string
+          effective_to?: string | null
+          framework_id: string
+          id?: string
+          published_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_urls?: Json
+          status?: string
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          content_hash?: string
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          framework_id?: string
+          id?: string
+          published_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_urls?: Json
+          status?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requirement_framework_versions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_framework_versions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_framework_versions_framework_id_fkey"
+            columns: ["framework_id"]
+            isOneToOne: false
+            referencedRelation: "requirement_frameworks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_framework_versions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_framework_versions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      requirement_frameworks: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          framework_type: string
+          id: string
+          name: string
+          owner_buyer_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          framework_type: string
+          id?: string
+          name: string
+          owner_buyer_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          framework_type?: string
+          id?: string
+          name?: string
+          owner_buyer_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requirement_frameworks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_frameworks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_frameworks_owner_buyer_id_fkey"
+            columns: ["owner_buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      requirement_jurisdictions: {
+        Row: {
+          code: string
+          country_code: string
+          created_at: string
+          id: string
+          name: string
+          subdivision_code: string | null
+        }
+        Insert: {
+          code: string
+          country_code: string
+          created_at?: string
+          id?: string
+          name: string
+          subdivision_code?: string | null
+        }
+        Update: {
+          code?: string
+          country_code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          subdivision_code?: string | null
+        }
+        Relationships: []
+      }
+      requirement_versions: {
+        Row: {
+          applicability_rule: Json
+          citation: string | null
+          created_at: string
+          description: string
+          effective_from: string
+          effective_to: string | null
+          explanation_template: string
+          framework_version_id: string
+          id: string
+          jurisdiction_id: string | null
+          required_evidence: Json
+          requirement_id: string
+          source_url: string | null
+          title: string
+        }
+        Insert: {
+          applicability_rule: Json
+          citation?: string | null
+          created_at?: string
+          description: string
+          effective_from: string
+          effective_to?: string | null
+          explanation_template: string
+          framework_version_id: string
+          id?: string
+          jurisdiction_id?: string | null
+          required_evidence?: Json
+          requirement_id: string
+          source_url?: string | null
+          title: string
+        }
+        Update: {
+          applicability_rule?: Json
+          citation?: string | null
+          created_at?: string
+          description?: string
+          effective_from?: string
+          effective_to?: string | null
+          explanation_template?: string
+          framework_version_id?: string
+          id?: string
+          jurisdiction_id?: string | null
+          required_evidence?: Json
+          requirement_id?: string
+          source_url?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requirement_versions_framework_version_id_fkey"
+            columns: ["framework_version_id"]
+            isOneToOne: false
+            referencedRelation: "requirement_framework_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_versions_jurisdiction_id_fkey"
+            columns: ["jurisdiction_id"]
+            isOneToOne: false
+            referencedRelation: "requirement_jurisdictions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_versions_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      requirements: {
+        Row: {
+          created_at: string
+          framework_id: string
+          id: string
+          stable_key: string
+          subject_types: string[]
+        }
+        Insert: {
+          created_at?: string
+          framework_id: string
+          id?: string
+          stable_key: string
+          subject_types: string[]
+        }
+        Update: {
+          created_at?: string
+          framework_id?: string
+          id?: string
+          stable_key?: string
+          subject_types?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requirements_framework_id_fkey"
+            columns: ["framework_id"]
+            isOneToOne: false
+            referencedRelation: "requirement_frameworks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shared_documents: {
         Row: {
@@ -5219,6 +6154,32 @@ export type Database = {
         }
         Returns: boolean
       }
+      claim_evidence_extraction_jobs_v1: {
+        Args: { p_batch_size: number }
+        Returns: {
+          attempts: number
+          buyer_id: string
+          completed_at: string | null
+          created_at: string
+          document_upload_id: string
+          extraction_model_version: string
+          id: string
+          idempotency_key: string
+          last_error: string | null
+          max_attempts: number
+          scheduled_at: string
+          started_at: string | null
+          status: string
+          supplier_id: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "evidence_extraction_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       cleanup_expired_knowledge_entries: { Args: never; Returns: number }
       consume_credits: {
         Args: {
@@ -5229,6 +6190,15 @@ export type Database = {
           p_user_id: string
         }
         Returns: boolean
+      }
+      correct_evidence_claim_v1: {
+        Args: {
+          p_claim_id: string
+          p_field_name: string
+          p_new_value: string
+          p_reason: string
+        }
+        Returns: undefined
       }
       create_bootstrap_super_admin: {
         Args: {
@@ -5245,6 +6215,16 @@ export type Database = {
           p_title: string
           p_type: string
           p_user_id: string
+        }
+        Returns: string
+      }
+      create_notification_v1: {
+        Args: {
+          p_message: string
+          p_reference_id?: string
+          p_target_user_id: string
+          p_title: string
+          p_type: string
         }
         Returns: string
       }
@@ -5469,13 +6449,33 @@ export type Database = {
         }
         Returns: boolean
       }
+      publish_requirement_framework_version_v1: {
+        Args: { p_actor_id: string; p_framework_version_id: string }
+        Returns: undefined
+      }
+      record_evidence_claim_v1: {
+        Args: { p_claim: Json; p_job_id: string }
+        Returns: string
+      }
+      record_requirement_evaluation_v1: {
+        Args: { p_evaluation: Json; p_results: Json }
+        Returns: string
+      }
       reject_document_request: {
         Args: { p_reason?: string; p_request_id: string }
         Returns: Json
       }
+      reject_evidence_claim_v1: {
+        Args: { p_claim_id: string; p_reason: string }
+        Returns: undefined
+      }
       remove_company_user: {
         Args: { p_company_user_id: string; p_force_delete?: boolean }
         Returns: Json
+      }
+      resolve_evidence_conflict_v1: {
+        Args: { p_conflict_id: string; p_resolution_notes: string }
+        Returns: undefined
       }
       revoke_platform_admin_invitation: {
         Args: { p_invitation_id: string }
@@ -5572,6 +6572,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: boolean
+      }
+      verify_evidence_claim_v1: {
+        Args: { p_claim_id: string }
+        Returns: undefined
       }
     }
     Enums: {

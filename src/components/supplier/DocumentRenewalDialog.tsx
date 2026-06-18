@@ -101,19 +101,19 @@ const DocumentRenewalDialog = ({
         });
       }
 
-      // Create notifications for all buyer users
-      const notifications = buyerUsersToNotify.map(userId => ({
-        user_id: userId,
-        type: 'document_renewed',
-        title: 'Document Renewed',
-        message: `${documentTitle} has been renewed${newExpDate ? ` with new expiration date` : ''} by ${supplierName}.`,
-        reference_id: requestId,
-        read: false
-      }));
-
-      if (notifications.length > 0) {
-        await supabase.from('notifications').insert(notifications);
-      }
+      // Notify all buyer users via the connection-verified RPC
+      const renewalMessage = `${documentTitle} has been renewed${newExpDate ? ` with new expiration date` : ''} by ${supplierName}.`;
+      await Promise.all(
+        buyerUsersToNotify.map(userId =>
+          supabase.rpc('create_notification_v1', {
+            p_target_user_id: userId,
+            p_type: 'document_renewed',
+            p_title: 'Document Renewed',
+            p_message: renewalMessage,
+            p_reference_id: requestId,
+          })
+        )
+      );
     } catch (error) {
       console.error('Error sending renewal notifications:', error);
       // Don't throw - notification failure shouldn't break renewal

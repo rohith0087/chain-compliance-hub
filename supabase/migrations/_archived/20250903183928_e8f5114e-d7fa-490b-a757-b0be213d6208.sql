@@ -1,6 +1,8 @@
 
--- Ensure RLS is enabled on storage.objects
-alter table storage.objects enable row level security;
+-- storage.objects already has RLS enabled by Supabase's storage bootstrap;
+-- the local migration role does not own the table, so this ALTER fails
+-- locally with "must be owner of table objects" even though it is a no-op.
+-- Omitted for local replay; no schema change.
 
 -- Drop existing buyer custom-template policies if they exist (idempotent)
 drop policy if exists "Buyers can upload custom templates" on storage.objects;

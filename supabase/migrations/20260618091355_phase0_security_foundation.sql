@@ -121,6 +121,112 @@ drop policy if exists "System can create notifications" on public.notifications;
 drop policy if exists "System can insert audit logs" on public.platform_admin_audit_logs;
 drop policy if exists "System can insert activity logs" on public.user_activity_logs;
 
+-- Buyer and supplier members notify users in the other organization through this
+-- function instead of a direct insert, so the relationship is verified server-side.
+create or replace function public.create_notification_v1(
+  p_target_user_id uuid,
+  p_type text,
+  p_title text,
+  p_message text,
+  p_reference_id uuid default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_caller uuid := auth.uid();
+  v_id uuid;
+begin
+  if v_caller is null then
+    raise exception 'Authentication required';
+  end if;
+  if p_target_user_id is null then
+    raise exception 'Target user is required';
+  end if;
+  if char_length(coalesce(p_title, '')) = 0 or char_length(p_title) > 200 then
+    raise exception 'Invalid notification title';
+  end if;
+  if char_length(coalesce(p_message, '')) = 0 or char_length(p_message) > 4000 then
+    raise exception 'Invalid notification message';
+  end if;
+
+  if not exists (
+    select 1
+    from public.buyer_supplier_connections bsc
+    where (
+      (
+        bsc.supplier_id is not null
+        and (
+          exists (
+            select 1 from public.company_users cu
+            where cu.profile_id = v_caller and cu.company_id = bsc.supplier_id
+              and cu.company_type = 'supplier' and cu.status = 'active'
+          )
+          or exists (
+            select 1 from public.suppliers s
+            where s.id = bsc.supplier_id and s.profile_id = v_caller
+          )
+        )
+        and bsc.buyer_id is not null
+        and (
+          exists (
+            select 1 from public.company_users cu
+            where cu.profile_id = p_target_user_id and cu.company_id = bsc.buyer_id
+              and cu.company_type = 'buyer' and cu.status = 'active'
+          )
+          or exists (
+            select 1 from public.buyers b
+            where b.id = bsc.buyer_id and b.profile_id = p_target_user_id
+          )
+        )
+      )
+      or (
+        bsc.buyer_id is not null
+        and (
+          exists (
+            select 1 from public.company_users cu
+            where cu.profile_id = v_caller and cu.company_id = bsc.buyer_id
+              and cu.company_type = 'buyer' and cu.status = 'active'
+          )
+          or exists (
+            select 1 from public.buyers b
+            where b.id = bsc.buyer_id and b.profile_id = v_caller
+          )
+        )
+        and bsc.supplier_id is not null
+        and (
+          exists (
+            select 1 from public.company_users cu
+            where cu.profile_id = p_target_user_id and cu.company_id = bsc.supplier_id
+              and cu.company_type = 'supplier' and cu.status = 'active'
+          )
+          or exists (
+            select 1 from public.suppliers s
+            where s.id = bsc.supplier_id and s.profile_id = p_target_user_id
+          )
+        )
+      )
+    )
+  ) then
+    raise exception 'No connection between the caller and the target user';
+  end if;
+
+  insert into public.notifications (user_id, type, title, message, reference_id, read)
+  values (p_target_user_id, p_type, p_title, p_message, p_reference_id, false)
+  returning id into v_id;
+
+  return v_id;
+end;
+$$;
+
+revoke all on function public.create_notification_v1(uuid, text, text, text, uuid) from public, anon;
+grant execute on function public.create_notification_v1(uuid, text, text, text, uuid) to authenticated;
+
+comment on function public.create_notification_v1 is
+  'Inserts a notification for another user after verifying the caller''s organization has an active buyer_supplier_connections row with the target user''s organization. Replaces the unrestricted "System can create notifications" policy.';
+
 drop policy if exists "Anyone can create tickets" on public.support_tickets;
 create policy "Authenticated users can create their own tickets"
 on public.support_tickets for insert to authenticated

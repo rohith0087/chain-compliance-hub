@@ -24,6 +24,8 @@
     "cleanup-all-auth-users",
     "elevenlabs-tts",
     "get-openai-key",
-    "send-user-invitation"
+    "send-user-invitation",
+    "evaluate-requirements-v1",
+    "publish-requirements-v1"
   ]
 }

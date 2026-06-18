@@ -6181,6 +6181,16 @@ export type Database = {
         }
       }
       cleanup_expired_knowledge_entries: { Args: never; Returns: number }
+      create_notification_v1: {
+        Args: {
+          p_message: string
+          p_reference_id?: string
+          p_target_user_id: string
+          p_title: string
+          p_type: string
+        }
+        Returns: string
+      }
       consume_credits: {
         Args: {
           p_credits_amount: number

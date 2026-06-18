@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 
 const baseline = JSON.parse(readFileSync(new URL('../config/eslint-baseline.json', import.meta.url), 'utf8'));
 const eslintBin = new URL('../node_modules/.bin/eslint', import.meta.url).pathname;
-const result = spawnSync(eslintBin, ['.', '-f', 'json'], { encoding: 'utf8' });
+const result = spawnSync(eslintBin, ['.', '-f', 'json'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
 
 if (!result.stdout) {
   console.error(result.stderr || 'ESLint did not produce JSON output.');

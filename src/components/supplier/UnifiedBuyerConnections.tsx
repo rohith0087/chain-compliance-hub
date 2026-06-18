@@ -170,7 +170,7 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
     try {
       const { data: buyerProfileData } = await supabase.from('buyers').select('profile_id').eq('id', connection.buyer_id).single();
       if (buyerProfileData?.profile_id) {
-        await supabase.from('notifications').insert({ user_id: buyerProfileData.profile_id, title: `Onboarding Request from ${wsT.supplier}`, message: `${supplierProfile.company_name} is requesting onboarding.`, type: 'onboarding_request', reference_id: connection.id });
+        await supabase.rpc('create_notification_v1', { p_target_user_id: buyerProfileData.profile_id, p_title: `Onboarding Request from ${wsT.supplier}`, p_message: `${supplierProfile.company_name} is requesting onboarding.`, p_type: 'onboarding_request', p_reference_id: connection.id });
         toast({ title: "Request Sent", description: `Onboarding request sent to ${connection.buyers.company_name}` });
         fetchData();
       }

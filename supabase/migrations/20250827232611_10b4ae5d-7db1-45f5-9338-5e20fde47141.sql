@@ -1,5 +1,10 @@
 -- Create scheduled cron jobs for knowledge base maintenance
 
+-- No-op in production, where pg_cron was already enabled by the time this
+-- ran. Local replay needs it here because the migration that explicitly
+-- creates the extension (20250827233119) is timestamped after this one.
+create extension if not exists pg_cron;
+
 -- Daily refresh job (runs at 2 AM UTC)
 SELECT cron.schedule(
   'knowledge-daily-refresh',

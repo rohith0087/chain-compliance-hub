@@ -642,18 +642,18 @@ select
     when 'CHILDRENS-PRODUCT-TRACKING-LABEL' then 'https://www.cpsc.gov/Business--Manufacturing/Business-Education/tracking-label'
     else 'https://www.cpsc.gov/Business--Manufacturing/Business-Education/Business-Guidance/Certificates'
   end,
-  case stable_key
-    when 'CHILDRENS-PRODUCT-CLASSIFICATION' then
+  case
+    when stable_key = 'CHILDRENS-PRODUCT-CLASSIFICATION' then
       '{"all":[{"fact":"destination_country","operator":"eq","value":"US"},{"fact":"is_children_product","operator":"present"}]}'::jsonb
-    when 'CHILDRENS-PRODUCT-CERTIFICATE' then
+    when stable_key = 'CHILDRENS-PRODUCT-CERTIFICATE' then
       '{"all":[{"fact":"destination_country","operator":"eq","value":"US"},{"fact":"consumer_product_under_cpsc","operator":"eq","value":true},{"fact":"is_children_product","operator":"eq","value":true},{"fact":"subject_to_cpsc_rule","operator":"eq","value":true}]}'::jsonb
-    when 'GENERAL-CERTIFICATE-OF-CONFORMITY' then
+    when stable_key = 'GENERAL-CERTIFICATE-OF-CONFORMITY' then
       '{"all":[{"fact":"destination_country","operator":"eq","value":"US"},{"fact":"consumer_product_under_cpsc","operator":"eq","value":true},{"fact":"is_children_product","operator":"eq","value":false},{"fact":"subject_to_cpsc_rule","operator":"eq","value":true}]}'::jsonb
-    when 'CHILDRENS-PRODUCT-TRACKING-LABEL' then
+    when stable_key = 'CHILDRENS-PRODUCT-TRACKING-LABEL' then
       '{"all":[{"fact":"destination_country","operator":"eq","value":"US"},{"fact":"is_children_product","operator":"eq","value":true}]}'::jsonb
-    when 'CERTIFICATE-EFILING' and version = 'CPSC-2026.1' then
+    when stable_key = 'CERTIFICATE-EFILING' and version = 'CPSC-2026.1' then
       '{"all":[{"fact":"destination_country","operator":"eq","value":"US"},{"fact":"domestic_import_status","operator":"eq","value":"imported"},{"fact":"import_entry_mode","operator":"eq","value":"general"},{"fact":"subject_to_cpsc_rule","operator":"eq","value":true}]}'::jsonb
-    when 'CERTIFICATE-EFILING' and version = 'CPSC-2027.1' then
+    when stable_key = 'CERTIFICATE-EFILING' and version = 'CPSC-2027.1' then
       '{"all":[{"fact":"destination_country","operator":"eq","value":"US"},{"fact":"domestic_import_status","operator":"eq","value":"imported"},{"fact":"import_entry_mode","operator":"in","value":["general","foreign_trade_zone"]},{"fact":"subject_to_cpsc_rule","operator":"eq","value":true}]}'::jsonb
     else '{"all":[{"fact":"destination_country","operator":"eq","value":"US"},{"fact":"domestic_import_status","operator":"eq","value":"imported"},{"fact":"subject_to_cpsc_rule","operator":"eq","value":true}]}'::jsonb
   end,

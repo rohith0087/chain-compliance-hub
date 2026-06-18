@@ -501,7 +501,6 @@ $$;
 
 revoke all on function public.resolve_evidence_conflict_v1(uuid, text) from public, anon;
 grant execute on function public.resolve_evidence_conflict_v1(uuid, text) to authenticated, service_role;
-grant execute on function public.resolve_evidence_conflict_v1(uuid, uuid, text) to authenticated, service_role;
 
 comment on table public.evidence_claims is
   'Structured evidence extracted from document_uploads. Never authoritative until status = verified by a human reviewer; corrections always reset status back to extracted.';

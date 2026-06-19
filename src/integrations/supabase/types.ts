@@ -6292,6 +6292,21 @@ export type Database = {
         Args: { p_escalation_id: string }
         Returns: undefined
       }
+      grant_evidence_access_v1: {
+        Args: {
+          p_claim_id?: string
+          p_document_type?: string
+          p_expires_at?: string
+          p_granted_to_buyer_id: string
+          p_owner_organization_id: string
+          p_purpose: string
+        }
+        Returns: string
+      }
+      revoke_evidence_access_v1: {
+        Args: { p_grant_id: string }
+        Returns: undefined
+      }
       consume_credits: {
         Args: {
           p_credits_amount: number

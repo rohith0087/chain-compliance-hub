@@ -30,7 +30,8 @@ import {
   Volume2,
   VolumeX,
   HelpCircle,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Share2
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
@@ -127,6 +128,7 @@ interface SupplierSidebarLayoutProps {
   pendingRequests?: number;
   connectedBuyers?: number;
   unreadMessages?: number;
+  evidenceSharingEnabled?: boolean;
 }
 
 export function SupplierSidebarLayout({
@@ -142,7 +144,8 @@ export function SupplierSidebarLayout({
   onUploadDocument,
   pendingRequests = 0,
   connectedBuyers = 0,
-  unreadMessages = 0
+  unreadMessages = 0,
+  evidenceSharingEnabled = false
 }: SupplierSidebarLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -331,6 +334,11 @@ export function SupplierSidebarLayout({
       value: 'messages',
       badge: unreadMessages > 0 ? unreadMessages : undefined
     },
+    ...(evidenceSharingEnabled ? [{
+      title: 'Evidence Sharing',
+      icon: Share2,
+      value: 'evidence-sharing'
+    }] : []),
     {
       title: t('supplier:tabs.compliance'),
       icon: BarChart3,

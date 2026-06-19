@@ -14,11 +14,14 @@ import {
   type ComplianceDecisionResultV1,
 } from '../_shared/compliance/contracts.ts';
 import { deriveComplianceOutcome, type CoverageState } from '../_shared/compliance/outcome.ts';
+import { isGrantActive, matchesGrant, normalizeDocType, type EvidenceSharingGrant } from '../_shared/compliance/grants.ts';
 
 type SupabaseAdmin = ReturnType<typeof createClient>;
 
 interface ClaimRow {
   id: string;
+  buyer_id: string;
+  supplier_id: string;
   document_type: string | null;
   status: string;
   expiry_date: string | null;
@@ -34,24 +37,28 @@ interface CoverageData {
   claims: ClaimRow[];
   requests: RequestRow[];
   uploadedRequestIds: Set<string>;
-}
-
-function normalizeDocType(value: string | null | undefined): string {
-  return (value || '').trim().toLowerCase();
+  grants: EvidenceSharingGrant[];
 }
 
 async function loadCoverageData(admin: SupabaseAdmin, buyerId: string, supplierId: string): Promise<CoverageData> {
-  const [{ data: claims, error: claimsError }, { data: requests, error: requestsError }] = await Promise.all([
+  const [{ data: claims, error: claimsError }, { data: requests, error: requestsError }, { data: grants, error: grantsError }] = await Promise.all([
     admin.from('evidence_claims')
-      .select('id, document_type, status, expiry_date')
+      .select('id, buyer_id, supplier_id, document_type, status, expiry_date')
       .eq('supplier_id', supplierId)
       .neq('status', 'superseded'),
     admin.from('document_requests')
       .select('id, document_type, status')
       .eq('buyer_id', buyerId).eq('supplier_id', supplierId),
+    admin.from('evidence_sharing_grants')
+      .select('id, owner_organization_id, granted_to_organization_id, claim_id, document_type, purpose, status, expires_at')
+      .eq('owner_organization_id', supplierId)
+      .eq('granted_to_organization_id', buyerId)
+      .eq('status', 'active')
+      .eq('purpose', 'compliance_decision'),
   ]);
   if (claimsError) throw claimsError;
   if (requestsError) throw requestsError;
+  if (grantsError) throw grantsError;
 
   const requestIds = (requests || []).map((request) => request.id);
   let uploadedRequestIds = new Set<string>();
@@ -61,17 +68,40 @@ async function loadCoverageData(admin: SupabaseAdmin, buyerId: string, supplierI
     uploadedRequestIds = new Set((data || []).map((upload) => upload.request_id).filter(Boolean));
   }
 
-  return { claims: claims || [], requests: requests || [], uploadedRequestIds };
+  return { claims: claims || [], requests: requests || [], uploadedRequestIds, grants: (grants || []) as EvidenceSharingGrant[] };
 }
 
-function buildCoverage(documentType: string, data: CoverageData): { coverage: CoverageState; claimIds: string[] } {
+function buildCoverage(
+  documentType: string,
+  data: CoverageData,
+  requestingBuyerId: string,
+  effectiveAt: string,
+): { coverage: CoverageState; claimIds: string[]; grantSourcedGrantIds: string[] } {
   const target = normalizeDocType(documentType);
-  const matchingClaims = data.claims.filter((claim) => normalizeDocType(claim.document_type) === target);
+  const candidateClaims = data.claims.filter((claim) => normalizeDocType(claim.document_type) === target);
   const matchingRequests = data.requests.filter((request) => normalizeDocType(request.document_type) === target);
 
-  const verified = matchingClaims.find((claim) => claim.status === 'verified');
-  const rejected = matchingClaims.some((claim) => claim.status === 'rejected');
-  const unverified = matchingClaims.some((claim) => claim.status === 'extracted');
+  // A claim counts toward coverage if the requesting buyer originated it
+  // directly, or if the supplier granted this buyer compliance_decision
+  // access to it (by claim id or by document type) and that grant is still
+  // active as of the evaluation's effective date.
+  const inScopeClaims: ClaimRow[] = [];
+  const grantSourcedGrantIds = new Set<string>();
+  for (const claim of candidateClaims) {
+    if (claim.buyer_id === requestingBuyerId) {
+      inScopeClaims.push(claim);
+      continue;
+    }
+    const grant = data.grants.find((g) => isGrantActive(g, effectiveAt) && matchesGrant(claim, g));
+    if (grant) {
+      inScopeClaims.push(claim);
+      grantSourcedGrantIds.add(grant.id);
+    }
+  }
+
+  const verified = inScopeClaims.find((claim) => claim.status === 'verified');
+  const rejected = inScopeClaims.some((claim) => claim.status === 'rejected');
+  const unverified = inScopeClaims.some((claim) => claim.status === 'extracted');
   const hasUpload = matchingRequests.some((request) => data.uploadedRequestIds.has(request.id));
   const hasOpenRequest = matchingRequests.some((request) => request.status === 'pending');
 
@@ -84,7 +114,8 @@ function buildCoverage(documentType: string, data: CoverageData): { coverage: Co
       hasUpload,
       hasOpenRequest,
     },
-    claimIds: matchingClaims.map((claim) => claim.id),
+    claimIds: inScopeClaims.map((claim) => claim.id),
+    grantSourcedGrantIds: [...grantSourcedGrantIds],
   };
 }
 
@@ -195,19 +226,27 @@ Deno.serve(async (req) => {
     ]);
     const applicabilityResults = [...catalogResults, ...legacy.results];
 
+    const grantSourcedByRequirement = new Map<string, string[]>();
     const decisionResults: ComplianceDecisionResultV1[] = applicabilityResults.map((result) => {
       const primaryDocType = result.required_evidence[0]?.document_type;
-      const { coverage, claimIds } = primaryDocType
-        ? buildCoverage(primaryDocType, coverageData)
+      const { coverage, claimIds, grantSourcedGrantIds } = primaryDocType
+        ? buildCoverage(primaryDocType, coverageData, input.buyer_id, input.effective_at)
         : {
           coverage: {
             hasVerifiedClaim: false, verifiedExpiryDate: null, hasRejectedClaim: false,
             hasUnverifiedClaim: false, hasUpload: false, hasOpenRequest: false,
           },
           claimIds: [],
+          grantSourcedGrantIds: [] as string[],
         };
 
       const mapped = deriveComplianceOutcome(result.outcome, result.required_evidence.length > 0, coverage, input.effective_at);
+      const sharedNote = grantSourcedGrantIds.length > 0
+        ? ' This decision includes evidence shared by the supplier under an active sharing grant.'
+        : '';
+      if (grantSourcedGrantIds.length > 0) {
+        grantSourcedByRequirement.set(result.requirement_key, grantSourcedGrantIds);
+      }
 
       return {
         requirement_version_id: result.requirement_version_id,
@@ -218,7 +257,7 @@ Deno.serve(async (req) => {
         title: result.title,
         applicability_outcome: result.outcome,
         outcome: mapped.outcome,
-        explanation: `${result.explanation} ${mapped.explanation}`,
+        explanation: `${result.explanation} ${mapped.explanation}${sharedNote}`,
         evidence_claim_ids: claimIds,
         decision_version: DECISION_ENGINE_VERSION,
         effective_from: result.effective_from,
@@ -242,6 +281,27 @@ Deno.serve(async (req) => {
       p_results: decisionResults,
     });
     if (recordError) throw recordError;
+
+    if (grantSourcedByRequirement.size > 0) {
+      const { data: storedResults, error: storedResultsError } = await admin.from('compliance_decision_results')
+        .select('id, requirement_key').eq('evaluation_id', evaluationId)
+        .in('requirement_key', [...grantSourcedByRequirement.keys()]);
+      if (storedResultsError) throw storedResultsError;
+
+      const accessAuditRows = (storedResults || []).flatMap((row) =>
+        (grantSourcedByRequirement.get(row.requirement_key) || []).map((grantId) => ({
+          grant_id: grantId,
+          event_type: 'accessed',
+          actor_id: null,
+          organization_id: input.buyer_id,
+          metadata: { decision_result_id: row.id, requirement_key: row.requirement_key, evaluation_id: evaluationId },
+        }))
+      );
+      if (accessAuditRows.length > 0) {
+        const { error: auditError } = await admin.from('evidence_sharing_audit_log').insert(accessAuditRows);
+        if (auditError) throw auditError;
+      }
+    }
 
     logEvent('info', 'compliance_decision_completed', context, {
       evaluation_id: evaluationId,

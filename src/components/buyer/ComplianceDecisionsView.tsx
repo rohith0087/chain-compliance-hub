@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle, AlertTriangle, CheckCircle2, ClipboardList, Clock,
-  FileQuestion, Loader2, ShieldCheck, ShieldQuestion, XCircle,
+  FileQuestion, Loader2, Share2, ShieldCheck, ShieldQuestion, XCircle,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -89,9 +89,17 @@ const outcomeSeverity: Record<ComplianceOutcome, number> = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
 
+// evaluate-compliance-v1 appends this exact sentence to a decision result's
+// persisted explanation whenever it relied on a claim shared by the
+// supplier (via an evidence_sharing_grants grant) rather than evidence the
+// buyer originated directly -- matching it here avoids a separate response
+// field that wouldn't survive into compliance_current_status reads later.
+const SHARED_EVIDENCE_MARKER = 'evidence shared by the supplier under an active sharing grant';
+
 function DecisionCard({ result }: { result: DecisionResult }) {
   const config = outcomeConfig[result.outcome];
   const Icon = config.icon;
+  const includesSharedEvidence = result.explanation.includes(SHARED_EVIDENCE_MARKER);
   return (
     <Card>
       <CardHeader className="space-y-2 pb-3">
@@ -100,9 +108,16 @@ function DecisionCard({ result }: { result: DecisionResult }) {
             <CardTitle className="text-base">{result.title}</CardTitle>
             <CardDescription>{result.framework_code} · {result.framework_version}</CardDescription>
           </div>
-          <Badge variant="outline" className={config.className}>
-            <Icon className="mr-1 h-3.5 w-3.5" />{config.label}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {includesSharedEvidence && (
+              <Badge variant="outline" className="border-violet-200 bg-violet-50 text-violet-800">
+                <Share2 className="mr-1 h-3.5 w-3.5" />Shared by supplier
+              </Badge>
+            )}
+            <Badge variant="outline" className={config.className}>
+              <Icon className="mr-1 h-3.5 w-3.5" />{config.label}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-2 text-sm">

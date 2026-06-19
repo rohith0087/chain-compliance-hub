@@ -43,8 +43,11 @@ import EvidenceVerificationView from "@/components/buyer/EvidenceVerificationVie
 import { useEvidenceVerificationFeature } from "@/hooks/useEvidenceVerificationFeature";
 import ComplianceDecisionsView from "@/components/buyer/ComplianceDecisionsView";
 import { useComplianceDecisionsFeature } from "@/hooks/useComplianceDecisionsFeature";
+import EvidenceSharingView from "@/components/supplier/EvidenceSharingView";
+import { useEvidenceSharingFeature } from "@/hooks/useEvidenceSharingFeature";
 
 const REQUIREMENT_TEST_BUYER_ID = '00000000-0000-4000-8000-000000000001';
+const EVIDENCE_SHARING_TEST_SUPPLIER_ID = '00000000-0000-4000-8000-000000000020';
 
 const RequirementEngineTestRoute = () => {
   const { enabled, loading } = useRequirementEngineFeature(REQUIREMENT_TEST_BUYER_ID);
@@ -65,6 +68,13 @@ const ComplianceDecisionsTestRoute = () => {
   if (loading) return <div>Loading compliance decisions feature…</div>;
   if (!enabled) return <div>Compliance decisions disabled</div>;
   return <ComplianceDecisionsView buyerId={REQUIREMENT_TEST_BUYER_ID} />;
+};
+
+const EvidenceSharingTestRoute = () => {
+  const { enabled, loading } = useEvidenceSharingFeature(EVIDENCE_SHARING_TEST_SUPPLIER_ID);
+  if (loading) return <div>Loading evidence sharing feature…</div>;
+  if (!enabled) return <div>Evidence sharing disabled</div>;
+  return <EvidenceSharingView supplierId={EVIDENCE_SHARING_TEST_SUPPLIER_ID} />;
 };
 
 const queryClient = new QueryClient({
@@ -248,6 +258,7 @@ const AppRoutes = () => {
                       <Route path="/__test/requirements" element={<RequirementEngineTestRoute />} />
                       <Route path="/__test/evidence" element={<EvidenceVerificationTestRoute />} />
                       <Route path="/__test/compliance-decisions" element={<ComplianceDecisionsTestRoute />} />
+                      <Route path="/__test/evidence-sharing" element={<EvidenceSharingTestRoute />} />
                     </>
                   )}
                   <Route path="/dashboard" element={

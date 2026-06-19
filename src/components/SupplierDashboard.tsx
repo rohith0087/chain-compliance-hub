@@ -64,6 +64,8 @@ import { MyAssignments } from '@/components/shared/MyAssignments';
 import DocumentRenewalDialog from '@/components/supplier/DocumentRenewalDialog';
 import { useBranchContext } from '@/contexts/BranchContext';
 import { useCommunicationThreads } from '@/hooks/useCommunicationThreads';
+import { useEvidenceSharingFeature } from '@/hooks/useEvidenceSharingFeature';
+import EvidenceSharingView from '@/components/supplier/EvidenceSharingView';
 
 interface SupplierDashboardProps {
   user: { 
@@ -121,6 +123,13 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch, impersonatedSupplierI
   
   // Get unread message count for sidebar badge
   const { totalUnread } = useCommunicationThreads(supplierProfile?.id || '', 'supplier');
+  const { enabled: evidenceSharingEnabled, loading: evidenceSharingLoading } = useEvidenceSharingFeature(supplierProfile?.id);
+
+  useEffect(() => {
+    if (!evidenceSharingLoading && !evidenceSharingEnabled && activeTab === 'evidence-sharing') {
+      setActiveTab('overview');
+    }
+  }, [activeTab, evidenceSharingEnabled, evidenceSharingLoading]);
 
   // Notification navigation handler
   const handleNotificationNavigation = (tab: string, notificationId?: string) => {
@@ -1011,6 +1020,10 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch, impersonatedSupplierI
         return <ContactRoleManager supplierId={supplierProfile?.id!} />;
       case 'connections':
         return <UnifiedBuyerConnections onConnectionRequest={loadSupplierData} />;
+      case 'evidence-sharing':
+        return supplierProfile?.id && evidenceSharingEnabled
+          ? <EvidenceSharingView supplierId={supplierProfile.id} />
+          : null;
       case 'compliance':
         return <SupplierComplianceDashboard />;
       case 'company':
@@ -1041,6 +1054,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch, impersonatedSupplierI
         pendingRequests={stats.pendingRequests}
         connectedBuyers={connectedBuyers.length}
         unreadMessages={totalUnread}
+        evidenceSharingEnabled={evidenceSharingEnabled}
       >
         {renderTabContent()}
       </SupplierSidebarLayout>

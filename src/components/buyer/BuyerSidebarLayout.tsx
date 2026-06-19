@@ -33,7 +33,8 @@ import {
   HelpCircle,
   ArrowLeftRight,
   FlaskConical,
-  ListTree
+  ListTree,
+  ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
@@ -131,6 +132,7 @@ interface BuyerSidebarLayoutProps {
   unreadMessages?: number;
   requirementEngineEnabled?: boolean;
   evidenceVerificationEnabled?: boolean;
+  complianceDecisionsEnabled?: boolean;
 }
 
 export function BuyerSidebarLayout({
@@ -148,7 +150,8 @@ export function BuyerSidebarLayout({
   companyId,
   unreadMessages = 0,
   requirementEngineEnabled = false,
-  evidenceVerificationEnabled = false
+  evidenceVerificationEnabled = false,
+  complianceDecisionsEnabled = false
 }: BuyerSidebarLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -281,6 +284,7 @@ export function BuyerSidebarLayout({
     { title: 'Overview', value: 'compliance', icon: BarChart3 },
     requirementEngineEnabled && { title: 'Requirements', value: 'requirements', icon: ListTree },
     evidenceVerificationEnabled && { title: 'Evidence Verification', value: 'evidence-verification', icon: ClipboardCheck },
+    complianceDecisionsEnabled && { title: 'Compliance Decisions', value: 'compliance-decisions', icon: ShieldCheck },
     { title: wsTerms.supplier_risk, value: 'supplier-risk', icon: AlertTriangle },
     !wsFlags.hideItemCompliance && { title: 'Item Compliance', value: 'item-compliance', icon: Package },
     !wsFlags.hideFacilityMatrix && { title: 'Facility Matrix', value: 'facility-matrix', icon: Building2 }

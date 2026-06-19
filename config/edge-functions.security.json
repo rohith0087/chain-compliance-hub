@@ -27,6 +27,8 @@
     "send-user-invitation",
     "evaluate-requirements-v1",
     "publish-requirements-v1",
-    "process-evidence-extraction-jobs-v1"
+    "process-evidence-extraction-jobs-v1",
+    "evaluate-compliance-v1",
+    "process-compliance-events-v1"
   ]
 }

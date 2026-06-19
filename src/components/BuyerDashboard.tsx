@@ -44,6 +44,8 @@ import { useRequirementEngineFeature } from '@/hooks/useRequirementEngineFeature
 import RequirementEngineView from '@/components/buyer/RequirementEngineView';
 import { useEvidenceVerificationFeature } from '@/hooks/useEvidenceVerificationFeature';
 import EvidenceVerificationView from '@/components/buyer/EvidenceVerificationView';
+import { useComplianceDecisionsFeature } from '@/hooks/useComplianceDecisionsFeature';
+import ComplianceDecisionsView from '@/components/buyer/ComplianceDecisionsView';
 
 import { supabase } from '@/integrations/supabase/client';
 
@@ -84,6 +86,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
   const { currentBranch, allBranchesView } = useBranchContext();
   const { enabled: requirementEngineEnabled, loading: requirementEngineLoading } = useRequirementEngineFeature(companyId);
   const { enabled: evidenceVerificationEnabled, loading: evidenceVerificationLoading } = useEvidenceVerificationFeature(companyId);
+  const { enabled: complianceDecisionsEnabled, loading: complianceDecisionsLoading } = useComplianceDecisionsFeature(companyId);
 
   useEffect(() => {
     if (!requirementEngineLoading && !requirementEngineEnabled && activeTab === 'requirements') {
@@ -96,6 +99,12 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
       setActiveTab('compliance');
     }
   }, [activeTab, evidenceVerificationEnabled, evidenceVerificationLoading]);
+
+  useEffect(() => {
+    if (!complianceDecisionsLoading && !complianceDecisionsEnabled && activeTab === 'compliance-decisions') {
+      setActiveTab('compliance');
+    }
+  }, [activeTab, complianceDecisionsEnabled, complianceDecisionsLoading]);
   
   // Get permissions to check if user is company owner
   const { isOwner, loading: permissionsLoading } = useCompanyPermissions(companyId, 'buyer');
@@ -325,6 +334,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
         unreadMessages={totalUnread}
         requirementEngineEnabled={requirementEngineEnabled}
         evidenceVerificationEnabled={evidenceVerificationEnabled}
+        complianceDecisionsEnabled={complianceDecisionsEnabled}
       >
         {/* Dashboard Content */}
         {activeTab === 'dashboard' && companyId && (
@@ -481,6 +491,10 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
 
         {activeTab === 'evidence-verification' && companyId && evidenceVerificationEnabled && (
           <EvidenceVerificationView buyerId={companyId} />
+        )}
+
+        {activeTab === 'compliance-decisions' && companyId && complianceDecisionsEnabled && (
+          <ComplianceDecisionsView buyerId={companyId} />
         )}
 
         {/* Agents Content */}

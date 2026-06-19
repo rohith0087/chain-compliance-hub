@@ -41,6 +41,8 @@ import RequirementEngineView from "@/components/buyer/RequirementEngineView";
 import { useRequirementEngineFeature } from "@/hooks/useRequirementEngineFeature";
 import EvidenceVerificationView from "@/components/buyer/EvidenceVerificationView";
 import { useEvidenceVerificationFeature } from "@/hooks/useEvidenceVerificationFeature";
+import ComplianceDecisionsView from "@/components/buyer/ComplianceDecisionsView";
+import { useComplianceDecisionsFeature } from "@/hooks/useComplianceDecisionsFeature";
 
 const REQUIREMENT_TEST_BUYER_ID = '00000000-0000-4000-8000-000000000001';
 
@@ -56,6 +58,13 @@ const EvidenceVerificationTestRoute = () => {
   if (loading) return <div>Loading evidence verification feature…</div>;
   if (!enabled) return <div>Evidence verification disabled</div>;
   return <EvidenceVerificationView buyerId={REQUIREMENT_TEST_BUYER_ID} />;
+};
+
+const ComplianceDecisionsTestRoute = () => {
+  const { enabled, loading } = useComplianceDecisionsFeature(REQUIREMENT_TEST_BUYER_ID);
+  if (loading) return <div>Loading compliance decisions feature…</div>;
+  if (!enabled) return <div>Compliance decisions disabled</div>;
+  return <ComplianceDecisionsView buyerId={REQUIREMENT_TEST_BUYER_ID} />;
 };
 
 const queryClient = new QueryClient({
@@ -238,6 +247,7 @@ const AppRoutes = () => {
                     <>
                       <Route path="/__test/requirements" element={<RequirementEngineTestRoute />} />
                       <Route path="/__test/evidence" element={<EvidenceVerificationTestRoute />} />
+                      <Route path="/__test/compliance-decisions" element={<ComplianceDecisionsTestRoute />} />
                     </>
                   )}
                   <Route path="/dashboard" element={

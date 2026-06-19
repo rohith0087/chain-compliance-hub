@@ -270,3 +270,11 @@ verify_jwt = true
 # is a service-role JWT inside the function (isServiceRoleRequest).
 [functions.process-evidence-extraction-jobs-v1]
 verify_jwt = true
+
+# Phase 3 compliance decision engine.
+[functions.evaluate-compliance-v1]
+verify_jwt = true
+
+# Phase 3 outbox dispatcher - cron-triggered, same isServiceRoleRequest pattern.
+[functions.process-compliance-events-v1]
+verify_jwt = true

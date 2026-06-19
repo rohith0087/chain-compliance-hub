@@ -6212,6 +6212,86 @@ export type Database = {
         Args: { p_conflict_id: string; p_resolution_notes: string }
         Returns: undefined
       }
+      create_compliance_task_v1: {
+        Args: {
+          p_buyer_id: string
+          p_decision_result_id?: string
+          p_description?: string
+          p_due_date?: string
+          p_subject_id: string
+          p_subject_type: string
+          p_supplier_id?: string
+          p_task_type: string
+          p_title: string
+          p_assignee_id?: string
+        }
+        Returns: string
+      }
+      complete_compliance_task_v1: {
+        Args: { p_task_id: string }
+        Returns: undefined
+      }
+      raise_compliance_finding_v1: {
+        Args: {
+          p_buyer_id: string
+          p_decision_result_id?: string
+          p_description: string
+          p_severity: string
+          p_subject_id: string
+          p_subject_type: string
+          p_supplier_id?: string
+        }
+        Returns: string
+      }
+      resolve_compliance_finding_v1: {
+        Args: { p_finding_id: string }
+        Returns: undefined
+      }
+      create_corrective_action_v1: {
+        Args: {
+          p_assigned_to?: string
+          p_description: string
+          p_due_date?: string
+          p_finding_id: string
+        }
+        Returns: string
+      }
+      complete_corrective_action_v1: {
+        Args: { p_corrective_action_id: string }
+        Returns: undefined
+      }
+      verify_corrective_action_v1: {
+        Args: { p_corrective_action_id: string }
+        Returns: undefined
+      }
+      request_compliance_exception_v1: {
+        Args: {
+          p_buyer_id: string
+          p_decision_result_id?: string
+          p_expires_at?: string
+          p_reason: string
+          p_requirement_version_id?: string
+          p_subject_id: string
+          p_subject_type: string
+        }
+        Returns: string
+      }
+      request_compliance_decision_override_v1: {
+        Args: { p_decision_result_id: string; p_override_outcome: string; p_reason: string }
+        Returns: string
+      }
+      decide_compliance_approval_v1: {
+        Args: { p_approval_id: string; p_decision: string; p_notes?: string }
+        Returns: undefined
+      }
+      create_compliance_escalation_v1: {
+        Args: { p_escalated_to: string; p_finding_id?: string; p_reason: string; p_task_id?: string }
+        Returns: string
+      }
+      resolve_compliance_escalation_v1: {
+        Args: { p_escalation_id: string }
+        Returns: undefined
+      }
       consume_credits: {
         Args: {
           p_credits_amount: number

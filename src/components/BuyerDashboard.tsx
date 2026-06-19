@@ -46,6 +46,8 @@ import { useEvidenceVerificationFeature } from '@/hooks/useEvidenceVerificationF
 import EvidenceVerificationView from '@/components/buyer/EvidenceVerificationView';
 import { useComplianceDecisionsFeature } from '@/hooks/useComplianceDecisionsFeature';
 import ComplianceDecisionsView from '@/components/buyer/ComplianceDecisionsView';
+import { useDossiersFeature } from '@/hooks/useDossiersFeature';
+import DossierGeneratorView from '@/components/buyer/DossierGeneratorView';
 
 import { supabase } from '@/integrations/supabase/client';
 
@@ -87,6 +89,13 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
   const { enabled: requirementEngineEnabled, loading: requirementEngineLoading } = useRequirementEngineFeature(companyId);
   const { enabled: evidenceVerificationEnabled, loading: evidenceVerificationLoading } = useEvidenceVerificationFeature(companyId);
   const { enabled: complianceDecisionsEnabled, loading: complianceDecisionsLoading } = useComplianceDecisionsFeature(companyId);
+  const { enabled: dossiersEnabled, loading: dossiersLoading } = useDossiersFeature(companyId);
+
+  useEffect(() => {
+    if (!dossiersLoading && !dossiersEnabled && activeTab === 'dossiers') {
+      setActiveTab('compliance');
+    }
+  }, [activeTab, dossiersEnabled, dossiersLoading]);
 
   useEffect(() => {
     if (!requirementEngineLoading && !requirementEngineEnabled && activeTab === 'requirements') {
@@ -335,6 +344,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
         requirementEngineEnabled={requirementEngineEnabled}
         evidenceVerificationEnabled={evidenceVerificationEnabled}
         complianceDecisionsEnabled={complianceDecisionsEnabled}
+        dossiersEnabled={dossiersEnabled}
       >
         {/* Dashboard Content */}
         {activeTab === 'dashboard' && companyId && (
@@ -495,6 +505,10 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
 
         {activeTab === 'compliance-decisions' && companyId && complianceDecisionsEnabled && (
           <ComplianceDecisionsView buyerId={companyId} />
+        )}
+
+        {activeTab === 'dossiers' && companyId && dossiersEnabled && (
+          <DossierGeneratorView buyerId={companyId} />
         )}
 
         {/* Agents Content */}

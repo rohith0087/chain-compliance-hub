@@ -45,6 +45,8 @@ import ComplianceDecisionsView from "@/components/buyer/ComplianceDecisionsView"
 import { useComplianceDecisionsFeature } from "@/hooks/useComplianceDecisionsFeature";
 import EvidenceSharingView from "@/components/supplier/EvidenceSharingView";
 import { useEvidenceSharingFeature } from "@/hooks/useEvidenceSharingFeature";
+import DossierGeneratorView from "@/components/buyer/DossierGeneratorView";
+import { useDossiersFeature } from "@/hooks/useDossiersFeature";
 
 const REQUIREMENT_TEST_BUYER_ID = '00000000-0000-4000-8000-000000000001';
 const EVIDENCE_SHARING_TEST_SUPPLIER_ID = '00000000-0000-4000-8000-000000000020';
@@ -75,6 +77,13 @@ const EvidenceSharingTestRoute = () => {
   if (loading) return <div>Loading evidence sharing feature…</div>;
   if (!enabled) return <div>Evidence sharing disabled</div>;
   return <EvidenceSharingView supplierId={EVIDENCE_SHARING_TEST_SUPPLIER_ID} />;
+};
+
+const DossiersTestRoute = () => {
+  const { enabled, loading } = useDossiersFeature(REQUIREMENT_TEST_BUYER_ID);
+  if (loading) return <div>Loading dossiers feature…</div>;
+  if (!enabled) return <div>Dossiers disabled</div>;
+  return <DossierGeneratorView buyerId={REQUIREMENT_TEST_BUYER_ID} />;
 };
 
 const queryClient = new QueryClient({
@@ -259,6 +268,7 @@ const AppRoutes = () => {
                       <Route path="/__test/evidence" element={<EvidenceVerificationTestRoute />} />
                       <Route path="/__test/compliance-decisions" element={<ComplianceDecisionsTestRoute />} />
                       <Route path="/__test/evidence-sharing" element={<EvidenceSharingTestRoute />} />
+                      <Route path="/__test/dossiers" element={<DossiersTestRoute />} />
                     </>
                   )}
                   <Route path="/dashboard" element={

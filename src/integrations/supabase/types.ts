@@ -6307,6 +6307,18 @@ export type Database = {
         Args: { p_grant_id: string }
         Returns: undefined
       }
+      set_dossier_retention_v1: {
+        Args: { p_dossier_id: string; p_legal_hold: boolean; p_retain_until?: string }
+        Returns: undefined
+      }
+      archive_dossier_v1: {
+        Args: { p_dossier_id: string }
+        Returns: undefined
+      }
+      verify_dossier_audit_chain_v1: {
+        Args: { p_dossier_id: string }
+        Returns: Json
+      }
       consume_credits: {
         Args: {
           p_credits_amount: number

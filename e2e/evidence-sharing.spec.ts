@@ -16,9 +16,9 @@ async function mockEvidenceSharingBackend(page: Page, enabled = true) {
     if (url.includes('/evidence_claims')) {
       body = [{
         id: claimId,
-        document_type: 'business_license',
+        document_type: 'Business License',
         status: 'verified',
-        issuer: 'Intertek',
+        issuer: null,
         certificate_number: 'INT-2026-00451',
         expiry_date: '2027-01-15',
       }];
@@ -64,15 +64,17 @@ test('shares a claim with a connected buyer and can revoke the grant', async ({ 
   await mockEvidenceSharingBackend(page);
   await page.goto('/__test/evidence-sharing');
   await expect(page.getByRole('heading', { name: 'Evidence Sharing' })).toBeVisible();
-  await expect(page.getByText('Intertek')).toBeVisible();
+  await expect(page.getByText('Business License')).toBeVisible();
+  await expect(page.getByText(/Unknown issuer/)).toBeVisible();
 
   await page.getByRole('button', { name: 'Share' }).click();
+  await expect(page.getByText(/Sharing Business License/)).toBeVisible();
   await page.getByText('Select a connected buyer').click();
   await page.getByRole('option', { name: 'Golden Buyer' }).click();
   await page.getByRole('button', { name: 'Share', exact: true }).click();
 
   await expect(page.getByText('Golden Buyer')).toBeVisible();
-  await expect(page.getByText('Active')).toBeVisible();
+  await expect(page.getByText('Active', { exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'Revoke' }).click();
   await expect(page.getByText('Revoked')).toBeVisible();

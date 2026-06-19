@@ -133,6 +133,7 @@ interface BuyerSidebarLayoutProps {
   requirementEngineEnabled?: boolean;
   evidenceVerificationEnabled?: boolean;
   complianceDecisionsEnabled?: boolean;
+  dossiersEnabled?: boolean;
 }
 
 export function BuyerSidebarLayout({
@@ -151,7 +152,8 @@ export function BuyerSidebarLayout({
   unreadMessages = 0,
   requirementEngineEnabled = false,
   evidenceVerificationEnabled = false,
-  complianceDecisionsEnabled = false
+  complianceDecisionsEnabled = false,
+  dossiersEnabled = false
 }: BuyerSidebarLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -285,6 +287,7 @@ export function BuyerSidebarLayout({
     requirementEngineEnabled && { title: 'Requirements', value: 'requirements', icon: ListTree },
     evidenceVerificationEnabled && { title: 'Evidence Verification', value: 'evidence-verification', icon: ClipboardCheck },
     complianceDecisionsEnabled && { title: 'Compliance Decisions', value: 'compliance-decisions', icon: ShieldCheck },
+    dossiersEnabled && { title: 'Dossiers', value: 'dossiers', icon: FileText },
     { title: wsTerms.supplier_risk, value: 'supplier-risk', icon: AlertTriangle },
     !wsFlags.hideItemCompliance && { title: 'Item Compliance', value: 'item-compliance', icon: Package },
     !wsFlags.hideFacilityMatrix && { title: 'Facility Matrix', value: 'facility-matrix', icon: Building2 }

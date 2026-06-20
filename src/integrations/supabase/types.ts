@@ -6181,37 +6181,6 @@ export type Database = {
         }
       }
       cleanup_expired_knowledge_entries: { Args: never; Returns: number }
-      create_notification_v1: {
-        Args: {
-          p_message: string
-          p_reference_id?: string
-          p_target_user_id: string
-          p_title: string
-          p_type: string
-        }
-        Returns: string
-      }
-      verify_evidence_claim_v1: {
-        Args: { p_claim_id: string }
-        Returns: undefined
-      }
-      reject_evidence_claim_v1: {
-        Args: { p_claim_id: string; p_reason: string }
-        Returns: undefined
-      }
-      correct_evidence_claim_v1: {
-        Args: {
-          p_claim_id: string
-          p_field_name: string
-          p_new_value: string
-          p_reason: string
-        }
-        Returns: undefined
-      }
-      resolve_evidence_conflict_v1: {
-        Args: { p_conflict_id: string; p_resolution_notes: string }
-        Returns: undefined
-      }
       create_compliance_task_v1: {
         Args: {
           p_buyer_id: string

@@ -35,7 +35,14 @@ interface NewRequestModalProps {
 
 interface SampleDocumentSelection {
   file?: File;
-  libraryDoc?: { file_path: string; document_name: string; file_size: number | null; mime_type: string | null };
+  libraryDoc?: {
+    id: string;
+    file_path: string;
+    document_name: string;
+    file_size: number | null;
+    mime_type: string | null;
+    category: string | null;
+  };
   source: 'device' | 'library' | null;
 }
 

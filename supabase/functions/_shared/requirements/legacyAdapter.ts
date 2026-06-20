@@ -13,6 +13,16 @@ export function legacyRequirementKey(documentType: string): string {
   return `LEGACY-${documentType.toUpperCase().replace(/[^A-Z0-9]+/g, '-')}`;
 }
 
+export function deduplicateLegacyRequirements(
+  items: LegacyRequirementSource[],
+): LegacyRequirementSource[] {
+  const unique = new Map<string, LegacyRequirementSource>();
+  for (const item of items) {
+    unique.set(legacyRequirementKey(item.document_type), item);
+  }
+  return [...unique.values()];
+}
+
 export function adaptLegacyRequirement(
   item: LegacyRequirementSource,
   mappingId: string,
@@ -44,4 +54,3 @@ export function adaptLegacyRequirement(
     effective_to: null,
   };
 }
-

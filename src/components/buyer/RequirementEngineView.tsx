@@ -131,7 +131,10 @@ export default function RequirementEngineView({ buyerId, onNavigateToDocuments }
         .eq('buyer_id', buyerId)
         .eq('status', 'approved');
       if (connectionError) {
-        if (active) setError('Unable to load connected suppliers.');
+        if (active) {
+          setError('Unable to load connected suppliers.');
+          setLoadingSubjects(false);
+        }
         return;
       }
 
@@ -150,6 +153,13 @@ export default function RequirementEngineView({ buyerId, onNavigateToDocuments }
           supabase.from('supplier_items').select('id, item_name, supplier_id')
             .in('supplier_id', supplierIds).eq('is_active', true),
         ]);
+        if (facilityResult.error || productResult.error) {
+          if (active) {
+            setError('Unable to load supplier facilities and products.');
+            setLoadingSubjects(false);
+          }
+          return;
+        }
         facilities = facilityResult.data || [];
         products = productResult.data || [];
       }

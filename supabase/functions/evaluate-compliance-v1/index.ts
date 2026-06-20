@@ -15,6 +15,8 @@ import {
 } from '../_shared/compliance/contracts.ts';
 import { deriveComplianceOutcome, type CoverageState } from '../_shared/compliance/outcome.ts';
 import { isGrantActive, matchesGrant, normalizeDocType, type EvidenceSharingGrant } from '../_shared/compliance/grants.ts';
+import { matchCanonicalEvidence, type CanonicalCoverageData, type CanonicalEvidenceMatch } from '../_shared/compliance/canonicalCoverage.ts';
+import { isAuthorizedCronRequest, isServiceRoleRequest } from '../_shared/systemAuth.ts';
 
 type SupabaseAdmin = ReturnType<typeof createClient>;
 
@@ -38,6 +40,27 @@ interface CoverageData {
   requests: RequestRow[];
   uploadedRequestIds: Set<string>;
   grants: EvidenceSharingGrant[];
+}
+
+async function loadCanonicalCoverageData(admin: SupabaseAdmin, buyerId: string, supplierId: string): Promise<CanonicalCoverageData> {
+  const { data: records, error: recordsError } = await admin.from('evidence_records').select('id,canonical_document_type').eq('supplier_id',supplierId).eq('status','active');
+  if (recordsError) throw recordsError;
+  const recordIds = (records || []).map((row) => row.id);
+  if (!recordIds.length) return { records: [], versions: [], attestations: [], validations: [], grants: [], requestLinks: [], observations: [] };
+  const { data: versions, error: versionsError } = await admin.from('evidence_versions')
+    .select('id,evidence_record_id,lifecycle_status,expiry_date,jurisdiction,standards,covered_product_ids,covered_facility_ids,validation_completeness,legacy_evidence_claim_id').in('evidence_record_id',recordIds);
+  if (versionsError) throw versionsError;
+  const versionIds = (versions || []).map((row) => row.id);
+  if (!versionIds.length) return { records: records || [], versions: [], attestations: [], validations: [], grants: [], requestLinks: [], observations: [] };
+  const [{ data: attestations, error: attestationsError }, { data: validations, error: validationsError }, { data: grants, error: grantsError }, { data: links, error: linksError }, { data: observations, error: observationsError }] = await Promise.all([
+    admin.from('evidence_attestations').select('evidence_version_id,attestation_type,outcome,organization_id,created_at').in('evidence_version_id',versionIds).or(`organization_id.eq.${supplierId},organization_id.eq.${buyerId}`).order('created_at',{ascending:false}),
+    admin.from('evidence_validation_runs').select('evidence_version_id,status,created_at').in('evidence_version_id',versionIds).order('created_at',{ascending:false}),
+    admin.from('evidence_sharing_grants').select('id,evidence_version_id,status,expires_at').eq('granted_to_organization_id',buyerId).in('evidence_version_id',versionIds),
+    admin.from('request_evidence_links').select('evidence_version_id,relation,document_requests!inner(buyer_id)').in('evidence_version_id',versionIds).eq('document_requests.buyer_id',buyerId),
+    admin.from('evidence_field_observations').select('evidence_version_id,field_name').in('evidence_version_id',versionIds),
+  ]);
+  if (attestationsError) throw attestationsError; if (validationsError) throw validationsError; if (grantsError) throw grantsError; if (linksError) throw linksError; if (observationsError) throw observationsError;
+  return { records: records || [], versions: versions || [], attestations: attestations || [], validations: validations || [], grants: grants || [], requestLinks: links || [], observations: observations || [] } as CanonicalCoverageData;
 }
 
 async function loadCoverageData(admin: SupabaseAdmin, buyerId: string, supplierId: string): Promise<CoverageData> {
@@ -138,35 +161,38 @@ Deno.serve(async (req) => {
     const admin = createClient(requireEnv('SUPABASE_URL'), getSupabaseSecretKey(), {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const token = authHeader.slice('Bearer '.length);
-    const { data: { user }, error: authError } = await admin.auth.getUser(token);
-    if (authError || !user) return jsonResponse(context, { error: 'Invalid authentication' }, 401);
-
-    const limit = checkRateLimit(`compliance:${user.id}`, 30, 60_000);
-    if (!limit.allowed) {
-      return jsonResponse(context, { error: 'Too many requests' }, 429, {
-        'Retry-After': String(Math.ceil(limit.retryAfterMs / 1000)),
-      });
-    }
-
     const parsed = requirementEvaluationRequestV1Schema.safeParse(await req.json());
     if (!parsed.success) {
       return jsonResponse(context, { error: 'Invalid request', details: parsed.error.flatten() }, 400);
     }
     const input = parsed.data;
+    const systemRequest = isServiceRoleRequest(req) || await isAuthorizedCronRequest(req, admin);
+    let actorId: string;
+    if (systemRequest) {
+      const { data: owner, error: ownerError } = await admin.from('buyers').select('profile_id').eq('id',input.buyer_id).maybeSingle();
+      if (ownerError || !owner?.profile_id) return jsonResponse(context,{error:'Buyer owner is required for system reevaluation'},409);
+      actorId = owner.profile_id;
+    } else {
+      const token = authHeader.slice('Bearer '.length);
+      const { data: { user }, error: authError } = await admin.auth.getUser(token);
+      if (authError || !user) return jsonResponse(context, { error: 'Invalid authentication' }, 401);
+      actorId = user.id;
+      const limit = checkRateLimit(`compliance:${actorId}`, 30, 60_000);
+      if (!limit.allowed) return jsonResponse(context, { error: 'Too many requests' }, 429, { 'Retry-After': String(Math.ceil(limit.retryAfterMs / 1000)) });
+    }
 
-    if (!(await hasBuyerAccess(admin, user.id, input.buyer_id))) {
-      logEvent('warn', 'compliance_decision_forbidden', context, { actor_id: user.id, buyer_id: input.buyer_id });
+    if (!systemRequest && !(await hasBuyerAccess(admin, actorId, input.buyer_id))) {
+      logEvent('warn', 'compliance_decision_forbidden', context, { actor_id: actorId, buyer_id: input.buyer_id });
       return jsonResponse(context, { error: 'Buyer access required' }, 403);
     }
     if (!(await isBuyerFeatureEnabled(admin, input.buyer_id, 'compliance_decisions_v1'))) {
-      logEvent('warn', 'compliance_decision_feature_disabled', context, { actor_id: user.id, buyer_id: input.buyer_id });
+      logEvent('warn', 'compliance_decision_feature_disabled', context, { actor_id: actorId, buyer_id: input.buyer_id });
       return jsonResponse(context, { error: 'Compliance decision engine is disabled for this organization' }, 403);
     }
 
     const requestHash = await requirementRequestHash(input);
     const { data: existing } = await admin.from('compliance_evaluations').select('id, request_hash')
-      .eq('buyer_id', input.buyer_id).eq('actor_id', user.id)
+      .eq('buyer_id', input.buyer_id).eq('actor_id', actorId)
       .eq('idempotency_key', idempotencyKey).maybeSingle();
     if (existing) {
       if (existing.request_hash !== requestHash) {
@@ -219,17 +245,29 @@ Deno.serve(async (req) => {
       effective_at: input.effective_at,
     };
 
-    const [catalogResults, legacy, coverageData] = await Promise.all([
+    const canonicalEnabled = await isBuyerFeatureEnabled(admin, input.buyer_id, 'canonical_evidence_v1');
+    const [catalogResults, legacy, coverageData, canonicalCoverageData, reviewPolicy] = await Promise.all([
       loadCatalogResults(admin, input.buyer_id, input.subject_type, input.effective_at, facts),
       loadLegacyResults(admin, input.buyer_id, input.subject_type, subjectContext.supplierId),
       loadCoverageData(admin, input.buyer_id, subjectContext.supplierId),
+      canonicalEnabled ? loadCanonicalCoverageData(admin,input.buyer_id,subjectContext.supplierId) : Promise.resolve(null),
+      canonicalEnabled ? admin.from('evidence_review_policies').select('default_minimum_validity_days,document_type_overrides').eq('buyer_id',input.buyer_id).maybeSingle() : Promise.resolve({data:null,error:null}),
     ]);
+    if (reviewPolicy.error) throw reviewPolicy.error;
+    const canonicalMatchPolicy = {
+      defaultMinimumValidityDays: reviewPolicy.data?.default_minimum_validity_days ?? 90,
+      documentTypeOverrides: reviewPolicy.data?.document_type_overrides || {},
+    };
     const applicabilityResults = [...catalogResults, ...legacy.results];
 
     const grantSourcedByRequirement = new Map<string, string[]>();
+    const canonicalMatchesByRequirement = new Map<string, CanonicalEvidenceMatch[]>();
     const decisionResults: ComplianceDecisionResultV1[] = applicabilityResults.map((result) => {
+      const canonical = canonicalCoverageData
+        ? matchCanonicalEvidence(result.required_evidence,canonicalCoverageData,input.subject_type,input.subject_id,input.effective_at,canonicalMatchPolicy)
+        : null;
       const primaryDocType = result.required_evidence[0]?.document_type;
-      const { coverage, claimIds, grantSourcedGrantIds } = primaryDocType
+      const legacyCoverage = primaryDocType
         ? buildCoverage(primaryDocType, coverageData, input.buyer_id, input.effective_at)
         : {
           coverage: {
@@ -239,6 +277,11 @@ Deno.serve(async (req) => {
           claimIds: [],
           grantSourcedGrantIds: [] as string[],
         };
+      const useCanonical = Boolean(canonical && (canonical.matches.length > 0 || canonical.coverage.hasUpload || canonical.coverage.hasRejectedClaim));
+      const coverage = useCanonical ? canonical!.coverage : legacyCoverage.coverage;
+      const claimIds = useCanonical ? canonical!.matches.map((match) => match.legacyClaimId).filter((id): id is string => Boolean(id)) : legacyCoverage.claimIds;
+      const grantSourcedGrantIds = useCanonical ? canonical!.grantIds : legacyCoverage.grantSourcedGrantIds;
+      if (useCanonical && canonical!.matches.length) canonicalMatchesByRequirement.set(result.requirement_key,canonical!.matches);
 
       const mapped = deriveComplianceOutcome(result.outcome, result.required_evidence.length > 0, coverage, input.effective_at);
       const sharedNote = grantSourcedGrantIds.length > 0
@@ -274,7 +317,7 @@ Deno.serve(async (req) => {
         input_snapshot: { ...input, resolved_subject: subjectContext.subject },
         request_hash: requestHash,
         evaluator_version: DECISION_ENGINE_VERSION,
-        actor_id: user.id,
+        actor_id: actorId,
         idempotency_key: idempotencyKey,
         correlation_id: context.correlationId,
       },
@@ -303,9 +346,23 @@ Deno.serve(async (req) => {
       }
     }
 
+    if (canonicalMatchesByRequirement.size > 0) {
+      const { data: storedCanonicalResults, error: canonicalResultError } = await admin.from('compliance_decision_results')
+        .select('id,requirement_key,requirement_version_id,legacy_mapping_id').eq('evaluation_id',evaluationId)
+        .in('requirement_key',[...canonicalMatchesByRequirement.keys()]);
+      if (canonicalResultError) throw canonicalResultError;
+      const linkRows = (storedCanonicalResults || []).flatMap((row) => (canonicalMatchesByRequirement.get(row.requirement_key) || []).map((match) => ({
+        requirement_version_id: row.requirement_version_id, legacy_mapping_id: row.legacy_mapping_id,
+        buyer_id: input.buyer_id, subject_type: input.subject_type, subject_id: input.subject_id,
+        evidence_version_id: match.evidenceVersionId, decision_result_id: row.id, match_outcome: 'eligible',
+        match_score: match.score, match_reasons: match.reasons, scope_result: match.scopeResult, validation_result: match.validationResult,
+      })));
+      if (linkRows.length) { const { error: linkError } = await admin.from('requirement_evidence_links').insert(linkRows); if (linkError) throw linkError; }
+    }
+
     logEvent('info', 'compliance_decision_completed', context, {
       evaluation_id: evaluationId,
-      actor_id: user.id,
+      actor_id: actorId,
       buyer_id: input.buyer_id,
       subject_type: input.subject_type,
       result_count: decisionResults.length,

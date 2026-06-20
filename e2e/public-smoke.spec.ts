@@ -8,6 +8,6 @@ test('marketing landing page renders', async ({ page }) => {
 
 test('authentication page renders without a session', async ({ page }) => {
   await page.goto('/auth');
-  await expect(page.getByText('Compliance Management')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Welcome' })).toBeVisible();
   await expect(page.locator('body')).not.toContainText('Session Error');
 });

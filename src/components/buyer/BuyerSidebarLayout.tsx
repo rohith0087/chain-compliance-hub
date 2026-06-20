@@ -34,7 +34,8 @@ import {
   ArrowLeftRight,
   FlaskConical,
   ListTree,
-  ShieldCheck
+  ShieldCheck,
+  Activity
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
@@ -276,6 +277,7 @@ export function BuyerSidebarLayout({
 
   const requestsSubmenu = [
     { title: t('common:navigation.documents'), value: 'documents', icon: FileCheck },
+    { title: 'Activity', value: 'document-activity', icon: Activity },
     { title: 'Templates', value: 'templates', icon: FileText },
     !wsFlags.hideBuyerSamples && { title: 'Buyer Samples', value: 'sample-templates', icon: FileImage },
     { title: 'Document Sets', value: 'document-sets', icon: FolderKanban },
@@ -470,9 +472,8 @@ export function BuyerSidebarLayout({
         </SidebarHeader>
 
         <SidebarContent>
-          {/* Quick Actions */}
-          <SidebarGroup>
-            <SidebarGroupLabel>Quick Actions</SidebarGroupLabel>
+          {/* + New Request Button - Standalone at top */}
+          <SidebarGroup className="pb-0">
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem data-guide-id="quick-new-request">
@@ -492,33 +493,13 @@ export function BuyerSidebarLayout({
                     )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton 
-                    onClick={() => handleSpecialAction('chat')}
-                    className="hover:bg-secondary/10 hover:text-secondary transition-colors"
-                  >
-                    <Compass className="h-4 w-4" />
-                    <span>{wsTerms.compliance_compass}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                {!wsFlags.hideBulkInvite && (
-                  <SidebarMenuItem data-guide-id="quick-bulk-invite">
-                    <SidebarMenuButton 
-                      onClick={() => handleSpecialAction('bulk-invite')}
-                      className="hover:bg-accent/10 hover:text-accent transition-colors"
-                    >
-                      <Send className="h-4 w-4" />
-                      <span>Bulk Invite</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
 
           {/* Main Navigation */}
           <SidebarGroup>
-            <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+            <SidebarGroupLabel>NAVIGATION</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {navigationItems.map((item) => (
@@ -605,15 +586,35 @@ export function BuyerSidebarLayout({
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter className="p-3">
+        <SidebarFooter className="p-3 space-y-3">
+          {/* Need help? Card */}
+          {!collapsed && (
+            <div className="rounded-xl bg-muted/50 p-4 text-center">
+              <div className="flex items-center justify-center mb-2">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <HelpCircle className="h-4 w-4 text-primary" />
+                </div>
+              </div>
+              <p className="text-sm font-medium text-foreground">Need help?</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Visit our help center for FAQs and guides.</p>
+              <a 
+                href="/help" 
+                onClick={(e) => { e.preventDefault(); navigate('/help'); }}
+                className="inline-flex items-center gap-1 text-xs text-primary font-medium mt-2 hover:underline"
+              >
+                Go to Help Center
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+              </a>
+            </div>
+          )}
           <VersionButton />
         </SidebarFooter>
       </Sidebar>
 
       <div className={`flex-1 flex flex-col ${activeTab === 'messages' ? 'overflow-hidden' : ''}`}>
         {/* Top Header */}
-        <header className="h-16 border-t border-t-primary/10 bg-white/95 backdrop-blur-xl sticky top-0 z-50 shadow-sm">
-          <div className="flex h-full items-center justify-between px-6">
+        <header className="h-[72px] border-t border-t-primary/10 bg-white/95 backdrop-blur-xl sticky top-0 z-50 shadow-sm">
+          <div className="flex h-full items-center justify-between px-8">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="-ml-1" />
               
@@ -740,7 +741,7 @@ export function BuyerSidebarLayout({
               {children}
             </div>
           ) : (
-            <div className="container mx-auto py-6 px-4">
+            <div className="container mx-auto py-[28px] px-[32px] max-w-[1440px]">
               {children}
             </div>
           )}

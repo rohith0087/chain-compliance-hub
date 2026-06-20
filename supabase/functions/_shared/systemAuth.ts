@@ -48,6 +48,32 @@ export function isServiceRoleRequest(req: Request): boolean {
   }
 }
 
+interface CronAuthClient {
+  rpc: (name: string, args: Record<string, unknown>) => Promise<{
+    data: unknown;
+    error: unknown;
+  }>;
+}
+
+/**
+ * Authorizes scheduled processors without placing a platform service-role key
+ * in cron SQL. Direct service-role calls remain supported for manual recovery.
+ */
+export async function isAuthorizedCronRequest(
+  req: Request,
+  admin: CronAuthClient,
+): Promise<boolean> {
+  if (isServiceRoleRequest(req)) return true;
+
+  const secret = req.headers.get('X-System-Secret');
+  if (!secret) return false;
+
+  const { data, error } = await admin.rpc('verify_system_cron_secret_v1', {
+    p_secret: secret,
+  });
+  return !error && data === true;
+}
+
 export function systemAuthErrorResponse(corsHeaders: Record<string, string>): Response {
   return new Response(
     JSON.stringify({ error: 'Unauthorized: Invalid or missing system secret' }),

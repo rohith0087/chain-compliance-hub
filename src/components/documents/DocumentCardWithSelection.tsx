@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -16,8 +16,22 @@ import {
   ThumbsDown,
   Link,
   Ban,
-  MessageSquare
+  MessageSquare,
+  MoreVertical,
+  Sparkles
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import DocumentVersionHistory from './DocumentVersionHistory';
 
 interface DocumentUpload {
@@ -200,244 +214,247 @@ const DocumentCardWithSelection = ({
 
   return (
     <Card 
-      className={`hover:shadow-elegant transition-all duration-300 border-l-4 ${getCategoryColor(document.category)} ${isSelected ? 'ring-2 ring-[hsl(var(--blue-accent))] shadow-[0_0_20px_hsl(var(--blue-accent)/0.3)]' : ''} ${isClickable ? 'cursor-pointer hover:ring-1 hover:ring-[#003f88]/50' : ''}`}
+      className={`relative hover:shadow-elegant transition-all duration-300 border-l-4 overflow-hidden ${
+        isExpired(document.expiration_date) || document.status === 'rejected' ? 'border-l-red-500' :
+        isExpiringSoon(document.expiration_date) ? 'border-l-amber-500' :
+        document.status === 'pending' ? 'border-l-blue-500' :
+        document.status === 'approved' ? 'border-l-green-500' :
+        getCategoryColor(document.category)
+      } ${isSelected ? 'ring-2 ring-[hsl(var(--blue-accent))] shadow-[0_0_20px_hsl(var(--blue-accent)/0.3)]' : ''} ${
+        isClickable ? 'cursor-pointer hover:ring-1 hover:ring-[#003f88]/50' : ''
+      }`}
       onClick={handleCardClick}
     >
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-3">
-            {showSelection && onSelectionChange && (
+      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)_120px] gap-4 items-center p-4">
+        
+        {/* 1. DOCUMENT */}
+        <div className="flex items-start gap-3 min-w-0">
+          {showSelection && onSelectionChange && (
+            <div className="pt-0.5">
               <Checkbox
                 checked={isSelected}
                 onCheckedChange={onSelectionChange}
-                className="mt-1 data-[state=checked]:bg-[hsl(var(--blue-accent))] data-[state=checked]:border-[hsl(var(--blue-accent))]"
+                className="data-[state=checked]:bg-[hsl(var(--blue-accent))] data-[state=checked]:border-[hsl(var(--blue-accent))]"
               />
-            )}
-            <div className="w-10 h-10 bg-gradient-to-br from-[hsl(var(--blue-accent))]/20 to-[hsl(var(--accent))]/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
-              <FileText className="w-5 h-5 text-[hsl(var(--blue-accent))]" />
             </div>
-            <div>
-              <CardTitle className="text-lg">{document.title || document.document_type}</CardTitle>
-              <div className="flex items-center space-x-2 mt-1">
-                <Badge variant="outline" className="text-xs">
-                  {document.document_type}
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  {document.category}
-                </Badge>
-                <Badge className={getStatusColor(document.status)} variant="secondary">
-                  {getStatusIcon(document.status)}
-                  <span className="ml-1 capitalize">{document.status}</span>
-                </Badge>
-              </div>
+          )}
+          <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <FileText className="w-4 h-4 text-primary" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold truncate text-foreground pr-2">
+              {document.title || document.document_type}
+            </h3>
+            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground whitespace-nowrap">
+                {document.document_type}
+              </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground whitespace-nowrap">
+                {document.category}
+              </span>
             </div>
           </div>
-          {showActions && (
-            <div className="flex items-center space-x-2">
-              {onView && (
-                <Button variant="outline" size="sm" onClick={onView}>
-                  <Eye className="w-4 h-4 mr-2" />
-                  View
-                </Button>
+        </div>
+
+        {/* 2. CATEGORY & STATUS */}
+        <div className="flex flex-col items-start min-w-0 gap-1.5">
+          <div className="flex items-center gap-2">
+            <Badge 
+              variant="secondary" 
+              className={`text-[10px] font-medium border px-1.5 py-0 rounded-md ${
+                isExpired(document.expiration_date) ? 'bg-red-50 text-red-600 border-red-200' :
+                isExpiringSoon(document.expiration_date) ? 'bg-amber-50 text-amber-600 border-amber-200' :
+                document.status === 'pending' ? 'bg-blue-50 text-blue-600 border-blue-200' :
+                document.status === 'approved' ? 'bg-green-50 text-green-600 border-green-200' :
+                'bg-muted text-muted-foreground border-border/50'
+              }`}
+            >
+              {isExpired(document.expiration_date) ? (
+                <><AlertTriangle className="w-3 h-3 mr-1" /> Expired</>
+              ) : isExpiringSoon(document.expiration_date) ? (
+                <><Clock className="w-3 h-3 mr-1" /> Expires Soon</>
+              ) : document.status === 'approved' ? (
+                <><CheckCircle className="w-3 h-3 mr-1" /> Approved</>
+              ) : document.status === 'pending' ? (
+                <><Clock className="w-3 h-3 mr-1" /> Pending</>
+              ) : (
+                <><FileText className="w-3 h-3 mr-1" /> <span className="capitalize">{document.status}</span></>
               )}
-              {onDownload && document.file_name && (
-                <Button variant="outline" size="sm" onClick={onDownload} disabled={downloadLoading}>
-                  {downloadLoading ? (
-                    <>
-                      <Clock className="w-4 h-4 mr-2 animate-spin" />
-                      Downloading...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4 mr-2" />
-                      Download
-                    </>
-                  )}
-                </Button>
-              )}
-              {onEditNotes && (
-                <Button variant="outline" size="sm" onClick={onEditNotes}>
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  {document.notes ? 'Edit Notes' : 'Notes'}
-                </Button>
-              )}
-              {onUpload && document.status === 'pending' && userRole === 'supplier' && (
-                <Button size="sm" onClick={onUpload}>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload
-                </Button>
-              )}
-              {canApproveOrDecline && onApprove && onDecline && (
-                <>
-                  <Button 
-                    size="sm" 
-                    variant="default" 
-                    className="bg-success hover:bg-success/90"
-                    onClick={onApprove}
-                    disabled={approveLoading || declineLoading}
-                  >
-                    {approveLoading ? (
-                      <>
-                        <Clock className="w-4 h-4 mr-2 animate-spin" />
-                        Approving...
-                      </>
-                    ) : (
-                      <>
-                        <ThumbsUp className="w-4 h-4 mr-2" />
-                        Approve
-                      </>
-                    )}
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="border-destructive text-destructive hover:bg-destructive/10"
-                    onClick={onDecline}
-                    disabled={approveLoading || declineLoading}
-                  >
-                    {declineLoading ? (
-                      <>
-                        <Clock className="w-4 h-4 mr-2 animate-spin" />
-                        Declining...
-                      </>
-                    ) : (
-                      <>
-                        <ThumbsDown className="w-4 h-4 mr-2" />
-                        Decline
-                      </>
-                    )}
-                  </Button>
-                </>
-              )}
-              {canCreateLink && (
-                <Button size="sm" variant="outline" onClick={onCreateLink}>
-                  <Link className="w-4 h-4 mr-2" />
-                  Create Link
-                </Button>
-              )}
-              {canWithdraw && (
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
-                  onClick={onWithdraw}
-                  disabled={withdrawLoading}
+            </Badge>
+
+            {/* AI Summary Popover placeholder */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button 
+                  className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-medium border transition-colors ${
+                    isExpired(document.expiration_date) || document.status === 'rejected' ? 'bg-red-50/50 text-red-600 border-red-200/50 hover:bg-red-50' :
+                    isExpiringSoon(document.expiration_date) || document.status === 'pending' ? 'bg-amber-50/50 text-amber-600 border-amber-200/50 hover:bg-amber-50' :
+                    'bg-primary/5 text-primary border-primary/10 hover:bg-primary/10'
+                  }`}
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  {withdrawLoading ? (
-                    <>
-                      <Clock className="w-4 h-4 mr-2 animate-spin" />
-                      Withdrawing...
-                    </>
-                  ) : (
-                    <>
-                      <Ban className="w-4 h-4 mr-2" />
-                      Withdraw
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-      </CardHeader>
-      
-      <CardContent className="pt-0">
-        <div className="space-y-3">
-          {/* File Information */}
-          {document.file_name && (
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">File: {document.file_name}</span>
-              <div className="flex items-center gap-2">
-                {document.file_size && (
-                  <span className="text-muted-foreground">{formatFileSize(document.file_size)}</span>
-                )}
-                {/* Version History Button */}
-                {document.document_uploads && document.document_uploads.length > 1 && (
-                  <DocumentVersionHistory
-                    documentTitle={document.title || document.document_type}
-                    uploads={document.document_uploads}
-                  />
-                )}
-              </div>
-            </div>
-          )}
+                  <Sparkles className="w-3 h-3" />
+                  {isExpired(document.expiration_date) ? 'AI: High priority' : 
+                   isExpiringSoon(document.expiration_date) ? 'AI: Renew now' : 
+                   document.status === 'pending' ? 'AI: Follow up' : 
+                   'AI: Summary'}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-3 text-xs" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-start gap-2">
+                  <Sparkles className="w-4 h-4 text-primary mt-0.5" />
+                  <div>
+                    <p className="font-semibold mb-1">AI Document Analysis</p>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {isExpired(document.expiration_date) 
+                        ? "This document is highly overdue. Recommend requesting renewal immediately from the supplier to maintain compliance."
+                        : isExpiringSoon(document.expiration_date)
+                        ? `This document expires on ${formatDate(document.expiration_date)}. Recommended action: send renewal request to supplier now.`
+                        : document.status === 'pending'
+                        ? "This document is pending approval. Please review the contents to verify they meet your compliance requirements."
+                        : `This ${document.document_type} is approved and linked to ${document.supplier?.company_name || 'the supplier'}. No immediate action is required.`
+                      }
+                    </p>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
 
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-muted-foreground">Created</p>
-              <p className="text-foreground">{formatDate(document.created_at)}</p>
-            </div>
-            {document.due_date && (
-              <div>
-                <p className="text-muted-foreground">Due Date</p>
-                <p className="text-foreground">{formatDate(document.due_date)}</p>
-              </div>
+          <span className={`text-[10px] ${
+            isExpired(document.expiration_date) ? 'text-red-500 font-medium' :
+            isExpiringSoon(document.expiration_date) ? 'text-amber-500 font-medium' :
+            'text-muted-foreground'
+          }`}>
+            {isExpired(document.expiration_date) 
+              ? `Expired ${formatDate(document.expiration_date)}`
+              : isExpiringSoon(document.expiration_date)
+              ? `Expires ${formatDate(document.expiration_date)}`
+              : document.status === 'approved'
+              ? `Approved on ${formatDate(document.created_at)}`
+              : 'Action required'}
+          </span>
+        </div>
+
+        {/* 3. DETAILS */}
+        <div className="flex flex-col min-w-0 text-[10px] text-muted-foreground gap-1 justify-center">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {userRole === 'buyer' && document.supplier && (
+              <span className="truncate flex items-center gap-1">
+                Supplier: <span className="font-medium text-foreground truncate max-w-[120px]">{document.supplier.company_name}</span>
+              </span>
+            )}
+            {document.uploader && (
+              <>
+                <span>&bull;</span>
+                <span className="truncate flex items-center gap-1">
+                  Uploaded by: <span className="font-medium text-foreground truncate max-w-[80px]">{document.uploader.full_name}</span>
+                </span>
+              </>
             )}
           </div>
-
-          {/* Expiration Date */}
-          {document.expiration_date && (
-            <div className={`p-3 rounded-lg backdrop-blur-sm ${
-              isExpired(document.expiration_date) 
-                ? 'bg-gradient-to-r from-red-500/10 to-red-600/10 border border-red-500/30' 
-                : isExpiringSoon(document.expiration_date)
-                ? 'bg-gradient-to-r from-[hsl(var(--orange-accent))]/10 to-amber-500/10 border border-[hsl(var(--orange-accent))]/30'
-                : 'bg-gradient-to-r from-[hsl(var(--green-accent))]/10 to-[hsl(var(--emerald-accent))]/10 border border-[hsl(var(--green-accent))]/30'
-            }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Calendar className={`w-4 h-4 ${
-                    isExpired(document.expiration_date) ? 'text-red-600' :
-                    isExpiringSoon(document.expiration_date) ? 'text-[hsl(var(--orange-accent))]' :
-                    'text-[hsl(var(--green-accent))]'
-                  }`} />
-                  <span className="text-sm font-medium">
-                    {userRole === 'buyer' ? 'Document Expires:' : 'Expires:'}
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm font-semibold">{formatDate(document.expiration_date)}</span>
-                  {isExpired(document.expiration_date) && (
-                    <Badge className="text-xs bg-gradient-to-r from-red-500 to-red-600 text-white border-0">
-                      <AlertTriangle className="w-3 h-3 mr-1" />
-                      Expired
-                    </Badge>
-                  )}
-                  {isExpiringSoon(document.expiration_date) && !isExpired(document.expiration_date) && (
-                    <Badge className="text-xs bg-gradient-to-r from-[hsl(var(--orange-accent))] to-amber-500 text-white border-0">
-                      <Clock className="w-3 h-3 mr-1" />
-                      Expires Soon
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Company Information */}
-          <div className="pt-3 border-t">
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <div>
-                {userRole === 'buyer' && document.supplier && (
-                  <span>Supplier: {document.supplier.company_name}</span>
-                )}
-                {userRole === 'supplier' && document.buyer && (
-                  <span>Requested by: {document.buyer.company_name}</span>
-                )}
-                {document.uploader && (
-                  <span className="ml-4">Uploaded by: {document.uploader.full_name}</span>
-                )}
-              </div>
-              {isClickable && (
-                <span className="text-xs text-[#003f88] font-medium">
-                  Click to view summary →
-                </span>
-              )}
-            </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span>Created: <span className="text-foreground">{formatDate(document.created_at)}</span></span>
+            {document.due_date && (
+              <>
+                <span>&bull;</span>
+                <span>Due: <span className="text-foreground">{formatDate(document.due_date)}</span></span>
+              </>
+            )}
+            {document.file_size && (
+              <>
+                <span>&bull;</span>
+                <span>Size: <span className="text-foreground">{formatFileSize(document.file_size)}</span></span>
+              </>
+            )}
           </div>
         </div>
-      </CardContent>
+
+        {/* 4. ACTIONS */}
+        <div className="flex items-center justify-end gap-1">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-8 text-xs px-3"
+            onClick={(e) => {
+              e.stopPropagation();
+              onView?.();
+            }}
+          >
+            <Eye className="w-3.5 h-3.5 mr-1.5" />
+            View
+          </Button>
+          
+          {(onDownload || onApprove || onDecline || onWithdraw || onCreateLink || onEditNotes) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48" onClick={(e) => e.stopPropagation()}>
+                {onDownload && (
+                  <DropdownMenuItem onClick={onDownload}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download
+                  </DropdownMenuItem>
+                )}
+                {onEditNotes && (
+                  <DropdownMenuItem onClick={onEditNotes}>
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Notes
+                  </DropdownMenuItem>
+                )}
+                {canCreateLink && (
+                  <DropdownMenuItem onClick={onCreateLink}>
+                    <Link className="mr-2 h-4 w-4" />
+                    Create Link
+                  </DropdownMenuItem>
+                )}
+                
+                {canWithdraw && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={onWithdraw} 
+                      className="text-amber-600 focus:text-amber-600 focus:bg-amber-50"
+                    >
+                      <Ban className="mr-2 h-4 w-4" />
+                      Withdraw
+                    </DropdownMenuItem>
+                  </>
+                )}
+
+                {canApproveOrDecline && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={onApprove} 
+                      className="text-green-600 focus:text-green-600 focus:bg-green-50"
+                    >
+                      <ThumbsUp className="mr-2 h-4 w-4" />
+                      Approve
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={onDecline} 
+                      className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                    >
+                      <ThumbsDown className="mr-2 h-4 w-4" />
+                      Decline
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+
+      </div>
     </Card>
   );
 };

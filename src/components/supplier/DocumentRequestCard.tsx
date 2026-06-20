@@ -21,6 +21,7 @@ import DocumentPreview from './DocumentPreview';
 import CustomTemplateResponse from './CustomTemplateResponse';
 import DocumentRenewalDialog from './DocumentRenewalDialog';
 import { getDocumentExpiryStatus, ExpiryResult } from '@/utils/documentExpiry';
+import SupplierEvidenceReusePanel from './SupplierEvidenceReusePanel';
 
 interface DocumentRequestCardProps {
   request: any;
@@ -352,6 +353,11 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
             </div>
           </div>
         </CardHeader>
+        <SupplierEvidenceReusePanel
+          request={request}
+          onResolved={onUploadSuccess}
+          onUploadNew={() => setShowUpload(true)}
+        />
         
         <CardContent className="pt-0">
           <div className="flex items-center justify-between text-sm text-gray-600">

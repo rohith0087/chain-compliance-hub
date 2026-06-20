@@ -13,7 +13,9 @@ import {
   Link2,
   Upload,
   Users,
-  ShieldAlert
+  ShieldAlert,
+  Zap,
+  ChevronRight
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useBranchContext } from '@/contexts/BranchContext';
@@ -33,7 +35,7 @@ interface ActivityQuickActionsPanelProps {
 interface ActivityItem {
   id: string;
   action_type: string;
-  description: string;
+  description: { title: string; subtitle: string };
   created_at: string;
   metadata?: any;
 }
@@ -151,16 +153,20 @@ export function ActivityQuickActionsPanel({
 
   const formatActionDescription = (actionType: string, metadata: any) => {
     const docName = metadata?.document_name || metadata?.title || 'Document';
+    const actor = metadata?.actor_name || metadata?.requested_by || null;
+    let title = '';
+    let subtitle = '';
     switch (actionType) {
-      case 'approved': return `${docName} approved`;
-      case 'rejected': return `${docName} declined`;
-      case 'uploaded': return `${docName} uploaded`;
-      case 'submitted': return `${docName} submitted`;
-      case 'requested': return `${docName} requested`;
-      case 'link_created': return `Link created for ${docName}`;
-      case 'downloaded': return `${docName} downloaded`;
-      default: return `${actionType} - ${docName}`;
+      case 'approved': title = `${docName}`; subtitle = 'Document approved'; break;
+      case 'rejected': title = `${docName}`; subtitle = 'Document declined'; break;
+      case 'uploaded': title = `${docName}`; subtitle = 'Document uploaded'; break;
+      case 'submitted': title = `${docName}`; subtitle = actor ? `Requested by ${actor}` : 'Document submitted'; break;
+      case 'requested': title = `${docName}`; subtitle = actor ? `Requested by ${actor}` : 'Document requested'; break;
+      case 'link_created': title = `Link created for ${docName}`; subtitle = 'Secure link generated'; break;
+      case 'downloaded': title = `${docName}`; subtitle = 'Document downloaded'; break;
+      default: title = `${actionType} - ${docName}`; subtitle = ''; break;
     }
+    return { title, subtitle };
   };
 
   const formatTimeAgo = (dateString: string) => {
@@ -191,19 +197,22 @@ export function ActivityQuickActionsPanel({
       {/* Quick Actions */}
       <Card className="flex-shrink-0 border-0 bg-gradient-to-br from-card via-card to-muted/30">
         <CardHeader className="pb-3 pt-4">
-          <CardTitle className="text-sm font-semibold">Quick Actions</CardTitle>
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Zap className="w-4 h-4 text-amber-500" />
+            Quick Actions
+          </CardTitle>
         </CardHeader>
         <CardContent className="pb-4 px-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             {quickActions.map((action) => (
               <Button
                 key={action.label}
                 size="sm"
-                className={cn("h-10 text-xs font-medium justify-start px-3", action.color)}
+                className={cn("h-11 text-xs font-medium justify-center px-2 gap-1.5", action.color)}
                 onClick={action.onClick}
               >
-                <action.icon className="w-4 h-4 mr-2 flex-shrink-0" />
-                <span className="truncate">{action.label}</span>
+                <action.icon className="w-4 h-4 flex-shrink-0" />
+                <span className="whitespace-nowrap">{action.label}</span>
               </Button>
             ))}
           </div>
@@ -213,13 +222,23 @@ export function ActivityQuickActionsPanel({
       {/* Activity Feed */}
       <Card className="flex-1 min-h-0 flex flex-col border-0 bg-gradient-to-br from-card via-card to-primary/5">
         <CardHeader className="flex-shrink-0 pb-2">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <Activity className="w-4 h-4 text-primary" />
-            Recent Activity
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Activity className="w-4 h-4 text-primary" />
+              Recent Activity
+            </CardTitle>
+            <Button
+              variant="link"
+              size="sm"
+              className="text-xs text-primary h-auto p-0"
+              onClick={() => onNavigateToDocuments()}
+            >
+              View all
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent className="flex-1 min-h-0 p-0">
-          <ScrollArea className="h-full px-4 pb-4">
+        <CardContent className="flex-1 min-h-0 flex flex-col p-0">
+          <ScrollArea className="flex-1 min-h-0 px-4 pb-4">
             {loading ? (
               <div className="space-y-2">
                 {[1, 2, 3, 4, 5].map(i => (
@@ -238,15 +257,22 @@ export function ActivityQuickActionsPanel({
                       initial={{ opacity: 0, x: 10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.03 }}
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors"
+                      className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors"
                     >
-                      <div className={cn("p-1.5 rounded-full flex-shrink-0", colorClass)}>
+                      <div className={cn("p-1.5 rounded-full flex-shrink-0 mt-0.5", colorClass)}>
                         <Icon className="w-3 h-3" />
                       </div>
-                      <p className="text-xs text-muted-foreground flex-1 truncate">
-                        {activity.description}
-                      </p>
-                      <span className="text-[10px] text-muted-foreground/70 flex-shrink-0">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-foreground truncate">
+                          {activity.description.title}
+                        </p>
+                        {activity.description.subtitle && (
+                          <p className="text-[10px] text-muted-foreground/70 mt-0.5 truncate">
+                            {activity.description.subtitle}
+                          </p>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground/70 flex-shrink-0 mt-0.5">
                         {formatTimeAgo(activity.created_at)}
                       </span>
                     </motion.div>
@@ -260,6 +286,19 @@ export function ActivityQuickActionsPanel({
               </div>
             )}
           </ScrollArea>
+
+          {/* Footer link */}
+          <div className="flex-shrink-0 px-4 py-3 border-t border-border/30">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs text-primary hover:text-primary/80 hover:bg-primary/5 justify-center gap-1"
+              onClick={() => onNavigateToDocuments()}
+            >
+              View all activity
+              <ChevronRight className="w-3 h-3" />
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

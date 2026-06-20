@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { evaluateApplicabilityRule } from '../../supabase/functions/_shared/requirements/evaluator';
-import { adaptLegacyRequirement, legacyRequirementKey } from '../../supabase/functions/_shared/requirements/legacyAdapter';
+import {
+  adaptLegacyRequirement,
+  deduplicateLegacyRequirements,
+  legacyRequirementKey,
+} from '../../supabase/functions/_shared/requirements/legacyAdapter';
 
 describe('requirement evaluator', () => {
   it('evaluates all, any, and not deterministically', () => {
@@ -95,5 +99,38 @@ describe('legacy requirement adapter', () => {
     expect(result.framework_code).toBe('TR2C-LEGACY');
     expect(result.outcome).toBe('applies');
     expect(result.required_evidence[0].document_type).toBe('business_license');
+  });
+
+  it('deduplicates differently formatted document types by normalized requirement key', () => {
+    const results = deduplicateLegacyRequirements([
+      {
+        id: 'default-1',
+        source_type: 'default_document_requirement',
+        document_type: 'Business License',
+        document_name: 'Business License',
+        is_required: true,
+      },
+      {
+        id: 'onboarding-1',
+        source_type: 'onboarding_document_requirement',
+        document_type: 'business_license',
+        document_name: 'Business License',
+        is_required: true,
+      },
+      {
+        id: 'onboarding-2',
+        source_type: 'onboarding_document_requirement',
+        document_type: 'insurance_certificate',
+        document_name: 'Insurance Certificate',
+        is_required: true,
+      },
+    ]);
+
+    expect(results).toHaveLength(2);
+    expect(results[0].id).toBe('onboarding-1');
+    expect(results.map((item) => legacyRequirementKey(item.document_type))).toEqual([
+      'LEGACY-BUSINESS-LICENSE',
+      'LEGACY-INSURANCE-CERTIFICATE',
+    ]);
   });
 });

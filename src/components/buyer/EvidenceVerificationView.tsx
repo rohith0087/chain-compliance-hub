@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import CanonicalEvidenceReviewWorkspace from './CanonicalEvidenceReviewWorkspace';
+import { useCanonicalEvidenceFeature } from '@/hooks/useCanonicalEvidenceFeature';
 
 interface EvidenceVerificationViewProps {
   buyerId: string;
@@ -19,6 +21,7 @@ interface EvidenceClaim {
   id: string;
   document_upload_id: string;
   supplier_id: string;
+  document_type: string | null;
   status: ClaimStatus;
   issuer: string | null;
   certificate_number: string | null;
@@ -217,7 +220,7 @@ function ClaimDetail({ claim, onActionComplete }: { claim: EvidenceClaim; onActi
   );
 }
 
-export default function EvidenceVerificationView({ buyerId }: EvidenceVerificationViewProps) {
+function LegacyEvidenceVerificationView({ buyerId }: EvidenceVerificationViewProps) {
   const [claims, setClaims] = useState<EvidenceClaim[]>([]);
   const [statusFilter, setStatusFilter] = useState<ClaimStatus | 'all'>('extracted');
   const [selectedClaimId, setSelectedClaimId] = useState<string | null>(null);
@@ -280,17 +283,19 @@ export default function EvidenceVerificationView({ buyerId }: EvidenceVerificati
                     className={`w-full rounded-md border p-3 text-left text-sm transition-colors ${selectedClaim?.id === claim.id ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium">{claim.issuer || 'Unknown issuer'}</span>
+                      <span className="font-medium">{claim.document_type || claim.issuer || 'Unknown evidence'}</span>
                       <Badge variant="outline" className={config.className}><Icon className="mr-1 h-3 w-3" />{config.label}</Badge>
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground">{claim.certificate_number || 'No certificate number'}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {claim.issuer || 'Unknown issuer'} · {claim.certificate_number || 'No certificate number'}
+                    </p>
                   </button>
                 );
               })}
             </div>
             <Card>
               <CardHeader>
-                <CardTitle>{selectedClaim?.issuer || 'Evidence claim'}</CardTitle>
+                <CardTitle>{selectedClaim?.document_type || selectedClaim?.issuer || 'Evidence claim'}</CardTitle>
                 <CardDescription>Extraction model {selectedClaim?.extraction_model_version}</CardDescription>
               </CardHeader>
               <CardContent>
@@ -302,4 +307,11 @@ export default function EvidenceVerificationView({ buyerId }: EvidenceVerificati
       </div>
     </div>
   );
+}
+
+export default function EvidenceVerificationView({ buyerId }: EvidenceVerificationViewProps) {
+  const { enabled, loading } = useCanonicalEvidenceFeature(buyerId, 'buyer');
+  if (loading) return <div className="p-8 text-sm text-muted-foreground">Loading evidence workspace…</div>;
+  if (enabled) return <CanonicalEvidenceReviewWorkspace buyerId={buyerId} />;
+  return <LegacyEvidenceVerificationView buyerId={buyerId} />;
 }

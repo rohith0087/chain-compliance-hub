@@ -16,6 +16,7 @@ import {
 import { signDigest } from '../_shared/dossier/signing.ts';
 
 type SupabaseAdmin = ReturnType<typeof createClient>;
+class DossierBlockedError extends Error {}
 
 function subjectDisplayName(subjectType: string, subject: Record<string, unknown>): string {
   if (subjectType === 'supplier') return String(subject.company_name ?? 'Unknown supplier');
@@ -32,6 +33,7 @@ async function buildStatements(admin: SupabaseAdmin, buyerId: string, subjectTyp
   const requirementVersionIds = [...new Set(statusRows.map((row) => row.requirement_version_id).filter(Boolean))];
   const legacyMappingIds = [...new Set(statusRows.map((row) => row.legacy_mapping_id).filter(Boolean))];
   const evidenceClaimIds = [...new Set(statusRows.flatMap((row) => row.evidence_claim_ids || []))];
+  const decisionResultIds = statusRows.map((row) => row.decision_result_id);
 
   const [versionsResult, legacyResult, evidenceResult] = await Promise.all([
     requirementVersionIds.length
@@ -48,8 +50,30 @@ async function buildStatements(admin: SupabaseAdmin, buyerId: string, subjectTyp
   if (legacyResult.error) throw legacyResult.error;
   if (evidenceResult.error) throw evidenceResult.error;
 
+  const { data: canonicalLinks, error: canonicalLinksError } = decisionResultIds.length
+    ? await admin.from('requirement_evidence_links').select('decision_result_id,evidence_version_id,match_score,match_reasons').in('decision_result_id',decisionResultIds).eq('match_outcome','eligible')
+    : { data: [], error: null };
+  if (canonicalLinksError) throw canonicalLinksError;
+  const canonicalVersionIds = [...new Set((canonicalLinks || []).map((row) => row.evidence_version_id))];
+  const [{ data: canonicalVersions, error: canonicalVersionsError }, { data: observations, error: observationsError }] = await Promise.all([
+    canonicalVersionIds.length ? admin.from('evidence_versions').select('id,evidence_record_id,issue_date,expiry_date,record:evidence_records!inner(canonical_document_type,display_name)').in('id',canonicalVersionIds) : Promise.resolve({data:[],error:null}),
+    canonicalVersionIds.length ? admin.from('evidence_field_observations').select('id,evidence_version_id,field_name,normalized_value,raw_value,source_page,source_quote,source_bbox,confidence,created_at').in('evidence_version_id',canonicalVersionIds).order('created_at',{ascending:false}) : Promise.resolve({data:[],error:null}),
+  ]);
+  if (canonicalVersionsError) throw canonicalVersionsError; if (observationsError) throw observationsError;
+
   const versionById = new Map((versionsResult.data || []).map((row) => [row.id, row]));
   const evidenceById = new Map((evidenceResult.data || []).map((row) => [row.id, row]));
+  const canonicalVersionById = new Map((canonicalVersions || []).map((row) => [row.id,row]));
+  const citationsByVersion = new Map<string, any[]>();
+  for (const observation of observations || []) {
+    const rows = citationsByVersion.get(observation.evidence_version_id) || [];
+    if (!rows.some((row) => row.field_name === observation.field_name)) rows.push({
+      field_name: observation.field_name, value: observation.normalized_value ?? observation.raw_value,
+      source_page: observation.source_page, source_quote: observation.source_quote,
+      source_bbox: observation.source_bbox, confidence: observation.confidence,
+    });
+    citationsByVersion.set(observation.evidence_version_id,rows);
+  }
 
   return statusRows.map((row): DossierStatementV1 => {
     const version = row.requirement_version_id ? versionById.get(row.requirement_version_id) : null;
@@ -73,12 +97,39 @@ async function buildStatements(admin: SupabaseAdmin, buyerId: string, subjectTyp
         const claim = evidenceById.get(id);
         return claim ? [claim] : [];
       }),
+      canonical_evidence: (canonicalLinks || []).filter((link) => link.decision_result_id === row.decision_result_id).flatMap((link) => {
+        const evidenceVersion = canonicalVersionById.get(link.evidence_version_id);
+        if (!evidenceVersion) return [];
+        const record = Array.isArray(evidenceVersion.record) ? evidenceVersion.record[0] : evidenceVersion.record;
+        return [{
+          evidence_record_id: evidenceVersion.evidence_record_id, evidence_version_id: evidenceVersion.id,
+          document_type: record.canonical_document_type, display_name: record.display_name,
+          issue_date: evidenceVersion.issue_date, expiry_date: evidenceVersion.expiry_date,
+          match_score: Number(link.match_score), match_reasons: link.match_reasons || [],
+          field_citations: citationsByVersion.get(evidenceVersion.id) || [],
+        }];
+      }),
       decision_version: row.decision_version,
       effective_from: row.effective_from,
       effective_to: row.effective_to,
       evaluated_at: row.evaluated_at,
     };
   });
+}
+
+async function assertDossierEvidenceReady(admin: SupabaseAdmin,buyerId:string,subjectType:string,subjectId:string):Promise<void>{
+  const {data:pending,error:pendingError}=await admin.from('compliance_reevaluation_queue').select('id').eq('buyer_id',buyerId).eq('subject_type',subjectType).eq('subject_id',subjectId).in('status',['pending','processing']).limit(1);
+  if(pendingError)throw pendingError;if(pending?.length)throw new DossierBlockedError('Compliance decisions are being reevaluated after an evidence change.');
+  const {data:statusRows,error:statusError}=await admin.from('compliance_current_status').select('decision_result_id,evidence_claim_ids').eq('buyer_id',buyerId).eq('subject_type',subjectType).eq('subject_id',subjectId);
+  if(statusError)throw statusError;
+  const claimIds=[...new Set((statusRows||[]).flatMap((row)=>row.evidence_claim_ids||[]))];
+  if(claimIds.length){const {data:conflicts,error}=await admin.from('evidence_conflicts').select('id').in('claim_id',claimIds).eq('resolved',false).limit(1);if(error)throw error;if(conflicts?.length)throw new DossierBlockedError('Required evidence has unresolved conflicts.');}
+  const decisionIds=(statusRows||[]).map((row)=>row.decision_result_id);
+  if(decisionIds.length){const {data:links,error}=await admin.from('requirement_evidence_links').select('evidence_version_id').in('decision_result_id',decisionIds).eq('match_outcome','eligible');if(error)throw error;
+    const versionIds=[...new Set((links||[]).map((row)=>row.evidence_version_id))];
+    if(versionIds.length){const {data:runs,error:runError}=await admin.from('evidence_validation_runs').select('evidence_version_id,status,created_at').in('evidence_version_id',versionIds).order('created_at',{ascending:false});if(runError)throw runError;
+      const latest=new Map<string,string>();for(const run of runs||[]){if(!latest.has(run.evidence_version_id))latest.set(run.evidence_version_id,run.status);}if([...latest.values()].some((status)=>status==='failed'))throw new DossierBlockedError('Required canonical evidence has failed validation.');}
+  }
 }
 
 Deno.serve(async (req) => {
@@ -160,6 +211,7 @@ Deno.serve(async (req) => {
     const subjectContext = await loadSubject(admin, input.buyer_id, input.subject_type, input.subject_id);
     if (!subjectContext) return jsonResponse(context, { error: 'Subject not found or not accessible' }, 404);
 
+    await assertDossierEvidenceReady(admin,input.buyer_id,input.subject_type,input.subject_id);
     const statements = await buildStatements(admin, input.buyer_id, input.subject_type, input.subject_id);
 
     const contentSnapshot: DossierContentSnapshotV1 = {
@@ -232,6 +284,7 @@ Deno.serve(async (req) => {
       error: error instanceof Error ? error.message : String(error),
       latency_ms: Math.round(performance.now() - startedAt),
     });
+    if (error instanceof DossierBlockedError) return jsonResponse(context,{error:error.message,code:'DOSSIER_EVIDENCE_NOT_READY',correlation_id:context.correlationId},409);
     return jsonResponse(context, { error: 'Dossier generation failed', correlation_id: context.correlationId }, 500);
   }
 });

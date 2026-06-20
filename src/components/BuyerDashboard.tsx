@@ -39,6 +39,7 @@ import { ActivityQuickActionsPanel } from '@/components/dashboard/ActivityQuickA
 import { AuditorDashboardPanel } from '@/components/dashboard/auditor/AuditorDashboardPanel';
 import { getWorkspaceProfileForIndustry } from '@/config/workspaceProfiles';
 import { motion } from 'framer-motion';
+import { Users, Clock, AlertTriangle } from 'lucide-react';
 import { useCommunicationThreads } from '@/hooks/useCommunicationThreads';
 import { useRequirementEngineFeature } from '@/hooks/useRequirementEngineFeature';
 import RequirementEngineView from '@/components/buyer/RequirementEngineView';
@@ -356,7 +357,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
               />
             </div>
           ) : (
-            <div className="h-[calc(100vh-80px)] overflow-hidden flex flex-col animate-fade-in">
+            <div className="h-[calc(100vh-120px)] overflow-hidden flex flex-col animate-fade-in">
               {/* Top Metrics Bar - Fixed Height */}
             <motion.div 
               className="flex-shrink-0 mb-4"
@@ -364,59 +365,89 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
             >
-              <div className="flex flex-wrap items-center gap-3 p-4 rounded-2xl bg-gradient-to-br from-card via-card to-muted/20 border border-border/40 shadow-sm">
-                <MetricChip 
-                  label={getWorkspaceProfileForIndustry(buyerProfile?.industry).terms.suppliers} 
-                  value={dashboardStats.connectedSuppliers} 
-                  color="blue" 
-                  onClick={() => setActiveTab('suppliers')}
-                />
+              <div className="grid grid-cols-5 gap-3">
+                <div className="rounded-2xl bg-card border border-border/40 shadow-sm p-4 cursor-pointer hover:shadow-md hover:border-primary/30 transition-all" onClick={() => setActiveTab('suppliers')}>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-blue-500/10">
+                      <Users className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">{getWorkspaceProfileForIndustry(buyerProfile?.industry).terms.suppliers}</p>
+                      <p className="text-2xl font-bold text-foreground">{dashboardStats.connectedSuppliers}</p>
+                      <p className="text-[11px] text-muted-foreground/70">Total suppliers</p>
+                    </div>
+                  </div>
+                </div>
 
-                <div className="w-px h-12 bg-border/30 hidden sm:block" />
-                <MetricChip 
-                  label="Active" 
-                  value={dashboardStats.activeRequests} 
-                  color="amber" 
-                  onClick={() => {
-                    sessionStorage.setItem('buyer_docs_filter_status', 'pending');
-                    setDocumentsKey(prev => prev + 1);
-                    setActiveTab('documents');
-                  }}
-                />
-                <div className="w-px h-12 bg-border/30 hidden sm:block" />
-                <MetricChip 
-                  label="Pending Review" 
-                  value={dashboardStats.pendingReview} 
-                  color="teal" 
-                  pulse={dashboardStats.pendingReview > 0}
-                  onClick={() => {
-                    sessionStorage.setItem('buyer_docs_filter_status', 'submitted');
-                    setDocumentsKey(prev => prev + 1);
-                    setActiveTab('documents');
-                  }}
-                />
-                <div className="w-px h-12 bg-border/30 hidden sm:block" />
-                <MetricChip 
-                  label="Expiring" 
-                  value={dashboardStats.expiringSoon} 
-                  color="red" 
-                  pulse={dashboardStats.expiringSoon > 0}
-                  onClick={() => {
-                    sessionStorage.setItem('buyer_docs_filter_expiration', 'expiring_soon');
-                    setDocumentsKey(prev => prev + 1);
-                    setActiveTab('documents');
-                  }}
-                />
-                <div className="w-px h-12 bg-border/30 hidden sm:block" />
-                <div className="ml-auto">
-                  <ComplianceRing 
-                    score={dashboardStats.totalDocs > 0 
-                      ? Math.round((dashboardStats.approvedDocs / dashboardStats.totalDocs) * 100) 
-                      : 0
-                    }
-                    size={80}
-                    strokeWidth={6}
-                  />
+                <div className="rounded-2xl bg-card border border-border/40 shadow-sm p-4 cursor-pointer hover:shadow-md hover:border-primary/30 transition-all" onClick={() => {
+                  sessionStorage.setItem('buyer_docs_filter_status', 'pending');
+                  setDocumentsKey(prev => prev + 1);
+                  setActiveTab('documents');
+                }}>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-amber-500/10">
+                      <Users className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">Active</p>
+                      <p className="text-2xl font-bold text-foreground">{dashboardStats.activeRequests}</p>
+                      <p className="text-[11px] text-muted-foreground/70">Active suppliers</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl bg-card border border-border/40 shadow-sm p-4 cursor-pointer hover:shadow-md hover:border-primary/30 transition-all" onClick={() => {
+                  sessionStorage.setItem('buyer_docs_filter_status', 'submitted');
+                  setDocumentsKey(prev => prev + 1);
+                  setActiveTab('documents');
+                }}>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-teal-500/10">
+                      <Clock className="w-5 h-5 text-teal-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">Pending Review</p>
+                      <p className="text-2xl font-bold text-foreground">{dashboardStats.pendingReview}</p>
+                      <p className="text-[11px] text-muted-foreground/70">Under review</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl bg-card border border-border/40 shadow-sm p-4 cursor-pointer hover:shadow-md hover:border-primary/30 transition-all" onClick={() => {
+                  sessionStorage.setItem('buyer_docs_filter_expiration', 'expiring_soon');
+                  setDocumentsKey(prev => prev + 1);
+                  setActiveTab('documents');
+                }}>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-red-500/10">
+                      <AlertTriangle className="w-5 h-5 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">Expiring</p>
+                      <p className="text-2xl font-bold text-foreground">{dashboardStats.expiringSoon}</p>
+                      <p className="text-[11px] text-muted-foreground/70">Within 60 days</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl bg-card border border-border/40 shadow-sm p-4">
+                  <div className="flex items-center justify-between h-full">
+                    <div className="flex flex-col justify-center">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-semibold text-foreground">Compliance Score</p>
+                        <AlertTriangle className="w-3 h-3 text-muted-foreground/50" />
+                      </div>
+                      <p className="text-[11px] text-muted-foreground/70 mt-0.5">Overall compliance</p>
+                    </div>
+                    <ComplianceRing 
+                      score={dashboardStats.totalDocs > 0 
+                        ? Math.round((dashboardStats.approvedDocs / dashboardStats.totalDocs) * 100) 
+                        : 0
+                      }
+                      size={60}
+                      strokeWidth={6}
+                    />
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -523,7 +554,12 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
 
         {/* Documents Content */}
         {activeTab === 'documents' && (
-          <BuyerDocumentsDashboard key={documentsKey} />
+          <BuyerDocumentsDashboard key={documentsKey} view="documents" />
+        )}
+
+        {/* Document Activity Content */}
+        {activeTab === 'document-activity' && (
+          <BuyerDocumentsDashboard key={documentsKey} view="activity" />
         )}
 
         {/* Performance Dashboard */}

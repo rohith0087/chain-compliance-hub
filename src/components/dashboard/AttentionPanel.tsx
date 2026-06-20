@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertTriangle, CheckCircle, Clock, Eye, ThumbsUp, ThumbsDown, FileText } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock, Eye, ThumbsUp, ThumbsDown, FileText, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useBranchContext } from '@/contexts/BranchContext';
 import { motion } from 'framer-motion';
@@ -192,8 +192,8 @@ export function AttentionPanel({ buyerId, onNavigateToDocuments }: AttentionPane
         </div>
       </CardHeader>
       
-      <CardContent className="flex-1 min-h-0 p-0">
-        <ScrollArea className="h-full px-4 pb-4">
+      <CardContent className="flex-1 min-h-0 flex flex-col p-0">
+        <ScrollArea className="flex-1 min-h-0 px-4 pb-4">
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3].map(i => (
@@ -213,11 +213,11 @@ export function AttentionPanel({ buyerId, onNavigateToDocuments }: AttentionPane
                     "group p-3 rounded-lg border transition-all duration-200 cursor-pointer",
                     "hover:shadow-md hover:border-primary/30",
                     item.is_overdue 
-                      ? "bg-red-500/5 border-red-500/20" 
-                      : "bg-teal-500/5 border-teal-500/20"
+                      ? "border-l-4 border-l-red-500 bg-card border-border/30" 
+                      : "border-l-4 border-l-teal-500 bg-card border-border/30"
                   )}
                 >
-                  <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <div className={cn(
@@ -242,16 +242,7 @@ export function AttentionPanel({ buyerId, onNavigateToDocuments }: AttentionPane
                       </div>
                     </div>
                     
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => handleQuickAction(item.id, 'view')}
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground/50 flex-shrink-0 mt-1 group-hover:text-primary transition-colors" />
                   </div>
                 </motion.div>
               ))}
@@ -264,6 +255,19 @@ export function AttentionPanel({ buyerId, onNavigateToDocuments }: AttentionPane
             </div>
           )}
         </ScrollArea>
+
+        {/* Footer link */}
+        <div className="flex-shrink-0 px-4 py-3 border-t border-border/30">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full text-xs text-primary hover:text-primary/80 hover:bg-primary/5 justify-center gap-1"
+            onClick={() => onNavigateToDocuments()}
+          >
+            View all attention items
+            <ChevronRight className="w-3 h-3" />
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

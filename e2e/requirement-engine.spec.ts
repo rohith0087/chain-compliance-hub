@@ -98,6 +98,25 @@ test('feature flag hides the Requirements experience when disabled', async ({ pa
   await expect(page.getByText('Requirement engine disabled')).toBeVisible();
 });
 
+test('shows a recoverable error instead of leaving the subject selector loading', async ({ page }) => {
+  await page.route('**/rest/v1/**', async (route) => {
+    const url = route.request().url();
+    if (url.includes('/feature_flags')) {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ default_enabled: false }) });
+      return;
+    }
+    if (url.includes('/organization_feature_flags')) {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ enabled: true, expires_at: null }) });
+      return;
+    }
+    await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'query failed' }) });
+  });
+
+  await page.goto('/__test/requirements');
+  await expect(page.getByText('Unable to load connected suppliers.')).toBeVisible();
+  await expect(page.getByText('Loading…')).toHaveCount(0);
+});
+
 test('evaluates supplier, facility, and product subjects with explainable results', async ({ page }) => {
   await mockRequirementBackend(page);
   await page.goto('/__test/requirements');

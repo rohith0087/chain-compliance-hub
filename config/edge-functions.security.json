@@ -12,13 +12,19 @@
     "send-generic-email": "Validates the caller JWT inside the function.",
     "send-new-request-email": "Validates the caller JWT inside the function.",
     "validate-turnstile": "Public anti-bot verification endpoint; validates the Turnstile response with Cloudflare.",
-    "coa-schedule-reminder": "Requires SYSTEM_INVOCATION_SECRET."
+    "coa-schedule-reminder": "Requires SYSTEM_INVOCATION_SECRET.",
+    "process-evidence-extraction-jobs-v1": "Requires a service-role bearer token or the rotated SYSTEM_INVOCATION_SECRET verified against its Vault-backed hash.",
+    "process-compliance-reevaluations-v1": "Requires a service-role bearer token or the rotated SYSTEM_INVOCATION_SECRET verified against its Vault-backed hash.",
+    "process-canonical-asset-hash-jobs-v1": "Requires a service-role bearer token or the rotated SYSTEM_INVOCATION_SECRET verified against its Vault-backed hash."
   },
   "systemSecretFunctions": [
     "generate-audit-report",
     "workflow-engine",
     "check-document-expiry",
-    "coa-schedule-reminder"
+    "coa-schedule-reminder",
+    "process-evidence-extraction-jobs-v1",
+    "process-compliance-reevaluations-v1",
+    "process-canonical-asset-hash-jobs-v1"
   ],
   "sharedCorsRequired": [
     "cleanup-all-auth-users",
@@ -29,6 +35,13 @@
     "publish-requirements-v1",
     "process-evidence-extraction-jobs-v1",
     "evaluate-compliance-v1",
-    "process-compliance-events-v1"
+    "process-compliance-events-v1",
+    "process-compliance-reevaluations-v1",
+    "preflight-document-requests-v1",
+    "create-document-requests-v2",
+    "finalize-canonical-upload-v1",
+    "resolve-document-request-v1",
+    "review-evidence-v2",
+    "process-canonical-asset-hash-jobs-v1"
   ]
 }

@@ -105,22 +105,9 @@ const SampleDocumentUpload = ({ buyerId, onSampleChange, currentSample }: Sample
   };
 
   return (
-    <div className="p-4 rounded-lg border bg-card shadow-sm">
-      <div className="flex items-center gap-2 mb-3 pb-3 border-b">
-        <div className="p-1.5 rounded-md bg-orange-500/10">
-          <Paperclip className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-        </div>
-        <div>
-          <h3 className="font-semibold text-sm">Sample/Reference Document</h3>
-          <p className="text-xs text-muted-foreground">
-            Upload a sample to help suppliers understand the expected format
-          </p>
-        </div>
-        <span className="ml-auto text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">Optional</span>
-      </div>
-
+    <div className="w-full">
       {/* Show selected file or allow selection */}
-      {currentSample.source === 'device' && currentSample.file ? (
+      {(currentSample || { source: null }).source === 'device' && currentSample?.file ? (
         <div className="flex items-center justify-between p-3 bg-primary/5 rounded-lg border border-primary/20 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-md bg-primary/10">
@@ -137,7 +124,7 @@ const SampleDocumentUpload = ({ buyerId, onSampleChange, currentSample }: Sample
             <X className="w-4 h-4" />
           </Button>
         </div>
-      ) : currentSample.source === 'library' && currentSample.libraryDoc ? (
+      ) : (currentSample || { source: null }).source === 'library' && currentSample?.libraryDoc ? (
         <div className="flex items-center justify-between p-3 bg-primary/5 rounded-lg border border-primary/20 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-md bg-primary/10">

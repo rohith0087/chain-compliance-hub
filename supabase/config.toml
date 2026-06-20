@@ -165,6 +165,22 @@ verify_jwt = true
 [functions.knowledge-refresh]
 verify_jwt = true
 
+# Canonical evidence and intelligent request reuse
+[functions.preflight-document-requests-v1]
+verify_jwt = true
+
+[functions.create-document-requests-v2]
+verify_jwt = true
+
+[functions.finalize-canonical-upload-v1]
+verify_jwt = true
+
+[functions.resolve-document-request-v1]
+verify_jwt = true
+
+[functions.review-evidence-v2]
+verify_jwt = true
+
 # Notification functions - require authentication
 [functions.send-expiry-notification]
 verify_jwt = true
@@ -269,7 +285,7 @@ verify_jwt = true
 # Phase 2 evidence extraction processor - cron-triggered, validates the bearer
 # is a service-role JWT inside the function (isServiceRoleRequest).
 [functions.process-evidence-extraction-jobs-v1]
-verify_jwt = true
+verify_jwt = false
 
 # Phase 3 compliance decision engine.
 [functions.evaluate-compliance-v1]
@@ -278,3 +294,9 @@ verify_jwt = true
 # Phase 3 outbox dispatcher - cron-triggered, same isServiceRoleRequest pattern.
 [functions.process-compliance-events-v1]
 verify_jwt = true
+
+[functions.process-compliance-reevaluations-v1]
+verify_jwt = false
+
+[functions.process-canonical-asset-hash-jobs-v1]
+verify_jwt = false

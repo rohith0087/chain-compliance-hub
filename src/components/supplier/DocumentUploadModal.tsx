@@ -13,6 +13,7 @@ import { Upload, X, FileText, Loader2, Trash2, FolderOpen, Calendar, Tag, Info }
 import { toast } from 'sonner';
 import { useWorkspaceProfile } from '@/hooks/useWorkspaceProfile';
 import { cn } from '@/lib/utils';
+import { useCanonicalEvidenceFeature } from '@/hooks/useCanonicalEvidenceFeature';
 
 interface DocumentUploadModalProps {
   supplierId: string;
@@ -34,6 +35,23 @@ const DOCUMENT_CATEGORIES = [
   'Technical',
   'Other'
 ];
+
+const DOCUMENT_TYPES = [
+  ['sds', 'Safety Data Sheet (SDS)'], ['iso_certificate', 'ISO Certificate'],
+  ['insurance_certificate', 'Insurance Certificate'], ['coa', 'Certificate of Analysis (COA)'],
+  ['business_license', 'Business License'], ['test_report', 'Test Report'], ['generic_evidence', 'Other Evidence'],
+] as const;
+
+function inferDocumentType(fileName: string): string {
+  const value = fileName.toLowerCase();
+  if (value.includes('sds') || value.includes('safety data') || value.includes('msds')) return 'sds';
+  if (value.includes('iso')) return 'iso_certificate';
+  if (value.includes('insurance') || value.includes('coi')) return 'insurance_certificate';
+  if (value.includes('coa') || value.includes('analysis')) return 'coa';
+  if (value.includes('business') && value.includes('license')) return 'business_license';
+  if (value.includes('test') && value.includes('report')) return 'test_report';
+  return '';
+}
 
 const ACCEPTED_FILE_TYPES = {
   'application/pdf': ['.pdf'],
@@ -69,6 +87,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
   const [dragActive, setDragActive] = useState(false);
   const [supplierCompanyName, setSupplierCompanyName] = useState<string>('');
   const { t: wsT } = useWorkspaceProfile();
+  const { enabled: canonicalEvidenceEnabled } = useCanonicalEvidenceFeature(supplierId, 'supplier');
 
   // Fetch supplier company name for default document names
   useEffect(() => {
@@ -121,13 +140,11 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
         return;
       }
 
-      const fileExtension = file.name.split('.').pop()?.toUpperCase() || '';
-      
       newFiles.push({
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         file,
         document_name: generateDefaultName(file.name),
-        document_type: fileExtension,
+        document_type: inferDocumentType(file.name),
         category: '',
         description: '',
         expiration_date: '',
@@ -202,9 +219,9 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
 
   const handleUploadAll = async () => {
     // Validate all files have required fields
-    const invalidFiles = files.filter(f => !f.document_name.trim() || !f.category);
+    const invalidFiles = files.filter(f => !f.document_name.trim() || !f.category || !f.document_type);
     if (invalidFiles.length > 0) {
-      toast.error('Please fill in document name and category for all files');
+      toast.error('Please fill in document name, document type, and category for all files');
       return;
     }
 
@@ -243,7 +260,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           }
 
           // Save document metadata to database
-          const { error: dbError } = await supabase
+          const { data: libraryRow, error: dbError } = await supabase
             .from('supplier_document_library')
             .insert({
               supplier_id: supplierId,
@@ -258,7 +275,9 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
               uploaded_by: user.id,
               extraction_status: 'completed',
               expiration_date: fileEntry.no_expiration ? null : (fileEntry.expiration_date || null)
-            });
+            })
+            .select('id')
+            .single();
 
           if (dbError) {
             console.error('Database error:', dbError);
@@ -266,6 +285,18 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
             await supabase.storage.from('compliance-documents').remove([uploadData.path]);
             errorCount++;
             continue;
+          }
+
+          if (canonicalEvidenceEnabled && libraryRow) {
+            const { error: finalizeError } = await supabase.functions.invoke('finalize-canonical-upload-v1', {
+              body: {
+                source_type: 'supplier_library', source_id: libraryRow.id,
+                document_type: fileEntry.document_type, display_name: fileEntry.document_name.trim(),
+                logical_identity_key: null, fields: [],
+                metadata: { expiry_date: fileEntry.no_expiration ? null : fileEntry.expiration_date, schema_version: 1 },
+              },
+            });
+            if (finalizeError) console.error('Canonical evidence finalization failed:', finalizeError);
           }
 
           successCount++;
@@ -469,13 +500,11 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                         </div>
 
                         <div className="space-y-1">
-                          <Label className="text-xs font-medium">Document Type</Label>
-                          <Input
-                            value={fileEntry.document_type}
-                            onChange={(e) => updateFileEntry(fileEntry.id, { document_type: e.target.value })}
-                            placeholder="e.g., PDF, Certificate"
-                            className="h-9 bg-background"
-                          />
+                          <Label className="text-xs font-medium">Document Type *</Label>
+                          <Select value={fileEntry.document_type} onValueChange={(value) => updateFileEntry(fileEntry.id, { document_type: value })}>
+                            <SelectTrigger className="h-9 bg-background"><SelectValue placeholder="Select the evidence type" /></SelectTrigger>
+                            <SelectContent>{DOCUMENT_TYPES.map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent>
+                          </Select>
                         </div>
                       </div>
                     </div>

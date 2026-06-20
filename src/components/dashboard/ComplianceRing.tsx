@@ -6,9 +6,11 @@ interface ComplianceRingProps {
   score: number;
   size?: number;
   strokeWidth?: number;
+  label?: string;
+  subtitle?: string;
 }
 
-export function ComplianceRing({ score, size = 140, strokeWidth = 10 }: ComplianceRingProps) {
+export function ComplianceRing({ score, size = 140, strokeWidth = 10, label, subtitle }: ComplianceRingProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const center = size / 2;
@@ -25,8 +27,8 @@ export function ComplianceRing({ score, size = 140, strokeWidth = 10 }: Complian
     return 'drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]';
   };
 
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
+  const ring = (
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
       <svg 
         className={cn('-rotate-90', getGlowColor(score))} 
         width={size} 
@@ -66,10 +68,27 @@ export function ComplianceRing({ score, size = 140, strokeWidth = 10 }: Complian
             size <= 80 ? "text-lg" : size <= 120 ? "text-2xl" : "text-3xl"
           )}
         />
-        {size > 80 && (
+        {size > 80 && !label && (
           <span className="text-xs text-muted-foreground">Completed</span>
         )}
       </div>
     </div>
   );
+
+  if (label) {
+    return (
+      <div className="flex items-center gap-3">
+        <div className="flex flex-col text-right">
+          <span className="text-sm font-semibold text-foreground">{label}</span>
+          {subtitle && (
+            <span className="text-[11px] text-muted-foreground/70 mt-0.5">{subtitle}</span>
+          )}
+        </div>
+        {ring}
+      </div>
+    );
+  }
+
+  return ring;
 }
+

@@ -33,6 +33,7 @@ const DocumentSelectionStep = ({
   const [showRequiredOnly, setShowRequiredOnly] = useState(false);
   const [selectedSetId, setSelectedSetId] = useState<string>('none');
   const [showSaveSetDialog, setShowSaveSetDialog] = useState(false);
+  const [showAIBanner, setShowAIBanner] = useState(true);
 
   const { documentSets, incrementUsage } = useDocumentSets(buyerId);
 
@@ -89,203 +90,189 @@ const DocumentSelectionStep = ({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Search and Filters */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Filter className="w-5 h-5 text-gray-600" />
-            Filter Documents
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search documents..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent className="bg-background border-border">
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map(category => (
-                  <SelectItem key={category} value={category}>{category}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedRegulatoryBody} onValueChange={setSelectedRegulatoryBody}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Regulatory Bodies" />
-              </SelectTrigger>
-              <SelectContent className="bg-background border-border">
-                <SelectItem value="all">All Regulatory Bodies</SelectItem>
-                {regulatoryBodies.map(body => (
-                  <SelectItem key={body} value={body}>{body}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {buyerId && documentSets && documentSets.length > 0 && (
-              <Select value={selectedSetId} onValueChange={handleSetSelection}>
-                <SelectTrigger>
-                  <SelectValue placeholder="My Document Sets" />
-                </SelectTrigger>
-                <SelectContent className="bg-background border-border">
-                  <SelectItem value="none">No Set Selected</SelectItem>
-                  {documentSets.map(set => (
-                    <SelectItem key={set.id} value={set.id}>
-                      <div className="flex items-center gap-2">
-                        <Package className="h-3 w-3" />
-                        {set.set_name} ({set.document_ids.length})
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="required-only"
-                checked={showRequiredOnly}
-                onCheckedChange={(checked) => setShowRequiredOnly(checked === true)}
-              />
-              <label htmlFor="required-only" className="text-sm font-medium">
-                Required Only
-              </label>
-            </div>
+    <div className="flex flex-col h-full space-y-5">
+      {/* AI Recommendation Banner */}
+      {showAIBanner && (
+        <div className="bg-gradient-to-r from-[#F8F9FE] to-[#F4EDFF] border border-[#E9D5FF] rounded-[16px] p-3 flex items-center justify-between gap-4 shrink-0 shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="text-[#7C3AED] font-bold flex items-center gap-2 shrink-0">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+              AI Recommendation
+              <Badge className="bg-[#E9D5FF] text-[#6B21A8] hover:bg-[#E9D5FF] border-0 text-[10px] px-1.5 py-0">BETA</Badge>
+            </span>
+            <p className="text-[#374151] text-[13px] hidden sm:block">
+              General Suppliers commonly require ISO 9001, ISO 14001, Supplier Questionnaire, and Code of Conduct. <span className="font-medium text-[#111827]">4 suggested documents.</span>
+            </p>
           </div>
-
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              Showing {filteredDocuments.length} of {complianceDocuments.length} documents
-            </div>
-            <Button variant="outline" size="sm" onClick={clearFilters}>
-              Clear Filters
+          <div className="flex items-center gap-2 shrink-0">
+            <Button className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-[10px] h-8 px-3 text-[12px] font-semibold shadow-sm transition-colors">
+              <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Apply Suggestions
+            </Button>
+            <Button 
+              variant="ghost" 
+              onClick={() => setShowAIBanner(false)}
+              className="text-[#92400E] hover:text-[#78350F] hover:bg-[#FEF3C7] rounded-[10px] h-8 px-3 text-[12px] font-semibold transition-colors"
+            >
+              Dismiss
             </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Selected Documents Summary */}
-      {selectedDocuments.length > 0 && (
-        <Card className="border-blue-200 bg-blue-50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <ClipboardCheck className="w-5 h-5 text-blue-600" />
-              Selected Documents ({selectedDocuments.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {selectedDocuments.map((doc) => (
-                <Badge 
-                  key={doc.id} 
-                  variant="secondary" 
-                  className="flex items-center gap-1 px-3 py-1"
-                >
-                  {doc.title}
-                  <X 
-                    className="w-3 h-3 cursor-pointer hover:text-red-600" 
-                    onClick={() => onRemoveSelected(doc.id)}
-                  />
-                </Badge>
-              ))}
-            </div>
-            <div className="mt-3 flex justify-between items-center">
-              {buyerId && selectedDocuments.length > 0 && (
-                <Button 
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowSaveSetDialog(true)}
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  Save as Document Set
-                </Button>
-              )}
-              <Button 
-                onClick={onNext}
-                disabled={selectedDocuments.length === 0}
-                className="bg-primary hover:bg-primary/90 ml-auto"
-              >
-                Configure Requests
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        </div>
       )}
 
-      {/* Document Selection Grid */}
-      <div className="grid gap-4">
-        {filteredDocuments.length === 0 ? (
-          <Card className="p-8 text-center">
-            <div className="text-gray-500">
-              <Filter className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <h3 className="text-lg font-medium mb-2">No documents found</h3>
-              <p className="text-sm">Try adjusting your search criteria or filters</p>
-            </div>
-          </Card>
-        ) : (
-          filteredDocuments.map((doc) => (
-            <Card 
-              key={doc.id} 
-              className={`cursor-pointer transition-all border-l-4 ${
-                selectedDocuments.find(d => d.id === doc.id) 
-                  ? 'border-l-blue-500 bg-blue-50 shadow-md' 
-                  : 'border-l-gray-300 hover:shadow-md hover:border-l-blue-400'
-              }`}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      checked={!!selectedDocuments.find(d => d.id === doc.id)}
-                      onCheckedChange={(checked) => onDocumentToggle(doc, checked === true)}
-                    />
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <doc.icon className="w-5 h-5 text-blue-600" />
-                    </div>
-                     <div>
-                       <div className="flex items-center gap-2">
-                         <CardTitle className="text-lg">{doc.title}</CardTitle>
-                         {(doc as any).isCustomTemplate && (
-                           <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
-                             Custom
-                           </Badge>
-                         )}
-                       </div>
-                       <div className="flex items-center gap-2 mt-1">
-                         <Badge variant="secondary">{doc.category}</Badge>
-                         <Badge variant="outline">{doc.regulatoryBody}</Badge>
-                         {doc.required && (
-                           <Badge variant="destructive" className="text-xs">Required</Badge>
-                         )}
-                       </div>
-                     </div>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 mb-3">{doc.description}</p>
-                <div className="text-sm text-gray-500">
-                  <strong>Template includes:</strong> {doc.template.sections.map(s => s.name).join(', ')}
-                </div>
-              </CardContent>
-            </Card>
-          ))
+      {/* Filter Bar */}
+      <div className="bg-white border border-[#E4E7EC] rounded-[16px] p-2 flex flex-wrap items-center gap-2 shadow-sm shrink-0">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#98A2B3] w-4 h-4" />
+          <Input
+            placeholder="Search documents..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 h-9 border-0 shadow-none focus-visible:ring-0 text-[14px]"
+          />
+        </div>
+        <div className="w-[1px] h-5 bg-[#E4E7EC] hidden sm:block"></div>
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="h-9 border-0 shadow-none focus:ring-0 text-[14px] w-auto">
+            <SelectValue placeholder="All Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {categories.map(category => (
+              <SelectItem key={category} value={category}>{category}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="w-[1px] h-5 bg-[#E4E7EC] hidden sm:block"></div>
+        <Select value={selectedRegulatoryBody} onValueChange={setSelectedRegulatoryBody}>
+          <SelectTrigger className="h-9 border-0 shadow-none focus:ring-0 text-[14px] w-auto">
+            <SelectValue placeholder="All Regulatory Frameworks" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Regulatory Frameworks</SelectItem>
+            {regulatoryBodies.map(body => (
+              <SelectItem key={body} value={body}>{body}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {buyerId && documentSets && documentSets.length > 0 && (
+          <>
+            <div className="w-[1px] h-5 bg-[#E4E7EC] hidden sm:block"></div>
+            <Select value={selectedSetId} onValueChange={handleSetSelection}>
+              <SelectTrigger className="h-9 border-0 shadow-none focus:ring-0 text-[14px] w-auto">
+                <SelectValue placeholder="All Document Sets" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No Set Selected</SelectItem>
+                {documentSets.map(set => (
+                  <SelectItem key={set.id} value={set.id}>
+                    {set.set_name} ({set.document_ids.length})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
         )}
+        <div className="w-[1px] h-5 bg-[#E4E7EC] hidden sm:block"></div>
+        <div className="flex items-center gap-2 px-3">
+          <Checkbox 
+            id="required-only"
+            checked={showRequiredOnly}
+            onCheckedChange={(checked) => setShowRequiredOnly(checked === true)}
+            className="rounded-[4px] border-[#D0D5DD] data-[state=checked]:bg-[#2F5BEA] data-[state=checked]:border-[#2F5BEA]"
+          />
+          <label htmlFor="required-only" className="text-[13px] font-medium text-[#374151] cursor-pointer">
+            Required only
+          </label>
+        </div>
+        <div className="ml-auto pr-3 pl-2 flex items-center gap-2 border-l border-[#E4E7EC]">
+          <Badge className="bg-[#EEF4FF] text-[#2F5BEA] hover:bg-[#EEF4FF] border-0 text-[13px] font-semibold px-2 py-0.5 rounded-[8px]">
+            {selectedDocuments.length} selected
+          </Badge>
+        </div>
       </div>
 
-      {/* Save Document Set Dialog */}
+      <div className="text-[13px] text-[#667085]">
+        Showing {filteredDocuments.length} of {complianceDocuments.length} documents
+      </div>
+
+      {/* Document List */}
+      <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+        <div className="bg-white border border-[#E4E7EC] rounded-[16px] divide-y divide-[#E4E7EC] overflow-hidden shadow-sm">
+          {filteredDocuments.length === 0 ? (
+            <div className="p-10 text-center text-[#667085]">
+              <Filter className="w-10 h-10 mx-auto mb-3 text-[#D0D5DD]" />
+              <h3 className="text-[16px] font-bold mb-1 text-[#111827]">No documents found</h3>
+              <p className="text-[14px]">Try adjusting your search criteria or filters</p>
+            </div>
+          ) : (
+            filteredDocuments.map((doc) => {
+              const isSelected = !!selectedDocuments.find(d => d.id === doc.id);
+              const isSuggested = ['ISO 9001 Certificate', 'ISO 14001 Environmental Certificate', 'Completed Supplier Questionnaire', 'Supplier Code of Conduct'].includes(doc.title);
+              
+              return (
+                <div 
+                  key={doc.id} 
+                  className={`flex items-center justify-between p-4 transition-colors hover:bg-[#F9FAFB] cursor-pointer ${isSelected ? 'bg-[#F9FAFB]' : ''}`}
+                  onClick={() => onDocumentToggle(doc, !isSelected)}
+                >
+                  <div className="flex items-center gap-4 flex-1">
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={(checked) => onDocumentToggle(doc, checked === true)}
+                        className="w-5 h-5 rounded-[6px] border-[#D0D5DD] data-[state=checked]:bg-[#2F5BEA] data-[state=checked]:border-[#2F5BEA]"
+                      />
+                    </div>
+                    <div className={`w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0 ${isSelected ? 'bg-[#EEF4FF] text-[#2F5BEA]' : 'bg-[#F3F5F9] text-[#667085]'}`}>
+                      <doc.icon className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0 flex-1 pr-4">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <span className="text-[15px] font-bold text-[#111827]">{doc.title}</span>
+                        <Badge className="bg-[#EEF4FF] text-[#2F5BEA] hover:bg-[#EEF4FF] border-0 text-[11px] font-semibold px-2 py-0 rounded-[6px]">{doc.category}</Badge>
+                        <Badge variant="outline" className="text-[#667085] border-[#E4E7EC] text-[11px] font-semibold px-2 py-0 rounded-[6px]">{doc.regulatoryBody}</Badge>
+                        {doc.required && (
+                          <Badge className="bg-[#FEE4E2] text-[#D92D20] hover:bg-[#FEE4E2] border-0 text-[11px] font-semibold px-2 py-0 rounded-[6px]">Required</Badge>
+                        )}
+                        {!doc.required && (
+                          <Badge className="bg-[#F3F5F9] text-[#667085] hover:bg-[#F3F5F9] border-0 text-[11px] font-semibold px-2 py-0 rounded-[6px]">Optional</Badge>
+                        )}
+                      </div>
+                      <p className="text-[13px] text-[#667085] truncate">{doc.description}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-6 shrink-0">
+                    {isSuggested && (
+                      <span className="text-[#7C3AED] text-[12px] font-semibold flex items-center gap-1.5 bg-[#F4EDFF] px-2.5 py-1 rounded-full border border-[#E9D5FF]">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                        </svg>
+                        AI Suggested
+                      </span>
+                    )}
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); /* Preview action */ }}
+                      className="text-[#2F5BEA] text-[13px] font-semibold hover:underline flex items-center gap-1.5"
+                    >
+                      Preview Template
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
       {buyerId && (
         <SaveDocumentSetDialog
           open={showSaveSetDialog}

@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 interface MetricChipProps {
   label: string;
   value: number;
+  subtitle?: string;
   trend?: number;
   color?: 'blue' | 'amber' | 'teal' | 'red' | 'green' | 'purple';
   pulse?: boolean;
@@ -28,7 +29,7 @@ const dotColorMap = {
   purple: 'bg-purple-500',
 };
 
-export function MetricChip({ label, value, trend, color = 'blue', pulse, onClick }: MetricChipProps) {
+export function MetricChip({ label, value, subtitle, trend, color = 'blue', pulse, onClick }: MetricChipProps) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
@@ -62,6 +63,9 @@ export function MetricChip({ label, value, trend, color = 'blue', pulse, onClick
             </span>
           )}
         </div>
+        {subtitle && (
+          <span className="text-[11px] text-muted-foreground/70 mt-0.5">{subtitle}</span>
+        )}
       </div>
     </motion.div>
   );

@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { parseISO, format } from 'date-fns';
 import SampleDocumentViewer from '@/components/shared/SampleDocumentViewer';
 import { useWorkspaceProfile } from '@/hooks/useWorkspaceProfile';
+import { useCanonicalEvidenceFeature } from '@/hooks/useCanonicalEvidenceFeature';
 
 interface LibraryDocument {
   id: string;
@@ -62,6 +63,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
   const { toast } = useToast();
   const { user } = useAuth();
   const { t: wsT } = useWorkspaceProfile();
+  const { enabled: canonicalEvidenceEnabled } = useCanonicalEvidenceFeature(request.supplier_id, 'supplier');
 
   const isResubmission = request.status === 'rejected';
   const latestUpload = request.document_uploads?.[0];
@@ -215,6 +217,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
       let fileName = latestUpload?.file_name;
       let fileSize = latestUpload?.file_size;
       let mimeType = latestUpload?.mime_type;
+      let canonicalSourceId: string | null = updateMetadataOnly ? latestUpload?.id || null : null;
 
       // If using library document - no need to upload, use existing file
       if (uploadSource === 'library' && selectedLibraryDoc) {
@@ -290,7 +293,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
         if (updateError) throw updateError;
       } else {
         // Create new upload record for new file uploads
-        const { error: insertError } = await supabase
+        const { data: insertedUpload, error: insertError } = await supabase
           .from('document_uploads')
           .insert({
             request_id: request.id,
@@ -305,9 +308,12 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
             expiration_date: expirationDate ? format(expirationDate, 'yyyy-MM-dd') : null,
             version: version,
             linked_item_ids: linkedItemIds.length > 0 ? linkedItemIds : null
-          });
+          })
+          .select('id')
+          .single();
 
         if (insertError) throw insertError;
+        canonicalSourceId = insertedUpload.id;
       }
 
       // Update the request status back to submitted
@@ -317,6 +323,23 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
         .eq('id', request.id);
 
       if (updateError) throw updateError;
+
+      if (canonicalEvidenceEnabled && canonicalSourceId) {
+        const { error: finalizeError } = await supabase.functions.invoke('finalize-canonical-upload-v1', {
+          body: {
+            source_type: 'document_upload', source_id: canonicalSourceId,
+            document_type: request.document_type, display_name: documentName.trim() || fileName,
+            logical_identity_key: null, fields: [],
+            metadata: {
+              expiry_date: expirationDate ? format(expirationDate, 'yyyy-MM-dd') : null,
+              covered_product_ids: linkedItemIds,
+              covered_facility_ids: request.supplier_branch_id ? [request.supplier_branch_id] : [],
+              schema_version: 1,
+            },
+          },
+        });
+        if (finalizeError) console.error('Canonical evidence finalization failed:', finalizeError);
+      }
 
       // Create notification for the buyer
       const notificationTitle = isResubmission ? 'Document Resubmitted' : 'Document Submitted';
@@ -334,8 +357,9 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
         });
       }
 
-      // Trigger buyer agent to process newly uploaded documents
-      try {
+      // Legacy buyers keep the existing agent path. Canonical evidence buyers
+      // use the single extraction/finalization pipeline instead.
+      if (!canonicalEvidenceEnabled) try {
         console.info('Triggering buyer agent for supplier upload...');
         const { data: agentData, error: agentError } = await supabase.functions.invoke('agent-coordinator', {
           body: { action: 'trigger_buyer' }

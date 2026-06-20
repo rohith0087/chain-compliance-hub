@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertCircle, CheckCircle2, ClipboardCheck, Loader2, Share2, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import CanonicalEvidenceSharingView from './CanonicalEvidenceSharingView';
+import { useCanonicalEvidenceFeature } from '@/hooks/useCanonicalEvidenceFeature';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -117,7 +119,7 @@ function ShareDialog({
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Sharing {preselectedClaim?.issuer || 'this evidence'} ({preselectedClaim?.certificate_number || 'no certificate number'}).
+            Sharing {preselectedClaim?.document_type || preselectedClaim?.issuer || 'this evidence'} ({preselectedClaim?.certificate_number || 'no certificate number'}).
           </p>
           <div className="space-y-2">
             <Label>Buyer</Label>
@@ -161,7 +163,7 @@ function ShareDialog({
   );
 }
 
-export default function EvidenceSharingView({ supplierId }: EvidenceSharingViewProps) {
+function LegacyEvidenceSharingView({ supplierId }: EvidenceSharingViewProps) {
   const [claims, setClaims] = useState<EvidenceClaim[]>([]);
   const [connectedBuyers, setConnectedBuyers] = useState<ConnectedBuyer[]>([]);
   const [grants, setGrants] = useState<EvidenceSharingGrant[]>([]);
@@ -181,11 +183,12 @@ export default function EvidenceSharingView({ supplierId }: EvidenceSharingViewP
       { data: auditRows, error: auditError },
     ] = await Promise.all([
       db.from('evidence_claims').select('id, document_type, status, issuer, certificate_number, expiry_date')
-        .eq('supplier_id', supplierId).neq('status', 'superseded').order('created_at', { ascending: false }),
+        .eq('supplier_id', supplierId).eq('status', 'verified').order('created_at', { ascending: false }),
       db.from('buyer_supplier_connections').select('buyer_id, buyers:buyer_id(id, company_name)')
         .eq('supplier_id', supplierId).eq('status', 'approved'),
       db.from('evidence_sharing_grants').select('*').eq('owner_organization_id', supplierId).order('granted_at', { ascending: false }),
-      db.from('evidence_sharing_audit_log').select('*').order('occurred_at', { ascending: false }).limit(50),
+      db.from('evidence_sharing_audit_log').select('*').eq('organization_id', supplierId)
+        .order('occurred_at', { ascending: false }).limit(50),
     ]);
 
     if (claimsError || connectionsError || grantsError || auditError) {
@@ -248,10 +251,12 @@ export default function EvidenceSharingView({ supplierId }: EvidenceSharingViewP
                     <div key={claim.id} className="flex items-center justify-between gap-2 rounded-md border p-3 text-sm">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">{claim.issuer || 'Unknown issuer'}</span>
+                          <span className="font-medium">{claim.document_type || claim.issuer || 'Unknown evidence'}</span>
                           <Badge variant="outline" className={config.className}><Icon className="mr-1 h-3 w-3" />{config.label}</Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground">{claim.certificate_number || 'No certificate number'}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {claim.issuer || 'Unknown issuer'} · {claim.certificate_number || 'No certificate number'}
+                        </p>
                       </div>
                       <Button
                         size="sm"
@@ -334,4 +339,11 @@ export default function EvidenceSharingView({ supplierId }: EvidenceSharingViewP
       </div>
     </div>
   );
+}
+
+export default function EvidenceSharingView({ supplierId }: EvidenceSharingViewProps) {
+  const { enabled, loading } = useCanonicalEvidenceFeature(supplierId, 'supplier');
+  if (loading) return <div className="p-8 text-sm text-muted-foreground">Loading evidence sharing…</div>;
+  if (enabled) return <CanonicalEvidenceSharingView supplierId={supplierId} />;
+  return <LegacyEvidenceSharingView supplierId={supplierId} />;
 }

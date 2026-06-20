@@ -32,6 +32,8 @@ export interface ComplianceDocument {
   template: {
     sections: Array<{ name: string; required: boolean }>;
   };
+  isCustomTemplate?: boolean;
+  customTemplateId?: string;
 }
 
 export const getComplianceDocuments = (userType: string): ComplianceDocument[] => {

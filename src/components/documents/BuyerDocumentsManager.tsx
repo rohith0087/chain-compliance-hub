@@ -18,6 +18,7 @@ import {
   FileText,
   RefreshCw,
   CheckCircle,
+  Check,
   Clock,
   AlertTriangle,
   Calendar,
@@ -64,7 +65,7 @@ type StatusTab = 'all' | 'pending_approval' | 'approved' | 'declined';
 type SortKey = 'created_at' | 'title' | 'supplier';
 
 const STATUS_BADGE_CONFIG: Record<string, { label: string; icon: typeof CheckCircle; className: string }> = {
-  pending: { label: 'Pending Review', icon: Clock, className: 'bg-amber-50 text-amber-700 border-amber-200' },
+  pending: { label: 'Pending', icon: Clock, className: 'bg-amber-50 text-amber-700 border-amber-200' },
   submitted: { label: 'Submitted', icon: FileText, className: 'bg-blue-50 text-blue-700 border-blue-200' },
   approved: { label: 'Approved', icon: CheckCircle, className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
   rejected: { label: 'Declined', icon: AlertTriangle, className: 'bg-red-50 text-red-700 border-red-200' },
@@ -174,7 +175,7 @@ const BuyerDocumentsManager = ({
   const [sortKey, setSortKey] = useState<SortKey>('created_at');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
 
   const [downloading, setDownloading] = useState<string | null>(null);
@@ -719,9 +720,12 @@ const BuyerDocumentsManager = ({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold">All Documents</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Manage and review supplier compliance documents</p>
+      {/* Page Title Block */}
+      <div className="pt-7 pb-5 flex justify-between items-start">
+        <div className="flex flex-col gap-1.5">
+          <h1 className="text-[26px] font-bold text-[#111827] leading-none">All Documents</h1>
+          <p className="text-[15px] text-[#6B7280]">Manage and review supplier compliance documents</p>
+        </div>
       </div>
 
       {isBulkDownloading && <BulkDownloadOverlay documentCount={pendingDownloadIds.size} />}
@@ -739,31 +743,42 @@ const BuyerDocumentsManager = ({
       />
 
       {/* Status tabs */}
-      <div className="flex items-center gap-1 border-b">
-        {statusTabs.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => setStatusTab(tab.value)}
-            className={`flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
-              statusTab === tab.value
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {tab.label}
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-              {tab.value === 'all' ? statusCounts.all
-                : tab.value === 'pending_approval' ? statusCounts.pending_approval
-                : tab.value === 'approved' ? statusCounts.approved
-                : statusCounts.declined}
-            </Badge>
-          </button>
-        ))}
+      <div className="h-[56px] border-b border-[#E5E7EB] flex items-center gap-9">
+        {statusTabs.map((tab) => {
+          const isActive = statusTab === tab.value;
+          const badgeColors = {
+            all: 'bg-[#EAF1FF] text-[#2563EB]',
+            pending_approval: 'bg-[#F3F4F6] text-[#374151]',
+            approved: 'bg-[#ECFDF5] text-[#047857]',
+            declined: 'bg-[#FEF2F2] text-[#DC2626]'
+          }[tab.value] || 'bg-gray-100 text-gray-600';
+          
+          return (
+            <button
+              key={tab.value}
+              onClick={() => setStatusTab(tab.value)}
+              className={`relative h-full flex items-center gap-2 text-[14px] font-semibold transition-colors ${
+                isActive ? 'text-[#2563EB]' : 'text-[#4B5563] hover:text-[#111827]'
+              }`}
+            >
+              {tab.label}
+              <span className={`h-[24px] min-w-[24px] rounded-full px-2 text-[13px] font-bold flex items-center justify-center ${badgeColors}`}>
+                {tab.value === 'all' ? statusCounts.all
+                  : tab.value === 'pending_approval' ? statusCounts.pending_approval
+                  : tab.value === 'approved' ? statusCounts.approved
+                  : statusCounts.declined}
+              </span>
+              {isActive && (
+                <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#2563EB] rounded-full" />
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 mt-[16px] mb-[20px]">
+        <div className="flex flex-wrap items-center gap-[12px]">
           <Select value={filters.category || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, category: value === 'all' ? '' : value }))}>
             <SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="Category" /></SelectTrigger>
             <SelectContent>
@@ -949,25 +964,24 @@ const BuyerDocumentsManager = ({
           ))}
         </div>
       ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">
+        <div className="rounded-[16px] border border-[#E5E7EB] bg-white overflow-hidden shadow-[0_1px_2px_rgba(16,24,40,0.04)] w-full">
+          <Table className="table-fixed w-full">
+            <TableHeader className="h-[56px] bg-white border-b border-[#E5E7EB]">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-[4%] px-3">
                   <Checkbox checked={allPageSelected} onCheckedChange={(checked) => handleSelectAll(checked === true)} />
                 </TableHead>
-                <TableHead>Document</TableHead>
-                <TableHead>Supplier</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>
-                  <button className="flex items-center gap-1" onClick={() => toggleSort('created_at')}>
-                    <Calendar className="w-3.5 h-3.5" />Created Date<SortIcon column="created_at" />
+                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-[#6B7280] px-3 w-[28%]">Document</TableHead>
+                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-[#6B7280] px-3 w-[14%]">Supplier</TableHead>
+                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-[#6B7280] px-3 w-[12%]">
+                  <button className="flex items-center gap-1 truncate" onClick={() => toggleSort('created_at')}>
+                    <Calendar className="w-3.5 h-3.5 flex-shrink-0" /><span className="truncate">Date</span><SortIcon column="created_at" />
                   </button>
                 </TableHead>
-                <TableHead>Uploaded By</TableHead>
-                <TableHead>Size</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-[#6B7280] px-3 w-[10%]">Uploader</TableHead>
+                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-[#6B7280] px-3 w-[6%]">Size</TableHead>
+                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-[#6B7280] px-3 w-[10%]">Status</TableHead>
+                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-[#6B7280] text-right px-3 w-[16%]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -982,108 +996,95 @@ const BuyerDocumentsManager = ({
                 const insight = aiInsight(doc, latestUpload?.expiration_date);
 
                 return (
-                  <TableRow key={doc.id}>
-                    <TableCell>
+                  <TableRow key={doc.id} className="h-[88px] border-b border-[#EEF2F7] hover:bg-gray-50/50">
+                    <TableCell className="px-3 py-3">
                       <Checkbox
                         checked={selectedDocuments.has(doc.id)}
                         onCheckedChange={(checked) => handleDocumentSelectionChange(doc.id, checked === true)}
                         disabled={!latestUpload?.file_path}
                       />
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-start gap-2 min-w-0">
-                        <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <FileText className="w-4 h-4 text-primary" />
+                    <TableCell className="px-3 py-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-[40px] h-[40px] rounded-[10px] bg-[#EFF6FF] flex items-center justify-center flex-shrink-0">
+                          <FileText className="w-5 h-5 text-[#2563EB]" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{doc.title || doc.document_type}</p>
-                          <p className="text-xs text-muted-foreground">ID: {doc.id.slice(0, 8).toUpperCase()}</p>
+                          <p className="text-[14px] font-semibold text-[#111827] truncate" title={doc.title || doc.document_type}>{doc.title || doc.document_type}</p>
+                          <p className="text-[13px] text-[#6B7280]">ID: {doc.id.slice(0, 8).toUpperCase()}</p>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5 text-sm">
-                        <User className="w-3.5 h-3.5 text-muted-foreground" />
-                        <div>
-                          <p>{doc.suppliers?.company_name || 'Unknown'}</p>
-                          <p className="text-xs text-muted-foreground">{supplierShortId(doc.supplier_id)}</p>
-                        </div>
+                    <TableCell className="px-3 py-3">
+                      <div className="text-[14px] truncate">
+                        <p className="font-medium text-[#111827] truncate" title={doc.suppliers?.company_name}>{doc.suppliers?.company_name || 'Unknown'}</p>
+                        <p className="text-[#6B7280]">{supplierShortId(doc.supplier_id)}</p>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        <Badge variant="outline" className={`text-[10px] ${CATEGORY_BADGE_CLASS[(doc.category || '').toLowerCase()] || 'bg-muted text-muted-foreground'}`}>
-                          {doc.category || 'General'}
-                        </Badge>
-                        <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground">
-                          {classifyDocument(doc)}
-                        </Badge>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="px-3 py-3 text-[13px] text-[#4B5563] truncate">
                       <div className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-                        {formatDate(doc.created_at)}
+                        <Calendar className="w-3.5 h-3.5 text-[#9CA3AF] flex-shrink-0" />
+                        <span className="truncate">{formatDate(doc.created_at)}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm">
-                      <div className="flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5 text-muted-foreground" />
-                        {latestUpload?.uploader?.full_name || '—'}
+                    <TableCell className="px-3 py-3 text-[13px] text-[#4B5563] truncate">
+                      <div className="flex items-center gap-1.5" title={latestUpload?.uploader?.full_name}>
+                        <User className="w-3.5 h-3.5 text-[#9CA3AF] flex-shrink-0" />
+                        <span className="truncate">{latestUpload?.uploader?.full_name || '—'}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{formatFileSize(latestUpload?.file_size)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5">
-                        <Badge variant="outline" className={`text-[10px] ${statusConfig.className}`}>
+                    <TableCell className="px-3 py-3 text-[13px] text-[#6B7280] truncate">
+                      <span className="truncate">{formatFileSize(latestUpload?.file_size)}</span>
+                    </TableCell>
+                    <TableCell className="px-3 py-3">
+                      <div className="flex items-center gap-1.5 flex-nowrap">
+                        <Badge variant="outline" className={`text-[12px] px-2 py-0.5 rounded-full font-medium border-0 flex items-center justify-center ${statusConfig.className}`}>
                           <StatusIcon className="w-3 h-3 mr-1" />{statusConfig.label}
                         </Badge>
                         <Popover>
                           <PopoverTrigger asChild>
-                            <button className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-medium border bg-primary/5 text-primary border-primary/10 hover:bg-primary/10">
+                            <button className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-medium bg-[#EEF2FF] text-[#4F46E5] hover:bg-[#E0E7FF] transition-colors border-0">
                               <Sparkles className="w-3 h-3" />
                             </button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-72 p-3 text-xs">
+                          <PopoverContent className="w-72 p-3 text-xs bg-white border-[#E5E7EB] shadow-[0_12px_24px_rgba(15,23,42,0.12)] rounded-[12px]">
                             <div className="flex items-start gap-2">
-                              <Sparkles className="w-4 h-4 text-primary mt-0.5" />
+                              <Sparkles className="w-4 h-4 text-[#4F46E5] mt-0.5" />
                               <div>
-                                <p className="font-semibold mb-1">{insight.label}</p>
-                                <p className="text-muted-foreground leading-relaxed">{insight.description}</p>
+                                <p className="font-semibold mb-1 text-[#111827]">{insight.label}</p>
+                                <p className="text-[#6B7280] leading-relaxed">{insight.description}</p>
                               </div>
                             </div>
                           </PopoverContent>
                         </Popover>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                    <TableCell className="px-3 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5 flex-nowrap">
                         {canApproveOrDecline ? (
                           <>
-                            <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700" disabled={approveLoading === doc.id} onClick={() => onApprove(doc.id)}>
-                              <ThumbsUp className="w-3.5 h-3.5 mr-1" />Approve
+                            <Button size="icon" className="h-[36px] w-[36px] bg-[#10B981] hover:bg-[#059669] text-white rounded-[10px] shadow-sm flex-shrink-0" disabled={approveLoading === doc.id} onClick={() => onApprove(doc.id)} title="Approve">
+                              <Check className="w-4 h-4" />
                             </Button>
-                            <Button size="sm" variant="outline" className="h-8 text-red-600 border-red-200 hover:bg-red-50" disabled={declineLoading === doc.id} onClick={() => onDecline(doc.id)}>
-                              <ThumbsDown className="w-3.5 h-3.5 mr-1" />Decline
+                            <Button size="icon" variant="outline" className="h-[36px] w-[36px] bg-white text-[#DC2626] border-[#FCA5A5] hover:bg-[#FEF2F2] rounded-[10px] shadow-sm flex-shrink-0" disabled={declineLoading === doc.id} onClick={() => onDecline(doc.id)} title="Decline">
+                              <X className="w-4 h-4" />
                             </Button>
                           </>
                         ) : (
-                          <>
-                            <Button size="sm" variant="outline" className="h-8" onClick={() => handleView(doc)}>
-                              <Eye className="w-3.5 h-3.5 mr-1" />View
-                            </Button>
-                            <Button size="sm" variant="outline" className="h-8" onClick={() => { setSelectedNotesDocument(doc); setNotesModalOpen(true); }}>
-                              <MessageSquare className="w-3.5 h-3.5 mr-1" />Notes
-                            </Button>
-                          </>
+                          <Button size="sm" variant="outline" className="h-[36px] px-[12px] bg-white text-[#374151] border-[#E5E7EB] hover:bg-gray-50 rounded-[10px] font-semibold shadow-sm" onClick={() => handleView(doc)}>
+                            View
+                          </Button>
                         )}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button size="icon" variant="ghost" className="h-8 w-8">
+                            <Button size="icon" variant="ghost" className="h-[36px] w-[36px] rounded-[10px] bg-white border border-transparent text-[#6B7280] hover:bg-[#F3F4F6] shadow-none">
                               <MoreVertical className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                          <DropdownMenuContent align="end" className="rounded-[12px] shadow-[0_12px_24px_rgba(15,23,42,0.12)] border-[#E5E7EB]">
+                            <DropdownMenuItem onClick={() => { setSelectedNotesDocument(doc); setNotesModalOpen(true); }}>
+                              <MessageSquare className="w-3.5 h-3.5 mr-2" />Notes
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleDownload(doc)} disabled={downloading === doc.id}>
                               <Download className="w-3.5 h-3.5 mr-2" />Download
                             </DropdownMenuItem>
@@ -1092,9 +1093,9 @@ const BuyerDocumentsManager = ({
                                 <LinkIcon className="w-3.5 h-3.5 mr-2" />Create link
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuSeparator />
+                            <DropdownMenuSeparator className="bg-[#EEF2F7]" />
                             {canWithdraw && (
-                              <DropdownMenuItem onClick={() => onWithdraw(doc.id, doc.title || doc.document_type)} disabled={withdrawLoading === doc.id}>
+                              <DropdownMenuItem onClick={() => onWithdraw(doc.id, doc.title || doc.document_type)} disabled={withdrawLoading === doc.id} className="text-[#DC2626] focus:text-[#DC2626]">
                                 <Ban className="w-3.5 h-3.5 mr-2" />Withdraw request
                               </DropdownMenuItem>
                             )}
@@ -1140,6 +1141,7 @@ const BuyerDocumentsManager = ({
               <Select value={String(rowsPerPage)} onValueChange={(value) => setRowsPerPage(Number(value))}>
                 <SelectTrigger className="h-8 w-[70px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
                   <SelectItem value="10">10</SelectItem>
                   <SelectItem value="25">25</SelectItem>
                   <SelectItem value="50">50</SelectItem>

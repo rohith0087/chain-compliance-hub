@@ -230,8 +230,8 @@ const EvidenceCard = () => {
             className="r2c-scan pointer-events-none absolute inset-x-0 top-0 z-10 h-16"
             style={{
               background:
-                'linear-gradient(to bottom, rgba(216,70,42,0) 0%, rgba(216,70,42,0.16) 50%, rgba(216,70,42,0) 100%)',
-              borderTop: '1px solid rgba(216,70,42,0.5)',
+                'linear-gradient(to bottom, rgba(22,73,58,0) 0%, rgba(22,73,58,0.18) 50%, rgba(22,73,58,0) 100%)',
+              borderTop: '1px solid rgba(22,73,58,0.5)',
             }}
           />
         )}
@@ -308,7 +308,7 @@ const EvidenceCard = () => {
                 Verified
               </div>
               <div className="mt-1 font-data text-[8px] uppercase tracking-[0.15em] text-[var(--r2c-stamp)]/80">
-                R2C · 06·2026
+                No. R2C-0419
               </div>
             </div>
           </div>
@@ -449,16 +449,20 @@ const Index = () => {
     if (reduce) return;
     const el = ctaHeadlineRef.current;
     if (!el) return;
+    let cancelled = false;
+    let split: SplitText | null = null;
+    let trigger: ScrollTrigger | null = null;
     // Wait for fonts
     document.fonts.ready.then(() => {
-      const split = SplitText.create(el, { type: 'words,chars' });
+      if (cancelled || !el.isConnected) return;
+      split = SplitText.create(el, { type: 'words,chars' });
       gsap.set(split.chars, { opacity: 0, yPercent: 40 });
-      ScrollTrigger.create({
+      trigger = ScrollTrigger.create({
         trigger: el,
         start: 'top 85%',
         once: true,
         onEnter: () => {
-          gsap.to(split.chars, {
+          gsap.to(split!.chars, {
             opacity: 1,
             yPercent: 0,
             stagger: 0.025,
@@ -468,7 +472,11 @@ const Index = () => {
         },
       });
     });
-    return () => ScrollTrigger.getAll().forEach((st) => st.kill());
+    return () => {
+      cancelled = true;
+      trigger?.kill();
+      split?.revert();
+    };
   }, [reduce]);
 
   /* ---- GSAP: CTA background parallax scrub ---- */
@@ -481,7 +489,8 @@ const Index = () => {
     const section = ctaSectionRef.current;
     const light = ctaLightRef.current;
     if (!grid || !section) return;
-    gsap.to(grid, {
+
+    const parallaxTween = gsap.to(grid, {
       yPercent: -20,
       ease: 'none',
       scrollTrigger: {
@@ -493,30 +502,39 @@ const Index = () => {
     });
 
     // Light sweep — plays continuously while CTA is in viewport
+    let sweepAnim: gsap.core.Tween | null = null;
+    let sweepTrigger: ScrollTrigger | null = null;
     if (light) {
-      const sweepAnim = gsap.fromTo(
+      sweepAnim = gsap.fromTo(
         light,
         { x: '-100%' },
-        { 
-          x: '100%', 
-          duration: 3.5, 
-          ease: 'none', 
-          repeat: -1, 
+        {
+          x: '100%',
+          duration: 3.5,
+          ease: 'none',
+          repeat: -1,
           repeatDelay: 1.5,
-          paused: true 
+          paused: true,
         }
       );
 
-      ScrollTrigger.create({
+      sweepTrigger = ScrollTrigger.create({
         trigger: section,
         start: 'top bottom',
         end: 'bottom top',
-        onEnter: () => sweepAnim.play(),
-        onLeave: () => sweepAnim.pause(),
-        onEnterBack: () => sweepAnim.play(),
-        onLeaveBack: () => sweepAnim.pause(),
+        onEnter: () => sweepAnim?.play(),
+        onLeave: () => sweepAnim?.pause(),
+        onEnterBack: () => sweepAnim?.play(),
+        onLeaveBack: () => sweepAnim?.pause(),
       });
     }
+
+    return () => {
+      parallaxTween.scrollTrigger?.kill();
+      parallaxTween.kill();
+      sweepTrigger?.kill();
+      sweepAnim?.kill();
+    };
   }, [reduce]);
 
   const nav = [
@@ -694,16 +712,20 @@ const Index = () => {
           <div className="border-t border-[var(--r2c-line)]">
             {ENGINES.map((e, i) => (
               <Reveal key={e.label} delay={i * 0.05}>
-                <div className={`group grid grid-cols-1 gap-1 border-b border-[var(--r2c-line)] p-5 transition-colors sm:grid-cols-[176px_1fr] sm:gap-6 ${i % 2 === 0 ? 'bg-[var(--r2c-surface-2)]/50' : 'bg-transparent'}`}>
+                <div
+                  className={`group grid grid-cols-1 gap-1 border-b border-b-[var(--r2c-line)] border-l-2 p-5 pl-[18px] transition-colors sm:grid-cols-[176px_1fr] sm:gap-6 ${
+                    e.accent ? 'border-l-[var(--r2c-recall)]' : 'border-l-transparent'
+                  } ${i % 2 === 0 ? 'bg-[var(--r2c-surface-2)]/50' : 'bg-transparent'}`}
+                >
                   <div className="flex items-center gap-2.5 self-start pt-0.5">
                     <span
                       className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${
-                        e.accent ? 'bg-[var(--r2c-stamp)]' : 'bg-[var(--r2c-muted)] group-hover:bg-[var(--r2c-ink)]'
+                        e.accent ? 'bg-[var(--r2c-recall)]' : 'bg-[var(--r2c-muted)] group-hover:bg-[var(--r2c-ink)]'
                       }`}
                     />
                     <span
                       className={`font-data text-[11px] uppercase tracking-[0.15em] ${
-                        e.accent ? 'text-[var(--r2c-stamp)]' : 'text-[var(--r2c-muted)]'
+                        e.accent ? 'text-[var(--r2c-recall)]' : 'text-[var(--r2c-muted)]'
                       }`}
                     >
                       {e.label}
@@ -714,7 +736,9 @@ const Index = () => {
                       {e.title}
                       <span
                         aria-hidden
-                        className="text-[var(--r2c-stamp)] opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-100"
+                        className={`opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-100 ${
+                          e.accent ? 'text-[var(--r2c-recall)]' : 'text-[var(--r2c-stamp)]'
+                        }`}
                       >
                         →
                       </span>
@@ -858,10 +882,17 @@ const Index = () => {
       </section>
 
       {/* ================================ CTA =============================== */}
-      <section ref={ctaSectionRef} className="mx-auto max-w-[1180px] px-5 pb-24 sm:px-8">
-        <div className="r2c-glass-cta relative overflow-hidden rounded-[22px] bg-[#171B22] px-8 py-20 text-center sm:px-16">
-          {/* Glass border glow */}
-          <div className="pointer-events-none absolute inset-0 rounded-[22px] border border-white/[0.08]" />
+      <section ref={ctaSectionRef} className="relative mx-auto max-w-[1180px] px-5 pb-24 sm:px-8">
+        {/* Subtle ambient glow behind the card so the glass has something to refract */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[300px] bg-[var(--r2c-stamp)]/10 rounded-full blur-[100px] pointer-events-none" />
+        
+        <div className="r2c-glass-cta relative overflow-hidden rounded-[13px] bg-[rgba(0,0,0,0.89)] backdrop-blur-[4px] px-8 py-20 text-center sm:px-16 border border-[rgba(0,0,0,0.53)] shadow-[0_0_38px_7px_rgba(0,0,0,0.44)]">
+          {/* Glass Noise Texture */}
+          <div 
+            className="pointer-events-none absolute inset-0 opacity-[0.04] mix-blend-overlay" 
+            style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E\")" }} 
+          />
+          
           {/* Subtle inner top reflection */}
           <div
             className="pointer-events-none absolute inset-x-0 top-0 h-[1px]"

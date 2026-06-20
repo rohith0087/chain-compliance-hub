@@ -1,55 +1,70 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const claimId = '00000000-0000-4000-8000-000000000030';
+const versionId = '00000000-0000-4000-8000-000000000030';
+const supplierId = '00000000-0000-4000-8000-000000000020';
 const buyerId = '00000000-0000-4000-8000-000000000001';
 const grantId = '00000000-0000-4000-8000-000000000040';
 
 async function mockEvidenceSharingBackend(page: Page, enabled = true) {
   const grants: Array<Record<string, unknown>> = [];
-  const auditLog: Array<Record<string, unknown>> = [];
 
   await page.route('**/rest/v1/**', async (route) => {
     const url = route.request().url();
     let body: unknown = [];
     if (url.includes('/feature_flags')) body = { default_enabled: false };
     if (url.includes('/organization_feature_flags')) body = { enabled, expires_at: null };
-    if (url.includes('/evidence_claims')) {
+    if (url.includes('/evidence_versions')) {
       body = [{
-        id: claimId,
-        document_type: 'Business License',
-        status: 'verified',
-        issuer: null,
-        certificate_number: 'INT-2026-00451',
+        id: versionId,
         expiry_date: '2027-01-15',
+        lifecycle_status: 'current',
+        document_asset_id: '00000000-0000-4000-8000-000000000031',
+        record: {
+          id: '00000000-0000-4000-8000-000000000032',
+          display_name: 'Business License',
+          canonical_document_type: 'business_license',
+          supplier_id: supplierId,
+        },
+        asset: { storage_bucket: 'compliance-documents', storage_path: null },
+        evidence_attestations: [{
+          attestation_type: 'supplier_verification',
+          outcome: 'accepted',
+          organization_id: supplierId,
+        }],
+        evidence_validation_runs: [{ status: 'passed', completeness: 1, created_at: '2026-06-18T00:00:00Z', evidence_validation_results: [] }],
+        evidence_field_observations: [],
       }];
     }
     if (url.includes('/buyer_supplier_connections')) {
       body = [{ buyer_id: buyerId, buyers: { id: buyerId, company_name: 'Golden Buyer' } }];
     }
     if (url.includes('/evidence_sharing_grants')) body = [...grants];
-    if (url.includes('/evidence_sharing_audit_log')) body = [...auditLog];
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   });
 
-  await page.route('**/rest/v1/rpc/grant_evidence_access_v1', async (route) => {
+  await page.route('**/rest/v1/rpc/grant_canonical_evidence_access_v1', async (route) => {
+    const request = route.request().postDataJSON();
+    expect(request).toMatchObject({
+      p_supplier_id: supplierId,
+      p_buyer_id: buyerId,
+      p_evidence_version_id: versionId,
+      p_purpose: 'compliance_decision',
+    });
     grants.push({
       id: grantId,
       granted_to_organization_id: buyerId,
-      claim_id: claimId,
-      document_type: null,
+      evidence_version_id: versionId,
       purpose: 'compliance_decision',
       status: 'active',
-      expires_at: null,
+      expires_at: '2027-01-15T00:00:00Z',
       granted_at: '2026-06-18T00:00:00Z',
     });
-    auditLog.push({ id: 'audit-1', grant_id: grantId, event_type: 'granted', occurred_at: '2026-06-18T00:00:00Z', metadata: {} });
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(grantId) });
   });
 
   await page.route('**/rest/v1/rpc/revoke_evidence_access_v1', async (route) => {
-    const grant = grants.find((g) => g.id === grantId);
+    const grant = grants.find((item) => item.id === grantId);
     if (grant) grant.status = 'revoked';
-    auditLog.push({ id: 'audit-2', grant_id: grantId, event_type: 'revoked', occurred_at: '2026-06-18T00:05:00Z', metadata: {} });
     await route.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
   });
 }
@@ -60,22 +75,23 @@ test('feature flag hides the Evidence Sharing experience when disabled', async (
   await expect(page.getByText('Evidence sharing disabled')).toBeVisible();
 });
 
-test('shares a claim with a connected buyer and can revoke the grant', async ({ page }) => {
+test('shares a verified canonical version with a connected buyer and revokes it', async ({ page }) => {
   await mockEvidenceSharingBackend(page);
   await page.goto('/__test/evidence-sharing');
+
   await expect(page.getByRole('heading', { name: 'Evidence Sharing' })).toBeVisible();
   await expect(page.getByText('Business License')).toBeVisible();
-  await expect(page.getByText(/Unknown issuer/)).toBeVisible();
+  await expect(page.getByText('Verified', { exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'Share' }).click();
-  await expect(page.getByText(/Sharing Business License/)).toBeVisible();
-  await page.getByText('Select a connected buyer').click();
+  await expect(page.getByRole('heading', { name: 'Share verified evidence' })).toBeVisible();
+  await page.getByText('Select buyer').click();
   await page.getByRole('option', { name: 'Golden Buyer' }).click();
-  await page.getByRole('button', { name: 'Share', exact: true }).click();
+  await page.getByRole('button', { name: 'Share evidence' }).click();
 
   await expect(page.getByText('Golden Buyer')).toBeVisible();
-  await expect(page.getByText('Active', { exact: true })).toBeVisible();
+  await expect(page.getByText(/^active/)).toBeVisible();
 
   await page.getByRole('button', { name: 'Revoke' }).click();
-  await expect(page.getByText('Revoked')).toBeVisible();
+  await expect(page.getByText(/^revoked/)).toBeVisible();
 });

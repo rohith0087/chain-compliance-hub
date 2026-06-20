@@ -57,6 +57,8 @@ export const requiredEvidenceDefinitionSchema = z.object({
   name: z.string().min(1).max(240),
   description: z.string().max(2000).optional(),
   required_fields: z.array(z.string().min(1).max(128)).optional(),
+  required_standards: z.array(z.string().min(1).max(200)).optional(),
+  jurisdiction: z.string().min(2).max(100).optional(),
 }).strict();
 export type RequiredEvidenceDefinitionV1 = z.infer<typeof requiredEvidenceDefinitionSchema>;
 

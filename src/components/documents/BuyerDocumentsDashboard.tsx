@@ -21,7 +21,11 @@ import DocumentWithdrawDialog from './DocumentWithdrawDialog';
 import { resolveStoragePath } from '@/utils/storagePath';
 import { useBranchContext } from '@/contexts/BranchContext';
 
-const BuyerDocumentsDashboard = () => {
+interface BuyerDocumentsDashboardProps {
+  view?: 'documents' | 'activity';
+}
+
+const BuyerDocumentsDashboard = ({ view = 'documents' }: BuyerDocumentsDashboardProps) => {
   const { currentBranch, allBranchesView } = useBranchContext();
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -945,44 +949,25 @@ if (user?.id && latest.id) {
   return (
     <div className="space-y-6">
       {/* Main Content */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="inline-flex h-12 items-center gap-1 rounded-full bg-white border border-border/40 p-1.5 justify-start shadow-sm">
-          <TabsTrigger 
-            value="documents"
-            className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground"
-          >
-            Document Manager
-          </TabsTrigger>
-          <TabsTrigger 
-            value="timeline"
-            className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground"
-          >
-            Activity
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="documents">
-          <BuyerDocumentsManager 
-            documents={documents}
-            onApprove={handleApproveDocument}
-            onDecline={(documentId) => {
-              const doc = documents.find(d => d.id === documentId);
-              openDeclineDialog(documentId, doc?.document_type || 'Document');
-            }}
-            onWithdraw={(documentId, documentTitle) => {
-              openWithdrawDialog(documentId, documentTitle);
-            }}
-            onRefresh={loadDocuments}
-            approveLoading={approveLoading}
-            declineLoading={declineLoading}
-            withdrawLoading={withdrawLoading}
-          />
-        </TabsContent>
-
-        <TabsContent value="timeline">
-          <DocumentActivityDashboard events={activityEvents} documents={documents} />
-        </TabsContent>
-      </Tabs>
+      {view === 'documents' ? (
+        <BuyerDocumentsManager 
+          documents={documents}
+          onApprove={handleApproveDocument}
+          onDecline={(documentId) => {
+            const doc = documents.find(d => d.id === documentId);
+            openDeclineDialog(documentId, doc?.document_type || 'Document');
+          }}
+          onWithdraw={(documentId, documentTitle) => {
+            openWithdrawDialog(documentId, documentTitle);
+          }}
+          onRefresh={loadDocuments}
+          approveLoading={approveLoading}
+          declineLoading={declineLoading}
+          withdrawLoading={withdrawLoading}
+        />
+      ) : (
+        <DocumentActivityDashboard events={activityEvents} documents={documents} />
+      )}
 
       {/* Decline Dialog */}
       <DocumentDeclineDialog

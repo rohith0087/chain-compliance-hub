@@ -21,6 +21,27 @@ export const dossierEvidenceSchema = z.object({
   status: z.string(),
 }).strict();
 
+export const dossierFieldCitationSchema = z.object({
+  field_name: z.string(),
+  value: z.unknown(),
+  source_page: z.number().int().nullable(),
+  source_quote: z.string().nullable(),
+  source_bbox: z.record(z.unknown()).nullable(),
+  confidence: z.number().nullable(),
+}).strict();
+
+export const dossierCanonicalEvidenceSchema = z.object({
+  evidence_record_id: z.string().uuid(),
+  evidence_version_id: z.string().uuid(),
+  document_type: z.string(),
+  display_name: z.string(),
+  issue_date: z.string().nullable(),
+  expiry_date: z.string().nullable(),
+  match_score: z.number(),
+  match_reasons: z.array(z.string()),
+  field_citations: z.array(dossierFieldCitationSchema),
+}).strict();
+
 export const dossierStatementSchema = z.object({
   decision_result_id: z.string().uuid(),
   requirement_version_id: z.string().uuid().nullable(),
@@ -37,6 +58,7 @@ export const dossierStatementSchema = z.object({
   source_url: z.string().nullable(),
   evidence_claim_ids: z.array(z.string().uuid()),
   evidence: z.array(dossierEvidenceSchema),
+  canonical_evidence: z.array(dossierCanonicalEvidenceSchema).optional(),
   decision_version: z.string(),
   effective_from: z.string().nullable(),
   effective_to: z.string().nullable(),

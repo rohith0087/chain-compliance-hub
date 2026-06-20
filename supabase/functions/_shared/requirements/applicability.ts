@@ -7,7 +7,12 @@ import {
   type SubjectType,
 } from './contracts.ts';
 import { evaluateApplicabilityRule } from './evaluator.ts';
-import { adaptLegacyRequirement, legacyRequirementKey, type LegacyRequirementSource } from './legacyAdapter.ts';
+import {
+  adaptLegacyRequirement,
+  deduplicateLegacyRequirements,
+  legacyRequirementKey,
+  type LegacyRequirementSource,
+} from './legacyAdapter.ts';
 
 type SupabaseAdmin = ReturnType<typeof createClient>;
 
@@ -167,11 +172,8 @@ export async function loadLegacyResults(
     ...onboardingRequirements.map((item) => ({ ...item, source_type: 'onboarding_document_requirement' })),
   ];
 
-  const unique = new Map<string, LegacyRequirementSource>();
-  for (const item of combined) unique.set(`${item.document_type}:${item.document_name}`, item);
-
   const results: RequirementEvaluationResultV1[] = [];
-  for (const item of unique.values()) {
+  for (const item of deduplicateLegacyRequirements(combined)) {
     const key = legacyRequirementKey(item.document_type);
     const evidence = {
       type: 'document' as const,

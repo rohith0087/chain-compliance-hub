@@ -3,6 +3,7 @@ import { useState, useEffect, createContext, useContext, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import logger from '@/utils/logger';
+import { shouldPreserveWorkspaceState } from '@/utils/authState';
 
 // Get client IP address using public API
 const getClientIP = async (): Promise<string | null> => {
@@ -58,6 +59,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const isInitializedRef = useRef(false);
+  const currentUserIdRef = useRef<string | null>(null);
 
   const createMissingProfile = async (user: User) => {
     logger.debug('Creating missing profile for user:', user.id);
@@ -136,32 +138,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         logger.debug('Auth state changed:', event);
-        
-        if (event === 'TOKEN_REFRESHED' && isInitializedRef.current) {
-          if (session) {
-            setSession(session);
-            setUser(session.user);
-          }
+
+        if (shouldPreserveWorkspaceState({
+          event,
+          initialized: isInitializedRef.current,
+          currentUserId: currentUserIdRef.current,
+          nextUserId: session?.user.id ?? null,
+        })) {
+          // Keep the existing User object stable. Hooks key off its identity,
+          // so replacing it on tab-focus SIGNED_IN/TOKEN_REFRESHED events
+          // unnecessarily reloads contexts and unmounts open dashboard forms.
+          setSession(session);
           return;
         }
-        
-        if (event === 'INITIAL_SESSION' && isInitializedRef.current && session?.user) {
-          if (session) {
-            setSession(session);
-            setUser(session.user);
-          }
-          return;
-        }
-        
+
         if (event === 'SIGNED_OUT') {
           setSession(null);
           setUser(null);
           setProfile(null);
           setLoading(false);
           isInitializedRef.current = false;
+          currentUserIdRef.current = null;
           return;
         }
-        
+
+        currentUserIdRef.current = session?.user.id ?? null;
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -179,6 +180,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       logger.debug('Initial session check');
+      currentUserIdRef.current = session?.user.id ?? null;
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -243,6 +245,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(null);
       setSession(null);
       setProfile(null);
+      currentUserIdRef.current = null;
       
       const { error } = await supabase.auth.signOut();
       
@@ -258,6 +261,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(null);
       setSession(null);
       setProfile(null);
+      currentUserIdRef.current = null;
       window.location.href = '/';
     }
   };

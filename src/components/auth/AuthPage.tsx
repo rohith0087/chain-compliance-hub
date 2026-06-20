@@ -512,7 +512,9 @@ const AuthPage = () => {
 
       {/* Right Form Section */}
       <div className="w-full lg:w-1/2 flex items-center justify-center bg-[var(--r2c-bg)] relative overflow-hidden">
-        
+        {/* Subtle ambient glow so the liquid glass has something to refract, strictly using theme colors */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[var(--r2c-stamp)]/10 rounded-full blur-[80px] pointer-events-none" />
+
         {/* Top Right Actions */}
         <div className="absolute top-8 right-8 xl:right-12 z-50 hidden sm:flex items-center gap-8">
           <nav className="hidden items-center gap-8 lg:flex">
@@ -540,7 +542,7 @@ const AuthPage = () => {
             <Wordmark size={28} />
           </div>
 
-          <Card className="border-2 border-[var(--r2c-line)] shadow-[0_16px_32px_-12px_rgba(20,24,31,0.5)] bg-[var(--r2c-surface)] backdrop-blur-md mt-16 lg:mt-0">
+          <Card className="r2c-glass-card mt-16 lg:mt-0">
             <CardContent className="p-6 sm:p-8">
               <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-foreground">
@@ -626,7 +628,7 @@ const AuthPage = () => {
                         />
                       )}
                       
-                      <Button type="submit" className="w-full h-11 font-semibold bg-[var(--r2c-stamp)] hover:bg-[var(--r2c-stamp-deep)] text-white" disabled={loading || isLoginLocked || (isTurnstileEnabled && !turnstileToken)}>
+                      <Button type="submit" className="r2c-glass-btn w-full h-11 text-slate-900 dark:text-white hover:text-slate-900 dark:hover:text-white" disabled={loading || isLoginLocked || (isTurnstileEnabled && !turnstileToken)}>
                         {isLoginLocked 
                           ? `Locked (${Math.ceil(loginCooldownRemaining / 1000)}s)` 
                           : loading ? "Logging In..." : "Login"}
@@ -974,7 +976,7 @@ const AuthPage = () => {
                     
                     <Button 
                       type="submit" 
-                      className="w-full h-11 font-semibold bg-[var(--r2c-stamp)] hover:bg-[var(--r2c-stamp-deep)] text-white" 
+                      className="r2c-glass-btn w-full h-11 text-slate-900 dark:text-white hover:text-slate-900 dark:hover:text-white" 
                       disabled={loading || isSignupCooling || selectedRoles.length === 0 || (isTurnstileEnabled && !turnstileToken)}
                     >
                       {isSignupCooling 

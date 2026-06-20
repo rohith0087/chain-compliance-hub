@@ -1,17 +1,44 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import logger from '@/utils/logger';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  FileText, 
-  Filter,
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  FileText,
   RefreshCw,
   CheckCircle,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Calendar,
+  User,
+  Download,
+  Eye,
+  ThumbsUp,
+  ThumbsDown,
+  Link as LinkIcon,
+  Ban,
+  MessageSquare,
+  MoreVertical,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  LayoutGrid,
+  List,
+  Sparkles,
+  SlidersHorizontal,
+  X,
 } from 'lucide-react';
-import EnhancedDocumentsFilter from './EnhancedDocumentsFilter';
 import DocumentCardWithSelection from './DocumentCardWithSelection';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -33,24 +60,103 @@ interface BuyerDocumentsManagerProps {
   withdrawLoading?: string | null;
 }
 
+type StatusTab = 'all' | 'pending_approval' | 'approved' | 'declined';
+type SortKey = 'created_at' | 'title' | 'supplier';
+
+const STATUS_BADGE_CONFIG: Record<string, { label: string; icon: typeof CheckCircle; className: string }> = {
+  pending: { label: 'Pending Review', icon: Clock, className: 'bg-amber-50 text-amber-700 border-amber-200' },
+  submitted: { label: 'Submitted', icon: FileText, className: 'bg-blue-50 text-blue-700 border-blue-200' },
+  approved: { label: 'Approved', icon: CheckCircle, className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  rejected: { label: 'Declined', icon: AlertTriangle, className: 'bg-red-50 text-red-700 border-red-200' },
+  withdrawn: { label: 'Withdrawn', icon: Ban, className: 'bg-slate-50 text-slate-600 border-slate-200' },
+  expired: { label: 'Expired', icon: AlertTriangle, className: 'bg-red-50 text-red-700 border-red-200' },
+};
+
+const CATEGORY_BADGE_CLASS: Record<string, string> = {
+  compliance: 'bg-blue-50 text-blue-700 border-blue-200',
+  certification: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  insurance: 'bg-orange-50 text-orange-700 border-orange-200',
+  quality: 'bg-pink-50 text-pink-700 border-pink-200',
+  safety: 'bg-teal-50 text-teal-700 border-teal-200',
+  financial: 'bg-slate-50 text-slate-700 border-slate-200',
+};
+
+// No taxonomy column exists for this second badge -- derive a reasonable
+// classification label from the document type/title rather than fabricate
+// a new schema field.
+function classifyDocument(doc: any): string {
+  const haystack = `${doc.document_type || ''} ${doc.template_type || ''} ${doc.title || ''}`.toLowerCase();
+  if (haystack.includes('certificat')) return 'Certification';
+  if (haystack.includes('questionnaire')) return 'Questionnaire';
+  if (haystack.includes('polic')) return 'Policy';
+  if (haystack.includes('report')) return 'Report';
+  if (haystack.includes('invoice')) return 'Invoice';
+  if (haystack.includes('permit') || haystack.includes('licens')) return 'License';
+  return 'Document';
+}
+
+// No human-readable supplier number exists in the schema (only a UUID) --
+// this is a stable, deterministic per-supplier display label, not a real ID.
+function supplierShortId(supplierId?: string): string {
+  if (!supplierId) return '—';
+  return `SUP-${supplierId.replace(/-/g, '').slice(0, 6).toUpperCase()}`;
+}
+
+function formatFileSize(bytes?: number): string {
+  if (!bytes) return '—';
+  const mb = bytes / (1024 * 1024);
+  return mb >= 0.1 ? `${mb.toFixed(2)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
+}
+
+function formatDate(dateString?: string): string {
+  if (!dateString) return '—';
+  return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function isExpiringSoon(expirationDate?: string): boolean {
+  if (!expirationDate) return false;
+  const expDate = new Date(expirationDate);
+  const today = new Date();
+  const thirtyDaysFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+  return expDate <= thirtyDaysFromNow && expDate >= today;
+}
+
+function isExpired(expirationDate?: string): boolean {
+  if (!expirationDate) return false;
+  return new Date(expirationDate) < new Date();
+}
+
+function aiInsight(doc: any, expirationDate?: string): { label: string; description: string } {
+  if (isExpired(expirationDate)) {
+    return { label: 'AI: High priority', description: 'This document is overdue. Recommend requesting renewal immediately from the supplier to maintain compliance.' };
+  }
+  if (isExpiringSoon(expirationDate)) {
+    return { label: 'AI: Renew now', description: `This document expires on ${formatDate(expirationDate)}. Recommended action: send a renewal request to the supplier now.` };
+  }
+  if (doc.status === 'pending' || doc.status === 'submitted') {
+    return { label: 'AI: Review recommended', description: 'Recommend manual review before approval.' };
+  }
+  return { label: 'AI: Summary', description: `This ${doc.document_type} is approved and linked to ${doc.suppliers?.company_name || 'the supplier'}. No immediate action is required.` };
+}
+
 // Helper to get the latest upload (most recent by created_at)
 const getLatestUpload = (uploads: any[] | undefined) => {
   if (!uploads || uploads.length === 0) return null;
   if (uploads.length === 1) return uploads[0];
-  return uploads.slice().sort((a, b) => 
+  return uploads.slice().sort((a, b) =>
     new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime()
   )[0];
 };
 
-const BuyerDocumentsManager = ({ 
-  documents, 
-  onApprove, 
-  onDecline, 
+const BuyerDocumentsManager = ({
+  documents,
+  onApprove,
+  onDecline,
   onWithdraw,
   onRefresh,
   approveLoading,
   declineLoading,
-  withdrawLoading 
+  withdrawLoading
 }: BuyerDocumentsManagerProps) => {
   const [filters, setFilters] = useState({
     search: '',
@@ -59,11 +165,18 @@ const BuyerDocumentsManager = ({
     documentType: '',
     supplier: '',
     expirationStatus: '',
-    dateRange: '',
     uploadDateRange: '',
     specificYear: '',
     facilityLocation: ''
   });
+  const [statusTab, setStatusTab] = useState<StatusTab>('all');
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [sortKey, setSortKey] = useState<SortKey>('created_at');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
+
   const [downloading, setDownloading] = useState<string | null>(null);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
@@ -76,39 +189,46 @@ const BuyerDocumentsManager = ({
   const [summaryDocument, setSummaryDocument] = useState<any>(null);
   const [notesModalOpen, setNotesModalOpen] = useState(false);
   const [selectedNotesDocument, setSelectedNotesDocument] = useState<any>(null);
+  const [pendingDownloadIds, setPendingDownloadIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
+
+  // Status-tab counts are computed over all documents, not the filtered set,
+  // so a tab's count doesn't change just because another filter is active.
+  const statusCounts = useMemo(() => ({
+    all: documents.length,
+    pending_approval: documents.filter((doc) => doc.status === 'pending' || doc.status === 'submitted').length,
+    approved: documents.filter((doc) => doc.status === 'approved').length,
+    declined: documents.filter((doc) => doc.status === 'rejected').length,
+  }), [documents]);
+
+  const matchesStatusTab = (doc: any) => {
+    if (statusTab === 'all') return true;
+    if (statusTab === 'pending_approval') return doc.status === 'pending' || doc.status === 'submitted';
+    if (statusTab === 'approved') return doc.status === 'approved';
+    return doc.status === 'rejected';
+  };
 
   // Enhanced filter logic with new filter options
   const filteredDocuments = documents.filter(doc => {
-    // Search filter
+    if (!matchesStatusTab(doc)) return false;
+
     const searchTerm = filters.search.toLowerCase();
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       doc.title?.toLowerCase().includes(searchTerm) ||
       doc.document_type.toLowerCase().includes(searchTerm) ||
       doc.category?.toLowerCase().includes(searchTerm) ||
       doc.suppliers?.company_name?.toLowerCase().includes(searchTerm);
 
-    // Status filter
     const matchesStatus = !filters.status || doc.status === filters.status;
-
-    // Category filter
     const matchesCategory = !filters.category || doc.category === filters.category;
-
-    // Document type filter
     const matchesDocumentType = !filters.documentType || doc.document_type === filters.documentType;
-
-    // Supplier filter
     const matchesSupplier = !filters.supplier || doc.supplier_id === filters.supplier;
-
-    // Facility location filter
     const matchesFacility = !filters.facilityLocation || doc.branch_id === filters.facilityLocation;
 
-    // Upload date range filter
     let matchesUploadDateRange = true;
     if (filters.uploadDateRange) {
       const docDate = new Date(doc.created_at);
       const now = new Date();
-      
       switch (filters.uploadDateRange) {
         case 'last_7_days':
           matchesUploadDateRange = docDate >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -127,34 +247,19 @@ const BuyerDocumentsManager = ({
       }
     }
 
-    // Specific year filter
     let matchesSpecificYear = true;
     if (filters.specificYear) {
-      const docDate = new Date(doc.created_at);
-      const docYear = docDate.getFullYear();
-      
+      const docYear = new Date(doc.created_at).getFullYear();
       switch (filters.specificYear) {
-        case '2025':
-          matchesSpecificYear = docYear === 2025;
-          break;
-        case '2024':
-          matchesSpecificYear = docYear === 2024;
-          break;
-        case '2023':
-          matchesSpecificYear = docYear === 2023;
-          break;
-        case '2024-2025':
-          matchesSpecificYear = docYear === 2024 || docYear === 2025;
-          break;
-        case '2023-2024':
-          matchesSpecificYear = docYear === 2023 || docYear === 2024;
-          break;
-        default:
-          matchesSpecificYear = true;
+        case '2025': matchesSpecificYear = docYear === 2025; break;
+        case '2024': matchesSpecificYear = docYear === 2024; break;
+        case '2023': matchesSpecificYear = docYear === 2023; break;
+        case '2024-2025': matchesSpecificYear = docYear === 2024 || docYear === 2025; break;
+        case '2023-2024': matchesSpecificYear = docYear === 2023 || docYear === 2024; break;
+        default: matchesSpecificYear = true;
       }
     }
 
-    // Expiration status filter
     let matchesExpirationStatus = true;
     if (filters.expirationStatus) {
       const upload = getLatestUpload(doc.document_uploads);
@@ -162,34 +267,55 @@ const BuyerDocumentsManager = ({
         const expirationDate = new Date(upload.expiration_date);
         const now = new Date();
         const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-        
         switch (filters.expirationStatus) {
-          case 'expiring_soon':
-            matchesExpirationStatus = expirationDate <= thirtyDaysFromNow && expirationDate >= now;
-            break;
-          case 'expired':
-            matchesExpirationStatus = expirationDate < now;
-            break;
-          case 'valid':
-            matchesExpirationStatus = expirationDate >= now;
-            break;
-          default:
-            matchesExpirationStatus = true;
+          case 'expiring_soon': matchesExpirationStatus = expirationDate <= thirtyDaysFromNow && expirationDate >= now; break;
+          case 'expired': matchesExpirationStatus = expirationDate < now; break;
+          case 'valid': matchesExpirationStatus = expirationDate >= now; break;
+          default: matchesExpirationStatus = true;
         }
       }
     }
 
-    return matchesSearch && matchesStatus && matchesCategory && 
-           matchesDocumentType && matchesSupplier && matchesUploadDateRange && 
-           matchesSpecificYear && matchesExpirationStatus && matchesFacility;
+    return matchesSearch && matchesStatus && matchesCategory &&
+      matchesDocumentType && matchesSupplier && matchesUploadDateRange &&
+      matchesSpecificYear && matchesExpirationStatus && matchesFacility;
   });
+
+  const sortedDocuments = useMemo(() => {
+    const arr = [...filteredDocuments];
+    arr.sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === 'created_at') cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      else if (sortKey === 'title') cmp = (a.title || a.document_type || '').localeCompare(b.title || b.document_type || '');
+      else cmp = (a.suppliers?.company_name || '').localeCompare(b.suppliers?.company_name || '');
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return arr;
+  }, [filteredDocuments, sortKey, sortDir]);
+
+  useEffect(() => { setPage(1); }, [statusTab, filters, sortKey, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedDocuments.length / rowsPerPage));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * rowsPerPage;
+  const pageDocuments = sortedDocuments.slice(pageStart, pageStart + rowsPerPage);
+
+  const activeFilterCount = Object.values(filters).filter((value) => value !== '').length + (statusTab !== 'all' ? 0 : 0);
+
+  const clearAllFilters = () => {
+    setFilters({
+      search: '', status: '', category: '', documentType: '', supplier: '',
+      expirationStatus: '', uploadDateRange: '', specificYear: '', facilityLocation: ''
+    });
+    setStatusTab('all');
+  };
 
   // Create available suppliers list from documents - extract actual supplier data
   const availableSuppliers = Array.from(
     new Map(
       documents
         .filter(doc => doc.suppliers && doc.supplier_id)
-        .map(doc => [doc.supplier_id, { // Use supplier_id as key for consistency
+        .map(doc => [doc.supplier_id, {
           id: doc.supplier_id,
           company_name: doc.suppliers.company_name,
           documentCount: documents.filter(d => d.supplier_id === doc.supplier_id).length
@@ -212,14 +338,9 @@ const BuyerDocumentsManager = ({
   ).sort((a, b) => a.name.localeCompare(b.name));
 
   const handleView = async (doc: any) => {
-    logger.debug('View document:', doc.id);
-    logger.debug('Document uploads:', doc.document_uploads);
     const uploads = doc.document_uploads || [];
-    const upload = uploads.length > 1
-      ? uploads.slice().sort((a: any, b: any) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())[0]
-      : uploads[0];
-    logger.debug('Selected upload data:', upload);
-    
+    const upload = getLatestUpload(uploads);
+
     if (!upload?.file_path) {
       try {
         if (doc.template_type === 'custom') {
@@ -241,17 +362,12 @@ const BuyerDocumentsManager = ({
       } catch (e) {
         console.error('Custom submission view fallback failed', e);
       }
-      toast({
-        title: "Error",
-        description: "No file available for viewing",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "No file available for viewing", variant: "destructive" });
       return;
     }
 
     let newTab: Window | null = null;
     try {
-      // Determine if we can preview in a new tab (images and PDFs)
       const isPreviewable =
         upload?.mime_type?.startsWith('image/') ||
         upload?.mime_type === 'application/pdf' ||
@@ -274,32 +390,21 @@ const BuyerDocumentsManager = ({
           window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
         }
       } else {
-        // For other files, trigger a download
         await handleDownload(doc);
       }
     } catch (error) {
       console.error('View error:', error);
-      // Close any pre-opened tab left on "Loading"
       try {
         if (newTab && !newTab.closed) newTab.close();
       } catch {}
-      toast({
-        title: "Error",
-        description: "Failed to view document",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to view document", variant: "destructive" });
     }
   };
 
   const handleDownload = async (doc: any) => {
-    logger.debug('Download document:', doc.id);
-    logger.debug('Document uploads:', doc.document_uploads);
     const uploads = doc.document_uploads || [];
-    const upload = uploads.length > 1
-      ? uploads.slice().sort((a: any, b: any) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())[0]
-      : uploads[0];
-    logger.debug('Selected upload data:', upload);
-    
+    const upload = getLatestUpload(uploads);
+
     if (!upload?.file_path) {
       try {
         if (doc.template_type === 'custom') {
@@ -326,18 +431,12 @@ const BuyerDocumentsManager = ({
       } catch (e) {
         console.error('Custom submission download fallback failed', e);
       }
-      logger.debug('No file_path found:', upload);
-      toast({
-        title: "Error",
-        description: "No file available for download",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "No file available for download", variant: "destructive" });
       return;
     }
 
     setDownloading(doc.id);
     try {
-      // Prefer a signed URL download so we avoid loading large blobs into memory
       const resolved = resolveStoragePath(upload.file_path);
       if (!resolved) {
         throw new Error('Invalid file path');
@@ -354,7 +453,6 @@ const BuyerDocumentsManager = ({
         a.click();
         window.document.body.removeChild(a);
 
-        // Log download activity with error handling
         const { data: { user } } = await supabase.auth.getUser();
         if (user?.id && upload.id) {
           try {
@@ -372,14 +470,10 @@ const BuyerDocumentsManager = ({
           }
         }
 
-        toast({
-          title: "Download Started",
-          description: `Downloading ${upload.file_name}`,
-        });
+        toast({ title: "Download Started", description: `Downloading ${upload.file_name}` });
         return;
       }
 
-      // Fallback: fetch the blob and download
       const { data: blob, error } = await supabase.storage
         .from(resolved.bucket)
         .download(resolved.key);
@@ -398,7 +492,6 @@ const BuyerDocumentsManager = ({
       window.document.body.removeChild(a2);
       URL.revokeObjectURL(url);
 
-      // Log download activity (fallback path) with error handling
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.id && upload.id) {
         try {
@@ -416,17 +509,10 @@ const BuyerDocumentsManager = ({
         }
       }
 
-      toast({
-        title: "Download Started",
-        description: `Downloading ${upload.file_name}`,
-      });
+      toast({ title: "Download Started", description: `Downloading ${upload.file_name}` });
     } catch (error) {
       console.error('Download error:', error);
-      toast({
-        title: "Download Failed",
-        description: "Failed to download the document",
-        variant: "destructive",
-      });
+      toast({ title: "Download Failed", description: "Failed to download the document", variant: "destructive" });
     } finally {
       setDownloading(null);
     }
@@ -442,131 +528,110 @@ const BuyerDocumentsManager = ({
     setSummaryModalOpen(true);
   };
 
-  // Bulk selection functions
-  const handleSelectAll = () => {
+  const handleSelectAll = (checked: boolean) => {
+    if (!checked) {
+      setSelectedDocuments(new Set());
+      return;
+    }
     const newSelection = new Set<string>();
-    filteredDocuments.forEach(doc => {
+    pageDocuments.forEach(doc => {
       const upload = doc.document_uploads?.[0];
-      if (upload?.file_path) { // Only select documents with files
-        newSelection.add(doc.id);
-      }
+      if (upload?.file_path) newSelection.add(doc.id);
     });
     setSelectedDocuments(newSelection);
   };
 
-  const handleClearSelection = () => {
-    setSelectedDocuments(new Set());
-  };
-
   const handleDocumentSelectionChange = (documentId: string, selected: boolean) => {
     const newSelection = new Set(selectedDocuments);
-    if (selected) {
-      newSelection.add(documentId);
-    } else {
-      newSelection.delete(documentId);
-    }
+    if (selected) newSelection.add(documentId);
+    else newSelection.delete(documentId);
     setSelectedDocuments(newSelection);
   };
 
-  // Check if any selected documents have multiple versions
-  const getMultiVersionCount = () => {
-    return Array.from(selectedDocuments).filter(docId => {
+  const getMultiVersionCount = (ids: Set<string>) => {
+    return Array.from(ids).filter(docId => {
       const doc = documents.find(d => d.id === docId);
       return doc?.document_uploads?.length > 1;
     }).length;
   };
 
-  // Bulk download function - checks for multi-version documents first
   const handleBulkDownload = async () => {
     if (selectedDocuments.size === 0) {
-      toast({
-        title: "Error",
-        description: "No documents selected",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "No documents selected", variant: "destructive" });
       return;
     }
-
-    const multiVersionCount = getMultiVersionCount();
-    if (multiVersionCount > 0) {
+    setPendingDownloadIds(selectedDocuments);
+    if (getMultiVersionCount(selectedDocuments) > 0) {
       setShowVersionDialog(true);
       return;
     }
-
-    // No multi-version docs, proceed with download
-    await executeBulkDownload('current');
+    await executeBulkDownload('current', selectedDocuments);
   };
 
-  // Execute the actual bulk download
-  const executeBulkDownload = async (mode: 'current' | 'all') => {
+  const handleExport = async () => {
+    const eligibleIds = new Set<string>();
+    sortedDocuments.forEach(doc => {
+      const upload = doc.document_uploads?.[0];
+      if (upload?.file_path) eligibleIds.add(doc.id);
+    });
+    if (eligibleIds.size === 0) {
+      toast({ title: "Nothing to export", description: "No documents with files in the current view." });
+      return;
+    }
+    setPendingDownloadIds(eligibleIds);
+    if (getMultiVersionCount(eligibleIds) > 0) {
+      setShowVersionDialog(true);
+      return;
+    }
+    await executeBulkDownload('current', eligibleIds);
+  };
+
+  const executeBulkDownload = async (mode: 'current' | 'all', ids: Set<string>) => {
     try {
       setShowVersionDialog(false);
       setIsBulkDownloading(true);
-      
-      // Get user's session token for authentication
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         throw new Error('No active session - please log in again');
       }
-      
-      // Create filter description for filename
-      const filterParts = [];
-      
+
+      const filterParts: string[] = [];
       if (filters.supplier) {
         const supplier = availableSuppliers.find(s => s.id === filters.supplier);
         if (supplier) filterParts.push(supplier.company_name);
       } else {
         filterParts.push("All_Suppliers");
       }
-      
-      if (filters.expirationStatus) {
-        filterParts.push(filters.expirationStatus.replace('_', ' '));
-      }
-      
-      if (filters.specificYear) {
-        filterParts.push(filters.specificYear);
-      } else if (filters.uploadDateRange) {
-        filterParts.push(filters.uploadDateRange.replace('_', ' '));
-      }
-      
-      if (filters.status) {
-        filterParts.push(filters.status);
-      }
+      if (filters.expirationStatus) filterParts.push(filters.expirationStatus.replace('_', ' '));
+      if (filters.specificYear) filterParts.push(filters.specificYear);
+      else if (filters.uploadDateRange) filterParts.push(filters.uploadDateRange.replace('_', ' '));
+      if (filters.status) filterParts.push(filters.status);
 
       const filterDescription = filterParts.join('_') || 'Documents';
 
-      // Get document upload IDs and metadata based on download mode
       let uploadIds: string[] = [];
       const documentMetadata: Array<{ title: string; uploadIds: string[] }> = [];
-      
-      Array.from(selectedDocuments).forEach(docId => {
+
+      Array.from(ids).forEach(docId => {
         const doc = documents.find(d => d.id === docId);
         if (!doc?.document_uploads?.length) return;
-        
+
         const docUploadIds: string[] = [];
-        
         if (mode === 'all') {
-          // Include all versions
           doc.document_uploads.forEach((upload: any) => {
             if (upload?.id) {
               uploadIds.push(upload.id);
               docUploadIds.push(upload.id);
             }
           });
-        } else {
-          // Include only latest version (first in array)
-          if (doc.document_uploads[0]?.id) {
-            uploadIds.push(doc.document_uploads[0].id);
-            docUploadIds.push(doc.document_uploads[0].id);
-          }
+        } else if (doc.document_uploads[0]?.id) {
+          uploadIds.push(doc.document_uploads[0].id);
+          docUploadIds.push(doc.document_uploads[0].id);
         }
-        
-        // Collect metadata for folder organization
+
         if (docUploadIds.length > 0) {
-          documentMetadata.push({
-            title: doc.title || doc.document_type || 'Documents',
-            uploadIds: docUploadIds
-          });
+          documentMetadata.push({ title: doc.title || doc.document_type || 'Documents', uploadIds: docUploadIds });
         }
       });
 
@@ -574,19 +639,13 @@ const BuyerDocumentsManager = ({
         throw new Error('No valid document uploads found for selected documents');
       }
 
-      // Call bulk download edge function with user's session token
       const response = await fetch('https://edwerzutsknhuplidhsj.supabase.co/functions/v1/bulk-document-downloader', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          documentIds: uploadIds,
-          filterDescription,
-          organizeFolders,
-          documentMetadata
-        })
+        body: JSON.stringify({ documentIds: uploadIds, filterDescription, organizeFolders, documentMetadata })
       });
 
       if (!response.ok) {
@@ -594,7 +653,6 @@ const BuyerDocumentsManager = ({
         throw new Error(`Download failed: ${errorText}`);
       }
 
-      // Download the ZIP file
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -605,27 +663,18 @@ const BuyerDocumentsManager = ({
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      toast({
-        title: "Download Started",
-        description: `ZIP download started with ${uploadIds.length} file${uploadIds.length !== 1 ? 's' : ''}`,
-      });
+      toast({ title: "Download Started", description: `ZIP download started with ${uploadIds.length} file${uploadIds.length !== 1 ? 's' : ''}` });
       setSelectedDocuments(new Set());
-
+      setPendingDownloadIds(new Set());
     } catch (error: any) {
       console.error('Bulk download error:', error);
-      toast({
-        title: "Download Failed",
-        description: error.message || "Failed to download documents",
-        variant: "destructive",
-      });
+      toast({ title: "Download Failed", description: error.message || "Failed to download documents", variant: "destructive" });
     } finally {
       setIsBulkDownloading(false);
     }
   };
 
-
   const [isRefreshing, setIsRefreshing] = useState(false);
-
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
@@ -635,140 +684,493 @@ const BuyerDocumentsManager = ({
     }
   };
 
-  return (
-    <div className="space-y-6">
-      {/* Loading Overlay */}
-      {isBulkDownloading && (
-        <BulkDownloadOverlay documentCount={selectedDocuments.size} />
-      )}
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir(key === 'created_at' ? 'desc' : 'asc');
+    }
+  };
 
-      {/* Version Selection Dialog */}
+  const SortIcon = ({ column }: { column: SortKey }) => {
+    if (sortKey !== column) return <ChevronsUpDown className="w-3.5 h-3.5 text-muted-foreground/50" />;
+    return sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />;
+  };
+
+  const statusTabs: Array<{ value: StatusTab; label: string }> = [
+    { value: 'all', label: 'All' },
+    { value: 'pending_approval', label: 'Pending Approval' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'declined', label: 'Declined' },
+  ];
+
+  const allPageSelected = pageDocuments.length > 0 && pageDocuments.every(doc => selectedDocuments.has(doc.id) || !doc.document_uploads?.[0]?.file_path);
+
+  const pageNumbers = useMemo(() => {
+    const pages: number[] = [];
+    const maxButtons = 5;
+    let start = Math.max(1, currentPage - 2);
+    const end = Math.min(totalPages, start + maxButtons - 1);
+    start = Math.max(1, end - maxButtons + 1);
+    for (let p = start; p <= end; p += 1) pages.push(p);
+    return pages;
+  }, [currentPage, totalPages]);
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-2xl font-bold">All Documents</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Manage and review supplier compliance documents</p>
+      </div>
+
+      {isBulkDownloading && <BulkDownloadOverlay documentCount={pendingDownloadIds.size} />}
+
       <BulkDownloadOptionsDialog
         open={showVersionDialog}
         onOpenChange={setShowVersionDialog}
-        multiVersionCount={getMultiVersionCount()}
-        totalSelected={selectedDocuments.size}
+        multiVersionCount={getMultiVersionCount(pendingDownloadIds)}
+        totalSelected={pendingDownloadIds.size}
         downloadMode={downloadMode}
         onDownloadModeChange={setDownloadMode}
         organizeFolders={organizeFolders}
         onOrganizeFoldersChange={setOrganizeFolders}
-        onConfirm={() => executeBulkDownload(downloadMode)}
+        onConfirm={() => executeBulkDownload(downloadMode, pendingDownloadIds)}
       />
 
-      {/* Enhanced Filters */}
-      <EnhancedDocumentsFilter
-        filters={filters}
-        onFiltersChange={setFilters}
-        showExpirationFilter={true}
-        availableSuppliers={availableSuppliers}
-        availableFacilities={availableFacilities}
-        selectedDocuments={selectedDocuments}
-        onSelectAll={handleSelectAll}
-        onClearSelection={handleClearSelection}
-        onBulkDownload={handleBulkDownload}
-        filteredDocumentsCount={filteredDocuments.length}
-        totalDocumentsCount={documents.length}
-        onRefresh={handleRefresh}
-        isRefreshing={isRefreshing}
-      />
+      {/* Status tabs */}
+      <div className="flex items-center gap-1 border-b">
+        {statusTabs.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => setStatusTab(tab.value)}
+            className={`flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+              statusTab === tab.value
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {tab.label}
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+              {tab.value === 'all' ? statusCounts.all
+                : tab.value === 'pending_approval' ? statusCounts.pending_approval
+                : tab.value === 'approved' ? statusCounts.approved
+                : statusCounts.declined}
+            </Badge>
+          </button>
+        ))}
+      </div>
 
-      {/* Documents List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Documents ({filteredDocuments.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {filteredDocuments.length > 0 ? (
-            <div className="space-y-6">
-              {filteredDocuments.map(doc => (
-                <DocumentCardWithSelection
-                  key={doc.id}
-                  document={{
-                    ...doc,
-                    supplier: doc.suppliers,
-                    ...(() => {
-                      const latestUpload = getLatestUpload(doc.document_uploads);
-                      return latestUpload ? {
-                        file_name: latestUpload.file_name,
-                        file_size: latestUpload.file_size,
-                        expiration_date: latestUpload.expiration_date,
-                        uploader: latestUpload.uploader
-                      } : {};
-                    })()
-                  }}
-                  userRole="buyer"
-                  showActions={true}
-                  onView={() => handleView(doc)}
-                  onDownload={() => handleDownload(doc)}
-                  downloadLoading={downloading === doc.id}
-                  onApprove={() => onApprove(doc.id)}
-                  onDecline={() => onDecline(doc.id)}
-                  onWithdraw={() => onWithdraw(doc.id, doc.title || doc.document_type)}
-                  onCreateLink={() => handleCreateLink(doc)}
-                  onOpenSummary={doc.status === 'approved' ? () => handleOpenSummary(doc) : undefined}
-                  onEditNotes={() => {
-                    setSelectedNotesDocument(doc);
-                    setNotesModalOpen(true);
-                  }}
-                  approveLoading={approveLoading === doc.id}
-                  declineLoading={declineLoading === doc.id}
-                  withdrawLoading={withdrawLoading === doc.id}
-                  showSelection={true}
-                  isSelected={selectedDocuments.has(doc.id)}
-                  onSelectionChange={(selected) => handleDocumentSelectionChange(doc.id, selected)}
-                />
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={filters.category || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, category: value === 'all' ? '' : value }))}>
+            <SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="Category" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Category: All</SelectItem>
+              <SelectItem value="compliance">Compliance</SelectItem>
+              <SelectItem value="certification">Certification</SelectItem>
+              <SelectItem value="insurance">Insurance</SelectItem>
+              <SelectItem value="quality">Quality</SelectItem>
+              <SelectItem value="safety">Safety</SelectItem>
+              <SelectItem value="financial">Financial</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={filters.supplier || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, supplier: value === 'all' ? '' : value }))}>
+            <SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="Supplier" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Supplier: All</SelectItem>
+              {availableSuppliers.map((supplier) => (
+                <SelectItem key={supplier.id} value={supplier.id}>{supplier.company_name}</SelectItem>
               ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Documents Found</h3>
-              <p className="text-muted-foreground">
-                {Object.values(filters).some(f => f !== '') 
-                  ? "No documents match your current filters." 
-                  : "No documents available."}
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </SelectContent>
+          </Select>
 
-      {/* Document Link Modal */}
+          <Select value={filters.documentType || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, documentType: value === 'all' ? '' : value }))}>
+            <SelectTrigger className="h-9 w-[130px]"><SelectValue placeholder="Type" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Type: All</SelectItem>
+              <SelectItem value="certificate">Certificate</SelectItem>
+              <SelectItem value="license">License</SelectItem>
+              <SelectItem value="permit">Permit</SelectItem>
+              <SelectItem value="policy">Policy</SelectItem>
+              <SelectItem value="report">Report</SelectItem>
+              <SelectItem value="invoice">Invoice</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={filters.status || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value === 'all' ? '' : value }))}>
+            <SelectTrigger className="h-9 w-[130px]"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Status: All</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="submitted">Submitted</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+              <SelectItem value="expired">Expired</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Popover open={moreFiltersOpen} onOpenChange={setMoreFiltersOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 gap-1.5">
+                <SlidersHorizontal className="w-3.5 h-3.5" />More Filters
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 space-y-3">
+              <Input
+                placeholder="Search documents..."
+                value={filters.search}
+                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+              />
+              <Select value={filters.expirationStatus || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, expirationStatus: value === 'all' ? '' : value }))}>
+                <SelectTrigger><SelectValue placeholder="Validity status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All documents</SelectItem>
+                  <SelectItem value="valid">Valid</SelectItem>
+                  <SelectItem value="expiring_soon">Expiring soon (30 days)</SelectItem>
+                  <SelectItem value="expired">Expired</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={filters.uploadDateRange || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, uploadDateRange: value === 'all' ? '' : value }))}>
+                <SelectTrigger><SelectValue placeholder="Upload date" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All time</SelectItem>
+                  <SelectItem value="last_7_days">Last 7 days</SelectItem>
+                  <SelectItem value="last_30_days">Last 30 days</SelectItem>
+                  <SelectItem value="last_90_days">Last 90 days</SelectItem>
+                  <SelectItem value="this_year">This year</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={filters.facilityLocation || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, facilityLocation: value === 'all' ? '' : value }))}>
+                <SelectTrigger><SelectValue placeholder="Facility" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All facilities</SelectItem>
+                  {availableFacilities.map((facility) => (
+                    <SelectItem key={facility.id} value={facility.id}>{facility.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </PopoverContent>
+          </Popover>
+
+          {(activeFilterCount > 0 || statusTab !== 'all') && (
+            <Button variant="link" size="sm" className="h-9 text-muted-foreground" onClick={clearAllFilters}>
+              Clear all
+            </Button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Select value={sortKey} onValueChange={(value) => toggleSort(value as SortKey)}>
+            <SelectTrigger className="h-9 w-[150px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="created_at">Sort by: Created date</SelectItem>
+              <SelectItem value="title">Sort by: Document name</SelectItem>
+              <SelectItem value="supplier">Sort by: Supplier</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="flex items-center rounded-md border p-0.5">
+            <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('table')}>
+              <List className="w-4 h-4" />
+            </Button>
+            <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8" onClick={() => setViewMode('grid')}>
+              <LayoutGrid className="w-4 h-4" />
+            </Button>
+          </div>
+          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleRefresh} disabled={isRefreshing} title="Refresh">
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={handleExport}>
+            <Download className="w-3.5 h-3.5" />Export
+          </Button>
+        </div>
+      </div>
+
+      {selectedDocuments.size > 0 && (
+        <div className="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2">
+          <div className="flex items-center gap-2 text-sm">
+            <Badge>{selectedDocuments.size} selected</Badge>
+            <Button variant="ghost" size="sm" onClick={() => setSelectedDocuments(new Set())}>
+              <X className="w-3 h-3 mr-1" />Clear
+            </Button>
+          </div>
+          <Button size="sm" onClick={handleBulkDownload}>
+            <Download className="w-3.5 h-3.5 mr-1.5" />Download selected
+          </Button>
+        </div>
+      )}
+
+      {sortedDocuments.length === 0 ? (
+        <div className="text-center py-12 border rounded-lg">
+          <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium mb-2">No Documents Found</h3>
+          <p className="text-muted-foreground">
+            {activeFilterCount > 0 || statusTab !== 'all' ? "No documents match your current filters." : "No documents available."}
+          </p>
+        </div>
+      ) : viewMode === 'grid' ? (
+        <div className="space-y-3">
+          {pageDocuments.map(doc => (
+            <DocumentCardWithSelection
+              key={doc.id}
+              document={{
+                ...doc,
+                supplier: doc.suppliers,
+                ...(() => {
+                  const latestUpload = getLatestUpload(doc.document_uploads);
+                  return latestUpload ? {
+                    file_name: latestUpload.file_name,
+                    file_size: latestUpload.file_size,
+                    expiration_date: latestUpload.expiration_date,
+                    uploader: latestUpload.uploader
+                  } : {};
+                })()
+              }}
+              userRole="buyer"
+              showActions={true}
+              onView={() => handleView(doc)}
+              onDownload={() => handleDownload(doc)}
+              downloadLoading={downloading === doc.id}
+              onApprove={() => onApprove(doc.id)}
+              onDecline={() => onDecline(doc.id)}
+              onWithdraw={() => onWithdraw(doc.id, doc.title || doc.document_type)}
+              onCreateLink={() => handleCreateLink(doc)}
+              onOpenSummary={doc.status === 'approved' ? () => handleOpenSummary(doc) : undefined}
+              onEditNotes={() => { setSelectedNotesDocument(doc); setNotesModalOpen(true); }}
+              approveLoading={approveLoading === doc.id}
+              declineLoading={declineLoading === doc.id}
+              withdrawLoading={withdrawLoading === doc.id}
+              showSelection={true}
+              isSelected={selectedDocuments.has(doc.id)}
+              onSelectionChange={(selected) => handleDocumentSelectionChange(doc.id, selected)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox checked={allPageSelected} onCheckedChange={(checked) => handleSelectAll(checked === true)} />
+                </TableHead>
+                <TableHead>Document</TableHead>
+                <TableHead>Supplier</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>
+                  <button className="flex items-center gap-1" onClick={() => toggleSort('created_at')}>
+                    <Calendar className="w-3.5 h-3.5" />Created Date<SortIcon column="created_at" />
+                  </button>
+                </TableHead>
+                <TableHead>Uploaded By</TableHead>
+                <TableHead>Size</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pageDocuments.map((doc) => {
+                const latestUpload = getLatestUpload(doc.document_uploads);
+                const hasFile = Boolean(latestUpload?.file_path) || doc.template_type === 'custom' || doc.has_template_submission;
+                const canApproveOrDecline = doc.status === 'submitted' && hasFile;
+                const canCreateLink = doc.status === 'approved' && hasFile;
+                const canWithdraw = doc.status === 'pending';
+                const statusConfig = STATUS_BADGE_CONFIG[doc.status] || STATUS_BADGE_CONFIG.pending;
+                const StatusIcon = statusConfig.icon;
+                const insight = aiInsight(doc, latestUpload?.expiration_date);
+
+                return (
+                  <TableRow key={doc.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedDocuments.has(doc.id)}
+                        onCheckedChange={(checked) => handleDocumentSelectionChange(doc.id, checked === true)}
+                        disabled={!latestUpload?.file_path}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-start gap-2 min-w-0">
+                        <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <FileText className="w-4 h-4 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{doc.title || doc.document_type}</p>
+                          <p className="text-xs text-muted-foreground">ID: {doc.id.slice(0, 8).toUpperCase()}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5 text-sm">
+                        <User className="w-3.5 h-3.5 text-muted-foreground" />
+                        <div>
+                          <p>{doc.suppliers?.company_name || 'Unknown'}</p>
+                          <p className="text-xs text-muted-foreground">{supplierShortId(doc.supplier_id)}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant="outline" className={`text-[10px] ${CATEGORY_BADGE_CLASS[(doc.category || '').toLowerCase()] || 'bg-muted text-muted-foreground'}`}>
+                          {doc.category || 'General'}
+                        </Badge>
+                        <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground">
+                          {classifyDocument(doc)}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                        {formatDate(doc.created_at)}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      <div className="flex items-center gap-1.5">
+                        <User className="w-3.5 h-3.5 text-muted-foreground" />
+                        {latestUpload?.uploader?.full_name || '—'}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{formatFileSize(latestUpload?.file_size)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        <Badge variant="outline" className={`text-[10px] ${statusConfig.className}`}>
+                          <StatusIcon className="w-3 h-3 mr-1" />{statusConfig.label}
+                        </Badge>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-medium border bg-primary/5 text-primary border-primary/10 hover:bg-primary/10">
+                              <Sparkles className="w-3 h-3" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-72 p-3 text-xs">
+                            <div className="flex items-start gap-2">
+                              <Sparkles className="w-4 h-4 text-primary mt-0.5" />
+                              <div>
+                                <p className="font-semibold mb-1">{insight.label}</p>
+                                <p className="text-muted-foreground leading-relaxed">{insight.description}</p>
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {canApproveOrDecline ? (
+                          <>
+                            <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700" disabled={approveLoading === doc.id} onClick={() => onApprove(doc.id)}>
+                              <ThumbsUp className="w-3.5 h-3.5 mr-1" />Approve
+                            </Button>
+                            <Button size="sm" variant="outline" className="h-8 text-red-600 border-red-200 hover:bg-red-50" disabled={declineLoading === doc.id} onClick={() => onDecline(doc.id)}>
+                              <ThumbsDown className="w-3.5 h-3.5 mr-1" />Decline
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button size="sm" variant="outline" className="h-8" onClick={() => handleView(doc)}>
+                              <Eye className="w-3.5 h-3.5 mr-1" />View
+                            </Button>
+                            <Button size="sm" variant="outline" className="h-8" onClick={() => { setSelectedNotesDocument(doc); setNotesModalOpen(true); }}>
+                              <MessageSquare className="w-3.5 h-3.5 mr-1" />Notes
+                            </Button>
+                          </>
+                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="icon" variant="ghost" className="h-8 w-8">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleDownload(doc)} disabled={downloading === doc.id}>
+                              <Download className="w-3.5 h-3.5 mr-2" />Download
+                            </DropdownMenuItem>
+                            {canCreateLink && (
+                              <DropdownMenuItem onClick={() => handleCreateLink(doc)}>
+                                <LinkIcon className="w-3.5 h-3.5 mr-2" />Create link
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            {canWithdraw && (
+                              <DropdownMenuItem onClick={() => onWithdraw(doc.id, doc.title || doc.document_type)} disabled={withdrawLoading === doc.id}>
+                                <Ban className="w-3.5 h-3.5 mr-2" />Withdraw request
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {sortedDocuments.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <p className="text-muted-foreground">
+            Showing {pageStart + 1} to {Math.min(pageStart + rowsPerPage, sortedDocuments.length)} of {sortedDocuments.length} documents
+          </p>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              <Button size="icon" variant="outline" className="h-8 w-8" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>
+                <ChevronUp className="w-4 h-4 -rotate-90" />
+              </Button>
+              {pageNumbers.map((p) => (
+                <Button
+                  key={p}
+                  size="icon"
+                  variant={p === currentPage ? 'default' : 'outline'}
+                  className="h-8 w-8"
+                  onClick={() => setPage(p)}
+                >
+                  {p}
+                </Button>
+              ))}
+              <Button size="icon" variant="outline" className="h-8 w-8" disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)}>
+                <ChevronUp className="w-4 h-4 rotate-90" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-muted-foreground">Rows per page:</span>
+              <Select value={String(rowsPerPage)} onValueChange={(value) => setRowsPerPage(Number(value))}>
+                <SelectTrigger className="h-8 w-[70px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectedDocument && (
         <DocumentLinkModal
           isOpen={linkModalOpen}
-          onClose={() => {
-            setLinkModalOpen(false);
-            setSelectedDocument(null);
-          }}
+          onClose={() => { setLinkModalOpen(false); setSelectedDocument(null); }}
           documentUpload={getLatestUpload(selectedDocument.document_uploads)}
         />
       )}
 
-      {/* Approved Document Summary Modal */}
       <ApprovedDocumentSummaryModal
         isOpen={summaryModalOpen}
-        onClose={() => {
-          setSummaryModalOpen(false);
-          setSummaryDocument(null);
-        }}
-        document={summaryDocument ? {
-          ...summaryDocument,
-          supplier: summaryDocument.suppliers
-        } : null}
-        onView={() => {
-          if (summaryDocument) handleView(summaryDocument);
-        }}
-        onDownload={() => {
-          if (summaryDocument) handleDownload(summaryDocument);
-        }}
+        onClose={() => { setSummaryModalOpen(false); setSummaryDocument(null); }}
+        document={summaryDocument ? { ...summaryDocument, supplier: summaryDocument.suppliers } : null}
+        onView={() => { if (summaryDocument) handleView(summaryDocument); }}
+        onDownload={() => { if (summaryDocument) handleDownload(summaryDocument); }}
         onCreateLink={() => {
           if (summaryDocument) {
             setSummaryModalOpen(false);
             handleCreateLink(summaryDocument);
           }
         }}
-         onRefresh={onRefresh}
+        onRefresh={onRefresh}
       />
 
       <DocumentNotesModal

@@ -47,6 +47,7 @@ import EvidenceSharingView from "@/components/supplier/EvidenceSharingView";
 import { useEvidenceSharingFeature } from "@/hooks/useEvidenceSharingFeature";
 import DossierGeneratorView from "@/components/buyer/DossierGeneratorView";
 import { useDossiersFeature } from "@/hooks/useDossiersFeature";
+import BuyerDocumentsManager from "@/components/documents/BuyerDocumentsManager";
 
 const REQUIREMENT_TEST_BUYER_ID = '00000000-0000-4000-8000-000000000001';
 const EVIDENCE_SHARING_TEST_SUPPLIER_ID = '00000000-0000-4000-8000-000000000020';
@@ -85,6 +86,115 @@ const DossiersTestRoute = () => {
   if (!enabled) return <div>Dossiers disabled</div>;
   return <DossierGeneratorView buyerId={REQUIREMENT_TEST_BUYER_ID} />;
 };
+
+const MOCK_BUYER_DOCUMENTS = [
+  {
+    id: '10000000-0000-4000-8000-000000000001',
+    title: 'HACCP Certification',
+    document_type: 'certificate',
+    category: 'safety',
+    status: 'submitted',
+    created_at: '2026-06-16T10:24:00Z',
+    supplier_id: 'aaaaaaaa-0000-4000-8000-000000000001',
+    suppliers: { company_name: 'Test Supplier' },
+    document_uploads: [{
+      id: 'u1', file_name: 'haccp-cert.pdf', file_path: 'mock/haccp-cert.pdf', file_size: 136000,
+      status: 'submitted', created_at: '2026-06-16T10:24:00Z', expiration_date: '2026-09-01',
+      uploader: { full_name: 'Amit Buyer' },
+    }],
+  },
+  {
+    id: '10000000-0000-4000-8000-000000000002',
+    title: 'ISO 14001 Environmental Certificate',
+    document_type: 'certificate',
+    category: 'compliance',
+    status: 'submitted',
+    created_at: '2026-06-17T09:12:00Z',
+    supplier_id: 'aaaaaaaa-0000-4000-8000-000000000002',
+    suppliers: { company_name: 'GreenFuture Ltd.' },
+    document_uploads: [{
+      id: 'u2', file_name: 'iso14001.pdf', file_path: 'mock/iso14001.pdf', file_size: 220000,
+      status: 'submitted', created_at: '2026-06-17T09:12:00Z', expiration_date: '2026-07-10',
+      uploader: { full_name: 'Amit Buyer' },
+    }],
+  },
+  {
+    id: '10000000-0000-4000-8000-000000000003',
+    title: 'HACCP Certification',
+    document_type: 'certificate',
+    category: 'quality',
+    status: 'approved',
+    created_at: '2026-06-18T08:45:00Z',
+    supplier_id: 'aaaaaaaa-0000-4000-8000-000000000001',
+    suppliers: { company_name: 'Test Supplier' },
+    document_uploads: [
+      {
+        id: 'u3', file_name: 'haccp-cert-v2.pdf', file_path: 'mock/haccp-cert-v2.pdf', file_size: 82000,
+        status: 'approved', created_at: '2026-06-18T08:45:00Z', expiration_date: '2027-06-18',
+        uploader: { full_name: 'Amit Buyer' }, version: 2,
+      },
+      {
+        id: 'u3-v1', file_name: 'haccp-cert-v1.pdf', file_path: 'mock/haccp-cert-v1.pdf', file_size: 80000,
+        status: 'approved', created_at: '2025-06-18T08:45:00Z', expiration_date: '2026-06-18',
+        uploader: { full_name: 'Amit Buyer' }, version: 1,
+      },
+    ],
+  },
+  {
+    id: '10000000-0000-4000-8000-000000000004',
+    title: 'Supplier Questionnaire',
+    document_type: 'report',
+    category: 'compliance',
+    status: 'rejected',
+    notes: 'Missing signature on page 3.',
+    created_at: '2026-06-15T14:15:00Z',
+    supplier_id: 'aaaaaaaa-0000-4000-8000-000000000003',
+    suppliers: { company_name: 'SupplyCo Inc.' },
+    document_uploads: [{
+      id: 'u4', file_name: 'questionnaire.pdf', file_path: 'mock/questionnaire.pdf', file_size: 178000,
+      status: 'rejected', created_at: '2026-06-15T14:15:00Z',
+      uploader: { full_name: 'Amit Buyer' },
+    }],
+  },
+  {
+    id: '10000000-0000-4000-8000-000000000005',
+    title: 'Code of Conduct',
+    document_type: 'policy',
+    category: 'compliance',
+    status: 'approved',
+    created_at: '2026-06-12T11:03:00Z',
+    supplier_id: 'aaaaaaaa-0000-4000-8000-000000000002',
+    suppliers: { company_name: 'GreenFuture Ltd.' },
+    document_uploads: [{
+      id: 'u5', file_name: 'code-of-conduct.pdf', file_path: 'mock/code-of-conduct.pdf', file_size: 110000,
+      status: 'approved', created_at: '2026-06-12T11:03:00Z',
+      uploader: { full_name: 'Amit Buyer' },
+    }],
+  },
+  {
+    id: '10000000-0000-4000-8000-000000000006',
+    title: 'Business License',
+    document_type: 'license',
+    category: 'financial',
+    status: 'pending',
+    created_at: '2026-06-10T09:00:00Z',
+    supplier_id: 'aaaaaaaa-0000-4000-8000-000000000003',
+    suppliers: { company_name: 'SupplyCo Inc.' },
+    document_uploads: [],
+  },
+];
+
+const BuyerDocumentsManagerTestRoute = () => (
+  <div className="p-6">
+    <BuyerDocumentsManager
+      documents={MOCK_BUYER_DOCUMENTS}
+      onApprove={async () => undefined}
+      onDecline={() => undefined}
+      onWithdraw={() => undefined}
+      onRefresh={async () => undefined}
+    />
+  </div>
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -269,6 +379,7 @@ const AppRoutes = () => {
                       <Route path="/__test/compliance-decisions" element={<ComplianceDecisionsTestRoute />} />
                       <Route path="/__test/evidence-sharing" element={<EvidenceSharingTestRoute />} />
                       <Route path="/__test/dossiers" element={<DossiersTestRoute />} />
+                      <Route path="/__test/buyer-documents" element={<BuyerDocumentsManagerTestRoute />} />
                     </>
                   )}
                   <Route path="/dashboard" element={

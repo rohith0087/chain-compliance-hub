@@ -7,6 +7,13 @@
       "runtimeArgs": ["run", "dev", "--"],
       "port": 8080,
       "autoPort": true
+    },
+    {
+      "name": "test-mode",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--mode", "test"],
+      "port": 8090,
+      "autoPort": true
     }
   ]
 }

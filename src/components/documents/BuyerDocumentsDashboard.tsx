@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { 
+import {
   FileText, 
   TrendingUp, 
   AlertTriangle, 
@@ -945,14 +944,6 @@ if (user?.id && latest.id) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Documents Dashboard</h1>
-        <Badge variant="outline" className="bg-blue-100 text-blue-800">
-          Buyer Portal
-        </Badge>
-      </div>
-
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="inline-flex h-12 items-center gap-1 rounded-full bg-white border border-border/40 p-1.5 justify-start shadow-sm">

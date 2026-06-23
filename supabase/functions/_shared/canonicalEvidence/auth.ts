@@ -25,6 +25,6 @@ export function canonicalEvidenceErrorStatus(error: unknown): number {
   if (/authentication/i.test(message)) return 401;
   if (/access required|connection is required|not authorized/i.test(message)) return 403;
   if (/not found/i.test(message)) return 404;
-  if (/required|invalid|unsupported|must be/i.test(message)) return 400;
+  if (/required|invalid|unsupported|must be|already|no longer|latest version|tenant mismatch/i.test(message)) return 400;
   return 500;
 }

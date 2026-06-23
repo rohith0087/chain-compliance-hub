@@ -25,6 +25,17 @@ interface BuyerDocumentsDashboardProps {
   view?: 'documents' | 'activity';
 }
 
+// Sort by version DESC, then created_at DESC as tiebreaker for same versions --
+// review actions must always target this row, never an older resubmitted version.
+function getLatestUpload(uploads: any[] | null | undefined) {
+  if (!uploads || uploads.length === 0) return undefined;
+  return [...uploads].sort((a: any, b: any) => {
+    const versionDiff = (b.version || 0) - (a.version || 0);
+    if (versionDiff !== 0) return versionDiff;
+    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+  })[0];
+}
+
 const BuyerDocumentsDashboard = ({ view = 'documents' }: BuyerDocumentsDashboardProps) => {
   const { currentBranch, allBranchesView } = useBranchContext();
   const [documents, setDocuments] = useState<any[]>([]);
@@ -353,13 +364,7 @@ const BuyerDocumentsDashboard = ({ view = 'documents' }: BuyerDocumentsDashboard
         let effectiveStatus = doc.status;
         
         if (doc.document_uploads && doc.document_uploads.length > 0) {
-          // Sort by version DESC, then created_at DESC as tiebreaker for same versions
-          const sortedUploads = [...doc.document_uploads].sort((a: any, b: any) => {
-            const versionDiff = (b.version || 0) - (a.version || 0);
-            if (versionDiff !== 0) return versionDiff;
-            return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-          });
-          const latestUpload = sortedUploads[0];
+          const latestUpload = getLatestUpload(doc.document_uploads);
           
           // PRIORITY 1: Check if latest upload needs review (renewal submitted)
           if (latestUpload.status === 'submitted' || latestUpload.status === 'pending_review') {
@@ -473,7 +478,7 @@ const BuyerDocumentsDashboard = ({ view = 'documents' }: BuyerDocumentsDashboard
         throw new Error('Document not found');
       }
 
-      const upload=document.document_uploads?.[0];if(!upload?.id)throw new Error('No document upload is available for review');
+      const upload=getLatestUpload(document.document_uploads);if(!upload?.id)throw new Error('No document upload is available for review');
       const { data, error } = await supabase.functions.invoke('review-document-submission-v2',{body:{request_id:documentId,upload_id:upload.id,decision:'approve',reason_code:'approved',reason_notes:'Approved by buyer reviewer',idempotency_key:`document-review/${upload.id}/approve/${crypto.randomUUID()}`}});
 
       if (error) {
@@ -510,7 +515,7 @@ const BuyerDocumentsDashboard = ({ view = 'documents' }: BuyerDocumentsDashboard
         throw new Error('Document not found');
       }
 
-      const upload=document.document_uploads?.[0];if(!upload?.id)throw new Error('No document upload is available for review');
+      const upload=getLatestUpload(document.document_uploads);if(!upload?.id)throw new Error('No document upload is available for review');
       const { data, error } = await supabase.functions.invoke('review-document-submission-v2',{body:{request_id:documentId,upload_id:upload.id,decision:'reject',reason_code:reasonCode,reason_notes:reason,idempotency_key:`document-review/${upload.id}/reject/${crypto.randomUUID()}`}});
 
       if (error) {

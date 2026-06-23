@@ -91,7 +91,15 @@ async function processJob(admin:Admin,resendKey:string,job:Job){
     }catch(error){unsafe++;await admin.from('inbound_email_attachments').upsert({...base,scan_status:error instanceof Error&&/Malware detected/.test(error.message)?'infected':'failed',is_encrypted:error instanceof Error&&/Encrypted PDF/.test(error.message),classification:{error:error instanceof Error?error.message:String(error)}},{onConflict:'message_id,provider_attachment_id'});}
   }
   const reviewable=matchResult==='matched'&&clean>0&&unsafe===0;const quarantineReason=attachments.length===0?'no_attachments':matchResult!=='matched'?`identity_${matchResult}`:unsafe>0?'unsafe_attachment':clean===0?'no_reviewable_attachments':null;
-  await admin.from('inbound_email_messages').update({status:reviewable?'awaiting_review':'quarantined',quarantine_reason:quarantineReason,processed_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',message.id);
+  // If every attachment already got a final decision (e.g. auto-accepted
+  // above), the message-level status was already set by that RPC -- don't
+  // clobber it back to 'awaiting_review'/'quarantined' here.
+  const {count:stillPending}=await admin.from('inbound_email_attachments').select('id',{count:'exact',head:true}).eq('message_id',message.id).eq('review_status','pending');
+  if((stillPending??0)>0){
+    await admin.from('inbound_email_messages').update({status:reviewable?'awaiting_review':'quarantined',quarantine_reason:quarantineReason,processed_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',message.id);
+  }else{
+    await admin.from('inbound_email_messages').update({quarantine_reason:quarantineReason,updated_at:new Date().toISOString()}).eq('id',message.id);
+  }
   await admin.from('inbound_processing_jobs').update({status:'completed',completed_at:new Date().toISOString(),lease_expires_at:null,last_error:null,updated_at:new Date().toISOString()}).eq('id',job.id);
 }
 

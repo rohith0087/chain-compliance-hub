@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/corsHeaders.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
+import { streamFirstCompletion } from "../_shared/openai/streamChatCompletion.ts";
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -4515,7 +4516,7 @@ serve(async (req) => {
     console.log('✓ User authenticated');
 
     // Parse request body
-    const { buyer_id: requested_buyer_id, question, session_id: incoming_session_id, user_context } = await req.json();
+    const { buyer_id: requested_buyer_id, question, session_id: incoming_session_id, user_context, stream: wantsStream } = await req.json();
 
     // ============= RESOLVE USER'S ACTUAL BUYER ID =============
     let actualBuyerId: string | null = null;
@@ -5221,6 +5222,21 @@ User: "Hey send an email to Test Supplier about expired documents"
 AI: [IMMEDIATELY calls draft_compliance_email({ action_type: "expired_documents", supplier_names: ["Test Supplier"] })]
 → Returns email composer with drafted email showing all expired docs from Test Supplier
 
+IMPORTANT - draft_compliance_email has NO send-by-chat capability. Unlike
+draft_generic_email/confirm_send_email below, there is no draft_id and no
+confirm step you can call for a compliance email draft. The ONLY way it gets
+sent is the user clicking "Send" on the email composer card that gets
+rendered to them -- you cannot send it yourself, ever, no matter what the
+user says next.
+- NEVER say "Yes, I can send this for you" or "Would you like me to send
+  this?" after a draft_compliance_email draft -- you cannot send it.
+- If the user asks "can you send it" or says "yes, send it" / "send it" in
+  response to a draft_compliance_email draft, reply exactly along the lines
+  of: "I can't send it directly from here -- please use the Send button on
+  the email draft above." Do NOT regenerate the same draft, do NOT claim it
+  "expired" or is "no longer available" -- the draft shown to the user is
+  still valid; you just have no tool to send it.
+
 GENERIC EMAIL HANDLING - draft_generic_email & confirm_send_email:
 
 Use these tools for emails to ANY email address (not just existing suppliers in the system).
@@ -5616,6 +5632,12 @@ AVAILABLE TAGS:
   urgency: high
 </SYSTEM_METADATA>
 
+<QUICK_ACTIONS> - Real, clickable action buttons (only after using get_missing_required_documents)
+  <QUICK_ACTION type="request_documents">Request missing documents</QUICK_ACTION>
+  <QUICK_ACTION type="generate_email">Generate email</QUICK_ACTION>
+  <QUICK_ACTION type="create_task">Create task</QUICK_ACTION>
+  <QUICK_ACTION type="view_supplier_profile">View supplier profile</QUICK_ACTION>
+
 WHEN TO USE STRUCTURED TAGS:
 1. "Who are my suppliers?" → Use <ENTITY_LIST type="suppliers">
 2. "Show me supplier X's status" → Use <ENTITY_DETAILS> + <ISSUES_IDENTIFIED>
@@ -5623,6 +5645,10 @@ WHEN TO USE STRUCTURED TAGS:
 4. "How's my compliance?" → Use <ENTITY_DETAILS> + <IMPACT>
 5. ANY list of entities → Use <ENTITY_LIST>
 6. "Show all documents" or "What documents are requested?" or document status queries → Use <DOCUMENT_LIST>
+7. After calling get_missing_required_documents for a specific supplier → ALWAYS also include a
+   <QUICK_ACTIONS> block with only the buttons that make sense: include "request_documents" only if
+   missing_count > 0, "generate_email" only if there's something to follow up on, "create_task" and
+   "view_supplier_profile" whenever a specific supplier entity_id is known.
 
 RULES:
 - ALWAYS wrap structured responses in <COMPLIANCE_SUMMARY>
@@ -5631,6 +5657,10 @@ RULES:
 - Use priority attributes: "high", "medium", "low" for actions
 - Keep human-readable content inside tags
 - Use conversational text for simple confirmations only
+- <QUICK_ACTIONS> entries must use exactly one of these type values: "request_documents",
+  "generate_email", "create_task", "view_supplier_profile" — never invent new types
+- Always include <SYSTEM_METADATA> with entity_id whenever <QUICK_ACTIONS> is used, since the
+  buttons need it to know which supplier they apply to
 
 EXAMPLE - Supplier List Query:
 <COMPLIANCE_SUMMARY>
@@ -5686,6 +5716,13 @@ EXAMPLE - Compliance Status Query:
   issue_types: expired, missing
   urgency: high
 </SYSTEM_METADATA>
+
+<QUICK_ACTIONS>
+  <QUICK_ACTION type="request_documents">Request missing documents</QUICK_ACTION>
+  <QUICK_ACTION type="generate_email">Generate email</QUICK_ACTION>
+  <QUICK_ACTION type="create_task">Create task</QUICK_ACTION>
+  <QUICK_ACTION type="view_supplier_profile">View supplier profile</QUICK_ACTION>
+</QUICK_ACTIONS>
 </COMPLIANCE_SUMMARY>`
       },
       // Inject memory preamble (summary + state) BEFORE conversation history
@@ -5715,8 +5752,54 @@ EXAMPLE - Compliance Status Query:
       console.log('Saved user message to chat history');
     }
 
-    let aiResponse = await callOpenAI(messages);
-    
+    let aiResponse;
+    if (wantsStream) {
+      const firstCall = await streamFirstCompletion(OPENAI_API_KEY!, messages, tools);
+      if (firstCall.kind === 'content') {
+        // No tool needed -- relay the answer live instead of waiting for the
+        // whole thing. Mirrors the plain-text save/finish steps at the
+        // bottom of this handler (lines ~5961-5990) verbatim, just sourced
+        // from the streamed text instead of a synchronous callOpenAI() call.
+        const encoder = new TextEncoder();
+        const ndjsonStream = new ReadableStream<Uint8Array>({
+          async start(controller) {
+            const reader = firstCall.readable.getReader();
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                controller.enqueue(value);
+              }
+            } catch (streamError) {
+              controller.enqueue(encoder.encode(`${JSON.stringify({ type: 'error', message: streamError instanceof Error ? streamError.message : 'Stream error' })}\n`));
+            }
+            const finalText = await firstCall.whenDone;
+            if (session_id) {
+              await supabase
+                .from('chat_messages')
+                .insert({ session_id, role: 'assistant', content: finalText, metadata: {} });
+              await supabase
+                .from('chat_sessions')
+                .update({ updated_at: new Date().toISOString() })
+                .eq('id', session_id)
+                .then(() => console.log('✓ Updated session activity'))
+                .catch((e) => console.error('Failed to update session activity:', e));
+              maybeUpdateSummary(session_id).catch((e) => console.error('Background summary failed:', e));
+            }
+            controller.enqueue(encoder.encode(`${JSON.stringify({ type: 'done', session_id })}\n`));
+            controller.close();
+          },
+        });
+        return new Response(ndjsonStream, { headers: { ...corsHeaders, 'Content-Type': 'application/x-ndjson' } });
+      }
+      // Tool call detected -- fall through to the exact existing tool-handling
+      // code below, unchanged, using the assembled message in place of what
+      // a synchronous callOpenAI() would have returned.
+      aiResponse = firstCall.message;
+    } else {
+      aiResponse = await callOpenAI(messages);
+    }
+
     // Step 2: If OpenAI wants to use tools, execute them
     if (aiResponse.tool_calls && aiResponse.tool_calls.length > 0) {
       console.log(`OpenAI requested ${aiResponse.tool_calls.length} tool calls`);

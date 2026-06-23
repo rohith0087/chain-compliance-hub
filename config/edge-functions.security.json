@@ -15,7 +15,13 @@
     "coa-schedule-reminder": "Requires SYSTEM_INVOCATION_SECRET.",
     "process-evidence-extraction-jobs-v1": "Requires a service-role bearer token or the rotated SYSTEM_INVOCATION_SECRET verified against its Vault-backed hash.",
     "process-compliance-reevaluations-v1": "Requires a service-role bearer token or the rotated SYSTEM_INVOCATION_SECRET verified against its Vault-backed hash.",
-    "process-canonical-asset-hash-jobs-v1": "Requires a service-role bearer token or the rotated SYSTEM_INVOCATION_SECRET verified against its Vault-backed hash."
+    "process-canonical-asset-hash-jobs-v1": "Requires a service-role bearer token or the rotated SYSTEM_INVOCATION_SECRET verified against its Vault-backed hash.",
+    "process-request-reminders-v1": "Requires a service-role bearer token or the rotated SYSTEM_INVOCATION_SECRET verified against its Vault-backed hash.",
+    "process-email-deliveries-v1": "Requires a service-role bearer token or the rotated SYSTEM_INVOCATION_SECRET verified against its Vault-backed hash.",
+    "resend-webhook-v1": "Requires a valid Svix signature produced with RESEND_WEBHOOK_SECRET over the raw request body.",
+    "process-inbound-email-jobs-v1": "Requires a service-role bearer token or the rotated SYSTEM_INVOCATION_SECRET verified against its Vault-backed hash.",
+    "cleanup-inbound-email-v1": "Requires a service-role bearer token or the rotated SYSTEM_INVOCATION_SECRET verified against its Vault-backed hash.",
+    "process-evidence-auto-verification-v1": "Requires a service-role bearer token or the rotated SYSTEM_INVOCATION_SECRET verified against its Vault-backed hash."
   },
   "systemSecretFunctions": [
     "generate-audit-report",
@@ -24,7 +30,12 @@
     "coa-schedule-reminder",
     "process-evidence-extraction-jobs-v1",
     "process-compliance-reevaluations-v1",
-    "process-canonical-asset-hash-jobs-v1"
+    "process-canonical-asset-hash-jobs-v1",
+    "process-request-reminders-v1",
+    "process-email-deliveries-v1",
+    "process-inbound-email-jobs-v1",
+    "cleanup-inbound-email-v1",
+    "process-evidence-auto-verification-v1"
   ],
   "sharedCorsRequired": [
     "cleanup-all-auth-users",
@@ -42,6 +53,16 @@
     "finalize-canonical-upload-v1",
     "resolve-document-request-v1",
     "review-evidence-v2",
-    "process-canonical-asset-hash-jobs-v1"
+    "process-canonical-asset-hash-jobs-v1",
+    "process-request-reminders-v1",
+    "process-email-deliveries-v1",
+    "create-supplier-upload-session-v1",
+    "finalize-transactional-upload-v1",
+    "process-inbound-email-jobs-v1",
+    "review-inbound-attachment-v1",
+    "get-inbound-attachment-url-v1",
+    "review-document-submission-v2",
+    "cleanup-inbound-email-v1",
+    "process-evidence-auto-verification-v1"
   ]
 }

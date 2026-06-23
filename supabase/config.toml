@@ -300,3 +300,37 @@ verify_jwt = false
 
 [functions.process-canonical-asset-hash-jobs-v1]
 verify_jwt = false
+
+[functions.process-evidence-auto-verification-v1]
+verify_jwt = false
+
+# Portal-first request delivery, reminders, and transactional uploads.
+[functions.process-request-reminders-v1]
+verify_jwt = false
+
+[functions.process-email-deliveries-v1]
+verify_jwt = false
+
+[functions.resend-webhook-v1]
+verify_jwt = false
+
+[functions.create-supplier-upload-session-v1]
+verify_jwt = true
+
+[functions.finalize-transactional-upload-v1]
+verify_jwt = true
+
+[functions.process-inbound-email-jobs-v1]
+verify_jwt = false
+
+[functions.review-inbound-attachment-v1]
+verify_jwt = true
+
+[functions.get-inbound-attachment-url-v1]
+verify_jwt = true
+
+[functions.review-document-submission-v2]
+verify_jwt = true
+
+[functions.cleanup-inbound-email-v1]
+verify_jwt = false

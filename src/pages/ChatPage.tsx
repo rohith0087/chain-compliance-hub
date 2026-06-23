@@ -10,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { publicEnvironment } from "@/config/env";
 import ReactMarkdown from "react-markdown";
 import ComplianceVisualizer from "@/components/chat/ComplianceVisualizer";
 import DailyInsightsPanel from "@/components/chat/DailyInsightsPanel";
@@ -53,7 +54,7 @@ import {
   Home,
   Trash2,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 
 // Charts (client-side fallback)
@@ -255,6 +256,7 @@ const ChatPage: React.FC = () => {
   const { t: wsT } = useWorkspaceProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -283,6 +285,22 @@ const ChatPage: React.FC = () => {
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const state = location.state as { initialPrompt?: string; sessionId?: string } | null;
+    const initialPrompt = state?.initialPrompt;
+    const resumeSessionId = state?.sessionId;
+    if (!initialPrompt && !resumeSessionId) return;
+
+    if (resumeSessionId) {
+      setCurrentSession(resumeSessionId);
+      void loadChatHistory(resumeSessionId);
+    }
+    if (initialPrompt) {
+      setInputMessage(initialPrompt);
+    }
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
 
   /* ---- Effects ---- */
 
@@ -490,8 +508,16 @@ const ChatPage: React.FC = () => {
     setActiveFunction('simple-rag-chat');
 
     try {
-      const { data, error } = await supabase.functions.invoke("simple-rag-chat", {
-        body: {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("No active session - please log in again");
+
+      const response = await fetch(`${publicEnvironment.VITE_SUPABASE_URL}/functions/v1/simple-rag-chat`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           question: userMsg.content,
           buyer_id: companyInfo.id,
           session_id: currentSession,
@@ -500,44 +526,95 @@ const ChatPage: React.FC = () => {
             company_type: companyInfo.type,
             industry: companyInfo.industry || "General",
           },
-        },
+          stream: true,
+        }),
       });
-      if (error) throw error;
+      if (!response.ok) throw new Error(`simple-rag-chat returned ${response.status}`);
 
-      console.debug("[simple-rag-chat] response", data);
-
-      // Capture session_id from response if we didn't have one
-      if (data.session_id && !currentSession) {
-        logger.debug('✓ Session created by edge function:', data.session_id);
-        setCurrentSession(data.session_id);
-        
-        // Update session title based on first question
-        const autoTitle = userMsg.content.length > 50 
+      const updateSessionTitle = (newSessionId: string) => {
+        logger.debug('✓ Session created by edge function:', newSessionId);
+        setCurrentSession(newSessionId);
+        const autoTitle = userMsg.content.length > 50
           ? userMsg.content.substring(0, 47) + '...'
           : userMsg.content;
-        
         supabase.functions.invoke("chat-session-manager", {
-          body: {
-            action: 'update_title',
-            session_id: data.session_id,
-            title: autoTitle
-          }
+          body: { action: 'update_title', session_id: newSessionId, title: autoTitle }
         }).catch(console.error);
-      }
-
-      const assistant: Message = {
-        id: `assistant-${Date.now()}`,
-        role: "assistant",
-        content: data?.answer || "I apologize, but I was unable to process your request.",
-        metadata: {
-          structured_response: data?.structured_response || {
-            content: data?.answer || "I apologize, but I was unable to process your request.",
-          },
-        },
-        created_at: new Date().toISOString(),
       };
 
-      setMessages((prev) => [...prev, assistant]);
+      const contentType = response.headers.get("Content-Type") || "";
+
+      if (contentType.includes("application/x-ndjson") && response.body) {
+        // Plain conversational answer -- relayed live, token by token.
+        const assistantId = `assistant-${Date.now()}`;
+        setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "", created_at: new Date().toISOString() }]);
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let resolvedSessionId: string | null = null;
+        // Defer live display until we know whether this is plain text (stream
+        // it) or a tagged compliance card (buffer silently, render formatted
+        // once complete -- raw "<COMPLIANCE_SUMMARY>" tag soup is never shown).
+        let accumulatedText = "";
+        let structuredDecision: "pending" | "plain" | "structured" = "pending";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let newlineIndex: number;
+          while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
+            const line = buffer.slice(0, newlineIndex);
+            buffer = buffer.slice(newlineIndex + 1);
+            if (!line.trim()) continue;
+            try {
+              const event = JSON.parse(line);
+              if (event.type === "text_delta") {
+                accumulatedText += event.text;
+                if (structuredDecision === "pending" && accumulatedText.length >= 20) {
+                  structuredDecision = accumulatedText.trimStart().startsWith("<COMPLIANCE_SUMMARY") ? "structured" : "plain";
+                }
+                if (structuredDecision === "plain") {
+                  setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: accumulatedText } : m)));
+                }
+                // structured (or still pending/short): keep buffering, don't display yet.
+              } else if (event.type === "done") {
+                resolvedSessionId = event.session_id || null;
+              } else if (event.type === "error") {
+                setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: event.message || "Something went wrong reaching the assistant." } : m)));
+              }
+            } catch (parseError) {
+              console.error("Failed to parse stream line", parseError);
+            }
+          }
+        }
+
+        if (structuredDecision !== "plain" && accumulatedText) {
+          setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: accumulatedText } : m)));
+        }
+        if (resolvedSessionId && !currentSession) updateSessionTitle(resolvedSessionId);
+      } else {
+        // Tool-using / structured response -- unchanged from before, delivered whole.
+        const data = await response.json();
+        console.debug("[simple-rag-chat] response", data);
+
+        if (data.session_id && !currentSession) updateSessionTitle(data.session_id);
+
+        const assistant: Message = {
+          id: `assistant-${Date.now()}`,
+          role: "assistant",
+          content: data?.answer || "I apologize, but I was unable to process your request.",
+          metadata: {
+            structured_response: data?.structured_response || {
+              content: data?.answer || "I apologize, but I was unable to process your request.",
+            },
+          },
+          created_at: new Date().toISOString(),
+        };
+
+        setMessages((prev) => [...prev, assistant]);
+      }
     } catch (e: any) {
       console.error("sendMessage", e);
       toast({
@@ -600,6 +677,55 @@ const ChatPage: React.FC = () => {
       description: `Fetching information for ${supplierName}`,
     });
     setTimeout(() => sendMessage(), 100);
+  }
+
+  // Handle the four real action buttons on a compliance-card (<QUICK_ACTIONS>) response.
+  async function handleStructuredQuickAction(actionType: string, metadata: Record<string, string>) {
+    const supplierId = metadata.entity_id;
+    const supplierLabel = metadata.entity_name || metadata.supplier_name || 'this supplier';
+
+    if (actionType === 'request_documents') {
+      setInputMessage(`Request the missing documents from ${supplierLabel}`);
+      setTimeout(() => sendMessage(), 100);
+      return;
+    }
+    if (actionType === 'generate_email') {
+      setInputMessage(`Draft a compliance follow-up email to ${supplierLabel} about the missing documents`);
+      setTimeout(() => sendMessage(), 100);
+      return;
+    }
+    if (actionType === 'view_supplier_profile') {
+      localStorage.setItem('buyerDashboard_activeTab', 'suppliers');
+      navigate('/dashboard');
+      return;
+    }
+    if (actionType === 'create_task') {
+      if (!companyInfo || !user || !supplierId) {
+        toast({ title: "Can't create task", description: "Missing supplier information.", variant: "destructive" });
+        return;
+      }
+      try {
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + 7);
+        const { error } = await supabase.rpc('create_compliance_task_v1', {
+          p_buyer_id: companyInfo.id,
+          p_subject_type: 'supplier',
+          p_subject_id: supplierId,
+          p_supplier_id: supplierId,
+          p_task_type: 'corrective_action',
+          p_title: `Follow up: missing documents from ${supplierLabel}`,
+          p_description: 'Created from the Compliance AI assistant.',
+          p_assignee_id: user.id,
+          p_due_date: dueDate.toISOString().slice(0, 10),
+          p_decision_result_id: null,
+        });
+        if (error) throw error;
+        toast({ title: "Task created", description: `Follow-up task created for ${supplierLabel}.` });
+      } catch (e) {
+        console.error('create_compliance_task_v1 failed', e);
+        toast({ title: "Couldn't create task", description: e instanceof Error ? e.message : "Please try again.", variant: "destructive" });
+      }
+    }
   }
 
   async function handleViewDocumentInNewWindow(doc: DocumentReference) {
@@ -962,10 +1088,11 @@ const ChatPage: React.FC = () => {
 
         {/* Structured Response Renderer - for AI responses with HTML-like tags */}
         {!isError && (parsed.response || parsed.content) && hasStructuredContent(parsed.response || parsed.content || '') && (
-          <StructuredResponseRenderer 
-            content={parsed.response || parsed.content || ''} 
+          <StructuredResponseRenderer
+            content={parsed.response || parsed.content || ''}
             onEmailSupplier={handleEmailSupplier}
             onViewSupplierDetails={handleViewSupplierDetails}
+            onQuickAction={handleStructuredQuickAction}
           />
         )}
 

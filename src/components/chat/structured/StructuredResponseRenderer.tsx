@@ -7,11 +7,13 @@ import { ImpactStatement } from './ImpactStatement';
 import { EmailDraftCard } from './EmailDraftCard';
 import { MetadataPanel } from './MetadataPanel';
 import { DocumentTable } from './DocumentTable';
+import { QuickActionButtons } from './QuickActionButtons';
 
 interface StructuredResponseRendererProps {
   content: string;
   onEmailSupplier?: (entity: { id: string; name?: string; email?: string }) => void;
   onViewSupplierDetails?: (entity: { id: string; name?: string; email?: string }) => void;
+  onQuickAction?: (type: string, metadata: Record<string, string>) => void;
 }
 
 interface ParsedSection {
@@ -28,7 +30,28 @@ function parseStructuredResponse(content: string): ParsedSection[] {
   if (!content.includes('<COMPLIANCE_SUMMARY>') && !content.includes('<ENTITY_LIST>') && !content.includes('<DOCUMENT_LIST')) {
     return sections;
   }
-  
+
+  // Parse QUICK_ACTIONS
+  const quickActionsMatch = content.match(/<QUICK_ACTIONS>([\s\S]*?)<\/QUICK_ACTIONS>/i);
+  if (quickActionsMatch) {
+    const quickActionsContent = quickActionsMatch[1];
+    const actions: { type: string; label: string }[] = [];
+
+    const actionMatches = quickActionsContent.matchAll(/<QUICK_ACTION[^>]*>([\s\S]*?)<\/QUICK_ACTION>/gi);
+    for (const match of actionMatches) {
+      const typeMatch = match[0].match(/type="([^"]+)"/);
+      if (typeMatch) {
+        actions.push({ type: typeMatch[1], label: match[1].trim() });
+      }
+    }
+
+    sections.push({
+      type: 'quick_actions',
+      data: { actions },
+      raw: quickActionsMatch[0],
+    });
+  }
+
   // Parse ENTITY_LIST
   const entityListMatch = content.match(/<ENTITY_LIST[^>]*>([\s\S]*?)<\/ENTITY_LIST>/i);
   if (entityListMatch) {
@@ -267,25 +290,52 @@ export function hasStructuredContent(content: string): boolean {
     content.includes('<DOCUMENT_LIST') ||
     content.includes('<ENTITY_DETAILS>') ||
     content.includes('<ISSUES_IDENTIFIED>') ||
-    content.includes('<RECOMMENDED_ACTIONS>')
+    content.includes('<RECOMMENDED_ACTIONS>') ||
+    content.includes('<QUICK_ACTIONS>')
   );
 }
 
-export const StructuredResponseRenderer: React.FC<StructuredResponseRendererProps> = ({ 
-  content, 
-  onEmailSupplier, 
-  onViewSupplierDetails 
+export const StructuredResponseRenderer: React.FC<StructuredResponseRendererProps> = ({
+  content,
+  onEmailSupplier,
+  onViewSupplierDetails,
+  onQuickAction,
 }) => {
   const sections = parseStructuredResponse(content);
-  
-  if (sections.length === 0) {
+
+  // The model doesn't always put everything it says inside a recognized
+  // sub-tag -- sometimes it wraps plain prose in just the outer
+  // <COMPLIANCE_SUMMARY> marker with no inner tags at all. Without this,
+  // that text would be silently dropped (zero sections -> render nothing),
+  // which is exactly what produced a blank reply bubble.
+  let remainder = content;
+  for (const section of sections) {
+    remainder = remainder.replace(section.raw, '');
+  }
+  remainder = remainder.replace(/<\/?COMPLIANCE_SUMMARY>/gi, '').trim();
+
+  if (sections.length === 0 && !remainder) {
     return null;
   }
-  
+
+  const metadataSection = sections.find((s) => s.type === 'metadata');
+
   return (
     <div className="space-y-4">
+      {remainder && (
+        <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{remainder}</div>
+      )}
       {sections.map((section, index) => {
         switch (section.type) {
+          case 'quick_actions':
+            return (
+              <QuickActionButtons
+                key={index}
+                actions={section.data.actions}
+                metadata={metadataSection?.data?.metadata || {}}
+                onQuickAction={onQuickAction}
+              />
+            );
           case 'entity_list':
             return (
               <SupplierGrid 

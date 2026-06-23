@@ -1705,6 +1705,7 @@ declare
   v_type text;
   v_required text[];
   v_missing text[];
+  v_low_confidence text[];
   v_validation_status text;
   v_validation_run uuid;
 begin

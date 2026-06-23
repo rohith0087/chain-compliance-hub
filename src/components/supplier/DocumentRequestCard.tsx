@@ -137,6 +137,7 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
               </div>
               <div>
                 <CardTitle className="text-lg">{request.title}</CardTitle>
+                {request.public_reference&&<p className="mt-0.5 font-mono text-xs text-muted-foreground">{request.public_reference}</p>}
                 <div className="flex items-center space-x-2 mt-1">
                   <Badge variant="outline" className={getPriorityColor(request.priority || 'medium')}>
                     {request.priority || 'medium'} priority
@@ -276,11 +277,14 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                               ) : (
                                 <p className="text-sm text-red-700">No specific feedback provided. Please review and resubmit with corrections.</p>
                               )}
+                              <p className="mt-2 text-xs text-red-700">Reply to the correction email with the updated document, or use Resubmit below. Your previous version remains in the audit history.</p>
                             </div>
                           </div>
                         </div>
                       </div>
                     )}
+
+                    {request.document_uploads?.length>1&&<div><h4 className="mb-3 font-semibold text-gray-900">Version history</h4><div className="space-y-2">{[...request.document_uploads].sort((a:any,b:any)=>Number(b.version||0)-Number(a.version||0)).map((upload:any)=><div key={upload.id} className="flex items-center justify-between rounded-md border p-2 text-sm"><span>Version {upload.version||1} · {upload.file_name}</span><Badge className={getStatusColor(upload.status)}>{upload.status}</Badge></div>)}</div></div>}
                   </div>
                 </DialogContent>
               </Dialog>

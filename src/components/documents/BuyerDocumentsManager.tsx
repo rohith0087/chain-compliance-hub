@@ -17,10 +17,7 @@ import {
 import {
   FileText,
   RefreshCw,
-  CheckCircle,
   Check,
-  Clock,
-  AlertTriangle,
   Calendar,
   User,
   Download,
@@ -49,6 +46,9 @@ import { BulkDownloadOptionsDialog } from './BulkDownloadOptionsDialog';
 import { BulkDownloadOverlay } from './BulkDownloadOverlay';
 import ApprovedDocumentSummaryModal from './ApprovedDocumentSummaryModal';
 import { DocumentNotesModal } from './DocumentNotesModal';
+import DocumentPreviewModal from './DocumentPreviewModal';
+import ReviewPagination from './ReviewPagination';
+import { STATUS_BADGE_CONFIG, CATEGORY_BADGE_CLASS } from './buyerReviewDesignSystem';
 
 interface BuyerDocumentsManagerProps {
   documents: any[];
@@ -63,24 +63,6 @@ interface BuyerDocumentsManagerProps {
 
 type StatusTab = 'all' | 'pending_approval' | 'approved' | 'declined';
 type SortKey = 'created_at' | 'title' | 'supplier';
-
-const STATUS_BADGE_CONFIG: Record<string, { label: string; icon: typeof CheckCircle; className: string }> = {
-  pending: { label: 'Pending', icon: Clock, className: 'bg-amber-50 text-amber-700 border-amber-200' },
-  submitted: { label: 'Submitted', icon: FileText, className: 'bg-blue-50 text-blue-700 border-blue-200' },
-  approved: { label: 'Approved', icon: CheckCircle, className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  rejected: { label: 'Declined', icon: AlertTriangle, className: 'bg-red-50 text-red-700 border-red-200' },
-  withdrawn: { label: 'Withdrawn', icon: Ban, className: 'bg-slate-50 text-slate-600 border-slate-200' },
-  expired: { label: 'Expired', icon: AlertTriangle, className: 'bg-red-50 text-red-700 border-red-200' },
-};
-
-const CATEGORY_BADGE_CLASS: Record<string, string> = {
-  compliance: 'bg-blue-50 text-blue-700 border-blue-200',
-  certification: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  insurance: 'bg-orange-50 text-orange-700 border-orange-200',
-  quality: 'bg-pink-50 text-pink-700 border-pink-200',
-  safety: 'bg-teal-50 text-teal-700 border-teal-200',
-  financial: 'bg-slate-50 text-slate-700 border-slate-200',
-};
 
 // No taxonomy column exists for this second badge -- derive a reasonable
 // classification label from the document type/title rather than fabricate
@@ -191,6 +173,8 @@ const BuyerDocumentsManager = ({
   const [notesModalOpen, setNotesModalOpen] = useState(false);
   const [selectedNotesDocument, setSelectedNotesDocument] = useState<any>(null);
   const [pendingDownloadIds, setPendingDownloadIds] = useState<Set<string>>(new Set());
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState<any>(null);
   const { toast } = useToast();
 
   // Status-tab counts are computed over all documents, not the filtered set,
@@ -342,64 +326,39 @@ const BuyerDocumentsManager = ({
     const uploads = doc.document_uploads || [];
     const upload = getLatestUpload(uploads);
 
-    if (!upload?.file_path) {
-      try {
-        if (doc.template_type === 'custom') {
-          const { data: subs } = await supabase
-            .from('template_submissions')
-            .select('submission_file_path, submission_file_name, submission_mime_type')
-            .eq('request_id', doc.id)
-            .limit(1);
-          const sub = subs && subs[0];
-          if (sub?.submission_file_path) {
-            const { data, error } = await supabase.functions.invoke('secure-document-url', {
-              body: { filePath: sub.submission_file_path, expiresIn: 3600 }
-            });
-            if (error || !data?.success) throw new Error(data?.error || 'Failed to get secure URL');
-            window.open(data.url, '_blank', 'noopener,noreferrer');
-            return;
-          }
-        }
-      } catch (e) {
-        console.error('Custom submission view fallback failed', e);
-      }
-      toast({ title: "Error", description: "No file available for viewing", variant: "destructive" });
+    if (upload?.file_path) {
+      setPreviewDoc({ doc, upload });
+      setPreviewOpen(true);
       return;
     }
 
-    let newTab: Window | null = null;
+    // Custom template submissions don't have a document_uploads row; resolve
+    // the submission file into an upload-shaped object the modal can preview.
     try {
-      const isPreviewable =
-        upload?.mime_type?.startsWith('image/') ||
-        upload?.mime_type === 'application/pdf' ||
-        upload?.file_name?.toLowerCase?.().endsWith('.pdf');
-
-      if (isPreviewable) {
-        newTab = window.open('', '_blank', 'noopener,noreferrer');
-        if (newTab) newTab.document.write('Loading document...');
-
-        const resolved = resolveStoragePath(upload.file_path);
-        if (!resolved) throw new Error('Invalid file path');
-        const { data, error } = await supabase.storage
-          .from(resolved.bucket)
-          .createSignedUrl(resolved.key, 60);
-
-        if (error) throw error;
-        if (newTab) {
-          newTab.location.href = data.signedUrl;
-        } else {
-          window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+      if (doc.template_type === 'custom') {
+        const { data: subs } = await supabase
+          .from('template_submissions')
+          .select('submission_file_path, submission_file_name, submission_mime_type')
+          .eq('request_id', doc.id)
+          .limit(1);
+        const sub = subs && subs[0];
+        if (sub?.submission_file_path) {
+          setPreviewDoc({
+            doc,
+            upload: {
+              file_path: sub.submission_file_path,
+              file_name: sub.submission_file_name,
+              mime_type: sub.submission_mime_type,
+            },
+          });
+          setPreviewOpen(true);
+          return;
         }
-      } else {
-        await handleDownload(doc);
       }
-    } catch (error) {
-      console.error('View error:', error);
-      try {
-        if (newTab && !newTab.closed) newTab.close();
-      } catch {}
-      toast({ title: "Error", description: "Failed to view document", variant: "destructive" });
+    } catch (e) {
+      console.error('Custom submission view fallback failed', e);
     }
+    toast({ title: "Error", description: "No file available for viewing", variant: "destructive" });
   };
 
   const handleDownload = async (doc: any) => {
@@ -708,16 +667,6 @@ const BuyerDocumentsManager = ({
 
   const allPageSelected = pageDocuments.length > 0 && pageDocuments.every(doc => selectedDocuments.has(doc.id) || !doc.document_uploads?.[0]?.file_path);
 
-  const pageNumbers = useMemo(() => {
-    const pages: number[] = [];
-    const maxButtons = 5;
-    let start = Math.max(1, currentPage - 2);
-    const end = Math.min(totalPages, start + maxButtons - 1);
-    start = Math.max(1, end - maxButtons + 1);
-    for (let p = start; p <= end; p += 1) pages.push(p);
-    return pages;
-  }, [currentPage, totalPages]);
-
   return (
     <div className="space-y-4">
       {/* Page Title Block */}
@@ -1005,15 +954,21 @@ const BuyerDocumentsManager = ({
                       />
                     </TableCell>
                     <TableCell className="px-3 py-3">
-                      <div className="flex items-start gap-3">
+                      <button
+                        type="button"
+                        className="flex w-full items-start gap-3 text-left transition-colors hover:opacity-80 disabled:cursor-default disabled:opacity-100"
+                        onClick={() => handleView(doc)}
+                        disabled={!hasFile}
+                        title={hasFile ? 'Preview document' : undefined}
+                      >
                         <div className="w-[40px] h-[40px] rounded-[10px] bg-[#EFF6FF] flex items-center justify-center flex-shrink-0">
                           <FileText className="w-5 h-5 text-[#2563EB]" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[14px] font-semibold text-[#111827] truncate" title={doc.title || doc.document_type}>{doc.title || doc.document_type}</p>
+                          <p className={`text-[14px] font-semibold text-[#111827] truncate ${hasFile ? 'hover:text-[#2563EB]' : ''}`} title={doc.title || doc.document_type}>{doc.title || doc.document_type}</p>
                           <p className="text-[13px] text-[#6B7280]">ID: {doc.id.slice(0, 8).toUpperCase()}</p>
                         </div>
-                      </div>
+                      </button>
                     </TableCell>
                     <TableCell className="px-3 py-3">
                       <div className="text-[14px] truncate">
@@ -1111,46 +1066,16 @@ const BuyerDocumentsManager = ({
         </div>
       )}
 
-      {sortedDocuments.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-          <p className="text-muted-foreground">
-            Showing {pageStart + 1} to {Math.min(pageStart + rowsPerPage, sortedDocuments.length)} of {sortedDocuments.length} documents
-          </p>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1">
-              <Button size="icon" variant="outline" className="h-8 w-8" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>
-                <ChevronUp className="w-4 h-4 -rotate-90" />
-              </Button>
-              {pageNumbers.map((p) => (
-                <Button
-                  key={p}
-                  size="icon"
-                  variant={p === currentPage ? 'default' : 'outline'}
-                  className="h-8 w-8"
-                  onClick={() => setPage(p)}
-                >
-                  {p}
-                </Button>
-              ))}
-              <Button size="icon" variant="outline" className="h-8 w-8" disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)}>
-                <ChevronUp className="w-4 h-4 rotate-90" />
-              </Button>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-muted-foreground">Rows per page:</span>
-              <Select value={String(rowsPerPage)} onValueChange={(value) => setRowsPerPage(Number(value))}>
-                <SelectTrigger className="h-8 w-[70px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5</SelectItem>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-      )}
+      <ReviewPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        pageStart={pageStart}
+        pageSize={rowsPerPage}
+        totalCount={sortedDocuments.length}
+        itemLabel="documents"
+        onPageChange={setPage}
+        onPageSizeChange={setRowsPerPage}
+      />
 
       {selectedDocument && (
         <DocumentLinkModal
@@ -1184,6 +1109,20 @@ const BuyerDocumentsManager = ({
           if (doc) doc.notes = newNotes;
           if (onRefresh) onRefresh();
         }}
+      />
+
+      <DocumentPreviewModal
+        open={previewOpen}
+        onOpenChange={(open) => { setPreviewOpen(open); if (!open) setPreviewDoc(null); }}
+        upload={previewDoc?.upload || null}
+        title={previewDoc?.doc?.title || previewDoc?.doc?.document_type}
+        status={previewDoc?.doc?.status}
+        supplierName={previewDoc?.doc?.suppliers?.company_name || previewDoc?.doc?.suppliers?.name}
+        documentId={previewDoc?.doc?.id}
+        canDecide={previewDoc?.doc?.status === 'submitted'}
+        approveBusy={approveLoading === previewDoc?.doc?.id}
+        onApprove={onApprove}
+        onDecline={onDecline}
       />
     </div>
   );

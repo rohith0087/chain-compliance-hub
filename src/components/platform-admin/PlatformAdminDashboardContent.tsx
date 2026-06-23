@@ -11,6 +11,7 @@ import { PlatformAdminInvitations } from './PlatformAdminInvitations';
 import { PlatformAdminAuditLogs } from './PlatformAdminAuditLogs';
 import { SuperAdminClientSupport } from '@/components/super-admin/SuperAdminClientSupport';
 import { DocumentBackfillManager } from './DocumentBackfillManager';
+import { PlatformEmailIntakeOperations } from './PlatformEmailIntakeOperations';
 import { formatDistanceToNow } from 'date-fns';
 
 export function PlatformAdminDashboardContent() {
@@ -103,6 +104,10 @@ export function PlatformAdminDashboardContent() {
 
   if (activeTab === 'backfill') {
     return <DocumentBackfillManager />;
+  }
+
+  if (activeTab === 'email-intake') {
+    return <PlatformEmailIntakeOperations />;
   }
 
   return (

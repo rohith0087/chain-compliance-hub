@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { reviewToolbarSelectTriggerClass } from '@/components/documents/buyerReviewDesignSystem';
 
 interface ComplianceFiltersProps {
   filters: {
@@ -90,7 +91,7 @@ export function ComplianceFilters({
             placeholder="Search suppliers..."
             value={filters.searchQuery}
             onChange={(e) => updateFilter('searchQuery', e.target.value)}
-            className="pl-8 h-8 text-sm bg-background border-border"
+            className={`pl-8 text-sm ${reviewToolbarSelectTriggerClass}`}
           />
         </div>
 
@@ -99,7 +100,7 @@ export function ComplianceFilters({
         {/* Industry Filter */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 text-sm font-normal">
+            <Button variant="outline" size="sm" className={`text-sm font-normal ${reviewToolbarSelectTriggerClass}`}>
               Industry
               {filters.industries.length > 0 && (
                 <span className="ml-1.5 text-xs bg-muted px-1.5 py-0.5 rounded">
@@ -138,7 +139,7 @@ export function ComplianceFilters({
         {/* Category Filter */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 text-sm font-normal">
+            <Button variant="outline" size="sm" className={`text-sm font-normal ${reviewToolbarSelectTriggerClass}`}>
               Category
               {filters.itemCategories.length > 0 && (
                 <span className="ml-1.5 text-xs bg-muted px-1.5 py-0.5 rounded">
@@ -177,7 +178,7 @@ export function ComplianceFilters({
         {/* Status Filter */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 text-sm font-normal">
+            <Button variant="outline" size="sm" className={`text-sm font-normal ${reviewToolbarSelectTriggerClass}`}>
               Status
               {filters.statuses.length > 0 && (
                 <span className="ml-1.5 text-xs bg-muted px-1.5 py-0.5 rounded">
@@ -212,7 +213,7 @@ export function ComplianceFilters({
         {/* Risk Level Filter */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 text-sm font-normal">
+            <Button variant="outline" size="sm" className={`text-sm font-normal ${reviewToolbarSelectTriggerClass}`}>
               Risk Level
               {filters.riskLevels.length > 0 && (
                 <span className="ml-1.5 text-xs bg-muted px-1.5 py-0.5 rounded">
@@ -252,7 +253,7 @@ export function ComplianceFilters({
               variant="ghost"
               size="sm"
               onClick={clearAllFilters}
-              className="h-8 text-sm text-muted-foreground hover:text-foreground"
+              className="h-9 text-sm text-muted-foreground hover:text-foreground"
             >
               Clear all
             </Button>

@@ -11,6 +11,7 @@ import {
   Ticket,
   X,
   Sparkles
+  ,MailWarning
 } from 'lucide-react';
 import {
   Sidebar,
@@ -80,6 +81,12 @@ const navigationItems = [
     url: '/platform-admin/dashboard?tab=logs',
     icon: FileText,
     section: 'logs'
+  },
+  {
+    title: 'Email Intake',
+    url: '/platform-admin/dashboard?tab=email-intake',
+    icon: MailWarning,
+    section: 'email-intake'
   },
   {
     title: 'AI Backfill',

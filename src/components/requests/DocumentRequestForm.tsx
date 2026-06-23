@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useBranchContext } from '@/contexts/BranchContext';
 import { ContactRoleSelector } from '@/components/buyer/ContactRoleSelector';
 import type { ContactRole } from '@/hooks/useSupplierContacts';
+import { useOrganizationFeature } from '@/hooks/useOrganizationFeature';
 
 interface DocumentRequestFormProps {
   isOpen: boolean;
@@ -43,6 +44,7 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { currentBranch } = useBranchContext();
+  const { enabled: reliableDeliveryEnabled } = useOrganizationFeature('reliable_request_delivery_v1', buyerProfile?.id, 'buyer');
 
   useEffect(() => {
     if (isOpen && user) {
@@ -223,9 +225,11 @@ const DocumentRequestForm = ({ isOpen, onClose }: DocumentRequestFormProps) => {
       }
 
       // Trigger new request email notification to SUPPLIER (fire and forget)
-      supabase.functions.invoke('send-new-request-email', {
-        body: { requestId: request.id, supplierId: selectedSupplier }
-      }).catch(err => console.error('Failed to send new request email:', err));
+      if (!reliableDeliveryEnabled) {
+        supabase.functions.invoke('send-new-request-email', {
+          body: { requestId: request.id, supplierId: selectedSupplier }
+        }).catch(err => console.error('Failed to send new request email:', err));
+      }
 
       toast({
         title: "Request Created",

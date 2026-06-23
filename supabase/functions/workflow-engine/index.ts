@@ -147,7 +147,7 @@ async function executeAction(actionType: string, context: any): Promise<void> {
     case 'approve_document':
       await supabase
         .from('document_uploads')
-        .update({ status: 'approved', ai_processed: true })
+        .update({ status: 'pending_manual_review', ai_processed: true, reviewer_notes: 'Workflow recommendation: approve. Human decision required.' })
         .eq('id', context.document_id);
       break;
       
@@ -155,21 +155,15 @@ async function executeAction(actionType: string, context: any): Promise<void> {
       await supabase
         .from('document_uploads')
         .update({ 
-          status: 'rejected', 
+          status: 'pending_manual_review',
           ai_processed: true,
-          rejection_reason: context.last_ai_response?.reasoning 
+          reviewer_notes: `Workflow recommendation: reject. ${context.last_ai_response?.reasoning || ''}`
         })
         .eq('id', context.document_id);
       break;
       
     case 'request_clarification':
-      // Trigger clarification workflow
-      await supabase.functions.invoke('send-rejection-notification', {
-        body: { 
-          document_id: context.document_id,
-          message: context.last_ai_response?.reasoning 
-        }
-      });
+      await supabase.from('document_uploads').update({status:'pending_manual_review',ai_processed:true,reviewer_notes:`Workflow recommends clarification. ${context.last_ai_response?.reasoning||''}`}).eq('id',context.document_id);
       break;
       
     case 'escalate_to_human':

@@ -24,7 +24,6 @@ import {
   Bot,
   TrendingUp,
   AlertTriangle,
-  ClipboardCheck,
   GitBranch,
   Package,
   FolderKanban,
@@ -35,7 +34,8 @@ import {
   FlaskConical,
   ListTree,
   ShieldCheck,
-  Activity
+  Activity,
+  Inbox
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
@@ -132,9 +132,9 @@ interface BuyerSidebarLayoutProps {
   companyId?: string;
   unreadMessages?: number;
   requirementEngineEnabled?: boolean;
-  evidenceVerificationEnabled?: boolean;
   complianceDecisionsEnabled?: boolean;
   dossiersEnabled?: boolean;
+  emailReplyIngestionEnabled?: boolean;
 }
 
 export function BuyerSidebarLayout({
@@ -152,9 +152,9 @@ export function BuyerSidebarLayout({
   companyId,
   unreadMessages = 0,
   requirementEngineEnabled = false,
-  evidenceVerificationEnabled = false,
   complianceDecisionsEnabled = false,
-  dossiersEnabled = false
+  dossiersEnabled = false,
+  emailReplyIngestionEnabled = false
 }: BuyerSidebarLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -277,17 +277,19 @@ export function BuyerSidebarLayout({
 
   const requestsSubmenu = [
     { title: t('common:navigation.documents'), value: 'documents', icon: FileCheck },
+    emailReplyIngestionEnabled && { title: 'Email Intake', value: 'email-intake', icon: Inbox },
     { title: 'Activity', value: 'document-activity', icon: Activity },
     { title: 'Templates', value: 'templates', icon: FileText },
     !wsFlags.hideBuyerSamples && { title: 'Buyer Samples', value: 'sample-templates', icon: FileImage },
     { title: 'Document Sets', value: 'document-sets', icon: FolderKanban },
-    !wsFlags.hideCOAAnalysis && { title: 'COA Analysis', value: 'coa-analysis', icon: FlaskConical }
+    !wsFlags.hideCOAAnalysis && { title: 'COA Analysis', value: 'coa-analysis', icon: FlaskConical },
+    { title: 'Corporate Documents', value: 'corporate-documents', icon: Building2 },
+    { title: 'Communication Log', value: 'communication-log', icon: Bell }
   ].filter(Boolean) as { title: string; value: string; icon: any }[];
 
   const complianceSubmenu = [
-    { title: 'Overview', value: 'compliance', icon: BarChart3 },
+    { title: 'Workbench', value: 'compliance', icon: BarChart3 },
     requirementEngineEnabled && { title: 'Requirements', value: 'requirements', icon: ListTree },
-    evidenceVerificationEnabled && { title: 'Evidence Verification', value: 'evidence-verification', icon: ClipboardCheck },
     complianceDecisionsEnabled && { title: 'Compliance Decisions', value: 'compliance-decisions', icon: ShieldCheck },
     dossiersEnabled && { title: 'Dossiers', value: 'dossiers', icon: FileText },
     { title: wsTerms.supplier_risk, value: 'supplier-risk', icon: AlertTriangle },

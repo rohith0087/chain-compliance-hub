@@ -1,18 +1,35 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertCircle, CheckCircle2, ExternalLink, FileCheck2, Loader2, ShieldCheck } from 'lucide-react';
+import { AlertCircle, Download, FileCheck2, Loader2, ShieldCheck } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import {
+  QUALIFICATION_BADGE_CONFIG,
+  reviewCardContainerClass,
+  reviewSectionHeaderClass,
+} from '@/components/documents/buyerReviewDesignSystem';
 
 const db = supabase as any;
+
+type PreviewKind = 'image' | 'pdf' | 'office' | 'unsupported';
+
+function getPreviewKind(asset: any): PreviewKind {
+  const mime = String(asset?.mime_type || '').toLowerCase();
+  const name = String(asset?.original_file_name || '').toLowerCase();
+  if (mime.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp|svg)$/.test(name)) return 'image';
+  if (mime === 'application/pdf' || name.endsWith('.pdf')) return 'pdf';
+  if (
+    mime.includes('msword') || mime.includes('officedocument') || mime === 'application/vnd.ms-excel' || mime === 'application/vnd.ms-powerpoint'
+    || /\.(docx?|xlsx?|pptx?)$/.test(name)
+  ) return 'office';
+  return 'unsupported';
+}
 
 interface Props { buyerId: string }
 interface ReviewItem {
@@ -56,6 +73,7 @@ export default function CanonicalEvidenceReviewWorkspace({ buyerId }: Props) {
   useEffect(()=>{const loadPolicy=async()=>{const {data}=await db.from('evidence_review_policies').select('require_four_eyes,default_minimum_validity_days').eq('buyer_id',buyerId).maybeSingle();if(data){setFourEyes(Boolean(data.require_four_eyes));setMinimumValidityDays(data.default_minimum_validity_days??90);}};void loadPolicy();},[buyerId]);
 
   const selected = useMemo(() => items.find((item) => item.id === selectedId) || items[0] || null, [items, selectedId]);
+  const previewKind = useMemo(() => getPreviewKind(selected?.asset), [selected]);
   const missingFields = useMemo(() => {
     const values = validationResults.flatMap((row) => Array.isArray(row.details?.missing_fields) ? row.details.missing_fields : []);
     return [...new Set(values.filter((value): value is string => typeof value === 'string'))].filter((name) => !fields.some((field) => field.field_name === name));
@@ -106,47 +124,97 @@ export default function CanonicalEvidenceReviewWorkspace({ buyerId }: Props) {
 
   if (loading) return <div className="p-8 text-sm text-muted-foreground">Loading review workspace…</div>;
   return (
-    <div className="h-[calc(100vh-80px)] overflow-y-auto p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-2xl font-semibold">Evidence Review</h1><p className="mt-1 text-sm text-muted-foreground">Verify cited facts and approve their use from one workspace. Verification and buyer acceptance remain separate audit events.</p></div><Card className="min-w-[310px]"><CardContent className="flex items-end gap-3 p-4"><div className="flex-1 space-y-1"><Label htmlFor="four-eyes">Require two reviewers</Label><div className="flex items-center gap-2"><Switch id="four-eyes" checked={fourEyes} onCheckedChange={setFourEyes}/><Input className="w-24" type="number" min={0} max={3650} value={minimumValidityDays} onChange={(event)=>setMinimumValidityDays(Number(event.target.value))}/><span className="text-xs text-muted-foreground">valid days</span></div></div><Button size="sm" variant="outline" disabled={busy} onClick={()=>void savePolicy()}>Save policy</Button></CardContent></Card></div>
-        {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
-        {!selected ? <Card><CardContent className="p-8 text-center text-muted-foreground">No evidence is waiting for review.</CardContent></Card> : (
-          <div className="grid gap-4 xl:grid-cols-[280px_1fr_360px]">
-            <div className="space-y-2">{items.map((item) => (
-              <button key={item.id} onClick={() => setSelectedId(item.id)} className={`w-full rounded-md border p-3 text-left ${selected.id === item.id ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}>
-                <p className="font-medium">{item.record?.display_name || item.request?.document_type}</p><p className="mt-1 text-xs text-muted-foreground">{item.request?.title}</p>
-                <Badge variant="outline" className="mt-2">{item.qualification}</Badge>
-              </button>
-            ))}</div>
+    <div className="flex h-[calc(100vh-80px)] flex-col overflow-hidden bg-white p-4">
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-3 overflow-hidden">
+        <div className="flex flex-shrink-0 flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-[19px] font-bold leading-none text-[#111827]">Evidence Review</h1>
+            <p className="mt-1 text-[13px] text-[#6B7280]">Verify cited facts and approve their use from one workspace. Verification and buyer acceptance remain separate audit events.</p>
+          </div>
+          <div className={`min-w-[310px] p-3 ${reviewCardContainerClass}`}>
+            <div className="flex items-end gap-3"><div className="flex-1 space-y-1"><Label htmlFor="four-eyes" className={reviewSectionHeaderClass}>Require two reviewers</Label><div className="flex items-center gap-2"><Switch id="four-eyes" checked={fourEyes} onCheckedChange={setFourEyes}/><Input className="w-24" type="number" min={0} max={3650} value={minimumValidityDays} onChange={(event)=>setMinimumValidityDays(Number(event.target.value))}/><span className="text-xs text-muted-foreground">valid days</span></div></div><Button size="sm" variant="outline" className="rounded-[10px]" disabled={busy} onClick={()=>void savePolicy()}>Save policy</Button></div>
+          </div>
+        </div>
+        {error && <Alert variant="destructive" className="flex-shrink-0"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
+        {!selected ? <div className={`p-8 text-center text-muted-foreground ${reviewCardContainerClass}`}>No evidence is waiting for review.</div> : (
+          <div className="grid flex-1 gap-4 overflow-hidden xl:grid-cols-[280px_1fr_360px]">
+            <div className="space-y-2 overflow-y-auto pr-1">{items.map((item) => {
+              const qualConfig = QUALIFICATION_BADGE_CONFIG[item.qualification] || QUALIFICATION_BADGE_CONFIG.potential;
+              const QualIcon = qualConfig.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setSelectedId(item.id)}
+                  className={`w-full rounded-[12px] border p-3 text-left transition-colors ${selected.id === item.id ? 'border-[#2563EB] bg-[#EAF1FF]' : 'border-[#E5E7EB] bg-white hover:bg-gray-50/50'}`}
+                >
+                  <p className="font-medium text-[#111827]">{item.record?.display_name || item.request?.document_type}</p>
+                  <p className="mt-1 text-xs text-[#6B7280]">{item.request?.title}</p>
+                  <span className={`mt-2 inline-flex items-center gap-1 rounded-full border-0 px-2 py-0.5 text-[12px] font-medium ${qualConfig.className}`}>
+                    <QualIcon className="h-3 w-3" />{qualConfig.label}
+                  </span>
+                </button>
+              );
+            })}</div>
 
-            <div className="space-y-4">
-              <Card><CardHeader><CardTitle>{selected.record?.display_name || selected.request?.document_type}</CardTitle><CardDescription>Request: {selected.request?.title} · due {selected.request?.due_date || 'not set'}</CardDescription></CardHeader>
-                <CardContent>{previewUrl ? <iframe title="Evidence source document" src={previewUrl} className="h-[520px] w-full rounded-md border" /> : <div className="flex h-64 items-center justify-center rounded-md border bg-muted/30 text-sm text-muted-foreground">Preview unavailable</div>}</CardContent>
-              </Card>
+            <div className="space-y-4 overflow-y-auto pr-1">
+              <div className={reviewCardContainerClass}>
+                <div className="border-b border-[#E5E7EB] p-4">
+                  <p className="text-base font-semibold text-[#111827]">{selected.record?.display_name || selected.request?.document_type}</p>
+                  <p className="mt-1 text-sm text-[#6B7280]">Request: {selected.request?.title} · due {selected.request?.due_date || 'not set'}</p>
+                </div>
+                <div className="p-4">
+                  {!previewUrl ? (
+                    <div className="flex h-64 items-center justify-center rounded-[12px] border border-[#E5E7EB] bg-gray-50/50 text-sm text-[#6B7280]">Preview unavailable</div>
+                  ) : previewKind === 'image' ? (
+                    <img src={previewUrl} alt="Evidence source document" className="h-[60vh] w-full rounded-[12px] border border-[#E5E7EB] object-contain bg-gray-50/50" />
+                  ) : previewKind === 'office' ? (
+                    <iframe title="Evidence source document" src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(previewUrl)}`} className="h-[60vh] w-full rounded-[12px] border border-[#E5E7EB]" />
+                  ) : previewKind === 'pdf' ? (
+                    <iframe title="Evidence source document" src={previewUrl} className="h-[60vh] w-full rounded-[12px] border border-[#E5E7EB]" />
+                  ) : (
+                    <div className="flex h-64 flex-col items-center justify-center gap-2 rounded-[12px] border border-[#E5E7EB] bg-gray-50/50 text-sm text-[#6B7280]">
+                      <p>This file type can't be previewed inline.</p>
+                      <a href={previewUrl} download className="inline-flex items-center gap-1 text-[#2563EB] hover:underline"><Download className="h-3.5 w-3.5" />Download to view</a>
+                    </div>
+                  )}
+                </div>
+              </div>
               {selected.request?.request_reason_code && <Alert><FileCheck2 className="h-4 w-4" /><AlertTitle>Why this was requested again</AlertTitle><AlertDescription>{selected.request.request_reason_code.replace(/_/g,' ')}{selected.request.request_reason_notes ? ` — ${selected.request.request_reason_notes}` : ''}</AlertDescription></Alert>}
             </div>
 
-            <div className="space-y-4">
-              <Card><CardHeader><CardTitle className="text-base">Extracted evidence</CardTitle><CardDescription>Every value remains linked to its source page and quote.</CardDescription></CardHeader><CardContent className="space-y-4">
+            <div className="space-y-4 overflow-y-auto pr-1">
+              <div className={reviewCardContainerClass}>
+                <div className="border-b border-[#E5E7EB] p-4">
+                  <p className="text-base font-semibold text-[#111827]">Extracted evidence</p>
+                  <p className="mt-1 text-sm text-[#6B7280]">Every value remains linked to its source page and quote.</p>
+                </div>
+                <div className="space-y-4 p-4">
                 {fields.length === 0 ? <p className="text-sm text-muted-foreground">No structured fields were extracted.</p> : fields.map((field) => {
                   const value = edits[field.field_name] ?? String(field.normalized_value ?? field.raw_value ?? '');
-                  return <div key={field.id} className="space-y-1.5"><div className="flex justify-between gap-2"><Label>{field.field_name.replace(/_/g,' ')}</Label>{field.confidence != null && <span className="text-xs text-muted-foreground">{Math.round(field.confidence * 100)}%</span>}</div>
-                    <Input value={value} onChange={(event) => setEdits((current) => ({ ...current, [field.field_name]: event.target.value }))} />
-                    {(field.source_page || field.source_quote) && <p className="text-xs text-muted-foreground">{field.source_page ? `Page ${field.source_page}` : ''}{field.source_quote ? ` — “${field.source_quote}”` : ''}</p>}</div>;
+                  return <div key={field.id} className="space-y-1.5"><div className="flex justify-between gap-2"><Label className={reviewSectionHeaderClass}>{field.field_name.replace(/_/g,' ')}</Label>{field.confidence != null && <span className="text-xs text-muted-foreground">{Math.round(field.confidence * 100)}%</span>}</div>
+                    <Input className="rounded-[10px] border-[#E5E7EB]" value={value} onChange={(event) => setEdits((current) => ({ ...current, [field.field_name]: event.target.value }))} />
+                    {(field.source_page || field.source_quote) && <p className="text-xs text-[#6B7280]">{field.source_page ? `Page ${field.source_page}` : ''}{field.source_quote ? ` — “${field.source_quote}”` : ''}</p>}</div>;
                 })}
-                {missingFields.map((fieldName) => <div key={fieldName} className="space-y-1.5 rounded-md border border-amber-200 bg-amber-50/50 p-3"><Label>{fieldName.replace(/_/g,' ')} *</Label><Input value={edits[fieldName] || ''} onChange={(event) => setEdits((current) => ({...current,[fieldName]:event.target.value}))} placeholder="Required before verification"/><p className="text-xs text-amber-800">This required field was not extracted. Enter it only after checking the source document.</p></div>)}
-              </CardContent></Card>
+                {missingFields.map((fieldName) => <div key={fieldName} className="space-y-1.5 rounded-[12px] border border-amber-200 bg-amber-50/50 p-3"><Label>{fieldName.replace(/_/g,' ')} *</Label><Input className="rounded-[10px]" value={edits[fieldName] || ''} onChange={(event) => setEdits((current) => ({...current,[fieldName]:event.target.value}))} placeholder="Required before verification"/><p className="text-xs text-amber-800">This required field was not extracted. Enter it only after checking the source document.</p></div>)}
+                </div>
+              </div>
 
-              <Card><CardHeader><CardTitle className="text-base">Safeguards and impact</CardTitle></CardHeader><CardContent className="space-y-3 text-sm">
-                <div className="flex items-center justify-between"><span>Validation</span><Badge variant={validationResults.some((row) => row.outcome === 'failed') ? 'destructive' : 'outline'}>{validationResults.length ? `${validationResults.length} rule result(s)` : 'No failures'}</Badge></div>
-                <div className="flex items-center justify-between"><span>Existing attestations</span><span>{attestations.length}</span></div>
-                <div className="flex items-center justify-between"><span>Affected requirements</span><span>{requirementLinks.length}</span></div>
-              </CardContent></Card>
-              <div className="space-y-2"><Label>Reviewer notes</Label><Textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Optional notes for the audit history" /></div>
-              <Button className="w-full" onClick={() => void (approvalTask ? approveVerified() : submitReview())} disabled={busy || validationResults.some((row) => row.outcome === 'failed')}>
+              <div className={reviewCardContainerClass}>
+                <div className="border-b border-[#E5E7EB] p-4"><p className="text-base font-semibold text-[#111827]">Safeguards and impact</p></div>
+                <div className="space-y-3 p-4 text-sm">
+                <div className="flex items-center justify-between"><span className="text-[#374151]">Validation</span><span className={`rounded-full border-0 px-2 py-0.5 text-[12px] font-medium ${validationResults.some((row) => row.outcome === 'failed') ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>{validationResults.length ? `${validationResults.length} rule result(s)` : 'No failures'}</span></div>
+                <div className="flex items-center justify-between"><span className="text-[#374151]">Existing attestations</span><span className="text-[#111827]">{attestations.length}</span></div>
+                <div className="flex items-center justify-between"><span className="text-[#374151]">Affected requirements</span><span className="text-[#111827]">{requirementLinks.length}</span></div>
+                </div>
+              </div>
+              <div className="space-y-2"><Label className={reviewSectionHeaderClass}>Reviewer notes</Label><Textarea className="rounded-[10px] border-[#E5E7EB]" value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Optional notes for the audit history" /></div>
+              <Button
+                className="w-full rounded-[10px] bg-[#10B981] text-white hover:bg-[#059669]"
+                onClick={() => void (approvalTask ? approveVerified() : submitReview())}
+                disabled={busy || validationResults.some((row) => row.outcome === 'failed')}
+              >
                 {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}{approvalTask?'Approve as second reviewer':'Verify evidence and approve submission'}
               </Button>
-              {previewUrl && <Button variant="outline" className="w-full" asChild><a href={previewUrl} target="_blank" rel="noreferrer"><ExternalLink className="mr-2 h-4 w-4" />Open source in new tab</a></Button>}
             </div>
           </div>
         )}

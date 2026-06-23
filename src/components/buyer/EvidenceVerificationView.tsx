@@ -2,14 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertCircle, AlertTriangle, CheckCircle2, ClipboardCheck, Loader2, Pencil, ShieldAlert, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import CanonicalEvidenceReviewWorkspace from './CanonicalEvidenceReviewWorkspace';
 import { useCanonicalEvidenceFeature } from '@/hooks/useCanonicalEvidenceFeature';
+import {
+  reviewCardContainerClass,
+  reviewPageSubtitleClass,
+  reviewPageTitleClass,
+} from '@/components/documents/buyerReviewDesignSystem';
 
 interface EvidenceVerificationViewProps {
   buyerId: string;
@@ -56,10 +59,10 @@ interface ConflictEntry {
 }
 
 const statusConfig: Record<ClaimStatus, { label: string; icon: typeof CheckCircle2; className: string }> = {
-  extracted: { label: 'Needs review', icon: ClipboardCheck, className: 'border-amber-200 bg-amber-50 text-amber-800' },
-  verified: { label: 'Verified', icon: CheckCircle2, className: 'border-emerald-200 bg-emerald-50 text-emerald-800' },
-  rejected: { label: 'Rejected', icon: XCircle, className: 'border-slate-200 bg-slate-50 text-slate-700' },
-  superseded: { label: 'Superseded', icon: XCircle, className: 'border-slate-200 bg-slate-50 text-slate-500' },
+  extracted: { label: 'Needs review', icon: ClipboardCheck, className: 'bg-amber-50 text-amber-700 border-amber-200' },
+  verified: { label: 'Verified', icon: CheckCircle2, className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  rejected: { label: 'Rejected', icon: XCircle, className: 'bg-red-50 text-red-700 border-red-200' },
+  superseded: { label: 'Superseded', icon: XCircle, className: 'bg-slate-50 text-slate-600 border-slate-200' },
 };
 
 const CORRECTABLE_FIELDS = ['issuer', 'certificate_number', 'issue_date', 'expiry_date', 'source_page'] as const;
@@ -178,17 +181,17 @@ function ClaimDetail({ claim, onActionComplete }: { claim: EvidenceClaim; onActi
       )}
 
       {editingField && (
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Correct {editingField.replace(/_/g, ' ')}</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            <Input value={editValue} onChange={(event) => setEditValue(event.target.value)} placeholder="New value" />
-            <Textarea value={editReason} onChange={(event) => setEditReason(event.target.value)} placeholder="Reason for this correction" />
+        <div className="rounded-[12px] border border-[#E5E7EB] bg-white">
+          <div className="border-b border-[#E5E7EB] px-3 py-2"><p className="text-sm font-semibold text-[#111827]">Correct {editingField.replace(/_/g, ' ')}</p></div>
+          <div className="space-y-2 p-3">
+            <Input className="rounded-[10px] border-[#E5E7EB]" value={editValue} onChange={(event) => setEditValue(event.target.value)} placeholder="New value" />
+            <Textarea className="rounded-[10px] border-[#E5E7EB]" value={editReason} onChange={(event) => setEditReason(event.target.value)} placeholder="Reason for this correction" />
             <div className="flex gap-2">
-              <Button size="sm" onClick={submitCorrection} disabled={busy}>Save correction</Button>
-              <Button size="sm" variant="ghost" onClick={() => setEditingField(null)}>Cancel</Button>
+              <Button size="sm" className="rounded-[10px] bg-[#10B981] text-white hover:bg-[#059669]" onClick={submitCorrection} disabled={busy}>Save correction</Button>
+              <Button size="sm" variant="ghost" className="rounded-[10px]" onClick={() => setEditingField(null)}>Cancel</Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {corrections.length > 0 && (
@@ -245,11 +248,11 @@ function LegacyEvidenceVerificationView({ buyerId }: EvidenceVerificationViewPro
   const selectedClaim = claims.find((claim) => claim.id === selectedClaimId) || filteredClaims[0] || null;
 
   return (
-    <div className="h-[calc(100vh-80px)] overflow-y-auto p-6">
+    <div className="h-[calc(100vh-80px)] overflow-y-auto bg-white p-6">
       <div className="mx-auto max-w-6xl space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold">Evidence Verification</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className={reviewPageTitleClass}>Evidence Verification</h1>
+          <p className={`mt-1 ${reviewPageSubtitleClass}`}>
             Structured fields extracted from uploaded documents. Nothing here is authoritative until a reviewer verifies it.
           </p>
         </div>
@@ -280,28 +283,28 @@ function LegacyEvidenceVerificationView({ buyerId }: EvidenceVerificationViewPro
                     key={claim.id}
                     type="button"
                     onClick={() => setSelectedClaimId(claim.id)}
-                    className={`w-full rounded-md border p-3 text-left text-sm transition-colors ${selectedClaim?.id === claim.id ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
+                    className={`w-full rounded-[12px] border p-3 text-left text-sm transition-colors ${selectedClaim?.id === claim.id ? 'border-[#2563EB] bg-[#EAF1FF]' : 'border-[#E5E7EB] bg-white hover:bg-gray-50/50'}`}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium">{claim.document_type || claim.issuer || 'Unknown evidence'}</span>
-                      <Badge variant="outline" className={config.className}><Icon className="mr-1 h-3 w-3" />{config.label}</Badge>
+                      <span className="font-medium text-[#111827]">{claim.document_type || claim.issuer || 'Unknown evidence'}</span>
+                      <span className={`inline-flex items-center gap-1 rounded-full border-0 px-2 py-0.5 text-[12px] font-medium ${config.className}`}><Icon className="h-3 w-3" />{config.label}</span>
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1 text-xs text-[#6B7280]">
                       {claim.issuer || 'Unknown issuer'} · {claim.certificate_number || 'No certificate number'}
                     </p>
                   </button>
                 );
               })}
             </div>
-            <Card>
-              <CardHeader>
-                <CardTitle>{selectedClaim?.document_type || selectedClaim?.issuer || 'Evidence claim'}</CardTitle>
-                <CardDescription>Extraction model {selectedClaim?.extraction_model_version}</CardDescription>
-              </CardHeader>
-              <CardContent>
+            <div className={reviewCardContainerClass}>
+              <div className="border-b border-[#E5E7EB] p-4">
+                <p className="text-base font-semibold text-[#111827]">{selectedClaim?.document_type || selectedClaim?.issuer || 'Evidence claim'}</p>
+                <p className="mt-1 text-sm text-[#6B7280]">Extraction model {selectedClaim?.extraction_model_version}</p>
+              </div>
+              <div className="p-4">
                 {selectedClaim && <ClaimDetail claim={selectedClaim} onActionComplete={load} />}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         )}
       </div>

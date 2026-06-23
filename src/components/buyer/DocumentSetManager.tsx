@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Package, Edit2, Trash2, Copy, FileText, X, Plus, Search, AlertCircle, TrendingUp, ChevronRight, Sparkles } from 'lucide-react';
 import { formatDistanceToNow, differenceInDays } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,13 @@ import { useDocumentSets, DocumentSet } from '@/hooks/useDocumentSets';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getComplianceDocuments, ComplianceDocument } from '@/components/requests/ComplianceDocuments';
+import {
+  reviewEmptyStateContainerClass,
+  reviewPageSubtitleClass,
+  reviewPageTitleClass,
+  reviewToolbarSelectTriggerClass,
+} from '@/components/documents/buyerReviewDesignSystem';
+import ReviewPagination from '@/components/documents/ReviewPagination';
 
 interface DocumentSetManagerProps {
   buyerId: string;
@@ -110,6 +117,8 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('recent');
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(12);
 
   // Sort document sets based on selected sort option
   const sortedDocumentSets = useMemo(() => {
@@ -343,21 +352,30 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
       .slice(0, 3);
   };
 
+  useEffect(() => {
+    setPage(1);
+  }, [sortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedDocumentSets.length / rowsPerPage));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * rowsPerPage;
+  const pageDocumentSets = sortedDocumentSets.slice(pageStart, pageStart + rowsPerPage);
+
   return (
     <TooltipProvider>
       <div className="space-y-6">
         {/* Header with intro and sorting */}
-        <div className="flex items-start justify-between gap-4">
+        <div className="pt-7 pb-5 flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold">Document Sets</h2>
-            <p className="text-muted-foreground">
+            <h2 className={reviewPageTitleClass}>Document Sets</h2>
+            <p className={reviewPageSubtitleClass}>
               Reusable document collections for faster supplier onboarding
             </p>
           </div>
-          
+
           {documentSets.length > 0 && (
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className={`w-[180px] ${reviewToolbarSelectTriggerClass}`}>
                 <SelectValue placeholder="Sort by..." />
               </SelectTrigger>
               <SelectContent>
@@ -372,36 +390,35 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
 
         {/* Enhanced Empty State */}
         {documentSets.length === 0 ? (
-          <Card className="border-dashed border-2">
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <div className="rounded-full bg-primary/10 p-4 mb-4">
-                <Package className="h-10 w-10 text-primary" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Create Your First Document Set</h3>
-              <p className="text-muted-foreground text-center max-w-md mb-6">
-                Document Sets let you reuse the same documents across multiple supplier requests. 
-                Save time by creating templates for common compliance packages.
-              </p>
-              
-              {/* Example use cases */}
-              <div className="flex flex-wrap gap-2 justify-center mb-6">
-                <Badge variant="outline" className="text-xs">Food Safety Package</Badge>
-                <Badge variant="outline" className="text-xs">ESG Compliance</Badge>
-                <Badge variant="outline" className="text-xs">Insurance Bundle</Badge>
-                <Badge variant="outline" className="text-xs">Quality Certifications</Badge>
-              </div>
-              
-              <p className="text-sm text-muted-foreground text-center">
-                Create a set from the "New Request" page by selecting documents and clicking "Save as Set"
-              </p>
-            </CardContent>
-          </Card>
+          <div className={`${reviewEmptyStateContainerClass} border-dashed border-2 py-16`}>
+            <div className="rounded-full bg-[#EFF6FF] p-4 mb-4 inline-flex">
+              <Package className="h-10 w-10 text-[#2563EB]" />
+            </div>
+            <h3 className="text-lg font-semibold text-[#111827] mb-2">Create Your First Document Set</h3>
+            <p className="text-[#6B7280] text-center max-w-md mb-6 mx-auto">
+              Document Sets let you reuse the same documents across multiple supplier requests.
+              Save time by creating templates for common compliance packages.
+            </p>
+
+            {/* Example use cases */}
+            <div className="flex flex-wrap gap-2 justify-center mb-6">
+              <Badge variant="outline" className="text-xs">Food Safety Package</Badge>
+              <Badge variant="outline" className="text-xs">ESG Compliance</Badge>
+              <Badge variant="outline" className="text-xs">Insurance Bundle</Badge>
+              <Badge variant="outline" className="text-xs">Quality Certifications</Badge>
+            </div>
+
+            <p className="text-sm text-[#6B7280] text-center">
+              Create a set from the "New Request" page by selecting documents and clicking "Save as Set"
+            </p>
+          </div>
         ) : (
+          <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {sortedDocumentSets.map((set) => (
-              <Card 
-                key={set.id} 
-                className="group cursor-pointer hover:shadow-lg hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-200"
+            {pageDocumentSets.map((set) => (
+              <Card
+                key={set.id}
+                className="group cursor-pointer rounded-[16px] border border-[#E5E7EB] shadow-[0_1px_3px_rgba(15,23,42,0.06)] hover:shadow-md hover:border-[#D1D5DB] hover:-translate-y-0.5 transition-all duration-200"
                 onClick={() => handleEdit(set)}
               >
                 <CardHeader className="pb-3">
@@ -448,16 +465,16 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
                   {/* Badges row */}
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {set.is_default && (
-                      <Badge variant="outline" className="text-xs">Default</Badge>
+                      <Badge variant="outline" className="text-[12px] px-2 py-0.5 rounded-full font-medium bg-slate-50 text-slate-600 border-slate-200">Default</Badge>
                     )}
                     {isPopularSet(set.usage_count || 0) && (
-                      <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-600 border-green-500/20">
+                      <Badge variant="outline" className="text-[12px] px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 border-emerald-200">
                         <TrendingUp className="h-3 w-3 mr-1" />
                         Popular
                       </Badge>
                     )}
                     {isNewSet(set.created_at) && !isPopularSet(set.usage_count || 0) && (
-                      <Badge variant="secondary" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/20">
+                      <Badge variant="outline" className="text-[12px] px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700 border-blue-200">
                         <Sparkles className="h-3 w-3 mr-1" />
                         New
                       </Badge>
@@ -531,10 +548,23 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
               </Card>
             ))}
           </div>
+
+          <ReviewPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageStart={pageStart}
+            pageSize={rowsPerPage}
+            totalCount={sortedDocumentSets.length}
+            itemLabel="document sets"
+            onPageChange={setPage}
+            onPageSizeChange={setRowsPerPage}
+            pageSizeOptions={[6, 12, 24]}
+          />
+          </>
         )}
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col rounded-[16px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="h-5 w-5 text-primary" />

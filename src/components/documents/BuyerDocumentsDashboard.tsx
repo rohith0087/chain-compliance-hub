@@ -473,36 +473,14 @@ const BuyerDocumentsDashboard = ({ view = 'documents' }: BuyerDocumentsDashboard
         throw new Error('Document not found');
       }
 
-      // Use the secure approval function
-      const { data, error } = await supabase.rpc('approve_document_request', {
-        p_request_id: documentId,
-        p_notes: null
-      });
+      const upload=document.document_uploads?.[0];if(!upload?.id)throw new Error('No document upload is available for review');
+      const { data, error } = await supabase.functions.invoke('review-document-submission-v2',{body:{request_id:documentId,upload_id:upload.id,decision:'approve',reason_code:'approved',reason_notes:'Approved by buyer reviewer',idempotency_key:`document-review/${upload.id}/approve/${crypto.randomUUID()}`}});
 
       if (error) {
         throw new Error(`Failed to approve document: ${error.message}`);
       }
 
-      const result = data as { success: boolean; error?: string; message?: string };
-      if (!result?.success) {
-        throw new Error(result?.error || 'Failed to approve document');
-      }
-
-    // Log the approval activity
-    const upload = document.document_uploads?.[0];
-    if (upload?.id && user?.id) {
-      const { error: logError } = await supabase.from('document_activity_logs').insert({
-        document_upload_id: upload.id,
-        document_request_id: documentId,
-        action_type: 'approved',
-        user_id: user.id,
-        notes: 'Document approved'
-      });
-      
-      if (logError) {
-        console.error('Failed to log approval activity:', logError);
-      }
-    }
+      if (!data) throw new Error('Review did not return a result');
 
       toast({
         title: "Document Approved",
@@ -523,7 +501,7 @@ const BuyerDocumentsDashboard = ({ view = 'documents' }: BuyerDocumentsDashboard
     }
   };
 
-  const handleDeclineDocument = async (documentId: string, reason: string) => {
+  const handleDeclineDocument = async (documentId: string, reasonCode: string, reason: string) => {
     setDeclineLoading(documentId);
     try {
       // Find the document for display purposes
@@ -532,36 +510,14 @@ const BuyerDocumentsDashboard = ({ view = 'documents' }: BuyerDocumentsDashboard
         throw new Error('Document not found');
       }
 
-      // Use the secure rejection function
-      const { data, error } = await supabase.rpc('reject_document_request', {
-        p_request_id: documentId,
-        p_reason: reason
-      });
+      const upload=document.document_uploads?.[0];if(!upload?.id)throw new Error('No document upload is available for review');
+      const { data, error } = await supabase.functions.invoke('review-document-submission-v2',{body:{request_id:documentId,upload_id:upload.id,decision:'reject',reason_code:reasonCode,reason_notes:reason,idempotency_key:`document-review/${upload.id}/reject/${crypto.randomUUID()}`}});
 
       if (error) {
         throw new Error(`Failed to reject document: ${error.message}`);
       }
 
-      const result = data as { success: boolean; error?: string; message?: string };
-      if (!result?.success) {
-        throw new Error(result?.error || 'Failed to reject document');
-      }
-
-      // Log the rejection activity
-      const upload = document.document_uploads?.[0];
-      if (upload?.id && user?.id) {
-        const { error: logError } = await supabase.from('document_activity_logs').insert({
-          document_upload_id: upload.id,
-          document_request_id: documentId,
-          action_type: 'rejected',
-          user_id: user.id,
-          notes: reason
-        });
-        
-        if (logError) {
-          console.error('Failed to log decline activity:', logError);
-        }
-      }
+      if (!data) throw new Error('Review did not return a result');
 
       toast({
         title: "Document Declined",
@@ -973,7 +929,7 @@ if (user?.id && latest.id) {
       <DocumentDeclineDialog
         isOpen={declineDialog.isOpen}
         onClose={() => setDeclineDialog({ isOpen: false, documentId: '', documentTitle: '' })}
-        onConfirm={(reason) => handleDeclineDocument(declineDialog.documentId, reason)}
+        onConfirm={(reasonCode,reason) => handleDeclineDocument(declineDialog.documentId,reasonCode,reason)}
         documentTitle={declineDialog.documentTitle}
         loading={declineLoading === declineDialog.documentId}
       />

@@ -258,7 +258,19 @@ Deno.serve(async (req) => {
       defaultMinimumValidityDays: reviewPolicy.data?.default_minimum_validity_days ?? 90,
       documentTypeOverrides: reviewPolicy.data?.document_type_overrides || {},
     };
-    const applicabilityResults = [...catalogResults, ...legacy.results];
+    // Catalog and legacy requirements are independently deduplicated within
+    // their own loaders, but a catalog requirement's stable_key can in
+    // principle still collide with a legacy normalized key under the same
+    // framework_code/version (e.g. an admin-authored framework reusing
+    // 'TR2C-LEGACY'). compliance_decision_results has a unique constraint on
+    // (evaluation_id, framework_code, requirement_key, framework_version),
+    // so guard the merge point the same way legacyAdapter.ts already does:
+    // normalized key, last source wins.
+    const dedupedApplicability = new Map<string, typeof catalogResults[number] | typeof legacy.results[number]>();
+    for (const result of [...catalogResults, ...legacy.results]) {
+      dedupedApplicability.set(`${result.framework_code}::${result.requirement_key}::${result.framework_version}`, result);
+    }
+    const applicabilityResults = [...dedupedApplicability.values()];
 
     const grantSourcedByRequirement = new Map<string, string[]>();
     const canonicalMatchesByRequirement = new Map<string, CanonicalEvidenceMatch[]>();

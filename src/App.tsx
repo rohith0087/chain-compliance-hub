@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { LanguageProvider } from "@/contexts/LanguageContext";
@@ -39,8 +39,6 @@ import "./i18n";
 import { BranchProvider } from "@/contexts/BranchContext";
 import RequirementEngineView from "@/components/buyer/RequirementEngineView";
 import { useRequirementEngineFeature } from "@/hooks/useRequirementEngineFeature";
-import EvidenceVerificationView from "@/components/buyer/EvidenceVerificationView";
-import { useEvidenceVerificationFeature } from "@/hooks/useEvidenceVerificationFeature";
 import ComplianceDecisionsView from "@/components/buyer/ComplianceDecisionsView";
 import { useComplianceDecisionsFeature } from "@/hooks/useComplianceDecisionsFeature";
 import EvidenceSharingView from "@/components/supplier/EvidenceSharingView";
@@ -48,6 +46,12 @@ import { useEvidenceSharingFeature } from "@/hooks/useEvidenceSharingFeature";
 import DossierGeneratorView from "@/components/buyer/DossierGeneratorView";
 import { useDossiersFeature } from "@/hooks/useDossiersFeature";
 import BuyerDocumentsManager from "@/components/documents/BuyerDocumentsManager";
+import CustomTemplateManager from "@/components/buyer/CustomTemplateManager";
+import SampleTemplateManager from "@/components/buyer/SampleTemplateManager";
+import { DocumentSetManager } from "@/components/buyer/DocumentSetManager";
+import BuyerComplianceDashboard from "@/components/dashboard/BuyerComplianceDashboard";
+import SupplierDiscovery from "@/components/buyer/SupplierDiscovery";
+import { FloatingComplianceAssistant } from "@/components/chat/FloatingComplianceAssistant";
 
 const REQUIREMENT_TEST_BUYER_ID = '00000000-0000-4000-8000-000000000001';
 const EVIDENCE_SHARING_TEST_SUPPLIER_ID = '00000000-0000-4000-8000-000000000020';
@@ -57,13 +61,6 @@ const RequirementEngineTestRoute = () => {
   if (loading) return <div>Loading requirement feature…</div>;
   if (!enabled) return <div>Requirement engine disabled</div>;
   return <RequirementEngineView buyerId={REQUIREMENT_TEST_BUYER_ID} onNavigateToDocuments={() => undefined} />;
-};
-
-const EvidenceVerificationTestRoute = () => {
-  const { enabled, loading } = useEvidenceVerificationFeature(REQUIREMENT_TEST_BUYER_ID);
-  if (loading) return <div>Loading evidence verification feature…</div>;
-  if (!enabled) return <div>Evidence verification disabled</div>;
-  return <EvidenceVerificationView buyerId={REQUIREMENT_TEST_BUYER_ID} />;
 };
 
 const ComplianceDecisionsTestRoute = () => {
@@ -86,6 +83,22 @@ const DossiersTestRoute = () => {
   if (!enabled) return <div>Dossiers disabled</div>;
   return <DossierGeneratorView buyerId={REQUIREMENT_TEST_BUYER_ID} />;
 };
+
+// CustomTemplateManager and BuyerComplianceDashboard self-resolve their
+// buyer id from the authenticated session (useAuth) rather than accepting
+// it as a prop, so these test routes render the components directly against
+// whatever buyer session is active in the browser.
+const CustomTemplatesTestRoute = () => <CustomTemplateManager />;
+
+const SampleTemplatesTestRoute = () => <SampleTemplateManager buyerId={REQUIREMENT_TEST_BUYER_ID} />;
+
+const DocumentSetsTestRoute = () => <DocumentSetManager buyerId={REQUIREMENT_TEST_BUYER_ID} />;
+
+const ComplianceOverviewTestRoute = () => <BuyerComplianceDashboard />;
+
+// SupplierDiscovery also self-resolves its buyer id from useAuth -- same
+// session-dependent limitation as the two routes above.
+const SupplierDiscoveryTestRoute = () => <SupplierDiscovery />;
 
 const MOCK_BUYER_DOCUMENTS = [
   {
@@ -208,21 +221,29 @@ const queryClient = new QueryClient({
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
+  const location = useLocation();
   
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
   
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    const returnTo = `${location.pathname}${location.search}${location.hash}`;
+    return <Navigate to="/auth" replace state={{ returnTo }} />;
   }
   
   // Wrap with MFA guard to enforce mandatory 2FA
-  return <MFAGuard>{children}</MFAGuard>;
+  return (
+    <MFAGuard>
+      {children}
+      <FloatingComplianceAssistant />
+    </MFAGuard>
+  );
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
+  const location = useLocation();
   const [mfaCheckComplete, setMfaCheckComplete] = useState(false);
   const [canRedirect, setCanRedirect] = useState(false);
 
@@ -271,10 +292,19 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 
   // Only redirect if MFA check passed
   if (user && canRedirect) {
-    return <Navigate to="/dashboard" replace />;
+    const candidate = (location.state as { returnTo?: unknown } | null)?.returnTo;
+    const returnTo = typeof candidate === 'string' && candidate.startsWith('/') && !candidate.startsWith('//')
+      ? candidate : '/dashboard';
+    return <Navigate to={returnTo} replace />;
   }
 
   return <>{children}</>;
+};
+
+const SupplierRequestRoute = () => {
+  const { requestId } = useParams<{ requestId: string }>();
+  if (!requestId) return <Navigate to="/dashboard?tab=documents" replace />;
+  return <Navigate to={`/dashboard?tab=documents&highlightDoc=${encodeURIComponent(requestId)}&action=upload`} replace />;
 };
 
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
@@ -375,16 +405,25 @@ const AppRoutes = () => {
                   {import.meta.env.MODE === 'test' && (
                     <>
                       <Route path="/__test/requirements" element={<RequirementEngineTestRoute />} />
-                      <Route path="/__test/evidence" element={<EvidenceVerificationTestRoute />} />
                       <Route path="/__test/compliance-decisions" element={<ComplianceDecisionsTestRoute />} />
                       <Route path="/__test/evidence-sharing" element={<EvidenceSharingTestRoute />} />
                       <Route path="/__test/dossiers" element={<DossiersTestRoute />} />
                       <Route path="/__test/buyer-documents" element={<BuyerDocumentsManagerTestRoute />} />
+                      <Route path="/__test/custom-templates" element={<CustomTemplatesTestRoute />} />
+                      <Route path="/__test/sample-templates" element={<SampleTemplatesTestRoute />} />
+                      <Route path="/__test/document-sets" element={<DocumentSetsTestRoute />} />
+                      <Route path="/__test/compliance-overview" element={<ComplianceOverviewTestRoute />} />
+                      <Route path="/__test/supplier-discovery" element={<SupplierDiscoveryTestRoute />} />
                     </>
                   )}
                   <Route path="/dashboard" element={
                     <ProtectedRoute>
                       <DynamicDashboard />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/supplier/requests/:requestId" element={
+                    <ProtectedRoute>
+                      <SupplierRequestRoute />
                     </ProtectedRoute>
                   } />
                   <Route path="/chat" element={

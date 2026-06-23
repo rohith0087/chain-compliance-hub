@@ -20,6 +20,7 @@ import { parseISO, format } from 'date-fns';
 import SampleDocumentViewer from '@/components/shared/SampleDocumentViewer';
 import { useWorkspaceProfile } from '@/hooks/useWorkspaceProfile';
 import { useCanonicalEvidenceFeature } from '@/hooks/useCanonicalEvidenceFeature';
+import { useOrganizationFeature } from '@/hooks/useOrganizationFeature';
 
 interface LibraryDocument {
   id: string;
@@ -64,6 +65,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
   const { user } = useAuth();
   const { t: wsT } = useWorkspaceProfile();
   const { enabled: canonicalEvidenceEnabled } = useCanonicalEvidenceFeature(request.supplier_id, 'supplier');
+  const { enabled: transactionalUploadEnabled } = useOrganizationFeature('transactional_supplier_upload_v1', request.supplier_id, 'supplier');
 
   const isResubmission = request.status === 'rejected';
   const latestUpload = request.document_uploads?.[0];
@@ -213,6 +215,28 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
 
     setUploading(true);
     try {
+      if (transactionalUploadEnabled && file && uploadSource === 'machine' && !updateMetadataOnly) {
+        const idempotencyKey = crypto.randomUUID();
+        const { data: session, error: sessionError } = await supabase.functions.invoke('create-supplier-upload-session-v1', {
+          body: {
+            request_id: request.id, idempotency_key: idempotencyKey, file_name: file.name,
+            mime_type: file.type || 'application/octet-stream', file_size: file.size,
+            expiration_date: expirationDate ? format(expirationDate, 'yyyy-MM-dd') : null,
+            no_expiration: noExpirationDate, document_name: documentName.trim() || null,
+            notes: notes || null, linked_item_ids: linkedItemIds,
+          },
+        });
+        if (sessionError || !session?.path || !session?.token) throw sessionError || new Error('Upload session could not be created');
+        const { error: uploadError } = await supabase.storage.from('compliance-documents')
+          .uploadToSignedUrl(session.path, session.token, file, { contentType: file.type || 'application/octet-stream', upsert: false });
+        if (uploadError) throw uploadError;
+        const { error: finalizeError } = await supabase.functions.invoke('finalize-transactional-upload-v1', { body: { session_id: session.session_id } });
+        if (finalizeError) throw finalizeError;
+        toast({ title: isResubmission ? 'Resubmission Successful' : 'Upload Successful', description: 'Your document was validated and submitted for review.' });
+        onUploadSuccess();
+        return;
+      }
+
       let filePath = latestUpload?.file_path;
       let fileName = latestUpload?.file_name;
       let fileSize = latestUpload?.file_size;

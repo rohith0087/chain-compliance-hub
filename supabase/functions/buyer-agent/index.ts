@@ -296,71 +296,14 @@ async function processDocumentUpload(upload: DocumentUpload) {
       analysis.compliance_score
     );
 
-    // Make decision based on analysis
-    let newStatus = 'pending_review';
-    let reviewerNotes = '';
-
-    if (analysis.compliance_score >= validationCriteria.auto_approve_threshold && 
-        analysis.recommendation === 'approve') {
-      newStatus = 'approved';
-      reviewerNotes = `Auto-approved by AI Agent (confidence: ${(analysis.compliance_score * 100).toFixed(1)}%)`;
-      
-      await logAgentActivity(
-        'auto_approve',
-        upload.id,
-        'document_upload',
-        { 
-          compliance_score: analysis.compliance_score,
-          validation_results: analysis.validation_results
-        },
-        true,
-        analysis.compliance_score
-      );
-
-    } else if (analysis.recommendation === 'reject') {
-      newStatus = 'rejected';
-      reviewerNotes = `Auto-rejected by AI Agent: ${analysis.rejection_reason}`;
-      
-      await logAgentActivity(
-        'auto_reject',
-        upload.id,
-        'document_upload',
-        { 
-          compliance_score: analysis.compliance_score,
-          rejection_reason: analysis.rejection_reason,
-          issues: analysis.issues
-        },
-        true,
-        analysis.compliance_score
-      );
-
-      // Send rejection notification to supplier
-      await supabase.functions.invoke('send-rejection-notification', {
-        body: {
-          upload_id: upload.id,
-          supplier_id: upload.uploader_id,
-          rejection_reason: analysis.rejection_reason,
-          issues: analysis.issues,
-          suggestions: analysis.issues // AI should provide suggestions
-        }
-      });
-
-    } else {
-      // Manual review required
-      reviewerNotes = `AI analysis requires manual review. Compliance score: ${(analysis.compliance_score * 100).toFixed(1)}%. Issues: ${analysis.issues.join(', ')}`;
-      
-      await logAgentActivity(
-        'manual_review_required',
-        upload.id,
-        'document_upload',
-        { 
-          compliance_score: analysis.compliance_score,
-          issues: analysis.issues
-        },
-        true,
-        analysis.compliance_score
-      );
-    }
+    // AI is advisory only. Human review is required for every compliance
+    // decision, and the database independently enforces this for email intake.
+    const newStatus = 'pending_review';
+    const reviewerNotes = `AI recommendation: ${analysis.recommendation}. Compliance score: ${(analysis.compliance_score * 100).toFixed(1)}%. Issues: ${analysis.issues.join(', ')}`;
+    await logAgentActivity('manual_review_required',upload.id,'document_upload',{
+      compliance_score:analysis.compliance_score,recommendation:analysis.recommendation,
+      rejection_reason:analysis.rejection_reason,issues:analysis.issues,
+    },true,analysis.compliance_score);
 
     // Update document status
     const { error: updateError } = await supabase

@@ -24,6 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useBranchSupplierConnections } from '@/hooks/useBranchSupplierConnections';
 import { getWorkspaceProfileForIndustry } from '@/config/workspaceProfiles';
 import { useCanonicalEvidenceFeature } from '@/hooks/useCanonicalEvidenceFeature';
+import { useOrganizationFeature } from '@/hooks/useOrganizationFeature';
 
 interface NewRequestModalProps {
   isOpen: boolean;
@@ -76,6 +77,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
   const { user } = useAuth();
   const { toast } = useToast();
   const { enabled: canonicalEvidenceEnabled } = useCanonicalEvidenceFeature(buyerProfile?.id, 'buyer');
+  const { enabled: reliableDeliveryEnabled } = useOrganizationFeature('reliable_request_delivery_v1', buyerProfile?.id, 'buyer');
   const staticComplianceDocuments = useMemo(() => getComplianceDocuments(selectedSupplierType), [selectedSupplierType]);
 
   // Use branch-specific supplier connections if branch is provided, otherwise fall back to all connections
@@ -430,10 +432,12 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
       }
 
       // Send ONE batch email per supplier (instead of one per document)
-      for (const [supplierId, requestIds] of Object.entries(requestsBySupplier)) {
-        supabase.functions.invoke('send-batch-request-email', {
-          body: { requestIds, supplierId }
-        }).catch(err => console.error('Failed to send batch request email:', err));
+      if (!reliableDeliveryEnabled) {
+        for (const [supplierId, requestIds] of Object.entries(requestsBySupplier)) {
+          supabase.functions.invoke('send-batch-request-email', {
+            body: { requestIds, supplierId }
+          }).catch(err => console.error('Failed to send batch request email:', err));
+        }
       }
 
       toast({
@@ -510,8 +514,10 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
         }
         onCreateRequest(result);
       });
-      for (const [supplierId, requestIds] of Object.entries(bySupplier)) {
-        void supabase.functions.invoke('send-batch-request-email', { body: { requestIds, supplierId } });
+      if (!reliableDeliveryEnabled) {
+        for (const [supplierId, requestIds] of Object.entries(bySupplier)) {
+          void supabase.functions.invoke('send-batch-request-email', { body: { requestIds, supplierId } });
+        }
       }
       toast({
         title: 'Requests resolved',

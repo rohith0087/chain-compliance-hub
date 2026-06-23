@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
 import { Building2, Warehouse, MapPin, Phone, Filter, Search, Store, Truck } from 'lucide-react';
 import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { demoSuppliers, demoFacilities, demoBuyerBranches } from '@/data/demoSuppliers';
+import { reviewCardContainerClass, reviewToolbarSelectTriggerClass } from '@/components/documents/buyerReviewDesignSystem';
 
 interface MapMarker {
   id: string;
@@ -207,7 +208,7 @@ export function SupplierMap() {
             placeholder="Search suppliers or locations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8"
+            className={`pl-8 ${reviewToolbarSelectTriggerClass}`}
           />
         </div>
       </div>
@@ -341,7 +342,7 @@ export function SupplierMap() {
           setFacilityTypeFilter(['headquarters', 'distribution', 'store']);
           setConnectionFilter(['connected', 'pending', 'none']);
         }}
-        className="w-full"
+        className="w-full rounded-[10px]"
       >
         Clear All Filters
       </Button>
@@ -351,22 +352,20 @@ export function SupplierMap() {
   return (
     <div className="relative h-[calc(100vh-120px)]">
       {/* Filter Panel - Desktop */}
-      <Card className="absolute top-4 left-4 z-10 w-80 max-h-[calc(100vh-160px)] overflow-y-auto hidden lg:block">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="w-5 h-5" />
-            Filters
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <div className={`${reviewCardContainerClass} absolute top-4 left-4 z-10 w-80 max-h-[calc(100vh-160px)] overflow-y-auto hidden lg:block`}>
+        <div className="px-4 pt-4 pb-2 flex items-center gap-2">
+          <Filter className="w-4 h-4 text-[#6B7280]" />
+          <h3 className="text-[15px] font-bold text-[#111827]">Filters</h3>
+        </div>
+        <div className="px-4 pb-4 space-y-4">
           <FilterControls />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Filter Panel - Mobile */}
       <Sheet>
         <SheetTrigger asChild>
-          <Button className="absolute top-4 left-4 z-10 lg:hidden" size="icon">
+          <Button className="absolute top-4 left-4 z-10 lg:hidden rounded-[10px]" size="icon">
             <Filter className="w-4 h-4" />
           </Button>
         </SheetTrigger>
@@ -381,13 +380,13 @@ export function SupplierMap() {
       </Sheet>
 
       {/* Results Count */}
-      <Card className="absolute top-4 right-4 z-10">
-        <CardContent className="p-3">
-          <p className="text-sm font-medium">
+      <div className={`${reviewCardContainerClass} absolute top-4 right-4 z-10`}>
+        <div className="p-3">
+          <p className="text-[13px] font-medium text-[#111827]">
             Showing {filteredMarkers.length} of {allMarkers.length} locations
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Map */}
       <APIProvider apiKey={apiKey}>
@@ -489,10 +488,10 @@ export function SupplierMap() {
       </APIProvider>
 
       {/* Legend */}
-      <Card className="absolute bottom-4 left-4 z-10">
-        <CardContent className="p-3">
-          <div className="text-xs font-semibold mb-2">Map Legend</div>
-          <div className="space-y-1 text-xs">
+      <div className={`${reviewCardContainerClass} absolute bottom-4 left-4 z-10`}>
+        <div className="p-3">
+          <div className="text-[12px] font-bold text-[#111827] mb-2">Map Legend</div>
+          <div className="space-y-1.5 text-[12px] text-[#374151]">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded-full bg-blue-700"></div>
               <span>Supplier HQ</span>
@@ -514,8 +513,8 @@ export function SupplierMap() {
               <span>Your Branch</span>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

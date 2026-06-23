@@ -65,6 +65,18 @@ const SupplierDocumentsDashboard = () => {
     }
   }, []);
 
+  useEffect(() => {
+    if (loading || !documents.length) return;
+    const url = new URL(window.location.href);
+    const requestId = url.searchParams.get('highlightDoc');
+    const action = url.searchParams.get('action');
+    if (action !== 'upload' || !requestId) return;
+    const request = documents.find(doc => doc.id === requestId);
+    if (request && ['pending', 'rejected'].includes(request.status)) setUploadDialogDoc(request);
+    url.searchParams.delete('action');
+    window.history.replaceState({}, '', url.toString());
+  }, [documents, loading]);
+
   // Handle URL params for subtab and document highlighting
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);

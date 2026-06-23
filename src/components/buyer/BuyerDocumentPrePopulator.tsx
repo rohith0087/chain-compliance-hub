@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,6 +16,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import {
+  reviewActionButtonSecondaryClass,
+  reviewCardContainerClass,
+  reviewPageSubtitleClass,
+  reviewPageTitleClass,
+  reviewToolbarSelectTriggerClass,
+} from '@/components/documents/buyerReviewDesignSystem';
 
 const DOCUMENT_TYPES = [
   // Basic Business Documents
@@ -302,20 +308,21 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
   };
 
   return (
-    <Card className="w-full border border-border/50 shadow-sm">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-lg font-semibold">Pre-populate Supplier Documents</CardTitle>
-        <CardDescription className="text-muted-foreground">
+    <div className="space-y-6">
+      <div className="pt-7 pb-5">
+        <h1 className={reviewPageTitleClass}>Pre-populate Documents</h1>
+        <p className={reviewPageSubtitleClass}>
           Upload existing documents on behalf of your connected suppliers. Documents will appear as formally requested and fulfilled.
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent className="space-y-6">
+        </p>
+      </div>
+
+      <div className={reviewCardContainerClass}>
+        <div className="p-6 space-y-6">
         {/* Supplier Selection */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground">Select Supplier</label>
+          <label className="text-sm font-medium text-[#111827]">Select Supplier</label>
           <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId}>
-            <SelectTrigger className="h-10">
+            <SelectTrigger className={reviewToolbarSelectTriggerClass}>
               <SelectValue placeholder="Choose a connected supplier" />
             </SelectTrigger>
             <SelectContent>
@@ -340,56 +347,56 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
 
         {/* Selected Supplier Info */}
         {selectedSupplier && (
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/40 border border-border/40">
-            <div className="flex items-center justify-center h-9 w-9 rounded-md bg-primary/10">
-              <Building2 className="h-4 w-4 text-primary" />
+          <div className="flex items-center gap-3 p-3 rounded-[16px] bg-gray-50/50 border border-[#E5E7EB]">
+            <div className="flex items-center justify-center h-9 w-9 rounded-[10px] bg-[#EFF6FF]">
+              <Building2 className="h-4 w-4 text-[#2563EB]" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">
+              <p className="text-sm font-medium text-[#111827] truncate">
                 {selectedSupplier.supplier?.company_name ?? `Supplier ${selectedSupplier.supplier_id.slice(0, 8)}`}
               </p>
-              <p className="text-xs text-muted-foreground truncate">
+              <p className="text-xs text-[#6B7280] truncate">
                 {selectedSupplier.supplier?.contact_email ?? 'No email available'}
               </p>
             </div>
             {existingRequests.length > 0 && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-[12px] px-2 py-0.5 rounded-full font-medium bg-slate-50 text-slate-600 border-slate-200">
                 {existingRequests.length} existing requests
               </Badge>
             )}
           </div>
         )}
 
-        {/* File Upload Area - Professional Design */}
+        {/* File Upload Area */}
         <div
           {...getRootProps()}
           className={cn(
-            "relative rounded-xl border bg-muted/20 p-6 text-center cursor-pointer transition-all duration-200",
-            isDragActive 
-              ? "border-primary bg-primary/5 ring-2 ring-primary/20" 
-              : "border-border/60 hover:border-primary/40 hover:bg-muted/30"
+            "relative rounded-[16px] border bg-gray-50/30 p-6 text-center cursor-pointer transition-all duration-200",
+            isDragActive
+              ? "border-[#2563EB] bg-blue-50/40 ring-2 ring-[#2563EB]/20"
+              : "border-[#E5E7EB] hover:border-[#2563EB]/40 hover:bg-gray-50/60"
           )}
         >
           <input {...getInputProps()} />
           <div className="flex flex-col items-center gap-2">
             <div className={cn(
-              "flex items-center justify-center h-12 w-12 rounded-lg transition-colors",
-              isDragActive ? "bg-primary/10" : "bg-muted/60"
+              "flex items-center justify-center h-12 w-12 rounded-[10px] transition-colors",
+              isDragActive ? "bg-blue-100" : "bg-[#EFF6FF]"
             )}>
               <Upload className={cn(
                 "h-5 w-5 transition-colors",
-                isDragActive ? "text-primary" : "text-muted-foreground/70"
+                isDragActive ? "text-[#2563EB]" : "text-[#2563EB]/70"
               )} />
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-medium text-foreground">
+              <p className="text-sm font-medium text-[#111827]">
                 {isDragActive ? "Drop files here" : "Drag & drop documents"}
               </p>
-              <p className="text-xs text-muted-foreground">
-                or <span className="text-primary hover:underline">browse files</span>
+              <p className="text-xs text-[#6B7280]">
+                or <span className="text-[#2563EB] hover:underline">browse files</span>
               </p>
             </div>
-            <p className="text-xs text-muted-foreground/70 mt-1">
+            <p className="text-xs text-[#9CA3AF] mt-1">
               PDF, DOC, DOCX, JPG, PNG
             </p>
           </div>
@@ -399,43 +406,43 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
         {files.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-foreground">
+              <h3 className="text-sm font-medium text-[#111827]">
                 Documents ({files.length})
               </h3>
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={clearAll}
-                className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                className="h-7 text-xs text-[#6B7280] hover:text-[#111827]"
               >
                 Clear all
               </Button>
             </div>
-            
-            <div className="rounded-lg border border-border/50 divide-y divide-border/50 overflow-hidden">
+
+            <div className="rounded-[16px] border border-[#E5E7EB] divide-y divide-[#EEF2F7] overflow-hidden">
               {files.map((file, index) => {
                 const matchingRequests = file.documentType ? getMatchingRequests(file.documentType) : [];
-                
+
                 return (
-                  <div key={index} className="p-3 bg-background hover:bg-muted/30 transition-colors space-y-3">
+                  <div key={index} className="p-3 bg-white hover:bg-gray-50/50 transition-colors space-y-3">
                     {/* File Info Row */}
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center h-8 w-8 rounded-md bg-muted/60 flex-shrink-0">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex items-center justify-center h-8 w-8 rounded-[10px] bg-[#EFF6FF] flex-shrink-0">
+                        <FileText className="h-4 w-4 text-[#2563EB]" />
                       </div>
-                      
+
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate text-foreground">{file.file.name}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-sm font-medium truncate text-[#111827]">{file.file.name}</p>
+                        <p className="text-xs text-[#6B7280]">
                           {(file.file.size / 1024 / 1024).toFixed(2)} MB
                         </p>
                       </div>
-                      
+
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => removeFile(index)}
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                        className="h-8 w-8 p-0 text-[#6B7280] hover:text-[#DC2626]"
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -567,9 +574,9 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
 
             {/* Expiry Date Reminder */}
             {files.some(f => !f.expirationDate && f.documentType) && (
-              <div className="flex items-center gap-2 p-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-                <CalendarIcon className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                <p className="text-xs text-amber-700 dark:text-amber-300">
+              <div className="flex items-center gap-2 p-2 rounded-[10px] bg-amber-50 border border-amber-200">
+                <CalendarIcon className="h-4 w-4 text-amber-600" />
+                <p className="text-xs text-amber-700">
                   Tip: Add expiration dates to receive automatic renewal notifications
                 </p>
               </div>
@@ -579,27 +586,27 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
 
         {/* Notes */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground">Notes</label>
+          <label className="text-sm font-medium text-[#111827]">Notes</label>
           <Textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Add any notes about these documents..."
             rows={2}
-            className="resize-none text-sm"
+            className="resize-none text-sm rounded-[14px] border-[#E5E7EB]"
           />
         </div>
 
         {/* Progress */}
         {progress && (
-          <div className="space-y-2 p-3 rounded-lg bg-muted/30 border border-border/40">
+          <div className="space-y-2 p-3 rounded-[16px] bg-gray-50/50 border border-[#E5E7EB]">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground">Uploading</span>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-sm font-medium text-[#111827]">Uploading</span>
+              <span className="text-xs text-[#6B7280]">
                 {progress.processedFiles} / {progress.totalFiles}
               </span>
             </div>
-            <Progress 
-              value={(progress.processedFiles / progress.totalFiles) * 100} 
+            <Progress
+              value={(progress.processedFiles / progress.totalFiles) * 100}
               className="h-1.5"
             />
             <div className="flex items-center gap-3 text-xs">
@@ -608,7 +615,7 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
                 {progress.successfulUploads} successful
               </div>
               {progress.failedUploads > 0 && (
-                <div className="flex items-center gap-1 text-destructive">
+                <div className="flex items-center gap-1 text-red-600">
                   <XCircle className="h-3.5 w-3.5" />
                   {progress.failedUploads} failed
                 </div>
@@ -624,7 +631,7 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
             size="sm"
             onClick={clearAll}
             disabled={isUploading}
-            className="h-9"
+            className={reviewActionButtonSecondaryClass}
           >
             Clear
           </Button>
@@ -632,12 +639,13 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
             size="sm"
             onClick={handleUpload}
             disabled={!canUpload || isUploading}
-            className="h-9 min-w-28"
+            className="h-9 min-w-28 rounded-[10px] bg-[#10B981] hover:bg-[#059669] text-white"
           >
             {isUploading ? 'Uploading...' : files.length > 0 ? `Upload ${files.length} Files` : 'Upload'}
           </Button>
         </div>
-      </CardContent>
-    </Card>
+        </div>
+      </div>
+    </div>
   );
 };

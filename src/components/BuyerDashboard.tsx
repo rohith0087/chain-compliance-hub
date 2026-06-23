@@ -31,6 +31,8 @@ import SampleTemplateManager from '@/components/buyer/SampleTemplateManager';
 import { SupplierMap } from '@/components/buyer/SupplierMap';
 import { SupplierRiskAssessment } from '@/components/buyer/supplier-risk/SupplierRiskAssessment';
 import { COADashboard } from '@/components/buyer/coa/COADashboard';
+import BuyerCorporateDocuments from '@/components/buyer/BuyerCorporateDocuments';
+import ExpiryNotificationLog from '@/components/compliance/ExpiryNotificationLog';
 import { ComplianceRing } from '@/components/dashboard/ComplianceRing';
 import { MetricChip } from '@/components/dashboard/MetricChip';
 import { AttentionPanel } from '@/components/dashboard/AttentionPanel';
@@ -43,12 +45,12 @@ import { Users, Clock, AlertTriangle } from 'lucide-react';
 import { useCommunicationThreads } from '@/hooks/useCommunicationThreads';
 import { useRequirementEngineFeature } from '@/hooks/useRequirementEngineFeature';
 import RequirementEngineView from '@/components/buyer/RequirementEngineView';
-import { useEvidenceVerificationFeature } from '@/hooks/useEvidenceVerificationFeature';
-import EvidenceVerificationView from '@/components/buyer/EvidenceVerificationView';
 import { useComplianceDecisionsFeature } from '@/hooks/useComplianceDecisionsFeature';
 import ComplianceDecisionsView from '@/components/buyer/ComplianceDecisionsView';
 import { useDossiersFeature } from '@/hooks/useDossiersFeature';
 import DossierGeneratorView from '@/components/buyer/DossierGeneratorView';
+import { InboundEmailReviewQueue } from '@/components/buyer/InboundEmailReviewQueue';
+import { useOrganizationFeature } from '@/hooks/useOrganizationFeature';
 
 import { supabase } from '@/integrations/supabase/client';
 
@@ -88,9 +90,9 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
   const { t } = useTranslation(['dashboard', 'common']);
   const { currentBranch, allBranchesView } = useBranchContext();
   const { enabled: requirementEngineEnabled, loading: requirementEngineLoading } = useRequirementEngineFeature(companyId);
-  const { enabled: evidenceVerificationEnabled, loading: evidenceVerificationLoading } = useEvidenceVerificationFeature(companyId);
   const { enabled: complianceDecisionsEnabled, loading: complianceDecisionsLoading } = useComplianceDecisionsFeature(companyId);
   const { enabled: dossiersEnabled, loading: dossiersLoading } = useDossiersFeature(companyId);
+  const { enabled: emailReplyIngestionEnabled, loading: emailReplyIngestionLoading } = useOrganizationFeature('email_reply_ingestion_v1',companyId,'buyer');
 
   useEffect(() => {
     if (!dossiersLoading && !dossiersEnabled && activeTab === 'dossiers') {
@@ -98,17 +100,15 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
     }
   }, [activeTab, dossiersEnabled, dossiersLoading]);
 
+  useEffect(()=>{
+    if(!emailReplyIngestionLoading&&!emailReplyIngestionEnabled&&activeTab==='email-intake')setActiveTab('documents');
+  },[activeTab,emailReplyIngestionEnabled,emailReplyIngestionLoading]);
+
   useEffect(() => {
     if (!requirementEngineLoading && !requirementEngineEnabled && activeTab === 'requirements') {
       setActiveTab('compliance');
     }
   }, [activeTab, requirementEngineEnabled, requirementEngineLoading]);
-
-  useEffect(() => {
-    if (!evidenceVerificationLoading && !evidenceVerificationEnabled && activeTab === 'evidence-verification') {
-      setActiveTab('compliance');
-    }
-  }, [activeTab, evidenceVerificationEnabled, evidenceVerificationLoading]);
 
   useEffect(() => {
     if (!complianceDecisionsLoading && !complianceDecisionsEnabled && activeTab === 'compliance-decisions') {
@@ -343,9 +343,9 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
         companyId={companyId}
         unreadMessages={totalUnread}
         requirementEngineEnabled={requirementEngineEnabled}
-        evidenceVerificationEnabled={evidenceVerificationEnabled}
         complianceDecisionsEnabled={complianceDecisionsEnabled}
         dossiersEnabled={dossiersEnabled}
+        emailReplyIngestionEnabled={emailReplyIngestionEnabled}
       >
         {/* Dashboard Content */}
         {activeTab === 'dashboard' && companyId && (
@@ -435,7 +435,6 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
                     <div className="flex flex-col justify-center">
                       <div className="flex items-center gap-1.5">
                         <p className="text-sm font-semibold text-foreground">Compliance Score</p>
-                        <AlertTriangle className="w-3 h-3 text-muted-foreground/50" />
                       </div>
                       <p className="text-[11px] text-muted-foreground/70 mt-0.5">Overall compliance</p>
                     </div>
@@ -516,7 +515,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
 
         {/* Compliance Content */}
         {activeTab === 'compliance' && (
-          <BuyerComplianceDashboard />
+          <BuyerComplianceDashboard onNavigateToComplianceDecisions={() => setActiveTab('compliance-decisions')} />
         )}
 
         {activeTab === 'requirements' && companyId && requirementEngineEnabled && (
@@ -528,10 +527,6 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
               setActiveTab('documents');
             }}
           />
-        )}
-
-        {activeTab === 'evidence-verification' && companyId && evidenceVerificationEnabled && (
-          <EvidenceVerificationView buyerId={companyId} />
         )}
 
         {activeTab === 'compliance-decisions' && companyId && complianceDecisionsEnabled && (
@@ -560,6 +555,10 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
         {/* Document Activity Content */}
         {activeTab === 'document-activity' && (
           <BuyerDocumentsDashboard key={documentsKey} view="activity" />
+        )}
+
+        {activeTab === 'email-intake' && companyId && (
+          <InboundEmailReviewQueue buyerId={companyId} />
         )}
 
         {/* Performance Dashboard */}
@@ -615,6 +614,16 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
         {/* COA Analysis */}
         {activeTab === 'coa-analysis' && (
           <COADashboard />
+        )}
+
+        {/* Corporate Documents (relocated from Compliance > Overview's old internal tabs) */}
+        {activeTab === 'corporate-documents' && companyId && (
+          <BuyerCorporateDocuments buyerId={companyId} />
+        )}
+
+        {/* Communication Log (relocated from Compliance > Overview's old internal tabs) */}
+        {activeTab === 'communication-log' && companyId && (
+          <ExpiryNotificationLog buyerId={companyId} />
         )}
 
         {/* Suppliers Content */}

@@ -1,16 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { 
-  FileImage, 
-  Upload, 
-  Trash2, 
-  Eye, 
-  Search, 
-  FileText, 
+import {
+  FileImage,
+  Upload,
+  Trash2,
+  Eye,
+  Search,
+  FileText,
   CheckCircle2,
   XCircle,
   RefreshCw,
@@ -18,7 +17,6 @@ import {
   Edit2,
   Loader2,
   ExternalLink,
-  Filter,
   FolderOpen,
   X
 } from 'lucide-react';
@@ -27,7 +25,6 @@ import { useToast } from '@/hooks/use-toast';
 import { getComplianceDocuments } from '@/components/requests/ComplianceDocuments';
 import { SampleTemplateUploadModal } from './SampleTemplateUploadModal';
 import { useDocumentSets } from '@/hooks/useDocumentSets';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -45,6 +42,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  reviewActionButtonDangerClass,
+  reviewActionButtonSecondaryClass,
+  reviewCardContainerClass,
+  reviewEmptyStateContainerClass,
+  reviewMetricCardClass,
+  reviewMetricIconCircleClass,
+  reviewPageSubtitleClass,
+  reviewPageTitleClass,
+  reviewToolbarSelectTriggerClass,
+} from '@/components/documents/buyerReviewDesignSystem';
+import ReviewPagination from '@/components/documents/ReviewPagination';
 
 interface SampleTemplate {
   id: string;
@@ -114,11 +123,11 @@ function TemplatePreviewContent({ template }: { template: SampleTemplate }) {
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={handleOpenInNewTab} disabled={loading}>
+        <Button variant="outline" size="sm" className="rounded-[10px]" onClick={handleOpenInNewTab} disabled={loading}>
           {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ExternalLink className="h-4 w-4 mr-2" />}
           Open in New Tab
         </Button>
-        <Button variant="outline" size="sm" onClick={handleDownload} disabled={loading}>
+        <Button variant="outline" size="sm" className="rounded-[10px]" onClick={handleDownload} disabled={loading}>
           {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
           Download
         </Button>
@@ -130,10 +139,10 @@ function TemplatePreviewContent({ template }: { template: SampleTemplate }) {
         </Button>
       )}
       {signedUrl && template.sample_mime_type?.startsWith('image/') && (
-        <img src={signedUrl} alt="Preview" className="max-w-full h-auto rounded-lg border" />
+        <img src={signedUrl} alt="Preview" className="max-w-full h-auto rounded-[10px] border border-[#E5E7EB]" />
       )}
       {signedUrl && template.sample_mime_type === 'application/pdf' && (
-        <iframe src={signedUrl} className="w-full h-[400px] rounded-lg border" title="PDF Preview" />
+        <iframe src={signedUrl} className="w-full h-[400px] rounded-[10px] border border-[#E5E7EB]" title="PDF Preview" />
       )}
     </div>
   );
@@ -154,13 +163,15 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<SampleTemplate | null>(null);
   const [deleting, setDeleting] = useState(false);
-  
+
   // New filter states
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedRegulatoryBody, setSelectedRegulatoryBody] = useState('all');
   const [selectedSetId, setSelectedSetId] = useState('all');
   const [uploadStatus, setUploadStatus] = useState<'all' | 'uploaded' | 'not-uploaded'>('all');
-  
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
   const { toast } = useToast();
   const { documentSets } = useDocumentSets(buyerId);
 
@@ -168,7 +179,7 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
   const allDocumentTypes = useMemo(() => {
     const generalDocs = getComplianceDocuments('General Supplier');
     const eggDocs = getComplianceDocuments('Egg Processing');
-    
+
     // Combine and deduplicate by title
     const combined = [...generalDocs, ...eggDocs];
     const unique = combined.reduce((acc, doc) => {
@@ -177,7 +188,7 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
       }
       return acc;
     }, [] as typeof combined);
-    
+
     return unique.sort((a, b) => a.title.localeCompare(b.title));
   }, []);
 
@@ -229,7 +240,7 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
 
   const handleDeleteConfirm = async () => {
     if (!templateToDelete) return;
-    
+
     setDeleting(true);
     try {
       // Delete from storage
@@ -295,7 +306,7 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
     // Search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(doc => 
+      filtered = filtered.filter(doc =>
         doc.title.toLowerCase().includes(query) ||
         doc.category.toLowerCase().includes(query)
       );
@@ -315,8 +326,8 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
     if (selectedSetId !== 'all') {
       const selectedSet = documentSets?.find(s => s.id === selectedSetId);
       if (selectedSet) {
-        const docIds = Array.isArray(selectedSet.document_ids) 
-          ? selectedSet.document_ids 
+        const docIds = Array.isArray(selectedSet.document_ids)
+          ? selectedSet.document_ids
           : [];
         filtered = filtered.filter(doc => docIds.includes(doc.id));
       }
@@ -338,9 +349,9 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
     const configured = templates.length;
     const filteredTotal = filteredDocTypes.length;
     const filteredConfigured = filteredDocTypes.filter(doc => !!getTemplateForDocType(doc.title)).length;
-    return { 
-      total, 
-      configured, 
+    return {
+      total,
+      configured,
       remaining: total - configured,
       filteredTotal,
       filteredConfigured,
@@ -349,9 +360,9 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
   }, [allDocumentTypes, templates, filteredDocTypes]);
 
   // Check if any filters are active
-  const hasActiveFilters = selectedCategory !== 'all' || 
-    selectedRegulatoryBody !== 'all' || 
-    selectedSetId !== 'all' || 
+  const hasActiveFilters = selectedCategory !== 'all' ||
+    selectedRegulatoryBody !== 'all' ||
+    selectedSetId !== 'all' ||
     uploadStatus !== 'all' ||
     searchQuery.trim() !== '';
 
@@ -363,6 +374,10 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
     setSearchQuery('');
   };
 
+  useEffect(() => {
+    setPage(1);
+  }, [selectedCategory, selectedRegulatoryBody, selectedSetId, uploadStatus, searchQuery]);
+
   const formatFileSize = (bytes: number | null) => {
     if (!bytes) return 'Unknown size';
     if (bytes < 1024) return `${bytes} B`;
@@ -370,17 +385,28 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const totalPages = Math.max(1, Math.ceil(filteredDocTypes.length / rowsPerPage));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * rowsPerPage;
+  const pageDocTypes = filteredDocTypes.slice(pageStart, pageStart + rowsPerPage);
+
+  const uploadStatusTabs: Array<{ value: 'all' | 'uploaded' | 'not-uploaded'; label: string; count: number; badgeClass: string }> = [
+    { value: 'all', label: 'All', count: stats.total, badgeClass: 'bg-[#EAF1FF] text-[#2563EB]' },
+    { value: 'uploaded', label: 'Uploaded', count: stats.configured, badgeClass: 'bg-[#ECFDF5] text-[#047857]' },
+    { value: 'not-uploaded', label: 'Needs Template', count: stats.remaining, badgeClass: 'bg-[#F3F4F6] text-[#374151]' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="pt-7 pb-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Sample Templates</h2>
-          <p className="text-muted-foreground">
+          <h2 className={reviewPageTitleClass}>Sample Templates</h2>
+          <p className={reviewPageSubtitleClass}>
             Upload sample documents for each document type. These will be automatically attached to new requests.
           </p>
         </div>
-        <Button onClick={() => fetchTemplates()} variant="outline" size="sm">
+        <Button onClick={() => fetchTemplates()} variant="outline" size="sm" className="rounded-[10px]">
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
@@ -388,280 +414,211 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <FileText className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.total}</p>
-                <p className="text-sm text-muted-foreground">Document Types</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.configured}</p>
-                <p className="text-sm text-muted-foreground">Templates Uploaded</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-500/10">
-                <XCircle className="h-5 w-5 text-amber-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.remaining}</p>
-                <p className="text-sm text-muted-foreground">Without Templates</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className={reviewMetricCardClass}>
+          <div className={`${reviewMetricIconCircleClass} bg-[#EFF6FF]`}>
+            <FileText className="h-5 w-5 text-[#2563EB]" />
+          </div>
+          <div>
+            <p className="text-[20px] font-bold text-[#111827] leading-none">{stats.total}</p>
+            <p className="text-[12px] text-[#6B7280]">Document Types</p>
+          </div>
+        </div>
+        <div className={reviewMetricCardClass}>
+          <div className={`${reviewMetricIconCircleClass} bg-[#F0FDF4]`}>
+            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+          </div>
+          <div>
+            <p className="text-[20px] font-bold text-[#111827] leading-none">{stats.configured}</p>
+            <p className="text-[12px] text-[#6B7280]">Templates Uploaded</p>
+          </div>
+        </div>
+        <div className={reviewMetricCardClass}>
+          <div className={`${reviewMetricIconCircleClass} bg-[#FFFBEB]`}>
+            <XCircle className="h-5 w-5 text-amber-600" />
+          </div>
+          <div>
+            <p className="text-[20px] font-bold text-[#111827] leading-none">{stats.remaining}</p>
+            <p className="text-[12px] text-[#6B7280]">Without Templates</p>
+          </div>
+        </div>
       </div>
 
-      {/* Filters Section */}
-      <Card className="border-border/50">
-        <CardContent className="pt-6 space-y-4">
-          {/* Filter Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <Filter className="h-4 w-4" />
-              Filters
-            </div>
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-7 text-xs">
-                <X className="h-3 w-3 mr-1" />
-                Clear All
-              </Button>
-            )}
-          </div>
+      {/* Upload Status tabs */}
+      <div className="h-[56px] border-b border-[#E5E7EB] flex items-center gap-9">
+        {uploadStatusTabs.map((tab) => {
+          const isActive = uploadStatus === tab.value;
+          return (
+            <button
+              key={tab.value}
+              onClick={() => setUploadStatus(tab.value)}
+              className={`relative h-full flex items-center gap-2 text-[14px] font-semibold transition-colors ${
+                isActive ? 'text-[#2563EB]' : 'text-[#4B5563] hover:text-[#111827]'
+              }`}
+            >
+              {tab.label}
+              <span className={`h-[24px] min-w-[24px] rounded-full px-2 text-[13px] font-bold flex items-center justify-center ${tab.badgeClass}`}>
+                {tab.count}
+              </span>
+              {isActive && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#2563EB] rounded-full" />}
+            </button>
+          );
+        })}
+      </div>
 
-          {/* Filter Dropdowns Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Category Filter */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Category</label>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {filterOptions.categories.map(cat => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex-1 relative min-w-[220px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9CA3AF]" />
+          <Input
+            placeholder="Search document types..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={`pl-10 ${reviewToolbarSelectTriggerClass}`}
+          />
+        </div>
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className={`w-[170px] ${reviewToolbarSelectTriggerClass}`}>
+            <SelectValue placeholder="All Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {filterOptions.categories.map(cat => (
+              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={selectedRegulatoryBody} onValueChange={setSelectedRegulatoryBody}>
+          <SelectTrigger className={`w-[190px] ${reviewToolbarSelectTriggerClass}`}>
+            <SelectValue placeholder="All Regulatory Bodies" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Regulatory Bodies</SelectItem>
+            {filterOptions.regulatoryBodies.map(reg => (
+              <SelectItem key={reg} value={reg}>{reg}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={selectedSetId} onValueChange={setSelectedSetId}>
+          <SelectTrigger className={`w-[180px] ${reviewToolbarSelectTriggerClass}`}>
+            <FolderOpen className="h-3.5 w-3.5 mr-1 text-[#9CA3AF]" />
+            <SelectValue placeholder="All Document Sets" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Document Sets</SelectItem>
+            {documentSets?.map(set => (
+              <SelectItem key={set.id} value={set.id}>
+                {set.set_name}
+                {set.is_default && (
+                  <Badge variant="secondary" className="ml-2 text-xs">Default</Badge>
+                )}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {hasActiveFilters && (
+          <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-9 text-[#6B7280]">
+            <X className="h-3.5 w-3.5 mr-1" />
+            Clear all
+          </Button>
+        )}
+      </div>
 
-            {/* Regulatory Body Filter */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Regulatory Body</label>
-              <Select value={selectedRegulatoryBody} onValueChange={setSelectedRegulatoryBody}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All Regulatory Bodies" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Regulatory Bodies</SelectItem>
-                  {filterOptions.regulatoryBodies.map(reg => (
-                    <SelectItem key={reg} value={reg}>{reg}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Document Sets Filter */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                <FolderOpen className="h-3 w-3" />
-                Document Set
-              </label>
-              <Select value={selectedSetId} onValueChange={setSelectedSetId}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All Document Sets" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Document Sets</SelectItem>
-                  {documentSets?.map(set => (
-                    <SelectItem key={set.id} value={set.id}>
-                      {set.set_name}
-                      {set.is_default && (
-                        <Badge variant="secondary" className="ml-2 text-xs">Default</Badge>
-                      )}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Upload Status Tabs */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Upload Status</label>
-            <Tabs value={uploadStatus} onValueChange={(v) => setUploadStatus(v as typeof uploadStatus)}>
-              <TabsList className="grid w-full grid-cols-3 h-9">
-                <TabsTrigger value="all" className="text-xs">
-                  All ({stats.total})
-                </TabsTrigger>
-                <TabsTrigger value="uploaded" className="text-xs">
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  Uploaded ({stats.configured})
-                </TabsTrigger>
-                <TabsTrigger value="not-uploaded" className="text-xs">
-                  <XCircle className="h-3 w-3 mr-1" />
-                  Needs Template ({stats.remaining})
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search document types..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-9"
-            />
-          </div>
-
-          {/* Filter Results Summary */}
-          {hasActiveFilters && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground pt-1 border-t">
-              <span>Showing <span className="font-medium text-foreground">{stats.filteredTotal}</span> of {stats.total} document types</span>
-              {stats.filteredConfigured > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {stats.filteredConfigured} with templates
-                </Badge>
-              )}
-            </div>
+      {hasActiveFilters && (
+        <div className="flex items-center gap-2 text-[13px] text-[#6B7280]">
+          <span>Showing <span className="font-medium text-[#111827]">{stats.filteredTotal}</span> of {stats.total} document types</span>
+          {stats.filteredConfigured > 0 && (
+            <Badge variant="secondary" className="text-xs">
+              {stats.filteredConfigured} with templates
+            </Badge>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      )}
 
       {/* Document Type List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileImage className="h-5 w-5" />
-            Document Types
-          </CardTitle>
-          <CardDescription>
-            Click "Upload Sample" to add a reference document for suppliers
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3, 4, 5].map(i => (
-                <div key={i} className="flex items-center justify-between p-4 border rounded-lg animate-pulse">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-muted rounded-lg" />
-                    <div className="space-y-2">
-                      <div className="w-40 h-4 bg-muted rounded" />
-                      <div className="w-24 h-3 bg-muted rounded" />
-                    </div>
+      {loading ? (
+        <div className="space-y-3">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="h-[88px] bg-gray-100 rounded-[16px] animate-pulse" />
+          ))}
+        </div>
+      ) : filteredDocTypes.length === 0 ? (
+        <div className={reviewEmptyStateContainerClass}>
+          <FileImage className="mx-auto h-12 w-12 text-[#9CA3AF] mb-4" />
+          <p className="text-[#6B7280]">No document types match your search</p>
+        </div>
+      ) : (
+        <div className={reviewCardContainerClass}>
+          {pageDocTypes.map((doc, index) => {
+            const template = getTemplateForDocType(doc.title);
+            const hasTemplate = !!template;
+            const Icon = doc.icon || FileText;
+
+            return (
+              <div
+                key={doc.id}
+                className={`h-[88px] flex items-center justify-between px-4 ${
+                  index !== pageDocTypes.length - 1 ? 'border-b border-[#EEF2F7]' : ''
+                } ${hasTemplate ? 'bg-emerald-50/30' : 'hover:bg-gray-50/50'}`}
+              >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className={`w-[40px] h-[40px] rounded-[10px] flex items-center justify-center flex-shrink-0 ${hasTemplate ? 'bg-[#F0FDF4]' : 'bg-[#EFF6FF]'}`}>
+                    <Icon className={`h-5 w-5 ${hasTemplate ? 'text-emerald-600' : 'text-[#2563EB]'}`} />
                   </div>
-                  <div className="w-24 h-8 bg-muted rounded" />
-                </div>
-              ))}
-            </div>
-          ) : filteredDocTypes.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No document types match your search
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {filteredDocTypes.map(doc => {
-                const template = getTemplateForDocType(doc.title);
-                const hasTemplate = !!template;
-                const Icon = doc.icon || FileText;
-
-                return (
-                  <div 
-                    key={doc.id} 
-                    className={`flex items-center justify-between p-4 border rounded-lg transition-colors ${
-                      hasTemplate ? 'bg-green-500/5 border-green-500/20' : 'hover:bg-muted/50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className={`p-2 rounded-lg ${hasTemplate ? 'bg-green-500/10' : 'bg-muted'}`}>
-                        <Icon className={`h-5 w-5 ${hasTemplate ? 'text-green-500' : 'text-muted-foreground'}`} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium truncate">{doc.title}</p>
-                          {hasTemplate && (
-                            <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/30">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              Template Set
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {hasTemplate 
-                            ? `${template.sample_file_name} • ${formatFileSize(template.sample_file_size)}`
-                            : doc.category
-                          }
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 ml-4">
-                      {hasTemplate ? (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setViewingTemplate(template)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditClick(template)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => handleDeleteClick(template)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleUploadClick(doc.title)}
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload Sample
-                        </Button>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-[14px] font-semibold text-[#111827] truncate">{doc.title}</p>
+                      {hasTemplate && (
+                        <Badge variant="outline" className="text-[12px] px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 border-emerald-200">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Template Set
+                        </Badge>
                       )}
                     </div>
+                    <p className="text-[13px] text-[#6B7280] truncate">
+                      {hasTemplate
+                        ? `${template.sample_file_name} · ${formatFileSize(template.sample_file_size)}`
+                        : doc.category
+                      }
+                    </p>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                </div>
+
+                <div className="flex items-center gap-1.5 ml-4 flex-shrink-0">
+                  {hasTemplate ? (
+                    <>
+                      <Button size="icon" variant="outline" className={reviewActionButtonSecondaryClass} onClick={() => setViewingTemplate(template)} title="Preview">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button size="icon" variant="outline" className={reviewActionButtonSecondaryClass} onClick={() => handleEditClick(template)} title="Edit">
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button size="icon" variant="outline" className={reviewActionButtonDangerClass} onClick={() => handleDeleteClick(template)} title="Delete">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  ) : (
+                    <Button size="sm" variant="outline" className={reviewActionButtonSecondaryClass} onClick={() => handleUploadClick(doc.title)}>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload Sample
+                    </Button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <ReviewPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        pageStart={pageStart}
+        pageSize={rowsPerPage}
+        totalCount={filteredDocTypes.length}
+        itemLabel="document types"
+        onPageChange={setPage}
+        onPageSizeChange={setRowsPerPage}
+      />
 
       {/* Upload Modal */}
       <SampleTemplateUploadModal
@@ -679,7 +636,7 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
 
       {/* Preview Modal */}
       <Dialog open={!!viewingTemplate} onOpenChange={() => setViewingTemplate(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl rounded-[16px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5" />
@@ -688,8 +645,8 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
           </DialogHeader>
           {viewingTemplate && (
             <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/50">
-                <FileText className="h-8 w-8 text-primary" />
+              <div className="flex items-center gap-3 p-3 border border-[#E5E7EB] rounded-[12px] bg-gray-50/50">
+                <FileText className="h-8 w-8 text-[#2563EB]" />
                 <div>
                   <p className="font-medium">{viewingTemplate.sample_file_name}</p>
                   <p className="text-sm text-muted-foreground">
@@ -715,13 +672,13 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Sample Template?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the sample template for "{templateToDelete?.document_type}". 
+              This will remove the sample template for "{templateToDelete?.document_type}".
               New requests for this document type will no longer have an auto-attached sample.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleDeleteConfirm}
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

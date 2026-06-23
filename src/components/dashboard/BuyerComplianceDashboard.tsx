@@ -1,26 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useCallback, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useTranslation } from 'react-i18next';
-import { 
+import {
   Building2,
-  Download,
-  RefreshCcw,
-  ArrowUpRight,
-  ArrowDownRight,
-  Check,
+  ClipboardList,
+  Sparkles,
   Clock,
   AlertCircle,
+  AlertTriangle,
   ChevronRight,
+  ListChecks,
+  ShieldCheck,
   TrendingUp,
-  TrendingDown,
-  Minus
 } from 'lucide-react';
-import ComplianceDashboard from './ComplianceDashboard';
-import SupplierInsightsModal from '../supplier/SupplierInsightsModal';
 import SupplierComplianceExportModal from '../exports/SupplierComplianceExportModal';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -32,55 +26,80 @@ import { AIInsightsService } from '@/services/AIInsightsService';
 import { ComplianceFilters } from '../compliance/ComplianceFilters';
 import { useBranchContext } from '@/contexts/BranchContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import BuyerCorporateDocuments from '../buyer/BuyerCorporateDocuments';
-import ExpiryNotificationLog from '../compliance/ExpiryNotificationLog';
-import { format, differenceInDays } from 'date-fns';
+import { differenceInDays } from 'date-fns';
+import {
+  reviewActionButtonSecondaryClass,
+  reviewCardContainerClass,
+  reviewPageSubtitleClass,
+  reviewPageTitleClass,
+  reviewSectionHeaderClass,
+} from '@/components/documents/buyerReviewDesignSystem';
 
-// Risk level indicator component
-const RiskIndicator = ({ level }: { level: 'high' | 'medium' | 'low' }) => {
-  const colors = {
-    high: 'bg-[hsl(0,72%,40%)]',
-    medium: 'bg-[hsl(45,93%,38%)]',
-    low: 'bg-[hsl(142,71%,32%)]'
-  };
-  const labels = {
-    high: 'High',
-    medium: 'Medium',
-    low: 'Low'
-  };
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className={`w-2 h-2 rounded-full ${colors[level]}`} />
-      <span className="text-sm text-foreground">{labels[level]}</span>
-    </div>
-  );
+// Phase 3/4 tables (compliance_tasks, compliance_findings, compliance_approvals,
+// compliance_current_status, evidence_* canonical tables) are intentionally not
+// added to generated types until reviewed -- same convention ComplianceDecisionsView.tsx uses.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any;
+
+interface PriorityItem {
+  id: string;
+  kind: 'task' | 'finding' | 'approval';
+  label: string;
+  meta: string;
+  sortDate: string;
+  severity: string | null;
+}
+
+interface CoverageGap {
+  frameworkCode: string;
+  total: number;
+  covered: number;
+  missing: number;
+  percentage: number;
+}
+
+interface AiFlag {
+  type: string;
+  label: string;
+  count: number;
+}
+
+interface DecisionSummary {
+  openTasks: number;
+  criticalHighFindings: number;
+  pendingApprovals: number;
+  complianceRate: number | null;
+  totalDecisions: number;
+}
+
+interface TaskRow { id: string; title: string; task_type: string; due_date: string | null; status: string }
+interface FindingRow { id: string; description: string; severity: string; status: string; raised_at: string }
+interface ApprovalRow { id: string; approval_type: string; status: string; requested_at: string }
+interface DecisionStatusRow { framework_code: string; requirement_key: string; outcome: string }
+interface FrameworkRow { id: string; code: string; owner_buyer_id: string | null }
+interface FrameworkVersionRow { id: string; framework_id: string }
+interface RequirementVersionRow { id: string; framework_version_id: string }
+interface ValidationResultRow { rule_code: string; message: string }
+
+const PRIORITY_KIND_BADGE: Record<PriorityItem['kind'], string> = {
+  task: 'bg-blue-50 text-blue-700 border-blue-200',
+  finding: 'bg-red-50 text-red-700 border-red-200',
+  approval: 'bg-amber-50 text-amber-700 border-amber-200',
 };
 
-// Status indicator for activity timeline
-const ActivityIcon = ({ status }: { status: string }) => {
-  switch (status) {
-    case 'approved':
-      return <Check className="w-3.5 h-3.5 text-[hsl(142,71%,32%)]" />;
-    case 'pending':
-      return <Clock className="w-3.5 h-3.5 text-[hsl(45,93%,38%)]" />;
-    case 'rejected':
-      return <AlertCircle className="w-3.5 h-3.5 text-[hsl(0,72%,40%)]" />;
-    default:
-      return <Minus className="w-3.5 h-3.5 text-muted-foreground" />;
-  }
-};
+interface BuyerComplianceDashboardProps {
+  onNavigateToComplianceDecisions?: () => void;
+}
 
-const BuyerComplianceDashboard = () => {
+const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComplianceDashboardProps) => {
   const { currentBranch, allBranchesView } = useBranchContext();
   const [supplierStats, setSupplierStats] = useState<any[]>([]);
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
-  const [showInsightsModal, setShowInsightsModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [buyerData, setBuyerData] = useState<any>(null);
   const [buyerId, setBuyerId] = useState<string>('');
-  
+
   const [filters, setFilters] = useState({
     searchQuery: '',
     industries: [] as string[],
@@ -91,7 +110,20 @@ const BuyerComplianceDashboard = () => {
   const [filteredSuppliers, setFilteredSuppliers] = useState<any[]>([]);
   const [filteredRequests, setFilteredRequests] = useState<any[]>([]);
   const [supplierItemsMap, setSupplierItemsMap] = useState<Map<string, Set<string>>>(new Map());
-  
+
+  // Workbench panels -- additive, read-only queries over Phase 3 (decision
+  // engine) and Phase 4 (canonical evidence) tables. None of this touches
+  // loadDashboardData/applyFilters below.
+  const [workbenchLoading, setWorkbenchLoading] = useState(true);
+  const [priorityItems, setPriorityItems] = useState<PriorityItem[]>([]);
+  const [decisionSummary, setDecisionSummary] = useState<DecisionSummary>({
+    openTasks: 0, criticalHighFindings: 0, pendingApprovals: 0, complianceRate: null, totalDecisions: 0,
+  });
+  const [coverageGaps, setCoverageGaps] = useState<CoverageGap[]>([]);
+  // null = no canonical evidence data for this buyer's suppliers (panel hidden);
+  // [] = canonical evidence exists and nothing is flagged (panel shows "all clear").
+  const [aiFlags, setAiFlags] = useState<AiFlag[] | null>(null);
+
   const { user } = useAuth();
   const { subscriptionData } = useSubscription();
   const { t } = useTranslation(['dashboard', 'common']);
@@ -129,7 +161,7 @@ const BuyerComplianceDashboard = () => {
       if (buyerProfile) {
         setBuyerId(buyerProfile.id);
         setBuyerData(buyerProfile);
-        
+
         let connectionsQuery = supabase
           .from('buyer_supplier_connections')
           .select(`
@@ -203,13 +235,13 @@ const BuyerComplianceDashboard = () => {
 
         const supplierStatsArray = Array.from(supplierMap.values()).map(supplier => ({
           ...supplier,
-          complianceScore: supplier.totalRequests > 0 
+          complianceScore: supplier.totalRequests > 0
             ? Math.round((supplier.approvedRequests / supplier.totalRequests) * 100)
             : 0
         }));
 
         const supplierIds = Array.from(supplierMap.keys());
-        const { data: supplierItems } = supplierIds.length > 0 
+        const { data: supplierItems } = supplierIds.length > 0
           ? await supabase
               .from('supplier_items')
               .select('supplier_id, item_category')
@@ -238,6 +270,195 @@ const BuyerComplianceDashboard = () => {
       setLoading(false);
     }
   };
+
+  const loadWorkbenchExtras = useCallback(async (currentBuyerId: string) => {
+    setWorkbenchLoading(true);
+    try {
+      await Promise.all([
+        loadPriorityQueueAndSummary(currentBuyerId),
+        loadCoverageGaps(currentBuyerId),
+        loadAiFlags(currentBuyerId),
+      ]);
+    } catch (error) {
+      console.error('Error loading workbench data:', error);
+    } finally {
+      setWorkbenchLoading(false);
+    }
+  }, []);
+
+  // Reuses the exact same compliance_tasks/compliance_findings/compliance_approvals
+  // query shape as ComplianceDecisionsView.tsx's ActionItemsPanel, plus
+  // compliance_current_status for an overall requirement-compliance rate --
+  // merged into one prioritized queue instead of three separate lists.
+  const loadPriorityQueueAndSummary = async (currentBuyerId: string) => {
+    const [{ data: taskRows }, { data: findingRows }, { data: approvalRows }, { data: statusRows }] = await Promise.all([
+      db.from('compliance_tasks').select('id, title, task_type, due_date, status')
+        .eq('buyer_id', currentBuyerId).in('status', ['open', 'in_progress']).order('due_date'),
+      db.from('compliance_findings').select('id, description, severity, status, raised_at')
+        .eq('buyer_id', currentBuyerId).in('status', ['open', 'acknowledged']).order('raised_at', { ascending: false }),
+      db.from('compliance_approvals').select('id, approval_type, status, requested_at')
+        .eq('buyer_id', currentBuyerId).eq('status', 'pending').order('requested_at'),
+      db.from('compliance_current_status').select('outcome').eq('buyer_id', currentBuyerId),
+    ]);
+
+    const tasks: TaskRow[] = taskRows || [];
+    const findings: FindingRow[] = findingRows || [];
+    const approvals: ApprovalRow[] = approvalRows || [];
+    const statuses: DecisionStatusRow[] = statusRows || [];
+
+    const merged: PriorityItem[] = [
+      ...tasks.map((item) => ({
+        id: `task-${item.id}`, kind: 'task' as const, label: item.title,
+        meta: item.due_date ? `Due ${item.due_date}` : item.task_type,
+        sortDate: item.due_date || '9999-12-31', severity: null,
+      })),
+      ...findings.map((item) => ({
+        id: `finding-${item.id}`, kind: 'finding' as const, label: item.description,
+        meta: `${item.severity} severity`, sortDate: item.raised_at, severity: item.severity,
+      })),
+      ...approvals.map((item) => ({
+        id: `approval-${item.id}`, kind: 'approval' as const, label: item.approval_type.replace(/_/g, ' '),
+        meta: `requested ${new Date(item.requested_at).toLocaleDateString()}`,
+        sortDate: item.requested_at, severity: null,
+      })),
+    ];
+
+    const severityRank: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+    merged.sort((a, b) => {
+      const aRank = a.severity ? severityRank[a.severity] ?? 4 : 4;
+      const bRank = b.severity ? severityRank[b.severity] ?? 4 : 4;
+      if (aRank !== bRank) return aRank - bRank;
+      return (a.sortDate || '').localeCompare(b.sortDate || '');
+    });
+
+    setPriorityItems(merged.slice(0, 10));
+
+    const criticalHighFindings = findings.filter((item) => item.severity === 'critical' || item.severity === 'high').length;
+    const compliantCount = statuses.filter((item) => item.outcome === 'compliant').length;
+    setDecisionSummary({
+      openTasks: tasks.length,
+      criticalHighFindings,
+      pendingApprovals: approvals.length,
+      complianceRate: statuses.length > 0 ? Math.round((compliantCount / statuses.length) * 100) : null,
+      totalDecisions: statuses.length,
+    });
+  };
+
+  // Coverage gaps: total = active published requirement_versions for
+  // frameworks this buyer can see (mirrors the accessible-framework filter
+  // already used in _shared/requirements/applicability.ts's loadCatalogResults);
+  // covered = distinct requirement_key with a 'compliant' outcome anywhere in
+  // compliance_current_status for this buyer. An approximation (compliant for
+  // at least one subject, not all), but real data -- no fabricated denominator.
+  const loadCoverageGaps = async (currentBuyerId: string) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: frameworks } = await supabase.from('requirement_frameworks').select('id, code, owner_buyer_id');
+    const accessible: FrameworkRow[] = (frameworks || []).filter((item) => item.owner_buyer_id === null || item.owner_buyer_id === currentBuyerId);
+    if (accessible.length === 0) { setCoverageGaps([]); return; }
+
+    const frameworkById = new Map(accessible.map((item) => [item.id, item]));
+    const { data: frameworkVersions } = await supabase.from('requirement_framework_versions')
+      .select('id, framework_id')
+      .in('framework_id', accessible.map((item) => item.id))
+      .eq('status', 'published')
+      .lte('effective_from', today)
+      .or(`effective_to.is.null,effective_to.gte.${today}`);
+    const frameworkVersionRows: FrameworkVersionRow[] = frameworkVersions || [];
+    if (frameworkVersionRows.length === 0) { setCoverageGaps([]); return; }
+
+    const versionToFrameworkCode = new Map(
+      frameworkVersionRows.map((item) => [item.id, frameworkById.get(item.framework_id)?.code])
+    );
+
+    const { data: requirementVersions } = await supabase.from('requirement_versions')
+      .select('id, framework_version_id')
+      .in('framework_version_id', frameworkVersionRows.map((item) => item.id))
+      .lte('effective_from', today)
+      .or(`effective_to.is.null,effective_to.gte.${today}`);
+
+    const totalsByFramework = new Map<string, number>();
+    ((requirementVersions || []) as RequirementVersionRow[]).forEach((item) => {
+      const code = versionToFrameworkCode.get(item.framework_version_id);
+      if (code) totalsByFramework.set(code, (totalsByFramework.get(code) || 0) + 1);
+    });
+    if (totalsByFramework.size === 0) { setCoverageGaps([]); return; }
+
+    const { data: statusRows } = await db.from('compliance_current_status')
+      .select('framework_code, requirement_key, outcome').eq('buyer_id', currentBuyerId);
+
+    const compliantKeysByFramework = new Map<string, Set<string>>();
+    ((statusRows || []) as DecisionStatusRow[]).forEach((row) => {
+      if (row.outcome !== 'compliant') return;
+      if (!compliantKeysByFramework.has(row.framework_code)) compliantKeysByFramework.set(row.framework_code, new Set());
+      compliantKeysByFramework.get(row.framework_code)!.add(row.requirement_key);
+    });
+
+    const gaps: CoverageGap[] = Array.from(totalsByFramework.entries()).map(([code, total]) => {
+      const covered = compliantKeysByFramework.get(code)?.size || 0;
+      return { frameworkCode: code, total, covered, missing: Math.max(0, total - covered), percentage: total > 0 ? Math.round((covered / total) * 100) : 0 };
+    }).sort((a, b) => a.percentage - b.percentage);
+
+    setCoverageGaps(gaps);
+  };
+
+  // Derives real verification flags from the canonical evidence tables
+  // (Phase 4) for this buyer's connected suppliers -- expired evidence,
+  // low-confidence extractions, and failed/needs-review validation rules.
+  // No mock data: returns null (panel hidden) if this buyer has no canonical
+  // evidence at all, [] (panel shows "all clear") if evidence exists but
+  // nothing is currently flagged.
+  const loadAiFlags = async (currentBuyerId: string) => {
+    const { data: connections } = await supabase.from('buyer_supplier_connections')
+      .select('supplier_id').eq('buyer_id', currentBuyerId).eq('status', 'approved');
+    const supplierIds = (connections || []).map((item) => item.supplier_id).filter(Boolean);
+    if (supplierIds.length === 0) { setAiFlags(null); return; }
+
+    const { data: records } = await db.from('evidence_records')
+      .select('id').in('supplier_id', supplierIds).eq('status', 'active');
+    const recordIds = ((records || []) as { id: string }[]).map((item) => item.id);
+    if (recordIds.length === 0) { setAiFlags(null); return; }
+
+    const { data: versions } = await db.from('evidence_versions')
+      .select('id, expiry_date').in('evidence_record_id', recordIds).eq('lifecycle_status', 'current');
+    const versionRows: { id: string; expiry_date: string | null }[] = versions || [];
+    const versionIds = versionRows.map((item) => item.id);
+    if (versionIds.length === 0) { setAiFlags([]); return; }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const expiredCount = versionRows.filter((item) => item.expiry_date && item.expiry_date < today).length;
+
+    const [{ data: observations }, { data: runs }] = await Promise.all([
+      db.from('evidence_field_observations').select('id').in('evidence_version_id', versionIds).lt('confidence', 0.7),
+      db.from('evidence_validation_runs').select('id').in('evidence_version_id', versionIds),
+    ]);
+    const lowConfidenceCount = (observations || []).length;
+
+    const runIds = ((runs || []) as { id: string }[]).map((item) => item.id);
+    let validationIssues: AiFlag[] = [];
+    if (runIds.length > 0) {
+      const { data: results } = await db.from('evidence_validation_results')
+        .select('rule_code, message').in('validation_run_id', runIds).in('outcome', ['failed', 'needs_review']);
+      const byRule = new Map<string, { message: string; count: number }>();
+      ((results || []) as ValidationResultRow[]).forEach((item) => {
+        const entry = byRule.get(item.rule_code) || { message: item.message, count: 0 };
+        entry.count += 1;
+        byRule.set(item.rule_code, entry);
+      });
+      validationIssues = Array.from(byRule.entries()).map(([ruleCode, { message, count }]) => ({
+        type: ruleCode, label: message, count,
+      }));
+    }
+
+    setAiFlags([
+      ...(expiredCount > 0 ? [{ type: 'expired', label: 'Expired evidence detected', count: expiredCount }] : []),
+      ...(lowConfidenceCount > 0 ? [{ type: 'low_confidence', label: 'Low-confidence extractions', count: lowConfidenceCount }] : []),
+      ...validationIssues,
+    ]);
+  };
+
+  useEffect(() => {
+    if (buyerId) void loadWorkbenchExtras(buyerId);
+  }, [buyerId, loadWorkbenchExtras]);
 
   React.useEffect(() => {
     applyFilters();
@@ -322,7 +543,7 @@ const BuyerComplianceDashboard = () => {
   const overallStats = {
     totalSuppliers: filteredSuppliers.length,
     totalRequests: filteredRequests.length,
-    avgComplianceScore: filteredSuppliers.length > 0 
+    avgComplianceScore: filteredSuppliers.length > 0
       ? Math.round(filteredSuppliers.reduce((sum, s) => sum + (s.complianceScore || 0), 0) / filteredSuppliers.length)
       : 0,
     pendingRequests: filteredRequests.filter(r => r.status === 'pending').length,
@@ -340,12 +561,6 @@ const BuyerComplianceDashboard = () => {
     .sort((a, b) => a.daysUntil - b.daysUntil)
     .slice(0, 5);
 
-  const getRiskLevel = (score: number): 'high' | 'medium' | 'low' => {
-    if (score < 70) return 'high';
-    if (score < 85) return 'medium';
-    return 'low';
-  };
-
   const handleViewDocument = async (request: any) => {
     try {
       const { data: uploads, error: uploadsError } = await supabase
@@ -360,7 +575,7 @@ const BuyerComplianceDashboard = () => {
       }
 
       const upload = uploads?.[0];
-      
+
       if (!upload?.file_path) {
         toast({
           title: "Error",
@@ -434,14 +649,6 @@ const BuyerComplianceDashboard = () => {
     }
   };
 
-  const handleSupplierClick = (supplier: any) => {
-    setSelectedSupplier({
-      ...supplier,
-      buyerId: buyerData?.buyer_id_number || buyerData?.id
-    });
-    setShowInsightsModal(true);
-  };
-
   const handleExportReports = async (
     selectedSupplierIds: string[],
     reportType: string,
@@ -482,19 +689,20 @@ const BuyerComplianceDashboard = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header - Minimal, Executive-style */}
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="pt-7 pb-5 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Compliance Overview</h1>
-          <p className="text-sm text-muted-foreground">Supplier & Document Status</p>
+          <h1 className={reviewPageTitleClass}>Compliance Workbench</h1>
+          <p className={reviewPageSubtitleClass}>Review, verify, and act on supplier compliance issues</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={loadDashboardData} className="text-muted-foreground">
+          <Button variant="ghost" size="sm" onClick={loadDashboardData} className="h-9 text-[#6B7280] rounded-[10px]">
             Refresh
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
+            className={reviewActionButtonSecondaryClass}
             onClick={() => setShowExportModal(true)}
           >
             Export
@@ -504,45 +712,14 @@ const BuyerComplianceDashboard = () => {
 
       {/* Branch indicator */}
       {currentBranch && !allBranchesView && (
-        <Alert className="border-border bg-muted/30">
+        <Alert className="border-[#E5E7EB] bg-gray-50/50 rounded-[16px]">
           <Building2 className="h-4 w-4" />
           <AlertTitle className="text-sm font-medium">Branch View</AlertTitle>
-          <AlertDescription className="text-sm text-muted-foreground">
-            Showing data for: <span className="font-medium text-foreground">{currentBranch.branch_name}</span>
+          <AlertDescription className="text-sm text-[#6B7280]">
+            Showing data for: <span className="font-medium text-[#111827]">{currentBranch.branch_name}</span>
           </AlertDescription>
         </Alert>
       )}
-
-      {/* Risk Summary Bar - Horizontal, muted */}
-      <div className="flex items-center gap-6 px-4 py-3 bg-muted/50 rounded-lg border border-border">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Suppliers:</span>
-          <span className="text-sm font-semibold text-foreground">{overallStats.totalSuppliers}</span>
-        </div>
-        <div className="h-4 w-px bg-border" />
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Documents:</span>
-          <span className="text-sm font-semibold text-foreground">{overallStats.totalRequests}</span>
-        </div>
-        <div className="h-4 w-px bg-border" />
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Open Items:</span>
-          <span className="text-sm font-semibold text-foreground">{overallStats.pendingRequests}</span>
-        </div>
-        <div className="h-4 w-px bg-border" />
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Risk: High</span>
-          <span className={`text-sm font-semibold ${overallStats.highRiskSuppliers > 0 ? 'text-[hsl(0,72%,40%)]' : 'text-foreground'}`}>
-            ({overallStats.highRiskSuppliers})
-          </span>
-        </div>
-        <div className="flex-1" />
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Compliance Coverage:</span>
-          <span className="text-sm font-semibold text-foreground">{overallStats.avgComplianceScore}%</span>
-          <Progress value={overallStats.avgComplianceScore} className="w-16 h-1.5" />
-        </div>
-      </div>
 
       {/* Filters */}
       <ComplianceFilters
@@ -555,283 +732,195 @@ const BuyerComplianceDashboard = () => {
         totalSuppliers={supplierStats.length}
       />
 
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="bg-white dark:bg-card border border-border shadow-sm p-1.5 rounded-lg">
-          <TabsTrigger 
-            value="overview" 
-            className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/70 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm px-4 py-2 rounded-md transition-all"
-          >
-            Overview
-          </TabsTrigger>
-          <TabsTrigger 
-            value="suppliers" 
-            className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/70 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm px-4 py-2 rounded-md transition-all"
-          >
-            Supplier Compliance
-          </TabsTrigger>
-          <TabsTrigger 
-            value="analytics" 
-            className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/70 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm px-4 py-2 rounded-md transition-all"
-          >
-            Analytics
-          </TabsTrigger>
-          <TabsTrigger 
-            value="corporate" 
-            className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/70 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm px-4 py-2 rounded-md transition-all"
-          >
-            Corporate Documents
-          </TabsTrigger>
-          <TabsTrigger 
-            value="communication" 
-            className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/70 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm px-4 py-2 rounded-md transition-all"
-          >
-            Communication Log
-          </TabsTrigger>
-        </TabsList>
+      {/* 2-column layout, same pattern as the Activity page: main scrollable
+          queue on the left, compact sticky summary on the right -- avoids
+          stacking every panel full-width one after another. */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left column: the main, scrollable work queue */}
+        <div className="w-full lg:w-[66%] space-y-4">
+          {/* Priority Review Queue */}
+          <div className={reviewCardContainerClass}>
+            <div className="flex items-center justify-between px-4 pt-4 pb-1">
+              <h3 className="text-[15px] font-bold text-[#111827]">Priority Review Queue</h3>
+              {onNavigateToComplianceDecisions && (
+                <Button variant="ghost" size="sm" className="text-xs text-[#2563EB] hover:text-[#1D4ED8]" onClick={onNavigateToComplianceDecisions}>
+                  View all in Compliance Decisions <ChevronRight className="w-3 h-3 ml-1" />
+                </Button>
+              )}
+            </div>
+            {!workbenchLoading && priorityItems.length === 0 ? (
+              <p className="px-4 pb-4 text-sm text-[#6B7280]">Nothing needs review right now.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="h-[48px] bg-white border-b border-[#E5E7EB] hover:bg-white">
+                    <TableHead className={`px-3 ${reviewSectionHeaderClass}`}>Type</TableHead>
+                    <TableHead className={`px-3 ${reviewSectionHeaderClass}`}>Item</TableHead>
+                    <TableHead className={`px-3 ${reviewSectionHeaderClass}`}>Detail</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {priorityItems.map((item) => (
+                    <TableRow key={item.id} className="h-[48px] border-b border-[#EEF2F7] hover:bg-gray-50/50">
+                      <TableCell className="px-3">
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[12px] font-medium capitalize ${PRIORITY_KIND_BADGE[item.kind]}`}>
+                          {item.kind}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-3 text-sm text-[#111827] truncate max-w-md">{item.label}</TableCell>
+                      <TableCell className="px-3 text-sm text-[#6B7280]">{item.meta}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
 
-        <TabsContent value="overview" className="space-y-4">
           {/* Attention Required Table */}
           {attentionItems.length > 0 && (
-            <Card className="border-border shadow-none">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base font-medium">Attention Required (Next 7 Days)</CardTitle>
-                  <Button variant="ghost" size="sm" className="text-xs text-muted-foreground">
-                    View All <ChevronRight className="w-3 h-3 ml-1" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-border hover:bg-transparent">
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Supplier</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Document</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Category</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Due</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right">Action</TableHead>
+            <div className={reviewCardContainerClass}>
+              <div className="flex items-center justify-between px-4 pt-4 pb-1">
+                <h3 className="text-[15px] font-bold text-[#111827]">Attention Required (Next 7 Days)</h3>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow className="h-[48px] bg-white border-b border-[#E5E7EB] hover:bg-white">
+                    <TableHead className={`px-3 ${reviewSectionHeaderClass}`}>Supplier</TableHead>
+                    <TableHead className={`px-3 ${reviewSectionHeaderClass}`}>Document</TableHead>
+                    <TableHead className={`px-3 ${reviewSectionHeaderClass}`}>Due</TableHead>
+                    <TableHead className={`px-3 text-right ${reviewSectionHeaderClass}`}>Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {attentionItems.map((item) => (
+                    <TableRow key={item.id} className="h-[48px] border-b border-[#EEF2F7] hover:bg-gray-50/50">
+                      <TableCell className="px-3 text-sm font-medium text-[#111827]">{item.suppliers?.company_name}</TableCell>
+                      <TableCell className="px-3 text-sm text-[#374151] truncate max-w-xs">{item.title}</TableCell>
+                      <TableCell className="px-3 text-sm">
+                        {item.daysUntil < 0 ? (
+                          <span className="text-red-600">Overdue {Math.abs(item.daysUntil)}d</span>
+                        ) : item.daysUntil === 0 ? (
+                          <span className="text-red-600">Today</span>
+                        ) : (
+                          <span className={item.daysUntil <= 3 ? 'text-amber-600' : 'text-[#374151]'}>
+                            {item.daysUntil}d
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="px-3 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs text-[#2563EB] hover:text-[#1D4ED8]"
+                          onClick={() => handleViewDocument(item)}
+                        >
+                          Review
+                        </Button>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {attentionItems.map((item) => (
-                      <TableRow key={item.id} className="border-border">
-                        <TableCell className="text-sm font-medium">{item.suppliers?.company_name}</TableCell>
-                        <TableCell className="text-sm">{item.title}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{item.category}</TableCell>
-                        <TableCell className="text-sm">
-                          {item.daysUntil < 0 ? (
-                            <span className="text-[hsl(0,72%,40%)]">Overdue {Math.abs(item.daysUntil)}d</span>
-                          ) : item.daysUntil === 0 ? (
-                            <span className="text-[hsl(0,72%,40%)]">Today</span>
-                          ) : (
-                            <span className={item.daysUntil <= 3 ? 'text-[hsl(45,93%,38%)]' : 'text-foreground'}>
-                              {item.daysUntil}d
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm capitalize">{item.status}</span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-xs text-primary hover:text-primary"
-                            onClick={() => handleViewDocument(item)}
-                          >
-                            Review
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
 
-          {/* Supplier Compliance Table */}
-          <Card className="border-border shadow-none">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium">Supplier Compliance</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {filteredSuppliers.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-border hover:bg-transparent">
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Supplier</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Industry</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-center">Docs</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-center">Approved</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-center">Open</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Risk</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredSuppliers.map((supplier) => (
-                      <TableRow 
-                        key={supplier.id} 
-                        className="border-border cursor-pointer hover:bg-muted/30"
-                        onClick={() => handleSupplierClick(supplier)}
-                      >
-                        <TableCell className="text-sm font-medium">{supplier.company_name}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{supplier.industry || '—'}</TableCell>
-                        <TableCell className="text-sm text-center">{supplier.totalRequests}</TableCell>
-                        <TableCell className="text-sm text-center">{supplier.approvedRequests}</TableCell>
-                        <TableCell className="text-sm text-center">{supplier.pendingRequests}</TableCell>
-                        <TableCell>
-                          <RiskIndicator level={getRiskLevel(supplier.complianceScore)} />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground">
-                            View <ChevronRight className="w-3 h-3 ml-1" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-sm text-muted-foreground mb-3">No suppliers match your current filters</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setFilters({
-                      searchQuery: '',
-                      industries: [],
-                      itemCategories: [],
-                      statuses: [],
-                      riskLevels: []
-                    })}
-                  >
-                    Clear All Filters
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        </div>
 
-          {/* Recent Activity Timeline */}
-          <Card className="border-border shadow-none">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium">Recent Activity</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-0">
-                {filteredRequests.slice(0, 8).map((request, index) => (
-                  <div 
-                    key={request.id} 
-                    className={`flex items-center gap-3 py-2.5 ${index !== 0 ? 'border-t border-border' : ''}`}
-                  >
-                    <ActivityIcon status={request.status} />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm">
-                        <span className="font-medium">{request.title}</span>
-                        <span className="text-muted-foreground"> — {request.suppliers?.company_name}</span>
-                      </span>
-                    </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {format(new Date(request.updated_at || request.created_at), 'MMM d')}
+        {/* Right column: sticky compact summary -- one panel of stat rows
+            instead of nine separate large metric cards. */}
+        <div className="w-full lg:w-[34%]">
+          <div className="sticky top-6 space-y-4">
+            <div className={reviewCardContainerClass}>
+              <div className="px-4 pt-4 pb-2">
+                <h3 className="text-[15px] font-bold text-[#111827]">Overview</h3>
+              </div>
+              <div className="px-4 pb-4 divide-y divide-[#EEF2F7]">
+                {[
+                  { icon: Building2, color: 'text-[#2563EB]', label: 'Suppliers', value: overallStats.totalSuppliers },
+                  { icon: ClipboardList, color: 'text-purple-600', label: 'Documents', value: overallStats.totalRequests },
+                  { icon: Clock, color: 'text-amber-600', label: 'Open Items', value: overallStats.pendingRequests },
+                  { icon: AlertCircle, color: 'text-red-600', label: 'Risk: High', value: overallStats.highRiskSuppliers },
+                  { icon: TrendingUp, color: 'text-emerald-600', label: 'Compliance Coverage', value: `${overallStats.avgComplianceScore}%` },
+                ].map((row) => (
+                  <div key={row.label} className="flex items-center justify-between py-2 first:pt-0 last:pb-0">
+                    <span className="flex items-center gap-2 text-sm text-[#374151]">
+                      <row.icon className={`h-3.5 w-3.5 ${row.color}`} />
+                      {row.label}
                     </span>
+                    <span className="text-sm font-semibold text-[#111827]">{row.value}</span>
                   </div>
                 ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="suppliers">
-          <Card className="border-border shadow-none">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium">All Suppliers</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {filteredSuppliers.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-border hover:bg-transparent">
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Supplier</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Industry</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-center">Total Docs</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-center">Approved</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-center">Pending</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-center">Compliance</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Risk</TableHead>
-                      <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-right"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredSuppliers.map((supplier) => (
-                      <TableRow 
-                        key={supplier.id} 
-                        className="border-border cursor-pointer hover:bg-muted/30"
-                        onClick={() => handleSupplierClick(supplier)}
-                      >
-                        <TableCell className="text-sm font-medium">{supplier.company_name}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{supplier.industry || '—'}</TableCell>
-                        <TableCell className="text-sm text-center">{supplier.totalRequests}</TableCell>
-                        <TableCell className="text-sm text-center">{supplier.approvedRequests}</TableCell>
-                        <TableCell className="text-sm text-center">{supplier.pendingRequests}</TableCell>
-                        <TableCell className="text-center">
-                          <span className="text-sm font-medium">{supplier.complianceScore}%</span>
-                        </TableCell>
-                        <TableCell>
-                          <RiskIndicator level={getRiskLevel(supplier.complianceScore)} />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground">
-                            Details <ChevronRight className="w-3 h-3 ml-1" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
+                {!workbenchLoading && decisionSummary.totalDecisions > 0 && (
+                  <>
+                    {[
+                      { icon: ListChecks, color: 'text-[#2563EB]', label: 'Open Tasks', value: decisionSummary.openTasks },
+                      { icon: AlertTriangle, color: 'text-red-600', label: 'Critical/High Findings', value: decisionSummary.criticalHighFindings },
+                      { icon: Clock, color: 'text-amber-600', label: 'Pending Approvals', value: decisionSummary.pendingApprovals },
+                      { icon: ShieldCheck, color: 'text-emerald-600', label: 'Requirement Compliance', value: decisionSummary.complianceRate !== null ? `${decisionSummary.complianceRate}%` : '—' },
+                    ].map((row) => (
+                      <div key={row.label} className="flex items-center justify-between py-2 first:pt-0 last:pb-0">
+                        <span className="flex items-center gap-2 text-sm text-[#374151]">
+                          <row.icon className={`h-3.5 w-3.5 ${row.color}`} />
+                          {row.label}
+                        </span>
+                        <span className="text-sm font-semibold text-[#111827]">{row.value}</span>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-sm text-muted-foreground mb-3">No suppliers match your current filters</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setFilters({
-                      searchQuery: '',
-                      industries: [],
-                      itemCategories: [],
-                      statuses: [],
-                      riskLevels: []
-                    })}
-                  >
-                    Clear All Filters
-                  </Button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* AI Verification Flags */}
+            {!workbenchLoading && aiFlags !== null && (
+              <div className={reviewCardContainerClass}>
+                <div className="px-4 pt-4 pb-2 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-violet-600" />
+                  <h3 className="text-[15px] font-bold text-[#111827]">AI Verification Flags</h3>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                <div className="px-4 pb-4">
+                  {aiFlags.length === 0 ? (
+                    <p className="text-sm text-[#6B7280]">No flags — all evidence current and validated.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {aiFlags.map((flag) => (
+                        <li key={flag.type} className="flex items-center justify-between text-sm gap-2">
+                          <span className="flex items-center gap-2 text-[#374151] min-w-0">
+                            <AlertTriangle className="h-3.5 w-3.5 text-amber-600 flex-shrink-0" />
+                            <span className="truncate">{flag.label}</span>
+                          </span>
+                          <span className="inline-flex items-center rounded-full bg-slate-50 text-slate-600 border border-slate-200 px-2 py-0.5 text-[12px] font-medium flex-shrink-0">{flag.count}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
 
-        <TabsContent value="analytics">
-          <ComplianceDashboard userRole="buyer" data={{ documentRequests }} />
-        </TabsContent>
-
-        <TabsContent value="corporate" className="space-y-4">
-          <BuyerCorporateDocuments buyerId={buyerId} />
-        </TabsContent>
-
-        <TabsContent value="communication" className="space-y-4">
-          <ExpiryNotificationLog buyerId={buyerId} />
-        </TabsContent>
-      </Tabs>
-
-      <SupplierInsightsModal
-        isOpen={showInsightsModal}
-        onClose={() => setShowInsightsModal(false)}
-        supplier={selectedSupplier}
-        buyerId={buyerData?.buyer_id_number || buyerId}
-      />
+            {/* Requirement Coverage Gaps */}
+            {!workbenchLoading && coverageGaps.length > 0 && (
+              <div className={reviewCardContainerClass}>
+                <div className="px-4 pt-4 pb-2">
+                  <h3 className="text-[15px] font-bold text-[#111827]">Requirement Coverage Gaps</h3>
+                </div>
+                <div className="px-4 pb-4 space-y-3">
+                  {coverageGaps.map((gap) => (
+                    <div key={gap.frameworkCode} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium text-[#111827]">{gap.frameworkCode}</span>
+                        <span className="text-[#6B7280]">{gap.percentage}%</span>
+                      </div>
+                      <Progress value={gap.percentage} className="h-1.5" />
+                      <p className="text-xs text-[#6B7280]">{gap.missing} missing</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       <SupplierComplianceExportModal
         isOpen={showExportModal}

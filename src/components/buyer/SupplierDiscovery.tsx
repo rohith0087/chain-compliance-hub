@@ -25,13 +25,23 @@ import { VALID_INDUSTRIES } from '@/config/industries';
 import { SafeSelect, SafeSelectItem } from '@/components/ui/SafeSelect';
 import { createSafeSelectValue } from '@/utils/selectValidation';
 import IndustryBasedSupplierSetup from './IndustryBasedSupplierSetup';
-import { SupplierDetailModal } from './SupplierDetailModal';
+import { SupplierProfileModal } from './SupplierProfileModal';
 import { BranchSupplierDashboard } from './BranchSupplierDashboard';
 import { useBranchContext } from '@/contexts/BranchContext';
 import { InviteSupplierModal } from './InviteSupplierModal';
 import ConnectionApprovalModal, { OnboardingType } from './ConnectionApprovalModal';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import {
+  getIndustryBadgeClass,
+  reviewActionButtonSecondaryClass,
+  reviewCardContainerClass,
+  reviewEmptyStateContainerClass,
+  reviewPageSubtitleClass,
+  reviewPageTitleClass,
+  reviewToolbarSelectTriggerClass,
+} from '@/components/documents/buyerReviewDesignSystem';
+import ReviewPagination from '@/components/documents/ReviewPagination';
 
 interface ConnectionRequest {
   id: string;
@@ -74,6 +84,10 @@ const SupplierDiscovery = () => {
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
   const [selectedConnectionRequest, setSelectedConnectionRequest] = useState<ConnectionRequest | null>(null);
+  const [connectedPage, setConnectedPage] = useState(1);
+  const [connectedRowsPerPage, setConnectedRowsPerPage] = useState(9);
+  const [discoverPage, setDiscoverPage] = useState(1);
+  const [discoverRowsPerPage, setDiscoverRowsPerPage] = useState(9);
   const { user } = useAuth();
   const { getBuyerProfile } = useBuyerSetup();
   const { terms } = useWorkspaceProfile();
@@ -218,6 +232,11 @@ const SupplierDiscovery = () => {
       setFilteredAvailableSuppliers(filtered);
     }
   }, [selectedIndustry, searchTerm, suppliers, availableSuppliers, activeTab]);
+
+  useEffect(() => {
+    setConnectedPage(1);
+    setDiscoverPage(1);
+  }, [selectedIndustry, searchTerm]);
 
   const handleIndustryChange = (value: string) => {
     setSelectedIndustry(createSafeSelectValue(value, 'all'));
@@ -456,18 +475,18 @@ const SupplierDiscovery = () => {
 
   return (
     <div className="space-y-6">
-      {/* Minimal Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header */}
+      <div className="pt-7 pb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{terms.supplier} Discovery</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className={reviewPageTitleClass}>{terms.supplier} Discovery</h1>
+          <p className={reviewPageSubtitleClass}>
             Find and connect with {terms.suppliers.toLowerCase()} for your organization
           </p>
         </div>
-        
+
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowInviteModal(true)} className="gap-2">
-            <UserPlus className="h-4 w-4" />
+          <Button variant="outline" size="sm" className="rounded-[10px]" onClick={() => setShowInviteModal(true)}>
+            <UserPlus className="h-4 w-4 mr-2" />
             Invite
           </Button>
           <DropdownMenu>
@@ -489,18 +508,19 @@ const SupplierDiscovery = () => {
       {/* Integrated Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9CA3AF]" />
           <Input
             placeholder={`Search ${terms.suppliers.toLowerCase()}...`}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className={`pl-10 ${reviewToolbarSelectTriggerClass}`}
           />
         </div>
-        <SafeSelect 
-          value={selectedIndustry} 
+        <SafeSelect
+          value={selectedIndustry}
           onValueChange={handleIndustryChange}
           placeholder="All Industries"
+          className={reviewToolbarSelectTriggerClass}
         >
           <SafeSelectItem value="all">All Industries</SafeSelectItem>
           {VALID_INDUSTRIES.map((industry) => (
@@ -511,95 +531,118 @@ const SupplierDiscovery = () => {
         </SafeSelect>
       </div>
 
-      {/* Underline Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-        <TabsList className="w-full justify-start h-auto p-0 bg-transparent border-b rounded-none">
-          <TabsTrigger 
-            value="connected" 
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3"
-          >
-            My {terms.suppliers}
-            <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
-              {suppliers.length}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger 
-            value="discover" 
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3"
-          >
-            Discover
-            <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
-              {availableSuppliers.length}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger 
-            value="pending" 
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3"
-          >
-            Pending
-            {totalPendingCount > 0 && (
-              <Badge className="ml-2 h-5 px-1.5 text-xs bg-amber-500 hover:bg-amber-500">
-                {totalPendingCount}
-              </Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
+      {/* Status tabs */}
+      <div className="h-[56px] border-b border-[#E5E7EB] flex items-center gap-9">
+        {[
+          { value: 'connected' as const, label: `My ${terms.suppliers}`, count: suppliers.length, badgeClass: 'bg-[#EAF1FF] text-[#2563EB]' },
+          { value: 'discover' as const, label: 'Discover', count: availableSuppliers.length, badgeClass: 'bg-[#F3F4F6] text-[#374151]' },
+          { value: 'pending' as const, label: 'Pending', count: totalPendingCount, badgeClass: 'bg-[#FEF2F2] text-[#DC2626]' },
+        ].map((tab) => {
+          const isActive = activeTab === tab.value;
+          return (
+            <button
+              key={tab.value}
+              onClick={() => setActiveTab(tab.value)}
+              className={`relative h-full flex items-center gap-2 text-[14px] font-semibold transition-colors ${
+                isActive ? 'text-[#2563EB]' : 'text-[#4B5563] hover:text-[#111827]'
+              }`}
+            >
+              {tab.label}
+              <span className={`h-[24px] min-w-[24px] rounded-full px-2 text-[13px] font-bold flex items-center justify-center ${tab.badgeClass}`}>
+                {tab.count}
+              </span>
+              {isActive && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#2563EB] rounded-full" />}
+            </button>
+          );
+        })}
+      </div>
 
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
         {/* Connected Suppliers Tab */}
         <TabsContent value="connected" className="mt-6">
           {filteredSuppliers.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="py-12 text-center">
-                <Building2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-                <h3 className="font-medium mb-1">No connected {terms.suppliers.toLowerCase()}</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Start by discovering and connecting with {terms.suppliers.toLowerCase()}
-                </p>
-                <Button variant="outline" size="sm" onClick={() => setActiveTab('discover')}>
-                  Discover {terms.suppliers}
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredSuppliers.map((supplier) => (
-                <CompactSupplierCard
-                  key={supplier.id}
-                  supplier={supplier}
-                  onView={() => handleViewSupplier(supplier)}
-                  onMessage={() => navigate(`/messages?supplier=${supplier.id}`)}
-                />
-              ))}
+            <div className={reviewEmptyStateContainerClass}>
+              <Building2 className="w-12 h-12 mx-auto mb-4 text-[#9CA3AF]" />
+              <h3 className="font-medium text-[#111827] mb-1">No connected {terms.suppliers.toLowerCase()}</h3>
+              <p className="text-sm text-[#6B7280] mb-4">
+                Start by discovering and connecting with {terms.suppliers.toLowerCase()}
+              </p>
+              <Button variant="outline" size="sm" className="rounded-[10px]" onClick={() => setActiveTab('discover')}>
+                Discover {terms.suppliers}
+              </Button>
             </div>
+          ) : (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredSuppliers
+                  .slice((connectedPage - 1) * connectedRowsPerPage, (connectedPage - 1) * connectedRowsPerPage + connectedRowsPerPage)
+                  .map((supplier) => (
+                    <CompactSupplierCard
+                      key={supplier.id}
+                      supplier={supplier}
+                      onView={() => handleViewSupplier(supplier)}
+                      onMessage={() => navigate(`/messages?supplier=${supplier.id}`)}
+                    />
+                  ))}
+              </div>
+              <div className="mt-4">
+                <ReviewPagination
+                  currentPage={Math.min(connectedPage, Math.max(1, Math.ceil(filteredSuppliers.length / connectedRowsPerPage)))}
+                  totalPages={Math.max(1, Math.ceil(filteredSuppliers.length / connectedRowsPerPage))}
+                  pageStart={(connectedPage - 1) * connectedRowsPerPage}
+                  pageSize={connectedRowsPerPage}
+                  totalCount={filteredSuppliers.length}
+                  itemLabel={terms.suppliers.toLowerCase()}
+                  onPageChange={setConnectedPage}
+                  onPageSizeChange={setConnectedRowsPerPage}
+                  pageSizeOptions={[6, 9, 18]}
+                />
+              </div>
+            </>
           )}
         </TabsContent>
 
         {/* Discover Tab */}
         <TabsContent value="discover" className="mt-6">
           {filteredAvailableSuppliers.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="py-12 text-center">
-                <Search className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-                <h3 className="font-medium mb-1">No {terms.suppliers.toLowerCase()} found</h3>
-                <p className="text-sm text-muted-foreground">
-                  {searchTerm || selectedIndustry !== 'all'
-                    ? "Try adjusting your filters"
-                    : `All available ${terms.suppliers.toLowerCase()} are already connected or pending`}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredAvailableSuppliers.map((supplier) => (
-                <DiscoverSupplierCard
-                  key={supplier.id}
-                  supplier={supplier}
-                  isPending={pendingRequests.has(supplier.id)}
-                  onSendRequest={() => handleSendConnectionRequest(supplier)}
-                  onResendRequest={() => handleResendRequest(supplier)}
-                />
-              ))}
+            <div className={reviewEmptyStateContainerClass}>
+              <Search className="w-12 h-12 mx-auto mb-4 text-[#9CA3AF]" />
+              <h3 className="font-medium text-[#111827] mb-1">No {terms.suppliers.toLowerCase()} found</h3>
+              <p className="text-sm text-[#6B7280]">
+                {searchTerm || selectedIndustry !== 'all'
+                  ? "Try adjusting your filters"
+                  : `All available ${terms.suppliers.toLowerCase()} are already connected or pending`}
+              </p>
             </div>
+          ) : (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredAvailableSuppliers
+                  .slice((discoverPage - 1) * discoverRowsPerPage, (discoverPage - 1) * discoverRowsPerPage + discoverRowsPerPage)
+                  .map((supplier) => (
+                    <DiscoverSupplierCard
+                      key={supplier.id}
+                      supplier={supplier}
+                      isPending={pendingRequests.has(supplier.id)}
+                      onSendRequest={() => handleSendConnectionRequest(supplier)}
+                      onResendRequest={() => handleResendRequest(supplier)}
+                    />
+                  ))}
+              </div>
+              <div className="mt-4">
+                <ReviewPagination
+                  currentPage={Math.min(discoverPage, Math.max(1, Math.ceil(filteredAvailableSuppliers.length / discoverRowsPerPage)))}
+                  totalPages={Math.max(1, Math.ceil(filteredAvailableSuppliers.length / discoverRowsPerPage))}
+                  pageStart={(discoverPage - 1) * discoverRowsPerPage}
+                  pageSize={discoverRowsPerPage}
+                  totalCount={filteredAvailableSuppliers.length}
+                  itemLabel={terms.suppliers.toLowerCase()}
+                  onPageChange={setDiscoverPage}
+                  onPageSizeChange={setDiscoverRowsPerPage}
+                  pageSizeOptions={[6, 9, 18]}
+                />
+              </div>
+            </>
           )}
         </TabsContent>
 
@@ -613,17 +656,17 @@ const SupplierDiscovery = () => {
               </h3>
               <div className="space-y-2">
                 {incomingRequests.filter(r => r.status === 'pending' && r.supplier).map((request) => (
-                  <Card key={request.id} className="p-4">
+                  <div key={request.id} className={`${reviewCardContainerClass} p-4`}>
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3 min-w-0">
-                        <CompanyLogo 
+                        <CompanyLogo
                           logoUrl={request.supplier?.company_logo_url}
                           companyName={request.supplier?.company_name}
                           size="sm"
                         />
                         <div className="min-w-0">
-                          <p className="font-medium truncate">{request.supplier.company_name}</p>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <p className="text-[14px] font-semibold text-[#111827] truncate">{request.supplier.company_name}</p>
+                          <p className="text-[13px] text-[#6B7280] flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
                             {format(new Date(request.requested_at), 'MMM d, yyyy')}
                             {request.supplier.industry && (
@@ -635,27 +678,29 @@ const SupplierDiscovery = () => {
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
                         <Button
-                          size="sm"
+                          size="icon"
+                          className="h-[36px] w-[36px] bg-[#10B981] hover:bg-[#059669] text-white rounded-[10px] shadow-sm"
                           onClick={() => handleApproveClick(request)}
                           disabled={processingIds.has(request.id)}
-                          className="gap-1"
+                          title="Approve"
                         >
                           <Check className="h-4 w-4" />
-                          Approve
                         </Button>
                         <Button
-                          size="sm"
+                          size="icon"
                           variant="outline"
+                          className="h-[36px] w-[36px] bg-white text-[#DC2626] border-[#FCA5A5] hover:bg-[#FEF2F2] rounded-[10px] shadow-sm"
                           onClick={() => handleRejectConnection(request.id)}
                           disabled={processingIds.has(request.id)}
+                          title="Reject"
                         >
                           <X className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
-                  </Card>
+                  </div>
                 ))}
               </div>
             </div>
@@ -669,15 +714,15 @@ const SupplierDiscovery = () => {
               </h3>
               <div className="space-y-2">
                 {outgoingRequests.map((request) => (
-                  <Card key={request.id} className="p-4">
+                  <div key={request.id} className={`${reviewCardContainerClass} p-4`}>
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="h-10 w-10 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                        <div className="h-10 w-10 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
                           <Clock className="h-5 w-5 text-amber-600" />
                         </div>
                         <div className="min-w-0">
-                          <p className="font-medium truncate">{request.supplier?.company_name}</p>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <p className="text-[14px] font-semibold text-[#111827] truncate">{request.supplier?.company_name}</p>
+                          <p className="text-[13px] text-[#6B7280] flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
                             Sent {format(new Date(request.requested_at), 'MMM d, yyyy')}
                           </p>
@@ -686,14 +731,14 @@ const SupplierDiscovery = () => {
                       <Button
                         size="sm"
                         variant="outline"
+                        className={reviewActionButtonSecondaryClass}
                         onClick={() => handleResendRequest(request.supplier)}
-                        className="gap-1 flex-shrink-0"
                       >
-                        <RefreshCw className="h-4 w-4" />
+                        <RefreshCw className="h-4 w-4 mr-2" />
                         Resend
                       </Button>
                     </div>
-                  </Card>
+                  </div>
                 ))}
               </div>
             </div>
@@ -701,15 +746,13 @@ const SupplierDiscovery = () => {
 
           {/* Empty State */}
           {totalPendingCount === 0 && (
-            <Card className="border-dashed">
-              <CardContent className="py-12 text-center">
-                <Check className="w-12 h-12 mx-auto mb-4 text-green-500/50" />
-                <h3 className="font-medium mb-1">All caught up!</h3>
-                <p className="text-sm text-muted-foreground">
-                  No pending connection requests at this time
-                </p>
-              </CardContent>
-            </Card>
+            <div className={reviewEmptyStateContainerClass}>
+              <Check className="w-12 h-12 mx-auto mb-4 text-emerald-500/60" />
+              <h3 className="font-medium text-[#111827] mb-1">All caught up!</h3>
+              <p className="text-sm text-[#6B7280]">
+                No pending connection requests at this time
+              </p>
+            </div>
           )}
         </TabsContent>
       </Tabs>
@@ -725,10 +768,12 @@ const SupplierDiscovery = () => {
         />
       )}
 
-      <SupplierDetailModal
+      <SupplierProfileModal
         supplier={selectedSupplier}
         isOpen={showSupplierDetail}
         onClose={() => setShowSupplierDetail(false)}
+        buyerId={buyerProfile?.id}
+        allIndustries={VALID_INDUSTRIES}
         connectionStatus={selectedSupplier ? getConnectionStatus(selectedSupplier.id) : undefined}
         connectionDate={selectedSupplier ? getConnectionDate(selectedSupplier.id) : undefined}
       />
@@ -749,23 +794,23 @@ const SupplierDiscovery = () => {
 
 // Compact card for connected suppliers
 const CompactSupplierCard = ({ supplier, onView, onMessage }: { supplier: any; onView: () => void; onMessage: () => void }) => (
-  <Card className="p-4 hover:shadow-md transition-shadow group">
+  <div className={`${reviewCardContainerClass} p-4 hover:shadow-md transition-shadow group`}>
     <div className="flex items-start gap-3">
-      <CompanyLogo 
+      <CompanyLogo
         logoUrl={supplier.company_logo_url}
         companyName={supplier.company_name}
         size="sm"
       />
       <div className="flex-1 min-w-0 cursor-pointer" onClick={onView}>
-        <h4 className="font-medium truncate group-hover:text-primary transition-colors">
+        <h4 className="text-[14px] font-semibold text-[#111827] truncate group-hover:text-[#2563EB] transition-colors">
           {supplier.company_name}
         </h4>
         {supplier.industry && (
-          <Badge variant="secondary" className="mt-1 text-xs">
+          <Badge variant="outline" className={`mt-1 text-[12px] px-2 py-0.5 rounded-full font-medium ${getIndustryBadgeClass(supplier.industry, VALID_INDUSTRIES)}`}>
             {supplier.industry}
           </Badge>
         )}
-        <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+        <div className="mt-2 space-y-1 text-[13px] text-[#6B7280]">
           {supplier.contact_email && (
             <div className="flex items-center gap-1.5 truncate">
               <Mail className="h-3 w-3 flex-shrink-0" />
@@ -791,7 +836,7 @@ const CompactSupplierCard = ({ supplier, onView, onMessage }: { supplier: any; o
           }}
           title="Send Message"
         >
-          <MessageSquare className="h-4 w-4 text-muted-foreground hover:text-primary" />
+          <MessageSquare className="h-4 w-4 text-[#6B7280] hover:text-[#2563EB]" />
         </Button>
         <Button
           variant="ghost"
@@ -800,37 +845,37 @@ const CompactSupplierCard = ({ supplier, onView, onMessage }: { supplier: any; o
           onClick={onView}
           title="View Details"
         >
-          <Eye className="h-4 w-4 text-muted-foreground" />
+          <Eye className="h-4 w-4 text-[#6B7280]" />
         </Button>
       </div>
     </div>
-  </Card>
+  </div>
 );
 
 // Compact card for discoverable suppliers
-const DiscoverSupplierCard = ({ 
-  supplier, 
-  isPending, 
-  onSendRequest, 
-  onResendRequest 
-}: { 
-  supplier: any; 
+const DiscoverSupplierCard = ({
+  supplier,
+  isPending,
+  onSendRequest,
+  onResendRequest
+}: {
+  supplier: any;
   isPending: boolean;
   onSendRequest: () => void;
   onResendRequest: () => void;
 }) => (
-  <Card className="p-4">
+  <div className={`${reviewCardContainerClass} p-4`}>
     <div className="flex items-start justify-between gap-3">
       <div className="flex items-start gap-3 min-w-0">
-        <CompanyLogo 
+        <CompanyLogo
           logoUrl={supplier.company_logo_url}
           companyName={supplier.company_name}
           size="sm"
         />
         <div className="min-w-0">
-          <h4 className="font-medium truncate">{supplier.company_name}</h4>
+          <h4 className="text-[14px] font-semibold text-[#111827] truncate">{supplier.company_name}</h4>
           {supplier.industry && (
-            <Badge variant="outline" className="mt-1 text-xs">
+            <Badge variant="outline" className={`mt-1 text-[12px] px-2 py-0.5 rounded-full font-medium ${getIndustryBadgeClass(supplier.industry, VALID_INDUSTRIES)}`}>
               {supplier.industry}
             </Badge>
           )}
@@ -840,24 +885,24 @@ const DiscoverSupplierCard = ({
         <Button
           size="sm"
           variant="outline"
+          className={`${reviewActionButtonSecondaryClass} flex-shrink-0`}
           onClick={(e) => { e.stopPropagation(); onResendRequest(); }}
-          className="gap-1 flex-shrink-0"
         >
-          <RefreshCw className="h-3.5 w-3.5" />
+          <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
           Resend
         </Button>
       ) : (
         <Button
           size="sm"
+          className="rounded-[10px] bg-[#2563EB] hover:bg-[#1D4ED8] text-white flex-shrink-0"
           onClick={(e) => { e.stopPropagation(); onSendRequest(); }}
-          className="gap-1 flex-shrink-0"
         >
-          <Send className="h-3.5 w-3.5" />
+          <Send className="h-3.5 w-3.5 mr-1.5" />
           Connect
         </Button>
       )}
     </div>
-  </Card>
+  </div>
 );
 
 export default SupplierDiscovery;

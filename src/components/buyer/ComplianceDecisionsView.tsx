@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  AlertCircle, AlertTriangle, CheckCircle2, ClipboardList, Clock,
-  FileQuestion, Loader2, Share2, ShieldCheck, ShieldQuestion, XCircle,
-} from 'lucide-react';
+import { AlertCircle, Loader2, Share2, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  OUTCOME_BADGE_CONFIG,
+  reviewCardContainerClass,
+  reviewPageSubtitleClass,
+  reviewPageTitleClass,
+  reviewSectionHeaderClass,
+} from '@/components/documents/buyerReviewDesignSystem';
 
 interface ComplianceDecisionsViewProps {
   buyerId: string;
@@ -68,18 +70,6 @@ interface ActionApproval {
   requested_at: string;
 }
 
-const outcomeConfig: Record<ComplianceOutcome, { label: string; icon: typeof CheckCircle2; className: string }> = {
-  compliant: { label: 'Compliant', icon: CheckCircle2, className: 'border-emerald-200 bg-emerald-50 text-emerald-800' },
-  conditional: { label: 'Conditional', icon: ShieldQuestion, className: 'border-sky-200 bg-sky-50 text-sky-800' },
-  noncompliant: { label: 'Noncompliant', icon: XCircle, className: 'border-red-200 bg-red-50 text-red-800' },
-  expired: { label: 'Expired', icon: Clock, className: 'border-orange-200 bg-orange-50 text-orange-800' },
-  under_review: { label: 'Under review', icon: FileQuestion, className: 'border-amber-200 bg-amber-50 text-amber-800' },
-  submitted: { label: 'Submitted', icon: FileQuestion, className: 'border-amber-200 bg-amber-50 text-amber-800' },
-  requested: { label: 'Requested', icon: ClipboardList, className: 'border-slate-200 bg-slate-50 text-slate-700' },
-  missing: { label: 'Missing', icon: AlertTriangle, className: 'border-slate-200 bg-slate-50 text-slate-700' },
-  not_applicable: { label: 'Not applicable', icon: XCircle, className: 'border-slate-200 bg-slate-50 text-slate-500' },
-};
-
 const outcomeSeverity: Record<ComplianceOutcome, number> = {
   noncompliant: 0, expired: 1, missing: 2, requested: 3, submitted: 4,
   under_review: 5, conditional: 6, compliant: 7, not_applicable: 8,
@@ -97,36 +87,36 @@ const db = supabase as any;
 const SHARED_EVIDENCE_MARKER = 'evidence shared by the supplier under an active sharing grant';
 
 function DecisionCard({ result }: { result: DecisionResult }) {
-  const config = outcomeConfig[result.outcome];
+  const config = OUTCOME_BADGE_CONFIG[result.outcome];
   const Icon = config.icon;
   const includesSharedEvidence = result.explanation.includes(SHARED_EVIDENCE_MARKER);
   return (
-    <Card>
-      <CardHeader className="space-y-2 pb-3">
+    <div className={reviewCardContainerClass}>
+      <div className="space-y-2 border-b border-[#E5E7EB] p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <CardTitle className="text-base">{result.title}</CardTitle>
-            <CardDescription>{result.framework_code} · {result.framework_version}</CardDescription>
+            <p className="text-base font-semibold text-[#111827]">{result.title}</p>
+            <p className="mt-1 text-sm text-[#6B7280]">{result.framework_code} · {result.framework_version}</p>
           </div>
           <div className="flex items-center gap-2">
             {includesSharedEvidence && (
-              <Badge variant="outline" className="border-violet-200 bg-violet-50 text-violet-800">
-                <Share2 className="mr-1 h-3.5 w-3.5" />Shared by supplier
-              </Badge>
+              <span className="inline-flex items-center gap-1 rounded-full border-0 bg-violet-50 px-2 py-0.5 text-[12px] font-medium text-violet-800">
+                <Share2 className="h-3.5 w-3.5" />Shared by supplier
+              </span>
             )}
-            <Badge variant="outline" className={config.className}>
-              <Icon className="mr-1 h-3.5 w-3.5" />{config.label}
-            </Badge>
+            <span className={`inline-flex items-center gap-1 rounded-full border-0 px-2 py-0.5 text-[12px] font-medium ${config.className}`}>
+              <Icon className="h-3.5 w-3.5" />{config.label}
+            </span>
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-2 text-sm">
-        <p className="text-muted-foreground">{result.explanation}</p>
+      </div>
+      <div className="space-y-2 p-4 text-sm">
+        <p className="text-[#6B7280]">{result.explanation}</p>
         {result.evidence_claim_ids.length > 0 && (
-          <p className="text-xs text-muted-foreground">{result.evidence_claim_ids.length} evidence claim(s) considered</p>
+          <p className="text-xs text-[#6B7280]">{result.evidence_claim_ids.length} evidence claim(s) considered</p>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -163,19 +153,22 @@ function ActionItemsPanel({ buyerId }: { buyerId: string }) {
   };
 
   return (
-    <Card>
-      <CardHeader><CardTitle>Action items</CardTitle><CardDescription>Open tasks, findings, and approvals for this organization.</CardDescription></CardHeader>
-      <CardContent className="space-y-4">
+    <div className={reviewCardContainerClass}>
+      <div className="border-b border-[#E5E7EB] p-4">
+        <p className="text-base font-semibold text-[#111827]">Action items</p>
+        <p className="mt-1 text-sm text-[#6B7280]">Open tasks, findings, and approvals for this organization.</p>
+      </div>
+      <div className="space-y-4 p-4">
         {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
 
         <div>
-          <p className="mb-2 text-sm font-medium">Tasks ({tasks.length})</p>
-          {tasks.length === 0 ? <p className="text-sm text-muted-foreground">No open tasks.</p> : (
+          <p className={`mb-2 ${reviewSectionHeaderClass}`}>Tasks ({tasks.length})</p>
+          {tasks.length === 0 ? <p className="text-sm text-[#6B7280]">No open tasks.</p> : (
             <ul className="space-y-2">
               {tasks.map((task) => (
-                <li key={task.id} className="flex items-center justify-between gap-2 rounded-md border p-2 text-sm">
-                  <span>{task.title} <span className="text-xs text-muted-foreground">({task.task_type}{task.due_date ? `, due ${task.due_date}` : ''})</span></span>
-                  <Button size="sm" variant="outline" disabled={busyId === task.id}
+                <li key={task.id} className="flex items-center justify-between gap-2 rounded-[12px] border border-[#E5E7EB] p-3 text-sm">
+                  <span className="text-[#111827]">{task.title} <span className="text-xs text-[#6B7280]">({task.task_type}{task.due_date ? `, due ${task.due_date}` : ''})</span></span>
+                  <Button size="sm" variant="outline" className="rounded-[10px] border-[#E5E7EB]" disabled={busyId === task.id}
                     onClick={() => runAction(task.id, () => db.rpc('complete_compliance_task_v1', { p_task_id: task.id }))}>
                     Complete
                   </Button>
@@ -186,13 +179,13 @@ function ActionItemsPanel({ buyerId }: { buyerId: string }) {
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-medium">Findings ({findings.length})</p>
-          {findings.length === 0 ? <p className="text-sm text-muted-foreground">No open findings.</p> : (
+          <p className={`mb-2 ${reviewSectionHeaderClass}`}>Findings ({findings.length})</p>
+          {findings.length === 0 ? <p className="text-sm text-[#6B7280]">No open findings.</p> : (
             <ul className="space-y-2">
               {findings.map((finding) => (
-                <li key={finding.id} className="flex items-center justify-between gap-2 rounded-md border p-2 text-sm">
-                  <span>{finding.description} <Badge variant="outline" className="ml-1">{finding.severity}</Badge></span>
-                  <Button size="sm" variant="outline" disabled={busyId === finding.id}
+                <li key={finding.id} className="flex items-center justify-between gap-2 rounded-[12px] border border-[#E5E7EB] p-3 text-sm">
+                  <span className="text-[#111827]">{finding.description} <span className="ml-1 inline-flex items-center rounded-full border-0 bg-slate-50 px-2 py-0.5 text-[12px] font-medium text-slate-600">{finding.severity}</span></span>
+                  <Button size="sm" variant="outline" className="rounded-[10px] border-[#E5E7EB]" disabled={busyId === finding.id}
                     onClick={() => runAction(finding.id, () => db.rpc('resolve_compliance_finding_v1', { p_finding_id: finding.id }))}>
                     Resolve
                   </Button>
@@ -203,18 +196,18 @@ function ActionItemsPanel({ buyerId }: { buyerId: string }) {
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-medium">Pending approvals ({approvals.length})</p>
-          {approvals.length === 0 ? <p className="text-sm text-muted-foreground">No pending approvals.</p> : (
+          <p className={`mb-2 ${reviewSectionHeaderClass}`}>Pending approvals ({approvals.length})</p>
+          {approvals.length === 0 ? <p className="text-sm text-[#6B7280]">No pending approvals.</p> : (
             <ul className="space-y-2">
               {approvals.map((approval) => (
-                <li key={approval.id} className="flex items-center justify-between gap-2 rounded-md border p-2 text-sm">
-                  <span>{approval.approval_type.replace(/_/g, ' ')} requested {new Date(approval.requested_at).toLocaleDateString()}</span>
-                  <div className="flex gap-2">
-                    <Button size="sm" disabled={busyId === approval.id}
+                <li key={approval.id} className="flex items-center justify-between gap-2 rounded-[12px] border border-[#E5E7EB] p-3 text-sm">
+                  <span className="text-[#111827]">{approval.approval_type.replace(/_/g, ' ')} requested {new Date(approval.requested_at).toLocaleDateString()}</span>
+                  <div className="flex gap-1.5">
+                    <Button size="sm" className="rounded-[10px] bg-[#10B981] text-white hover:bg-[#059669]" disabled={busyId === approval.id}
                       onClick={() => runAction(approval.id, () => db.rpc('decide_compliance_approval_v1', { p_approval_id: approval.id, p_decision: 'approved', p_notes: null }))}>
                       Approve
                     </Button>
-                    <Button size="sm" variant="destructive" disabled={busyId === approval.id}
+                    <Button size="sm" variant="outline" className="rounded-[10px] border-[#FCA5A5] bg-white text-[#DC2626] hover:bg-[#FEF2F2]" disabled={busyId === approval.id}
                       onClick={() => runAction(approval.id, () => db.rpc('decide_compliance_approval_v1', { p_approval_id: approval.id, p_decision: 'rejected', p_notes: null }))}>
                       Reject
                     </Button>
@@ -224,8 +217,8 @@ function ActionItemsPanel({ buyerId }: { buyerId: string }) {
             </ul>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -308,11 +301,11 @@ export default function ComplianceDecisionsView({ buyerId }: ComplianceDecisions
   };
 
   return (
-    <div className="h-[calc(100vh-80px)] overflow-y-auto p-6">
+    <div className="h-[calc(100vh-80px)] overflow-y-auto bg-white p-6">
       <div className="mx-auto max-w-6xl space-y-6">
         <div>
-          <div className="flex items-center gap-2"><ShieldCheck className="h-6 w-6 text-primary" /><h1 className="text-2xl font-semibold">Compliance Decisions</h1></div>
-          <p className="mt-1 text-sm text-muted-foreground">Computed compliance status, derived from verified evidence and requirement applicability - not a manually selected document status.</p>
+          <div className="flex items-center gap-2"><ShieldCheck className="h-6 w-6 text-[#2563EB]" /><h1 className={reviewPageTitleClass}>Compliance Decisions</h1></div>
+          <p className={`mt-1 ${reviewPageSubtitleClass}`}>Computed compliance status, derived from verified evidence and requirement applicability - not a manually selected document status.</p>
         </div>
 
         <Tabs value={subjectType} onValueChange={(value) => setSubjectType(value as SubjectType)}>
@@ -323,21 +316,24 @@ export default function ComplianceDecisionsView({ buyerId }: ComplianceDecisions
           </TabsList>
         </Tabs>
 
-        <Card>
-          <CardHeader><CardTitle>Evaluate compliance</CardTitle><CardDescription>Select a subject and an evaluation date.</CardDescription></CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-3">
+        <div className={reviewCardContainerClass}>
+          <div className="border-b border-[#E5E7EB] p-4">
+            <p className="text-base font-semibold text-[#111827]">Evaluate compliance</p>
+            <p className="mt-1 text-sm text-[#6B7280]">Select a subject and an evaluation date.</p>
+          </div>
+          <div className="grid gap-4 p-4 md:grid-cols-3">
             <div className="space-y-2">
               <Select value={subjectId} onValueChange={setSubjectId} disabled={loadingSubjects}>
-                <SelectTrigger><SelectValue placeholder={loadingSubjects ? 'Loading…' : 'Select subject'} /></SelectTrigger>
+                <SelectTrigger className="rounded-[10px] border-[#E5E7EB]"><SelectValue placeholder={loadingSubjects ? 'Loading…' : 'Select subject'} /></SelectTrigger>
                 <SelectContent>{subjects[subjectType].map((subject) => <SelectItem key={subject.id} value={subject.id}>{subject.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <Input type="date" value={effectiveAt} onChange={(event) => setEffectiveAt(event.target.value)} />
-            <Button onClick={evaluate} disabled={evaluating || loadingSubjects}>
+            <Input className="rounded-[10px] border-[#E5E7EB]" type="date" value={effectiveAt} onChange={(event) => setEffectiveAt(event.target.value)} />
+            <Button className="rounded-[10px] bg-[#10B981] text-white hover:bg-[#059669]" onClick={evaluate} disabled={evaluating || loadingSubjects}>
               {evaluating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Evaluate compliance
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>Evaluation unavailable</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
 

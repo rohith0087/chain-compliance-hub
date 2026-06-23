@@ -75,7 +75,19 @@ async function processJob(admin:Admin,resendKey:string,job:Job){
       const stored=await admin.storage.from('inbound-email-quarantine').upload(path,new Blob([bytes],{type:detected}),{contentType:detected,upsert:false});if(stored.error&&!/already exists/i.test(stored.error.message))throw stored.error;
       let duplicateId:null|string=null;if(route){const {data:dup}=await admin.from('document_assets').select('id').eq('supplier_id',route.supplier_id).eq('content_sha256',hash).maybeSingle();duplicateId=dup?.id||null;}
       const ai=route?await shadowMatch(admin,route.buyer_id,filename,String(email.subject||''),String(email.text||''),validRequests):null;const aiRequest=ai&&typeof ai==='object'&&'request_id'in ai?String(ai.request_id||''):'';const proposed=validRequests.length===1?validRequests[0]:validRequests.find(candidate=>candidate.id===aiRequest);
-      await admin.from('inbound_email_attachments').upsert({...base,proposed_request_id:proposed?.id||null,proposed_document_type:proposed?.document_type||null,detected_mime_type:detected,file_size:blob.size,sha256:hash,quarantine_storage_path:path,scan_status:'clean',scan_provider:scanResult.provider||'configured_scanner',scan_result:scanResult,is_encrypted:false,duplicate_document_asset_id:duplicateId,classification:ai||{method:'deterministic',document_type:proposed?.document_type||null},classification_confidence:proposed?(validRequests.length===1?0.95:Number(ai&&typeof ai==='object'&&'confidence'in ai?ai.confidence:0)):0.2},{onConflict:'message_id,provider_attachment_id'});clean++;
+      const {data:savedAttachment}=await admin.from('inbound_email_attachments').upsert({...base,proposed_request_id:proposed?.id||null,proposed_document_type:proposed?.document_type||null,detected_mime_type:detected,file_size:blob.size,sha256:hash,quarantine_storage_path:path,scan_status:'clean',scan_provider:scanResult.provider||'configured_scanner',scan_result:scanResult,is_encrypted:false,duplicate_document_asset_id:duplicateId,classification:ai||{method:'deterministic',document_type:proposed?.document_type||null},classification_confidence:proposed?(validRequests.length===1?0.95:Number(ai&&typeof ai==='object'&&'confidence'in ai?ai.confidence:0)):0.2},{onConflict:'message_id,provider_attachment_id'}).select('id').single();clean++;
+      const autoAcceptEligible=Boolean(route&&matchResult==='matched'&&reasons.includes('routing_token_valid')&&validRequests.length===1&&proposed&&savedAttachment?.id);
+      if(autoAcceptEligible){
+        try{
+          const finalPath=`${route!.supplier_id}/${proposed!.id}/inbound/${savedAttachment!.id}/${filename}`;
+          const copy=await admin.storage.from('inbound-email-quarantine').copy(path,finalPath,{destinationBucket:'compliance-documents'});
+          if(copy.error)throw copy.error;
+          const {error:autoAcceptError}=await admin.rpc('auto_accept_inbound_attachment_v1',{p_attachment_id:savedAttachment!.id,p_final_storage_path:finalPath});
+          if(autoAcceptError){await admin.storage.from('compliance-documents').remove([finalPath]);throw autoAcceptError;}
+        }catch(autoAcceptError){
+          console.warn('inbound_attachment_auto_accept_skipped',JSON.stringify({attachment_id:savedAttachment!.id,error:autoAcceptError instanceof Error?autoAcceptError.message:String(autoAcceptError)}));
+        }
+      }
     }catch(error){unsafe++;await admin.from('inbound_email_attachments').upsert({...base,scan_status:error instanceof Error&&/Malware detected/.test(error.message)?'infected':'failed',is_encrypted:error instanceof Error&&/Encrypted PDF/.test(error.message),classification:{error:error instanceof Error?error.message:String(error)}},{onConflict:'message_id,provider_attachment_id'});}
   }
   const reviewable=matchResult==='matched'&&clean>0&&unsafe===0;const quarantineReason=attachments.length===0?'no_attachments':matchResult!=='matched'?`identity_${matchResult}`:unsafe>0?'unsafe_attachment':clean===0?'no_reviewable_attachments':null;

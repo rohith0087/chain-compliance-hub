@@ -843,12 +843,13 @@ const Index = () => {
         <div className="relative mx-auto flex max-w-[1180px] flex-col items-center px-5 pb-16 pt-20 text-center sm:px-8 lg:pb-24 lg:pt-24">
           <motion.h1
             {...heroIn(0.04)}
-            className="mt-2 max-w-[18ch] font-normal leading-[1.02] tracking-[-0.015em] text-[var(--r2c-ink)] text-[44px] sm:text-[64px] lg:text-[84px]"
+            className="mt-2 max-w-[20ch] font-normal leading-[1.05] tracking-[-0.02em] text-[var(--r2c-ink)] text-[42px] sm:text-[60px] lg:text-[72px]"
             style={{ fontFamily: 'Instrument Serif, "Cormorant Garamond", Georgia, serif' }}
           >
-            Make every supplier document{' '}
-            <span className="font-medium text-[var(--r2c-stamp)] italic">defensible at audit speed</span>
+            Supplier compliance,{' '}
+            <span className="italic text-[var(--r2c-stamp)]">defensible at audit speed</span>
           </motion.h1>
+
 
           <motion.p
             {...heroIn(0.16)}

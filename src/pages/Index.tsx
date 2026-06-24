@@ -590,48 +590,41 @@ const Index = () => {
           style={{ background: 'radial-gradient(120% 85% at 100% 0%, rgba(20,24,31,0.05), transparent 55%)' }}
         />
 
-        <div className="relative mx-auto grid max-w-[1180px] grid-cols-1 gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:py-28">
-          {/* copy */}
-          <div>
-            <motion.div {...heroIn(0)}>
-              <Eyebrow>Compliance Operating System</Eyebrow>
-            </motion.div>
+        <div className="relative mx-auto flex max-w-[1180px] flex-col items-center px-5 pb-12 pt-20 text-center sm:px-8 lg:pb-20 lg:pt-28">
+          <motion.div {...heroIn(0)}>
+            <Eyebrow>Compliance Operating System</Eyebrow>
+          </motion.div>
 
-            <motion.h1
-              {...heroIn(0.08)}
-              className="font-display mt-5 text-[40px] font-bold leading-[1.04] sm:text-[52px] lg:text-[58px]"
-            >
-              Make every supplier document something you can{' '}
-              <span className="relative whitespace-nowrap text-[var(--r2c-stamp)]">
-                defend
-                <motion.span
-                  aria-hidden
-                  className="absolute -bottom-0.5 left-0 h-[3px] w-full origin-left bg-[var(--r2c-stamp)]"
-                  initial={reduce ? false : { scaleX: 0 }}
-                  animate={{ scaleX: 1 }}
-                  transition={reduce ? { duration: 0 } : { delay: 0.7, duration: 0.5, ease: EASE }}
-                />
-              </span>
-            </motion.h1>
+          <motion.h1
+            {...heroIn(0.08)}
+            className="mt-6 max-w-[14ch] font-serif text-[44px] font-normal leading-[1.02] tracking-[-0.02em] text-[var(--r2c-ink)] sm:text-[64px] lg:text-[88px]"
+            style={{ fontFamily: 'Instrument Serif, "Cormorant Garamond", Georgia, serif' }}
+          >
+            Make every supplier document{' '}
+            <span className="italic text-[var(--r2c-stamp)]">defensible</span>
+          </motion.h1>
 
-            <motion.p {...heroIn(0.16)} className="mt-7 max-w-lg text-[17px] leading-[1.6] text-[var(--r2c-muted)]">
-              TraceR2C reads each certificate, validates it against the rule that applies, and stamps it as
-              product-level evidence — so you clear customs, pass audits, and recall by lot, not by guess.
-            </motion.p>
+          <motion.p
+            {...heroIn(0.16)}
+            className="mt-7 max-w-xl text-[17px] leading-[1.6] text-[var(--r2c-muted)]"
+          >
+            TraceR2C reads each certificate, validates it against the rule that applies, and stamps it
+            as product-level evidence — so you clear customs, pass audits, and recall by lot, not by guess.
+          </motion.p>
 
-            <motion.div {...heroIn(0.24)} className="mt-9 flex flex-wrap items-center gap-3">
-              <PrimaryButton onClick={goAuth}>Book a demo</PrimaryButton>
-              <GhostButton onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })}>
-                Watch it read a certificate
-              </GhostButton>
-            </motion.div>
-          </div>
+          <motion.div {...heroIn(0.24)} className="mt-10 flex flex-wrap items-center justify-center gap-3">
+            <PrimaryButton onClick={goAuth}>Get started</PrimaryButton>
+            <GhostButton onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })}>
+              Talk to us
+            </GhostButton>
+          </motion.div>
 
-          {/* signature */}
+          {/* signature — centered beneath CTAs */}
           <motion.div
-            initial={reduce ? false : { opacity: 0, y: 24, scale: 0.98 }}
+            initial={reduce ? false : { opacity: 0, y: 32, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={reduce ? { duration: 0 } : { delay: 0.3, duration: 0.7, ease: EASE }}
+            className="mt-16 w-full max-w-[920px]"
           >
             <EvidenceCard />
           </motion.div>

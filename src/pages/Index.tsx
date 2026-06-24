@@ -414,7 +414,7 @@ const SOLUTIONS = [
 
 /* ------------------------- HERO: barcode side panel ----------------------- */
 
-const BARCODE_ROWS = 56;
+const BARCODE_ROWS = 38;
 // deterministic pseudo-random bar pattern (no flicker across renders)
 const seededBars = (side: 'left' | 'right') => {
   const rng = (seed: number) => {

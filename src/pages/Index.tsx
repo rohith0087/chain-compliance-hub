@@ -479,52 +479,66 @@ const BarcodePanel = ({ side }: { side: 'left' | 'right' }) => {
 };
 
 
-/* ------------------------- HERO: supplier app mockup ---------------------- */
+/* ------------------------- HERO: buyer dashboard mockup ------------------- */
 
-type Status = 'verified' | 'pending' | 'expired';
-const SUPPLIER_ROWS: Array<{
-  name: string;
-  initial: string;
-  dot: string;
-  cert: string;
-  standard: string;
-  expires: string;
-  auditor: string;
-  status: Status;
-}> = [
-  { name: 'Auburn Foods',     initial: 'A', dot: '#16493A', cert: 'ISO22000_AuburnPlant.pdf',  standard: 'ISO 22000',  expires: '2027-04-12', auditor: 'Intertek',   status: 'verified' },
-  { name: 'Pacific Mills',    initial: 'P', dot: '#0F4C4A', cert: 'BRCGS_Pacific_v9.pdf',      standard: 'BRCGS v9',   expires: '2026-11-03', auditor: 'SGS',        status: 'verified' },
-  { name: 'Granaria Co',      initial: 'G', dot: '#B8731A', cert: 'SQF_Granaria_Ed9.pdf',      standard: 'SQF Ed 9',   expires: '2026-02-28', auditor: 'NSF',        status: 'pending'  },
-  { name: 'Hokkaido Dairy',   initial: 'H', dot: '#1F6B4A', cert: 'HACCP_Hokkaido_2025.pdf',   standard: 'HACCP',      expires: '2027-01-19', auditor: 'Bureau V.',  status: 'verified' },
-  { name: 'Sierra Produce',   initial: 'S', dot: '#D8462A', cert: 'GLOBALGAP_Sierra.pdf',      standard: 'GLOBALG.A.P', expires: '2025-09-30', auditor: 'Control U.', status: 'expired'  },
-  { name: 'Maple Ridge',      initial: 'M', dot: '#16493A', cert: 'ISO9001_MapleRidge.pdf',    standard: 'ISO 9001',   expires: '2028-03-14', auditor: 'DNV',        status: 'verified' },
-  { name: 'Andes Cacao',      initial: 'A', dot: '#B8731A', cert: 'FairTrade_Andes_25.pdf',    standard: 'Fairtrade',  expires: '2026-06-22', auditor: 'FLOCERT',    status: 'pending'  },
-  { name: 'Nordic Seafood',   initial: 'N', dot: '#0F4C4A', cert: 'MSC_Nordic_Chain.pdf',      standard: 'MSC CoC',    expires: '2027-08-08', auditor: 'Lloyd\u2019s',     status: 'verified' },
+const KPI_CARDS = [
+  { label: 'Suppliers',        value: '7',   sub: 'Total suppliers',  tone: 'stamp'  as const, icon: '👥' },
+  { label: 'Active',           value: '23',  sub: 'Active suppliers', tone: 'caution' as const, icon: '◐' },
+  { label: 'Pending Review',   value: '3',   sub: 'Under review',     tone: 'verified' as const, icon: '◷' },
+  { label: 'Expiring',         value: '1',   sub: 'Within 60 days',   tone: 'recall'  as const, icon: '⚠' },
 ];
 
-const STATUS_STYLES: Record<Status, { label: string; bg: string; fg: string; border: string }> = {
-  verified: { label: 'Verified', bg: 'rgba(31,107,74,0.10)',  fg: 'var(--r2c-verified)', border: 'rgba(31,107,74,0.35)' },
-  pending:  { label: 'Pending',  bg: 'rgba(184,115,26,0.10)', fg: 'var(--r2c-caution)',  border: 'rgba(184,115,26,0.35)' },
-  expired:  { label: 'Expired',  bg: 'rgba(216,70,42,0.10)',  fg: 'var(--r2c-recall)',   border: 'rgba(216,70,42,0.35)' },
+const TONE_BG: Record<'stamp'|'caution'|'verified'|'recall', { bg: string; fg: string }> = {
+  stamp:    { bg: 'rgba(22,73,58,0.10)',   fg: 'var(--r2c-stamp)'    },
+  caution:  { bg: 'rgba(184,115,26,0.12)', fg: 'var(--r2c-caution)'  },
+  verified: { bg: 'rgba(31,107,74,0.10)',  fg: 'var(--r2c-verified)' },
+  recall:   { bg: 'rgba(216,70,42,0.10)',  fg: 'var(--r2c-recall)'   },
 };
+
+const ATTENTION_ITEMS = [
+  { title: 'Test',                       supplier: 'Test Supplier', meta: 'Overdue 176d ago' },
+  { title: 'Manufacturing License',      supplier: 'Test Supplier', meta: 'Overdue 176d ago' },
+  { title: 'ISO 9001 Certificate',       supplier: 'Logic Foods',   meta: 'Overdue 138d ago' },
+  { title: 'OHSAS 18001 Certificate',    supplier: 'Test Supplier', meta: 'Overdue 55d ago'  },
+];
+
+const EXPIRY_ITEMS = [
+  { title: 'ISO 9001 Certificate',           supplier: 'Test Supplier · ISO 9001 Certificate',           tag: 'Expired 177d ago' },
+  { title: 'ISO 9001 Certificate',           supplier: 'Test Supplier · ISO 9001 Certificate',           tag: 'Expired 176d ago' },
+  { title: 'Approved Supplier Locations',    supplier: 'Test Supplier · Approved Supplier Locations',    tag: 'Expired 175d ago' },
+  { title: 'Completed Supplier Questionnaire', supplier: 'Test Supplier · Completed Supplier Questionnaire', tag: 'Expired 85d ago' },
+  { title: 'Safety Data Sheets (SDS)',       supplier: 'Test Supplier · Safety Data Sheets (SDS)',       tag: 'Expired 69d ago' },
+];
+
+const ACTIVITY_ITEMS = [
+  { icon: '↑',  title: 'process_change_agreement…', sub: 'Document uploaded',   time: '9h'  },
+  { icon: '↑',  title: 'process_change_agreement…', sub: 'Document uploaded',   time: '9h'  },
+  { icon: '📄', title: 'Process Change Agreement…', sub: 'Document requested',  time: '10h' },
+  { icon: '↑',  title: 'sample_npip_certificate…',  sub: 'Document uploaded',   time: '10h' },
+  { icon: '📄', title: 'NPIP Certification',         sub: 'Document requested',  time: '10h' },
+  { icon: '✓',  title: 'Document',                   sub: 'Document approved',   time: '3d'  },
+];
+
+const SIDEBAR_ITEMS = [
+  { label: 'Dashboard',            icon: '▦', active: true  },
+  { label: 'Suppliers',            icon: '◫', active: false, chevron: true },
+  { label: 'Requests & Documents', icon: '▤', active: false, chevron: true },
+  { label: 'Compliance',           icon: '◇', active: false, chevron: true },
+  { label: 'Onboarding Pipeline',  icon: '◧', active: false },
+  { label: 'Messages',             icon: '✉', active: false },
+  { label: 'Settings',             icon: '⚙', active: false },
+  { label: 'Subscription & Billing', icon: '◉', active: false },
+];
 
 const SupplierAppMockup = () => {
   const reduce = useReducedMotion();
-  const sidebar = [
-    { label: 'Suppliers',  icon: '◫', active: true  },
-    { label: 'Documents',  icon: '▤', active: false },
-    { label: 'Requests',   icon: '◧', active: false },
-    { label: 'Audits',     icon: '◇', active: false },
-    { label: 'Reports',    icon: '◔', active: false },
-    { label: 'Settings',   icon: '⚙', active: false },
-  ];
 
   return (
     <motion.div
       initial={reduce ? false : { opacity: 0, y: 40, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={reduce ? { duration: 0 } : { delay: 0.35, duration: 0.8, ease: EASE }}
-      className="relative mx-auto w-full max-w-[1040px] overflow-hidden rounded-[14px] border border-[var(--r2c-line)] bg-[var(--r2c-surface)] shadow-[0_40px_80px_-30px_rgba(20,24,31,0.45),0_18px_36px_-18px_rgba(20,24,31,0.25)]"
+      className="relative mx-auto w-full max-w-[1120px] overflow-hidden rounded-[14px] border border-[var(--r2c-line)] bg-[var(--r2c-surface)] shadow-[0_40px_80px_-30px_rgba(20,24,31,0.45),0_18px_36px_-18px_rgba(20,24,31,0.25)]"
     >
       {/* macOS title bar */}
       <div className="relative grid h-9 grid-cols-[1fr_auto_1fr] items-center border-b border-[var(--r2c-line)] bg-[var(--r2c-surface-2)] px-4">
@@ -533,129 +547,224 @@ const SupplierAppMockup = () => {
           <span className="h-3 w-3 rounded-full bg-[#FEBC2E]" />
           <span className="h-3 w-3 rounded-full bg-[#28C840]" />
         </div>
-        <span className="font-data text-[12px] font-medium tracking-wide text-[var(--r2c-ink)]">TraceR2C</span>
+        <span className="font-data text-[12px] font-medium tracking-wide text-[var(--r2c-ink)]">TraceR2C · Buyer Workspace</span>
         <span />
       </div>
 
-      <div className="grid grid-cols-[212px_1fr]">
-        {/* sidebar */}
-        <aside className="border-r border-[var(--r2c-line)] bg-[var(--r2c-surface-2)]/60 p-3">
-          {/* workspace selector */}
-          <div className="flex items-center justify-between rounded-md border border-[var(--r2c-line)] bg-[var(--r2c-surface)] px-2.5 py-1.5">
-            <span className="flex items-center gap-2">
-              <span className="grid h-5 w-5 place-items-center rounded-[5px] bg-[var(--r2c-stamp)] font-data text-[10px] font-bold text-white">A</span>
-              <span className="font-body text-[12.5px] font-medium text-[var(--r2c-ink)]">Acme Foods</span>
+      <div className="grid grid-cols-[220px_1fr]">
+        {/* ============================== sidebar ============================== */}
+        <aside className="flex flex-col border-r border-[var(--r2c-line)] bg-[var(--r2c-surface-2)]/60">
+          {/* buyer header */}
+          <div className="flex items-center gap-2.5 border-b border-[var(--r2c-line)] px-3 py-3">
+            <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--r2c-stamp)] font-data text-[11px] font-bold text-white">TB</span>
+            <span className="flex flex-col leading-tight">
+              <span className="font-body text-[12.5px] font-semibold text-[var(--r2c-ink)]">Test Buyer</span>
+              <span className="font-data text-[10px] text-[var(--r2c-muted)]">Amit</span>
             </span>
-            <span className="font-data text-[10px] text-[var(--r2c-muted)]">▾</span>
           </div>
 
-          {/* quick icons row */}
-          <div className="mt-3 flex items-center gap-1.5">
-            <button className="grid h-7 w-7 place-items-center rounded-md border border-[var(--r2c-line)] bg-[var(--r2c-surface)] font-data text-[11px] text-[var(--r2c-muted)]">⌂</button>
-            <button className="grid h-7 w-7 place-items-center rounded-md border border-[var(--r2c-line)] bg-[var(--r2c-surface)] font-data text-[11px] text-[var(--r2c-muted)]">⌕</button>
-            <button className="ml-auto rounded-md border border-[var(--r2c-line)] bg-[var(--r2c-surface)] px-2 py-1 font-data text-[10px] text-[var(--r2c-muted)]">+ New</button>
+          {/* + New Request CTA */}
+          <div className="px-3 pt-3">
+            <button className="flex w-full items-center justify-center gap-1.5 rounded-md bg-[var(--r2c-stamp)] px-3 py-2 font-body text-[12px] font-semibold text-white">
+              <span>+</span> New Request
+            </button>
           </div>
 
-          {/* Favorites */}
-          <div className="mt-4">
-            <p className="px-1 font-data text-[10px] uppercase tracking-[0.14em] text-[var(--r2c-muted)]">Favorites</p>
-            <div className="mt-1 flex items-center gap-2 rounded-md px-2 py-1.5">
-              <span className="grid h-4 w-4 place-items-center rounded bg-[var(--r2c-caution)]/15 font-data text-[9px] font-bold text-[var(--r2c-caution)]">C</span>
-              <span className="font-body text-[12px] text-[var(--r2c-ink)]">Compliance Dashboard</span>
-            </div>
-          </div>
-
-          {/* Workspace */}
-          <div className="mt-4">
-            <p className="px-1 font-data text-[10px] uppercase tracking-[0.14em] text-[var(--r2c-muted)]">Workspace</p>
+          {/* nav */}
+          <div className="mt-3 px-2">
+            <p className="px-2 font-data text-[10px] uppercase tracking-[0.14em] text-[var(--r2c-muted)]">Navigation</p>
             <ul className="mt-1 space-y-0.5">
-              {sidebar.map((item) => (
+              {SIDEBAR_ITEMS.map((item) => (
                 <li
                   key={item.label}
                   className={`flex items-center gap-2 rounded-md px-2 py-1.5 ${
                     item.active
-                      ? 'bg-[var(--r2c-stamp)]/10 text-[var(--r2c-stamp)]'
+                      ? 'bg-[var(--r2c-stamp)]/12 text-[var(--r2c-stamp)]'
                       : 'text-[var(--r2c-ink)]'
                   }`}
                 >
-                  <span className="font-data w-4 text-[12px] leading-none">{item.icon}</span>
-                  <span className="font-body text-[12.5px] font-medium">{item.label}</span>
+                  <span className="font-data w-3.5 text-center text-[11px] leading-none">{item.icon}</span>
+                  <span className="font-body flex-1 text-[12px] font-medium">{item.label}</span>
+                  {item.chevron && <span className="font-data text-[9px] text-[var(--r2c-muted)]">›</span>}
                 </li>
               ))}
             </ul>
           </div>
+
+          {/* footer help card */}
+          <div className="mt-auto p-3">
+            <div className="rounded-md border border-[var(--r2c-line)] bg-[var(--r2c-surface)] p-2.5 text-center">
+              <span className="grid mx-auto h-5 w-5 place-items-center rounded-full bg-[var(--r2c-stamp)]/10 font-data text-[10px] text-[var(--r2c-stamp)]">?</span>
+              <p className="mt-1 font-body text-[10.5px] font-semibold text-[var(--r2c-ink)]">Need help?</p>
+              <a className="font-data text-[9.5px] text-[var(--r2c-stamp)]">Go to Help Center →</a>
+            </div>
+            <p className="mt-2 text-center font-data text-[9px] text-[var(--r2c-muted)]">v1.3</p>
+          </div>
         </aside>
 
-        {/* main panel */}
-        <div className="bg-[var(--r2c-surface)]">
-          {/* toolbar */}
-          <div className="flex items-center justify-between border-b border-[var(--r2c-line)] px-5 py-3">
-            <div className="flex items-center gap-2">
-              <span className="font-data text-[11px] text-[var(--r2c-muted)]">≣</span>
-              <span className="font-body text-[13px] font-medium text-[var(--r2c-ink)]">All Suppliers</span>
-              <span className="font-data text-[11px] text-[var(--r2c-muted)]">· {SUPPLIER_ROWS.length} ▾</span>
+        {/* ============================== main =================================== */}
+        <div className="flex min-w-0 flex-col bg-[var(--r2c-surface)]">
+          {/* top bar */}
+          <div className="flex items-center gap-3 border-b border-[var(--r2c-line)] px-4 py-2.5">
+            <span className="font-data text-[13px] text-[var(--r2c-muted)]">⊟</span>
+            <div className="flex flex-1 items-center gap-2 rounded-md border border-[var(--r2c-line)] bg-[var(--r2c-surface-2)]/60 px-2.5 py-1.5">
+              <span className="font-data text-[10.5px] text-[var(--r2c-muted)]">⌕</span>
+              <span className="font-body flex-1 text-[11.5px] text-[var(--r2c-muted)]">Search everything…</span>
+              <span className="rounded border border-[var(--r2c-line)] bg-[var(--r2c-surface)] px-1.5 font-data text-[9.5px] text-[var(--r2c-muted)]">⌘K</span>
             </div>
-            <div className="flex items-center gap-4">
-              {['Filter', 'Sort', 'Options'].map((l) => (
-                <span key={l} className="font-data text-[11px] uppercase tracking-wider text-[var(--r2c-muted)]">{l}</span>
-              ))}
+            <div className="flex items-center gap-1.5 rounded-md border border-[var(--r2c-line)] bg-[var(--r2c-surface-2)]/60 px-2.5 py-1.5">
+              <span className="font-data text-[10.5px] text-[var(--r2c-muted)]">⌂</span>
+              <span className="font-body text-[11.5px] text-[var(--r2c-ink)]">Select Branch</span>
+              <span className="font-data text-[9.5px] text-[var(--r2c-muted)]">▾</span>
             </div>
+            <span className="font-data text-[14px] text-[var(--r2c-muted)]">⇄</span>
+            <span className="relative font-data text-[14px] text-[var(--r2c-muted)]">
+              ⌕<span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-[var(--r2c-recall)]" />
+            </span>
+            <span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--r2c-stamp)] font-data text-[10px] font-bold text-white">A</span>
           </div>
 
-          {/* table */}
-          <div className="overflow-hidden">
-            {/* header */}
-            <div className="grid grid-cols-[28px_1.4fr_1.6fr_1fr_0.9fr_1fr_0.8fr] items-center border-b border-[var(--r2c-line)] bg-[var(--r2c-surface-2)]/60 px-3 py-2">
-              <span />
-              {['Supplier', 'Certificate', 'Standard', 'Expires', 'Auditor', 'Status'].map((h) => (
-                <span key={h} className="font-data text-[10.5px] uppercase tracking-[0.12em] text-[var(--r2c-muted)]">{h}</span>
-              ))}
-            </div>
-
-            {/* rows */}
-            {SUPPLIER_ROWS.map((row, i) => {
-              const s = STATUS_STYLES[row.status];
+          {/* KPI row */}
+          <div className="grid grid-cols-5 gap-3 px-4 pt-4">
+            {KPI_CARDS.map((k) => {
+              const tone = TONE_BG[k.tone];
               return (
-                <div
-                  key={row.name}
-                  className={`grid grid-cols-[28px_1.4fr_1.6fr_1fr_0.9fr_1fr_0.8fr] items-center border-b border-[var(--r2c-line)] px-3 py-2.5 ${
-                    i % 2 === 1 ? 'bg-[var(--r2c-surface-2)]/30' : ''
-                  }`}
-                >
-                  <span className="grid h-3.5 w-3.5 place-items-center rounded-[3px] border border-[var(--r2c-line)] bg-[var(--r2c-surface)]" />
-                  <span className="flex items-center gap-2">
-                    <span
-                      className="grid h-5 w-5 place-items-center rounded-full font-data text-[10px] font-bold text-white"
-                      style={{ background: row.dot }}
-                    >
-                      {row.initial}
-                    </span>
-                    <span className="font-body text-[12.5px] font-medium text-[var(--r2c-ink)]">{row.name}</span>
-                  </span>
-                  <span className="truncate font-data text-[11.5px] text-[var(--r2c-ink)]">
-                    <span className="rounded border border-[var(--r2c-line)] bg-[var(--r2c-surface)] px-1.5 py-0.5">{row.cert}</span>
-                  </span>
-                  <span className="font-data text-[11.5px] text-[var(--r2c-ink)]">{row.standard}</span>
-                  <span className="font-data text-[11.5px] text-[var(--r2c-muted)]">{row.expires}</span>
-                  <span className="font-body text-[12px] text-[var(--r2c-ink)]">{row.auditor}</span>
-                  <span>
-                    <span
-                      className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-data text-[10.5px] font-medium uppercase tracking-wider"
-                      style={{ background: s.bg, color: s.fg, borderColor: s.border }}
-                    >
-                      <span className="h-1.5 w-1.5 rounded-full" style={{ background: s.fg }} />
-                      {s.label}
-                    </span>
-                  </span>
+                <div key={k.label} className="rounded-lg border border-[var(--r2c-line)] bg-[var(--r2c-surface)] p-3">
+                  <div className="flex items-start justify-between">
+                    <span className="font-body text-[10.5px] font-medium text-[var(--r2c-muted)]">{k.label}</span>
+                    <span className="grid h-6 w-6 place-items-center rounded-md font-data text-[11px]" style={{ background: tone.bg, color: tone.fg }}>{k.icon}</span>
+                  </div>
+                  <p className="font-display mt-1 text-[22px] font-bold leading-none text-[var(--r2c-ink)]">{k.value}</p>
+                  <p className="mt-1 font-body text-[10px] text-[var(--r2c-muted)]">{k.sub}</p>
                 </div>
               );
             })}
+            {/* compliance score donut */}
+            <div className="rounded-lg border border-[var(--r2c-line)] bg-[var(--r2c-surface)] p-3">
+              <div className="flex items-start justify-between">
+                <span className="font-body text-[10.5px] font-medium text-[var(--r2c-muted)]">Compliance Score</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between">
+                <p className="font-display text-[22px] font-bold leading-none text-[var(--r2c-ink)]">54%</p>
+                <svg width="34" height="34" viewBox="0 0 36 36" className="-rotate-90">
+                  <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(216,70,42,0.15)" strokeWidth="4" />
+                  <circle cx="18" cy="18" r="15" fill="none" stroke="var(--r2c-recall)" strokeWidth="4" strokeDasharray="50.9 94.2" strokeLinecap="round" />
+                </svg>
+              </div>
+              <p className="mt-1 font-body text-[10px] text-[var(--r2c-muted)]">Overall compliance</p>
+            </div>
+          </div>
+
+          {/* three-column body */}
+          <div className="grid grid-cols-[1fr_1.25fr_0.95fr] gap-3 p-4">
+            {/* Needs Your Attention */}
+            <div className="overflow-hidden rounded-lg border border-[var(--r2c-line)] bg-[var(--r2c-surface)]">
+              <div className="flex items-center gap-2 border-b border-[var(--r2c-line)] px-3 py-2.5">
+                <span className="text-[11px]" style={{ color: 'var(--r2c-caution)' }}>⚠</span>
+                <span className="font-body text-[12px] font-semibold text-[var(--r2c-ink)]">Needs Your Attention</span>
+              </div>
+              <div className="flex gap-1.5 px-3 pt-2.5">
+                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-data text-[10px] font-medium" style={{ background: TONE_BG.verified.bg, color: TONE_BG.verified.fg }}>
+                  3 Submitted
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-data text-[10px] font-medium" style={{ background: TONE_BG.recall.bg, color: TONE_BG.recall.fg }}>
+                  10 Overdue
+                </span>
+              </div>
+              <ul className="px-2 py-2">
+                {ATTENTION_ITEMS.map((it) => (
+                  <li key={it.title} className="flex items-start gap-2 rounded-md px-2 py-2 hover:bg-[var(--r2c-surface-2)]/50">
+                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: 'var(--r2c-recall)' }} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-body text-[11.5px] font-semibold text-[var(--r2c-ink)]">{it.title}</span>
+                      <span className="block font-body text-[10.5px] text-[var(--r2c-muted)]">{it.supplier}</span>
+                      <span className="block font-data text-[10px]" style={{ color: 'var(--r2c-recall)' }}>{it.meta}</span>
+                    </span>
+                    <span className="font-data text-[10px] text-[var(--r2c-muted)]">›</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="border-t border-[var(--r2c-line)] px-3 py-2 text-center font-data text-[10.5px] text-[var(--r2c-stamp)]">
+                View all attention items ›
+              </div>
+            </div>
+
+            {/* Document Expiry Tracker */}
+            <div className="overflow-hidden rounded-lg border border-[var(--r2c-line)] bg-[var(--r2c-surface)]">
+              <div className="flex items-center justify-between border-b border-[var(--r2c-line)] px-3 py-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px]" style={{ color: 'var(--r2c-stamp)' }}>▤</span>
+                  <span className="font-body text-[12px] font-semibold text-[var(--r2c-ink)]">Document Expiry Tracker</span>
+                </div>
+                <span className="rounded-md border border-[var(--r2c-line)] bg-[var(--r2c-surface-2)]/60 px-1.5 py-0.5 font-data text-[10px] text-[var(--r2c-muted)]">13 total</span>
+              </div>
+              <div className="flex gap-3 px-3 pt-2.5 font-data text-[10.5px]">
+                <span className="font-semibold text-[var(--r2c-ink)]">All <span className="ml-0.5 rounded-full bg-[var(--r2c-stamp)] px-1.5 py-0.5 text-[9px] text-white">13</span></span>
+                <span className="text-[var(--r2c-muted)]">Expired <span className="ml-0.5 rounded-full bg-[var(--r2c-recall)] px-1.5 py-0.5 text-[9px] text-white">12</span></span>
+                <span className="text-[var(--r2c-muted)]">7d <span className="ml-0.5 rounded-full bg-[var(--r2c-caution)] px-1.5 py-0.5 text-[9px] text-white">1</span></span>
+                <span className="text-[var(--r2c-muted)]">30d</span>
+                <span className="text-[var(--r2c-muted)]">60d</span>
+              </div>
+              <ul className="px-2 py-2">
+                {EXPIRY_ITEMS.map((it, i) => (
+                  <li key={i} className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-[var(--r2c-surface-2)]/50">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-body text-[11.5px] font-semibold text-[var(--r2c-ink)]">{it.title}</span>
+                      <span className="block truncate font-body text-[10.5px] text-[var(--r2c-muted)]">{it.supplier}</span>
+                    </span>
+                    <span className="shrink-0 rounded-md px-2 py-0.5 font-data text-[10px] font-medium" style={{ background: TONE_BG.recall.bg, color: TONE_BG.recall.fg }}>{it.tag}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="border-t border-[var(--r2c-line)] px-3 py-2 text-center font-data text-[10.5px] text-[var(--r2c-stamp)]">
+                View all documents ›
+              </div>
+            </div>
+
+            {/* Quick Actions + Recent Activity */}
+            <div className="flex flex-col gap-3">
+              <div className="overflow-hidden rounded-lg border border-[var(--r2c-line)] bg-[var(--r2c-surface)]">
+                <div className="flex items-center gap-2 border-b border-[var(--r2c-line)] px-3 py-2.5">
+                  <span className="text-[11px]" style={{ color: 'var(--r2c-stamp)' }}>⚡</span>
+                  <span className="font-body text-[12px] font-semibold text-[var(--r2c-ink)]">Quick Actions</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 p-2.5">
+                  <button className="flex items-center justify-center gap-1.5 rounded-md bg-[var(--r2c-stamp)] px-2 py-2 font-body text-[10.5px] font-semibold text-white">+ New Request</button>
+                  <button className="flex items-center justify-center gap-1.5 rounded-md bg-[var(--r2c-verified)] px-2 py-2 font-body text-[10.5px] font-semibold text-white">⚗ COA Analysis</button>
+                  <button className="flex items-center justify-center gap-1.5 rounded-md border border-[var(--r2c-line)] bg-[var(--r2c-surface-2)]/60 px-2 py-2 font-body text-[10.5px] font-semibold text-[var(--r2c-ink)]">⛨ Supplier Risk</button>
+                  <button className="flex items-center justify-center gap-1.5 rounded-md border border-[var(--r2c-line)] bg-[var(--r2c-surface-2)]/60 px-2 py-2 font-body text-[10.5px] font-semibold text-[var(--r2c-ink)]">⌬ Suppliers</button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-hidden rounded-lg border border-[var(--r2c-line)] bg-[var(--r2c-surface)]">
+                <div className="flex items-center justify-between border-b border-[var(--r2c-line)] px-3 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px]" style={{ color: 'var(--r2c-stamp)' }}>↗</span>
+                    <span className="font-body text-[12px] font-semibold text-[var(--r2c-ink)]">Recent Activity</span>
+                  </div>
+                  <span className="font-data text-[10.5px] text-[var(--r2c-stamp)]">View all</span>
+                </div>
+                <ul className="px-2 py-1.5">
+                  {ACTIVITY_ITEMS.map((it, i) => (
+                    <li key={i} className="flex items-center gap-2 rounded-md px-2 py-1.5">
+                      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md font-data text-[10px]" style={{ background: TONE_BG.stamp.bg, color: TONE_BG.stamp.fg }}>{it.icon}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-body text-[11px] font-medium text-[var(--r2c-ink)]">{it.title}</span>
+                        <span className="block font-body text-[10px] text-[var(--r2c-muted)]">{it.sub}</span>
+                      </span>
+                      <span className="font-data text-[9.5px] text-[var(--r2c-muted)]">{it.time}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </motion.div>
   );
 };
+
 
 /* --------------------------------- page ----------------------------------- */
 
@@ -853,14 +962,12 @@ const Index = () => {
 
           <motion.p
             {...heroIn(0.16)}
-            className="mt-7 max-w-2xl text-[16px] leading-[1.6] text-[var(--r2c-muted)] sm:text-[17px]"
+            className="mt-5 max-w-xl text-[15px] leading-[1.55] text-[var(--r2c-muted)] sm:text-[16px]"
           >
-            TraceR2C gives compliance teams a system of record for supplier evidence — reading every
-            certificate, validating it against the rule that applies, and stamping it as product-level
-            proof that holds up in customs, audits, and recalls.
+            A system of record for supplier evidence — reads every certificate, validates it against the rule that applies, and proves it at audit, customs, and recall.
           </motion.p>
 
-          <motion.div {...heroIn(0.24)} className="mt-10 flex flex-wrap items-center justify-center gap-3">
+          <motion.div {...heroIn(0.24)} className="mt-7 flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={goAuth}
               className="font-data inline-flex items-center rounded-full bg-[var(--r2c-ink)] px-7 py-3 text-[12px] font-semibold uppercase tracking-[0.16em] text-white transition-all hover:bg-[var(--r2c-stamp)] active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--r2c-stamp)]"
@@ -876,9 +983,10 @@ const Index = () => {
           </motion.div>
 
           {/* dashboard mockup */}
-          <div className="relative z-[1] mt-16 w-full">
+          <div className="relative z-[1] mt-10 w-full">
             <SupplierAppMockup />
           </div>
+
         </div>
       </section>
 

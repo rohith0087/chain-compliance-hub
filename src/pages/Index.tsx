@@ -962,14 +962,12 @@ const Index = () => {
 
           <motion.p
             {...heroIn(0.16)}
-            className="mt-7 max-w-2xl text-[16px] leading-[1.6] text-[var(--r2c-muted)] sm:text-[17px]"
+            className="mt-5 max-w-xl text-[15px] leading-[1.55] text-[var(--r2c-muted)] sm:text-[16px]"
           >
-            TraceR2C gives compliance teams a system of record for supplier evidence — reading every
-            certificate, validating it against the rule that applies, and stamping it as product-level
-            proof that holds up in customs, audits, and recalls.
+            A system of record for supplier evidence — reads every certificate, validates it against the rule that applies, and proves it at audit, customs, and recall.
           </motion.p>
 
-          <motion.div {...heroIn(0.24)} className="mt-10 flex flex-wrap items-center justify-center gap-3">
+          <motion.div {...heroIn(0.24)} className="mt-7 flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={goAuth}
               className="font-data inline-flex items-center rounded-full bg-[var(--r2c-ink)] px-7 py-3 text-[12px] font-semibold uppercase tracking-[0.16em] text-white transition-all hover:bg-[var(--r2c-stamp)] active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--r2c-stamp)]"
@@ -985,9 +983,10 @@ const Index = () => {
           </motion.div>
 
           {/* dashboard mockup */}
-          <div className="relative z-[1] mt-16 w-full">
+          <div className="relative z-[1] mt-10 w-full">
             <SupplierAppMockup />
           </div>
+
         </div>
       </section>
 

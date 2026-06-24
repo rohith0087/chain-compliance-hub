@@ -828,53 +828,58 @@ const Index = () => {
 
       {/* ================================ hero =============================== */}
       <section ref={heroRef} className="relative overflow-hidden border-b border-[var(--r2c-line)]">
-        <motion.div className="r2c-grid pointer-events-none absolute inset-0 opacity-70" style={{ y: reduce ? 0 : gridY }} />
-        {/* cool steel wash for depth (neutral charcoal, deliberately not warm) */}
+        <motion.div className="r2c-grid pointer-events-none absolute inset-0 opacity-40" style={{ y: reduce ? 0 : gridY }} />
+        {/* soft radial wash */}
         <div
           className="pointer-events-none absolute inset-0"
-          style={{ background: 'radial-gradient(120% 85% at 100% 0%, rgba(20,24,31,0.05), transparent 55%)' }}
+          style={{ background: 'radial-gradient(60% 50% at 50% 35%, rgba(255,255,255,0.6), transparent 70%)' }}
         />
 
-        <div className="relative mx-auto flex max-w-[1180px] flex-col items-center px-5 pb-12 pt-20 text-center sm:px-8 lg:pb-20 lg:pt-28">
-          <motion.div {...heroIn(0)}>
-            <Eyebrow>Compliance Operating System</Eyebrow>
-          </motion.div>
+        {/* side barcode panels */}
+        <BarcodePanel side="left" />
+        <BarcodePanel side="right" />
 
+        <div className="relative mx-auto flex max-w-[1180px] flex-col items-center px-5 pb-16 pt-20 text-center sm:px-8 lg:pb-24 lg:pt-24">
           <motion.h1
-            {...heroIn(0.08)}
-            className="mt-6 max-w-[14ch] font-serif text-[44px] font-normal leading-[1.02] tracking-[-0.02em] text-[var(--r2c-ink)] sm:text-[64px] lg:text-[88px]"
+            {...heroIn(0.04)}
+            className="mt-2 max-w-[18ch] font-normal leading-[1.02] tracking-[-0.015em] text-[var(--r2c-ink)] text-[44px] sm:text-[64px] lg:text-[84px]"
             style={{ fontFamily: 'Instrument Serif, "Cormorant Garamond", Georgia, serif' }}
           >
             Make every supplier document{' '}
-            <span className="italic text-[var(--r2c-stamp)]">defensible</span>
+            <span className="font-medium text-[var(--r2c-stamp)] italic">defensible at audit speed</span>
           </motion.h1>
 
           <motion.p
             {...heroIn(0.16)}
-            className="mt-7 max-w-xl text-[17px] leading-[1.6] text-[var(--r2c-muted)]"
+            className="mt-7 max-w-2xl text-[16px] leading-[1.6] text-[var(--r2c-muted)] sm:text-[17px]"
           >
-            TraceR2C reads each certificate, validates it against the rule that applies, and stamps it
-            as product-level evidence — so you clear customs, pass audits, and recall by lot, not by guess.
+            TraceR2C gives compliance teams a system of record for supplier evidence — reading every
+            certificate, validating it against the rule that applies, and stamping it as product-level
+            proof that holds up in customs, audits, and recalls.
           </motion.p>
 
           <motion.div {...heroIn(0.24)} className="mt-10 flex flex-wrap items-center justify-center gap-3">
-            <PrimaryButton onClick={goAuth}>Get started</PrimaryButton>
-            <GhostButton onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })}>
+            <button
+              onClick={goAuth}
+              className="font-data inline-flex items-center rounded-full bg-[var(--r2c-ink)] px-7 py-3 text-[12px] font-semibold uppercase tracking-[0.16em] text-white transition-all hover:bg-[var(--r2c-stamp)] active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--r2c-stamp)]"
+            >
+              Get started
+            </button>
+            <button
+              onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })}
+              className="font-data inline-flex items-center rounded-full border border-[var(--r2c-ink)] bg-transparent px-7 py-3 text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--r2c-ink)] transition-colors hover:bg-[var(--r2c-ink)]/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--r2c-ink)]"
+            >
               Talk to us
-            </GhostButton>
+            </button>
           </motion.div>
 
-          {/* signature — centered beneath CTAs */}
-          <motion.div
-            initial={reduce ? false : { opacity: 0, y: 32, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={reduce ? { duration: 0 } : { delay: 0.3, duration: 0.7, ease: EASE }}
-            className="mt-16 w-full max-w-[920px]"
-          >
-            <EvidenceCard />
-          </motion.div>
+          {/* dashboard mockup */}
+          <div className="relative z-[1] mt-16 w-full">
+            <SupplierAppMockup />
+          </div>
         </div>
       </section>
+
 
       {/* ============================== platform ============================ */}
       <section id="platform" className="mx-auto max-w-[1180px] px-5 py-24 sm:px-8">

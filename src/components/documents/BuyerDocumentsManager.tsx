@@ -36,6 +36,8 @@ import {
   Sparkles,
   SlidersHorizontal,
   X,
+  Pin,
+  PinOff,
 } from 'lucide-react';
 import DocumentCardWithSelection from './DocumentCardWithSelection';
 import { supabase } from '@/integrations/supabase/client';
@@ -61,7 +63,7 @@ interface BuyerDocumentsManagerProps {
   withdrawLoading?: string | null;
 }
 
-type StatusTab = 'all' | 'pending_approval' | 'approved' | 'declined';
+type StatusTab = 'all' | 'pending_approval' | 'approved' | 'declined' | 'pinned';
 type SortKey = 'created_at' | 'title' | 'supplier';
 
 // No taxonomy column exists for this second badge -- derive a reasonable
@@ -175,7 +177,58 @@ const BuyerDocumentsManager = ({
   const [pendingDownloadIds, setPendingDownloadIds] = useState<Set<string>>(new Set());
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<any>(null);
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
+  const [pinnedAt, setPinnedAt] = useState<Map<string, string>>(new Map());
+  const [pinBusy, setPinBusy] = useState<string | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const loadPins = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await (supabase as any).from('document_pins').select('request_id, pinned_at').eq('user_id', user.id);
+      if (data) {
+        setPinnedIds(new Set(data.map((p: any) => p.request_id as string)));
+        setPinnedAt(new Map(data.map((p: any) => [p.request_id as string, p.pinned_at as string])));
+      }
+    };
+    void loadPins();
+  }, []);
+
+  const handlePin = async (docId: string) => {
+    setPinBusy(docId);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const now = new Date().toISOString();
+      const { error } = await (supabase as any).from('document_pins').insert({ user_id: user.id, request_id: docId, pinned_at: now });
+      if (error) throw error;
+      setPinnedIds((prev) => new Set([...prev, docId]));
+      setPinnedAt((prev) => new Map([...prev, [docId, now]]));
+      toast({ title: 'Pinned', description: 'Document added to your Pinned tab.' });
+    } catch {
+      toast({ title: 'Pin failed', variant: 'destructive' });
+    } finally {
+      setPinBusy(null);
+    }
+  };
+
+  const handleUnpin = async (docId: string) => {
+    setPinBusy(docId);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { error } = await (supabase as any).from('document_pins').delete().eq('user_id', user.id).eq('request_id', docId);
+      if (error) throw error;
+      setPinnedIds((prev) => { const n = new Set(prev); n.delete(docId); return n; });
+      setPinnedAt((prev) => { const n = new Map(prev); n.delete(docId); return n; });
+      toast({ title: 'Unpinned', description: 'Document removed from your Pinned tab.' });
+    } catch {
+      toast({ title: 'Unpin failed', variant: 'destructive' });
+    } finally {
+      setPinBusy(null);
+    }
+  };
 
   // Status-tab counts are computed over all documents, not the filtered set,
   // so a tab's count doesn't change just because another filter is active.
@@ -184,12 +237,14 @@ const BuyerDocumentsManager = ({
     pending_approval: documents.filter((doc) => doc.status === 'pending' || doc.status === 'submitted').length,
     approved: documents.filter((doc) => doc.status === 'approved').length,
     declined: documents.filter((doc) => doc.status === 'rejected').length,
-  }), [documents]);
+    pinned: pinnedIds.size,
+  }), [documents, pinnedIds]);
 
   const matchesStatusTab = (doc: any) => {
     if (statusTab === 'all') return true;
     if (statusTab === 'pending_approval') return doc.status === 'pending' || doc.status === 'submitted';
     if (statusTab === 'approved') return doc.status === 'approved';
+    if (statusTab === 'pinned') return pinnedIds.has(doc.id);
     return doc.status === 'rejected';
   };
 
@@ -268,6 +323,11 @@ const BuyerDocumentsManager = ({
 
   const sortedDocuments = useMemo(() => {
     const arr = [...filteredDocuments];
+    if (statusTab === 'pinned') {
+      // LIFO: last pinned shows first
+      arr.sort((a, b) => (pinnedAt.get(b.id) || '').localeCompare(pinnedAt.get(a.id) || ''));
+      return arr;
+    }
     arr.sort((a, b) => {
       let cmp = 0;
       if (sortKey === 'created_at') cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -276,7 +336,7 @@ const BuyerDocumentsManager = ({
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return arr;
-  }, [filteredDocuments, sortKey, sortDir]);
+  }, [filteredDocuments, sortKey, sortDir, statusTab, pinnedAt]);
 
   useEffect(() => { setPage(1); }, [statusTab, filters, sortKey, sortDir]);
 
@@ -658,11 +718,12 @@ const BuyerDocumentsManager = ({
     return sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />;
   };
 
-  const statusTabs: Array<{ value: StatusTab; label: string }> = [
+  const statusTabs: Array<{ value: StatusTab; label: string; pinned?: true }> = [
     { value: 'all', label: 'All' },
     { value: 'pending_approval', label: 'Pending Approval' },
     { value: 'approved', label: 'Approved' },
     { value: 'declined', label: 'Declined' },
+    { value: 'pinned', label: 'Pinned', pinned: true },
   ];
 
   const allPageSelected = pageDocuments.length > 0 && pageDocuments.every(doc => selectedDocuments.has(doc.id) || !doc.document_uploads?.[0]?.file_path);
@@ -695,32 +756,44 @@ const BuyerDocumentsManager = ({
       <div className="h-[56px] border-b border-[#E5E7EB] flex items-center gap-9">
         {statusTabs.map((tab) => {
           const isActive = statusTab === tab.value;
-          const badgeColors = {
-            all: 'bg-[#EAF1FF] text-[#2563EB]',
-            pending_approval: 'bg-[#F3F4F6] text-[#374151]',
-            approved: 'bg-[#ECFDF5] text-[#047857]',
-            declined: 'bg-[#FEF2F2] text-[#DC2626]'
-          }[tab.value] || 'bg-gray-100 text-gray-600';
-          
+          const badgeColors = tab.pinned
+            ? (isActive ? 'bg-amber-100 text-amber-700' : 'bg-amber-50 text-amber-600')
+            : ({
+                all: 'bg-[#EAF1FF] text-[#2563EB]',
+                pending_approval: 'bg-[#F3F4F6] text-[#374151]',
+                approved: 'bg-[#ECFDF5] text-[#047857]',
+                declined: 'bg-[#FEF2F2] text-[#DC2626]',
+              }[tab.value] || 'bg-gray-100 text-gray-600');
+          const count =
+            tab.value === 'all' ? statusCounts.all
+            : tab.value === 'pending_approval' ? statusCounts.pending_approval
+            : tab.value === 'approved' ? statusCounts.approved
+            : tab.value === 'pinned' ? statusCounts.pinned
+            : statusCounts.declined;
+
           return (
-            <button
-              key={tab.value}
-              onClick={() => setStatusTab(tab.value)}
-              className={`relative h-full flex items-center gap-2 text-[14px] font-semibold transition-colors ${
-                isActive ? 'text-[#2563EB]' : 'text-[#4B5563] hover:text-[#111827]'
-              }`}
-            >
-              {tab.label}
-              <span className={`h-[24px] min-w-[24px] rounded-full px-2 text-[13px] font-bold flex items-center justify-center ${badgeColors}`}>
-                {tab.value === 'all' ? statusCounts.all
-                  : tab.value === 'pending_approval' ? statusCounts.pending_approval
-                  : tab.value === 'approved' ? statusCounts.approved
-                  : statusCounts.declined}
-              </span>
-              {isActive && (
-                <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#2563EB] rounded-full" />
+            <div key={tab.value} className="flex items-center gap-9 h-full">
+              {tab.pinned && (
+                <div className="h-5 w-px bg-[#E5E7EB] flex-shrink-0 -ml-[18px]" />
               )}
-            </button>
+              <button
+                onClick={() => setStatusTab(tab.value)}
+                className={`relative h-full flex items-center gap-2 text-[14px] font-semibold transition-colors ${
+                  isActive
+                    ? tab.pinned ? 'text-amber-600' : 'text-[#2563EB]'
+                    : 'text-[#4B5563] hover:text-[#111827]'
+                }`}
+              >
+                {tab.pinned && <Pin className="h-3.5 w-3.5 flex-shrink-0" />}
+                {tab.label}
+                <span className={`h-[22px] min-w-[22px] rounded-full px-1.5 text-[12px] font-bold flex items-center justify-center ${badgeColors}`}>
+                  {count}
+                </span>
+                {isActive && (
+                  <div className={`absolute bottom-0 left-0 right-0 h-[3px] rounded-full ${tab.pinned ? 'bg-amber-500' : 'bg-[#2563EB]'}`} />
+                )}
+              </button>
+            </div>
           );
         })}
       </div>
@@ -867,12 +940,24 @@ const BuyerDocumentsManager = ({
       )}
 
       {sortedDocuments.length === 0 ? (
-        <div className="text-center py-12 border rounded-lg">
-          <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium mb-2">No Documents Found</h3>
-          <p className="text-muted-foreground">
-            {activeFilterCount > 0 || statusTab !== 'all' ? "No documents match your current filters." : "No documents available."}
-          </p>
+        <div className="text-center py-14 border border-dashed border-[#E5E7EB] rounded-[16px] bg-white">
+          {statusTab === 'pinned' ? (
+            <>
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 mx-auto mb-3">
+                <Pin className="w-6 h-6 text-amber-400" />
+              </div>
+              <h3 className="text-[15px] font-semibold text-[#111827] mb-1">No pinned documents yet</h3>
+              <p className="text-[13px] text-[#6B7280] max-w-xs mx-auto">Pin any document using the <Pin className="inline w-3.5 h-3.5 text-[#6B7280] mx-0.5" /> button in the actions column — they'll appear here for quick access, newest first.</p>
+            </>
+          ) : (
+            <>
+              <FileText className="w-12 h-12 text-[#D1D5DB] mx-auto mb-3" />
+              <h3 className="text-[15px] font-semibold text-[#111827] mb-1">No Documents Found</h3>
+              <p className="text-[13px] text-[#6B7280]">
+                {activeFilterCount > 0 || statusTab !== 'all' ? "No documents match your current filters." : "No documents available."}
+              </p>
+            </>
+          )}
         </div>
       ) : viewMode === 'grid' ? (
         <div className="space-y-3">
@@ -965,7 +1050,12 @@ const BuyerDocumentsManager = ({
                           <FileText className="w-5 h-5 text-[#2563EB]" />
                         </div>
                         <div className="min-w-0">
-                          <p className={`text-[14px] font-semibold text-[#111827] truncate ${hasFile ? 'hover:text-[#2563EB]' : ''}`} title={doc.title || doc.document_type}>{doc.title || doc.document_type}</p>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <p className={`text-[14px] font-semibold text-[#111827] truncate ${hasFile ? 'hover:text-[#2563EB]' : ''}`} title={doc.title || doc.document_type}>{doc.title || doc.document_type}</p>
+                            {pinnedIds.has(doc.id) && (
+                              <Pin className="h-3 w-3 flex-shrink-0 text-amber-500 fill-amber-400" />
+                            )}
+                          </div>
                           <p className="text-[13px] text-[#6B7280]">ID: {doc.id.slice(0, 8).toUpperCase()}</p>
                         </div>
                       </button>
@@ -1037,6 +1127,11 @@ const BuyerDocumentsManager = ({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="rounded-[12px] shadow-[0_12px_24px_rgba(15,23,42,0.12)] border-[#E5E7EB]">
+                            <DropdownMenuItem onClick={() => pinnedIds.has(doc.id) ? handleUnpin(doc.id) : handlePin(doc.id)} disabled={pinBusy === doc.id}>
+                              {pinnedIds.has(doc.id)
+                                ? <><PinOff className="w-3.5 h-3.5 mr-2 text-amber-500" />Unpin</>
+                                : <><Pin className="w-3.5 h-3.5 mr-2" />Pin</>}
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => { setSelectedNotesDocument(doc); setNotesModalOpen(true); }}>
                               <MessageSquare className="w-3.5 h-3.5 mr-2" />Notes
                             </DropdownMenuItem>

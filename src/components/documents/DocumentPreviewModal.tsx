@@ -16,10 +16,12 @@ import {
   Maximize2,
   Minus,
   Plus,
+  StickyNote,
   X,
 } from 'lucide-react';
 import { STATUS_BADGE_CONFIG } from './buyerReviewDesignSystem';
 import EvidenceFieldsPanel from './EvidenceFieldsPanel';
+import DocumentNotesPanel from './DocumentNotesPanel';
 
 type PreviewKind = 'image' | 'pdf' | 'office' | 'text' | 'unsupported';
 
@@ -180,6 +182,7 @@ export default function DocumentPreviewModal({
   const [downloading, setDownloading] = useState(false);
   const [officeLoaded, setOfficeLoaded] = useState(false);
   const [showEvidencePanel, setShowEvidencePanel] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
 
   const fileName = upload?.file_name ?? undefined;
   const mimeType = upload?.mime_type ?? undefined;
@@ -193,7 +196,7 @@ export default function DocumentPreviewModal({
     ? `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(signedUrl)}`
     : null;
 
-  useEffect(() => { setShowEvidencePanel(false); }, [documentId]);
+  useEffect(() => { setShowEvidencePanel(false); setNotesOpen(false); }, [documentId]);
 
   useEffect(() => {
     if (!open || !upload?.file_path) { setSignedUrl(null); setError(null); return; }
@@ -332,7 +335,7 @@ export default function DocumentPreviewModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`${showEvidencePanel ? 'max-w-6xl' : 'max-w-5xl'} gap-0 overflow-hidden rounded-[16px] border border-[#E5E7EB] p-0 shadow-[0_20px_60px_rgba(16,24,40,0.18)] [&>button]:hidden`}>
+      <DialogContent className={`${(showEvidencePanel && !notesOpen) || notesOpen ? 'max-w-6xl' : 'max-w-5xl'} gap-0 overflow-hidden rounded-[16px] border border-[#E5E7EB] p-0 shadow-[0_20px_60px_rgba(16,24,40,0.18)] [&>button]:hidden`}>
         {/* Header */}
         <div className="flex items-center justify-between gap-3 border-b border-[#E5E7EB] bg-white px-5 py-4">
           <div className="flex min-w-0 items-center gap-3">
@@ -398,6 +401,17 @@ export default function DocumentPreviewModal({
                 {downloading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />}Download
               </Button>
             )}
+            {documentId && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className={`h-[36px] w-[36px] rounded-[10px] transition-colors ${notesOpen ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' : 'text-[#6B7280] hover:bg-gray-100'}`}
+                onClick={() => setNotesOpen((v) => !v)}
+                title="Notes"
+              >
+                <StickyNote className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               size="icon"
               variant="ghost"
@@ -412,7 +426,10 @@ export default function DocumentPreviewModal({
         {/* Body */}
         <div className="flex h-[72vh] bg-[#F1F5F9]">
           <div className="min-w-0 flex-1">{renderBody()}</div>
-          {open && documentId && (
+          {open && documentId && notesOpen && (
+            <DocumentNotesPanel documentId={documentId} />
+          )}
+          {open && documentId && !notesOpen && (
             <EvidenceFieldsPanel documentId={documentId} onVisibilityChange={setShowEvidencePanel} />
           )}
         </div>

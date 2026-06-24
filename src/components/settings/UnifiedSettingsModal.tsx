@@ -9,7 +9,7 @@ import {
 import { AccountSettingsForm } from './AccountSettingsForm';
 import { PasswordChangeForm } from './PasswordChangeForm';
 import { NotificationSettingsForm } from './NotificationSettingsForm';
-import { IntegrationsDirectoryGrid } from './IntegrationsDirectoryGrid';
+import { IntegrationsPanel } from './IntegrationsPanel';
 import { CompanyManagementDashboard } from '@/components/company/CompanyManagementDashboard';
 
 interface UnifiedSettingsModalProps {
@@ -193,14 +193,10 @@ export function UnifiedSettingsModal({
 
               </div>
               
-              {/* Full width content for Integrations without max-w-3xl wrapper */}
+              {/* Integrations panel */}
               {activeTab === 'integrations' && (
-                <div className="h-full animate-in fade-in slide-in-from-bottom-4 duration-500 p-8 pt-6">
-                  <div className="mb-6">
-                    <h2 className="text-xl font-bold font-serif text-slate-900 mb-1">Integrations</h2>
-                    <p className="text-sm text-slate-500">Connect TraceR2C to your favorite workflow tools.</p>
-                  </div>
-                  <IntegrationsDirectoryGrid />
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-3xl mx-auto p-10 pb-20">
+                  <IntegrationsPanel organizationId={companyId ?? null} />
                 </div>
               )}
             </div>

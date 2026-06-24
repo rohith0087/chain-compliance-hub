@@ -412,7 +412,252 @@ const SOLUTIONS = [
   { tag: 'GPSR · DPP', name: 'EU expansion' },
 ];
 
+/* ------------------------- HERO: barcode side panel ----------------------- */
+
+const BARCODE_ROWS = 56;
+// deterministic pseudo-random bar pattern (no flicker across renders)
+const seededBars = (side: 'left' | 'right') => {
+  const rng = (seed: number) => {
+    let s = seed;
+    return () => {
+      s = (s * 9301 + 49297) % 233280;
+      return s / 233280;
+    };
+  };
+  const r = rng(side === 'left' ? 17 : 91);
+  return Array.from({ length: BARCODE_ROWS }, () => {
+    // 1–3 bars per row, each with x-offset and width
+    const segs = 1 + Math.floor(r() * 3);
+    return Array.from({ length: segs }, () => ({
+      x: Math.floor(r() * 70),
+      w: 6 + Math.floor(r() * 60),
+    }));
+  });
+};
+
+const BarcodePanel = ({ side }: { side: 'left' | 'right' }) => {
+  const reduce = useReducedMotion();
+  const rows = seededBars(side);
+  const maskId = `r2c-barcode-mask-${side}`;
+  return (
+    <motion.div
+      aria-hidden
+      initial={reduce ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={reduce ? { duration: 0 } : { delay: 0.5, duration: 1.0, ease: EASE }}
+      className="pointer-events-none absolute top-0 hidden h-full w-[min(34vw,440px)] md:block"
+      style={{ [side]: 0 } as React.CSSProperties}
+    >
+      <svg viewBox="0 0 100 224" preserveAspectRatio="none" className="h-full w-full">
+        <defs>
+          <linearGradient id={maskId} x1={side === 'left' ? '0%' : '100%'} y1="0%" x2={side === 'left' ? '100%' : '0%'} y2="0%">
+            <stop offset="0%" stopColor="white" stopOpacity="1" />
+            <stop offset="55%" stopColor="white" stopOpacity="0.85" />
+            <stop offset="100%" stopColor="white" stopOpacity="0" />
+          </linearGradient>
+          <mask id={`${maskId}-m`}>
+            <rect width="100" height="224" fill={`url(#${maskId})`} />
+          </mask>
+        </defs>
+        <g mask={`url(#${maskId}-m)`} fill="var(--r2c-stamp)">
+          {rows.flatMap((segs, i) =>
+            segs.map((s, j) => (
+              <rect
+                key={`${i}-${j}`}
+                x={s.x}
+                y={i * 4 + 0.4}
+                width={s.w}
+                height={2}
+                rx={0.6}
+              />
+            )),
+          )}
+        </g>
+      </svg>
+    </motion.div>
+  );
+};
+
+/* ------------------------- HERO: supplier app mockup ---------------------- */
+
+type Status = 'verified' | 'pending' | 'expired';
+const SUPPLIER_ROWS: Array<{
+  name: string;
+  initial: string;
+  dot: string;
+  cert: string;
+  standard: string;
+  expires: string;
+  auditor: string;
+  status: Status;
+}> = [
+  { name: 'Auburn Foods',     initial: 'A', dot: '#16493A', cert: 'ISO22000_AuburnPlant.pdf',  standard: 'ISO 22000',  expires: '2027-04-12', auditor: 'Intertek',   status: 'verified' },
+  { name: 'Pacific Mills',    initial: 'P', dot: '#0F4C4A', cert: 'BRCGS_Pacific_v9.pdf',      standard: 'BRCGS v9',   expires: '2026-11-03', auditor: 'SGS',        status: 'verified' },
+  { name: 'Granaria Co',      initial: 'G', dot: '#B8731A', cert: 'SQF_Granaria_Ed9.pdf',      standard: 'SQF Ed 9',   expires: '2026-02-28', auditor: 'NSF',        status: 'pending'  },
+  { name: 'Hokkaido Dairy',   initial: 'H', dot: '#1F6B4A', cert: 'HACCP_Hokkaido_2025.pdf',   standard: 'HACCP',      expires: '2027-01-19', auditor: 'Bureau V.',  status: 'verified' },
+  { name: 'Sierra Produce',   initial: 'S', dot: '#D8462A', cert: 'GLOBALGAP_Sierra.pdf',      standard: 'GLOBALG.A.P', expires: '2025-09-30', auditor: 'Control U.', status: 'expired'  },
+  { name: 'Maple Ridge',      initial: 'M', dot: '#16493A', cert: 'ISO9001_MapleRidge.pdf',    standard: 'ISO 9001',   expires: '2028-03-14', auditor: 'DNV',        status: 'verified' },
+  { name: 'Andes Cacao',      initial: 'A', dot: '#B8731A', cert: 'FairTrade_Andes_25.pdf',    standard: 'Fairtrade',  expires: '2026-06-22', auditor: 'FLOCERT',    status: 'pending'  },
+  { name: 'Nordic Seafood',   initial: 'N', dot: '#0F4C4A', cert: 'MSC_Nordic_Chain.pdf',      standard: 'MSC CoC',    expires: '2027-08-08', auditor: 'Lloyd\u2019s',     status: 'verified' },
+];
+
+const STATUS_STYLES: Record<Status, { label: string; bg: string; fg: string; border: string }> = {
+  verified: { label: 'Verified', bg: 'rgba(31,107,74,0.10)',  fg: 'var(--r2c-verified)', border: 'rgba(31,107,74,0.35)' },
+  pending:  { label: 'Pending',  bg: 'rgba(184,115,26,0.10)', fg: 'var(--r2c-caution)',  border: 'rgba(184,115,26,0.35)' },
+  expired:  { label: 'Expired',  bg: 'rgba(216,70,42,0.10)',  fg: 'var(--r2c-recall)',   border: 'rgba(216,70,42,0.35)' },
+};
+
+const SupplierAppMockup = () => {
+  const reduce = useReducedMotion();
+  const sidebar = [
+    { label: 'Suppliers',  icon: '◫', active: true  },
+    { label: 'Documents',  icon: '▤', active: false },
+    { label: 'Requests',   icon: '◧', active: false },
+    { label: 'Audits',     icon: '◇', active: false },
+    { label: 'Reports',    icon: '◔', active: false },
+    { label: 'Settings',   icon: '⚙', active: false },
+  ];
+
+  return (
+    <motion.div
+      initial={reduce ? false : { opacity: 0, y: 40, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={reduce ? { duration: 0 } : { delay: 0.35, duration: 0.8, ease: EASE }}
+      className="relative mx-auto w-full max-w-[1040px] overflow-hidden rounded-[14px] border border-[var(--r2c-line)] bg-[var(--r2c-surface)] shadow-[0_40px_80px_-30px_rgba(20,24,31,0.45),0_18px_36px_-18px_rgba(20,24,31,0.25)]"
+    >
+      {/* macOS title bar */}
+      <div className="relative grid h-9 grid-cols-[1fr_auto_1fr] items-center border-b border-[var(--r2c-line)] bg-[var(--r2c-surface-2)] px-4">
+        <div className="flex items-center gap-1.5">
+          <span className="h-3 w-3 rounded-full bg-[#FF5F57]" />
+          <span className="h-3 w-3 rounded-full bg-[#FEBC2E]" />
+          <span className="h-3 w-3 rounded-full bg-[#28C840]" />
+        </div>
+        <span className="font-data text-[12px] font-medium tracking-wide text-[var(--r2c-ink)]">TraceR2C</span>
+        <span />
+      </div>
+
+      <div className="grid grid-cols-[212px_1fr]">
+        {/* sidebar */}
+        <aside className="border-r border-[var(--r2c-line)] bg-[var(--r2c-surface-2)]/60 p-3">
+          {/* workspace selector */}
+          <div className="flex items-center justify-between rounded-md border border-[var(--r2c-line)] bg-[var(--r2c-surface)] px-2.5 py-1.5">
+            <span className="flex items-center gap-2">
+              <span className="grid h-5 w-5 place-items-center rounded-[5px] bg-[var(--r2c-stamp)] font-data text-[10px] font-bold text-white">A</span>
+              <span className="font-body text-[12.5px] font-medium text-[var(--r2c-ink)]">Acme Foods</span>
+            </span>
+            <span className="font-data text-[10px] text-[var(--r2c-muted)]">▾</span>
+          </div>
+
+          {/* quick icons row */}
+          <div className="mt-3 flex items-center gap-1.5">
+            <button className="grid h-7 w-7 place-items-center rounded-md border border-[var(--r2c-line)] bg-[var(--r2c-surface)] font-data text-[11px] text-[var(--r2c-muted)]">⌂</button>
+            <button className="grid h-7 w-7 place-items-center rounded-md border border-[var(--r2c-line)] bg-[var(--r2c-surface)] font-data text-[11px] text-[var(--r2c-muted)]">⌕</button>
+            <button className="ml-auto rounded-md border border-[var(--r2c-line)] bg-[var(--r2c-surface)] px-2 py-1 font-data text-[10px] text-[var(--r2c-muted)]">+ New</button>
+          </div>
+
+          {/* Favorites */}
+          <div className="mt-4">
+            <p className="px-1 font-data text-[10px] uppercase tracking-[0.14em] text-[var(--r2c-muted)]">Favorites</p>
+            <div className="mt-1 flex items-center gap-2 rounded-md px-2 py-1.5">
+              <span className="grid h-4 w-4 place-items-center rounded bg-[var(--r2c-caution)]/15 font-data text-[9px] font-bold text-[var(--r2c-caution)]">C</span>
+              <span className="font-body text-[12px] text-[var(--r2c-ink)]">Compliance Dashboard</span>
+            </div>
+          </div>
+
+          {/* Workspace */}
+          <div className="mt-4">
+            <p className="px-1 font-data text-[10px] uppercase tracking-[0.14em] text-[var(--r2c-muted)]">Workspace</p>
+            <ul className="mt-1 space-y-0.5">
+              {sidebar.map((item) => (
+                <li
+                  key={item.label}
+                  className={`flex items-center gap-2 rounded-md px-2 py-1.5 ${
+                    item.active
+                      ? 'bg-[var(--r2c-stamp)]/10 text-[var(--r2c-stamp)]'
+                      : 'text-[var(--r2c-ink)]'
+                  }`}
+                >
+                  <span className="font-data w-4 text-[12px] leading-none">{item.icon}</span>
+                  <span className="font-body text-[12.5px] font-medium">{item.label}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </aside>
+
+        {/* main panel */}
+        <div className="bg-[var(--r2c-surface)]">
+          {/* toolbar */}
+          <div className="flex items-center justify-between border-b border-[var(--r2c-line)] px-5 py-3">
+            <div className="flex items-center gap-2">
+              <span className="font-data text-[11px] text-[var(--r2c-muted)]">≣</span>
+              <span className="font-body text-[13px] font-medium text-[var(--r2c-ink)]">All Suppliers</span>
+              <span className="font-data text-[11px] text-[var(--r2c-muted)]">· {SUPPLIER_ROWS.length} ▾</span>
+            </div>
+            <div className="flex items-center gap-4">
+              {['Filter', 'Sort', 'Options'].map((l) => (
+                <span key={l} className="font-data text-[11px] uppercase tracking-wider text-[var(--r2c-muted)]">{l}</span>
+              ))}
+            </div>
+          </div>
+
+          {/* table */}
+          <div className="overflow-hidden">
+            {/* header */}
+            <div className="grid grid-cols-[28px_1.4fr_1.6fr_1fr_0.9fr_1fr_0.8fr] items-center border-b border-[var(--r2c-line)] bg-[var(--r2c-surface-2)]/60 px-3 py-2">
+              <span />
+              {['Supplier', 'Certificate', 'Standard', 'Expires', 'Auditor', 'Status'].map((h) => (
+                <span key={h} className="font-data text-[10.5px] uppercase tracking-[0.12em] text-[var(--r2c-muted)]">{h}</span>
+              ))}
+            </div>
+
+            {/* rows */}
+            {SUPPLIER_ROWS.map((row, i) => {
+              const s = STATUS_STYLES[row.status];
+              return (
+                <div
+                  key={row.name}
+                  className={`grid grid-cols-[28px_1.4fr_1.6fr_1fr_0.9fr_1fr_0.8fr] items-center border-b border-[var(--r2c-line)] px-3 py-2.5 ${
+                    i % 2 === 1 ? 'bg-[var(--r2c-surface-2)]/30' : ''
+                  }`}
+                >
+                  <span className="grid h-3.5 w-3.5 place-items-center rounded-[3px] border border-[var(--r2c-line)] bg-[var(--r2c-surface)]" />
+                  <span className="flex items-center gap-2">
+                    <span
+                      className="grid h-5 w-5 place-items-center rounded-full font-data text-[10px] font-bold text-white"
+                      style={{ background: row.dot }}
+                    >
+                      {row.initial}
+                    </span>
+                    <span className="font-body text-[12.5px] font-medium text-[var(--r2c-ink)]">{row.name}</span>
+                  </span>
+                  <span className="truncate font-data text-[11.5px] text-[var(--r2c-ink)]">
+                    <span className="rounded border border-[var(--r2c-line)] bg-[var(--r2c-surface)] px-1.5 py-0.5">{row.cert}</span>
+                  </span>
+                  <span className="font-data text-[11.5px] text-[var(--r2c-ink)]">{row.standard}</span>
+                  <span className="font-data text-[11.5px] text-[var(--r2c-muted)]">{row.expires}</span>
+                  <span className="font-body text-[12px] text-[var(--r2c-ink)]">{row.auditor}</span>
+                  <span>
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-data text-[10.5px] font-medium uppercase tracking-wider"
+                      style={{ background: s.bg, color: s.fg, borderColor: s.border }}
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ background: s.fg }} />
+                      {s.label}
+                    </span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 /* --------------------------------- page ----------------------------------- */
+
 
 const Index = () => {
   const navigate = useNavigate();

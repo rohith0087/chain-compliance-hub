@@ -414,7 +414,7 @@ const SOLUTIONS = [
 
 /* ------------------------- HERO: barcode side panel ----------------------- */
 
-const BARCODE_ROWS = 56;
+const BARCODE_ROWS = 38;
 // deterministic pseudo-random bar pattern (no flicker across renders)
 const seededBars = (side: 'left' | 'right') => {
   const rng = (seed: number) => {
@@ -443,16 +443,16 @@ const BarcodePanel = ({ side }: { side: 'left' | 'right' }) => {
     <motion.div
       aria-hidden
       initial={reduce ? false : { opacity: 0 }}
-      animate={{ opacity: 1 }}
+      animate={{ opacity: 0.55 }}
       transition={reduce ? { duration: 0 } : { delay: 0.5, duration: 1.0, ease: EASE }}
-      className="pointer-events-none absolute top-0 hidden h-full w-[min(34vw,440px)] md:block"
+      className="pointer-events-none absolute bottom-0 hidden h-[62%] w-[min(26vw,300px)] lg:block"
       style={{ [side]: 0 } as React.CSSProperties}
     >
       <svg viewBox="0 0 100 224" preserveAspectRatio="none" className="h-full w-full">
         <defs>
           <linearGradient id={maskId} x1={side === 'left' ? '0%' : '100%'} y1="0%" x2={side === 'left' ? '100%' : '0%'} y2="0%">
-            <stop offset="0%" stopColor="white" stopOpacity="1" />
-            <stop offset="55%" stopColor="white" stopOpacity="0.85" />
+            <stop offset="0%" stopColor="white" stopOpacity="0.9" />
+            <stop offset="60%" stopColor="white" stopOpacity="0.45" />
             <stop offset="100%" stopColor="white" stopOpacity="0" />
           </linearGradient>
           <mask id={`${maskId}-m`}>
@@ -467,8 +467,8 @@ const BarcodePanel = ({ side }: { side: 'left' | 'right' }) => {
                 x={s.x}
                 y={i * 4 + 0.4}
                 width={s.w}
-                height={2}
-                rx={0.6}
+                height={1.2}
+                rx={0.4}
               />
             )),
           )}
@@ -477,6 +477,7 @@ const BarcodePanel = ({ side }: { side: 'left' | 'right' }) => {
     </motion.div>
   );
 };
+
 
 /* ------------------------- HERO: supplier app mockup ---------------------- */
 
@@ -842,12 +843,13 @@ const Index = () => {
         <div className="relative mx-auto flex max-w-[1180px] flex-col items-center px-5 pb-16 pt-20 text-center sm:px-8 lg:pb-24 lg:pt-24">
           <motion.h1
             {...heroIn(0.04)}
-            className="mt-2 max-w-[18ch] font-normal leading-[1.02] tracking-[-0.015em] text-[var(--r2c-ink)] text-[44px] sm:text-[64px] lg:text-[84px]"
+            className="mt-2 max-w-[20ch] font-normal leading-[1.05] tracking-[-0.02em] text-[var(--r2c-ink)] text-[42px] sm:text-[60px] lg:text-[72px]"
             style={{ fontFamily: 'Instrument Serif, "Cormorant Garamond", Georgia, serif' }}
           >
-            Make every supplier document{' '}
-            <span className="font-medium text-[var(--r2c-stamp)] italic">defensible at audit speed</span>
+            Supplier compliance,{' '}
+            <span className="italic text-[var(--r2c-stamp)]">defensible at audit speed</span>
           </motion.h1>
+
 
           <motion.p
             {...heroIn(0.16)}

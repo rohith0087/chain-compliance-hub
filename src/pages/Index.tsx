@@ -443,16 +443,16 @@ const BarcodePanel = ({ side }: { side: 'left' | 'right' }) => {
     <motion.div
       aria-hidden
       initial={reduce ? false : { opacity: 0 }}
-      animate={{ opacity: 1 }}
+      animate={{ opacity: 0.55 }}
       transition={reduce ? { duration: 0 } : { delay: 0.5, duration: 1.0, ease: EASE }}
-      className="pointer-events-none absolute top-0 hidden h-full w-[min(34vw,440px)] md:block"
+      className="pointer-events-none absolute bottom-0 hidden h-[62%] w-[min(26vw,300px)] lg:block"
       style={{ [side]: 0 } as React.CSSProperties}
     >
       <svg viewBox="0 0 100 224" preserveAspectRatio="none" className="h-full w-full">
         <defs>
           <linearGradient id={maskId} x1={side === 'left' ? '0%' : '100%'} y1="0%" x2={side === 'left' ? '100%' : '0%'} y2="0%">
-            <stop offset="0%" stopColor="white" stopOpacity="1" />
-            <stop offset="55%" stopColor="white" stopOpacity="0.85" />
+            <stop offset="0%" stopColor="white" stopOpacity="0.9" />
+            <stop offset="60%" stopColor="white" stopOpacity="0.45" />
             <stop offset="100%" stopColor="white" stopOpacity="0" />
           </linearGradient>
           <mask id={`${maskId}-m`}>
@@ -467,8 +467,8 @@ const BarcodePanel = ({ side }: { side: 'left' | 'right' }) => {
                 x={s.x}
                 y={i * 4 + 0.4}
                 width={s.w}
-                height={2}
-                rx={0.6}
+                height={1.2}
+                rx={0.4}
               />
             )),
           )}
@@ -477,6 +477,7 @@ const BarcodePanel = ({ side }: { side: 'left' | 'right' }) => {
     </motion.div>
   );
 };
+
 
 /* ------------------------- HERO: supplier app mockup ---------------------- */
 

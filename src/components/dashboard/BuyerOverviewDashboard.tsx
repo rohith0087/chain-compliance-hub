@@ -11,7 +11,7 @@ import {
   Sparkles,
   ChevronRight,
   ArrowUpRight,
-  ArrowDownRight,
+  Activity,
 } from 'lucide-react';
 import {
   BarChart,
@@ -47,7 +47,18 @@ interface BuyerOverviewDashboardProps {
   onAddSupplier: () => void;
 }
 
-const months = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
+// Build last 6 months ending with current month, formatted "MMM 'YY"
+const buildLast6Months = () => {
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const now = new Date();
+  const result: string[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const yy = String(d.getFullYear()).slice(-2);
+    result.push(`${monthNames[d.getMonth()]} '${yy}`);
+  }
+  return result;
+};
 
 export const BuyerOverviewDashboard = ({
   stats,
@@ -60,16 +71,23 @@ export const BuyerOverviewDashboard = ({
       ? Math.round((stats.approvedDocs / stats.totalDocs) * 100)
       : 0;
 
+  const months = buildLast6Months();
+
   // Derived chart data — illustrative trend built from current snapshot
-  const approvalData = months.map((m, i) => {
+  const approvalData = months.map((month, i) => {
     const base = Math.max(stats.approvedDocs / 6, 4);
     return {
-      month: `${m} '25`,
+      month,
       approved: Math.round(base + i * 2),
       pending: Math.max(2, Math.round(stats.pendingReview / 2 + (i % 3))),
+      blocked: Math.max(1, Math.round(stats.pendingReview / 4 + (i % 2))),
       rejected: Math.max(1, Math.round(stats.rejectedDocs / 4 + ((i + 1) % 3))),
     };
   });
+
+  const lastMonth = approvalData[approvalData.length - 1];
+  const totalThisMonth =
+    lastMonth.approved + lastMonth.pending + lastMonth.blocked + lastMonth.rejected;
 
   const high = Math.max(1, Math.round(stats.connectedSuppliers * 0.18));
   const medium = Math.max(1, Math.round(stats.connectedSuppliers * 0.32));
@@ -81,8 +99,8 @@ export const BuyerOverviewDashboard = ({
     { name: 'Low Risk', value: low, color: '#10b981' },
   ];
 
-  const complianceTrend = months.map((m, i) => ({
-    month: `${m} '25`,
+  const complianceTrend = months.map((month, i) => ({
+    month,
     value: Math.min(100, Math.max(50, complianceScore - 6 + i * 1.2)),
   }));
 
@@ -101,7 +119,7 @@ export const BuyerOverviewDashboard = ({
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="space-y-5 max-w-[1600px] mx-auto"
+        className="space-y-4 max-w-[1600px] mx-auto"
       >
         {/* Stat Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -110,7 +128,7 @@ export const BuyerOverviewDashboard = ({
             value={stats.connectedSuppliers}
             sub="All time"
             subIcon={<Users className="w-3 h-3" />}
-            icon={<Users className="w-5 h-5 text-sky-600" />}
+            icon={<Users className="w-4 h-4 text-sky-600" />}
             iconBg="bg-sky-100/70"
             onClick={() => onTabChange('suppliers')}
           />
@@ -118,7 +136,7 @@ export const BuyerOverviewDashboard = ({
             label="Active Suppliers"
             value={stats.activeRequests}
             sub={<span className="text-emerald-600 font-medium">↑ {Math.max(1, Math.round(stats.activeRequests * 0.07))} this month</span>}
-            icon={<UserCheck className="w-5 h-5 text-emerald-600" />}
+            icon={<UserCheck className="w-4 h-4 text-emerald-600" />}
             iconBg="bg-emerald-100/70"
             onClick={() => onTabChange('suppliers')}
           />
@@ -126,7 +144,7 @@ export const BuyerOverviewDashboard = ({
             label="Technical Approvals Pending"
             value={stats.pendingReview}
             sub={<span className="text-amber-600 font-medium">{Math.min(2, stats.pendingReview)} blocked</span>}
-            icon={<Clock className="w-5 h-5 text-amber-600" />}
+            icon={<Clock className="w-4 h-4 text-amber-600" />}
             iconBg="bg-amber-100/70"
             onClick={() => onTabChange('documents')}
           />
@@ -134,46 +152,44 @@ export const BuyerOverviewDashboard = ({
             label="Critical Issues / Expiring Soon"
             value={stats.expiringSoon}
             sub={<span className="text-rose-600 font-medium">Within 30 days</span>}
-            icon={<AlertTriangle className="w-5 h-5 text-rose-600" />}
+            icon={<AlertTriangle className="w-4 h-4 text-rose-600" />}
             iconBg="bg-rose-100/70"
             onClick={() => onTabChange('documents')}
           />
           {/* Compliance Score with ring */}
-          <div className="rounded-2xl bg-white border border-slate-200/80 shadow-sm p-5 hover:shadow-md transition-all">
+          <div className="rounded-2xl bg-white border border-slate-200/80 shadow-sm p-4 hover:shadow-md transition-all min-h-[112px]">
             <div className="flex items-center justify-between h-full">
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-slate-500">Overall Compliance Score</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-3xl font-bold text-slate-900 tabular-nums tracking-tight">
-                    {complianceScore}%
-                  </p>
-                  <span className="text-xs text-emerald-600 font-medium inline-flex items-center gap-0.5">
-                    <ArrowUpRight className="w-3 h-3" /> 4%
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-400">vs last month</p>
+              <div className="space-y-0.5">
+                <p className="text-xs font-medium text-slate-500 leading-tight">Overall Compliance Score</p>
+                <p className="text-3xl font-bold text-slate-900 tabular-nums tracking-tight">
+                  {complianceScore}%
+                </p>
+                <p className="text-[11px] text-emerald-600 font-medium inline-flex items-center gap-0.5">
+                  <ArrowUpRight className="w-3 h-3" /> 4% vs last month
+                </p>
               </div>
-              <ComplianceRing score={complianceScore} size={62} strokeWidth={6} />
+              <ComplianceRing score={complianceScore} size={58} strokeWidth={6} showLabel={false} />
             </div>
           </div>
         </div>
 
-        {/* Middle Row: Approvals + Risk + Quick Actions */}
+        {/* Middle Row: Approval Record + Risk + AI Summary */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Technical Approval Overview */}
-          <div className="lg:col-span-5 rounded-2xl bg-white border border-slate-200/80 shadow-sm p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-slate-900">Technical Approval Overview</h3>
-              <select className="text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none">
+          {/* Technical Approval Record */}
+          <div className="lg:col-span-5 rounded-2xl bg-white border border-slate-200/80 shadow-sm p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-slate-900">Technical Approval Record</h3>
+              <select className="text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 outline-none">
                 <option>Last 6 Months</option>
               </select>
             </div>
-            <div className="flex items-center gap-4 text-[11px] text-slate-500 mb-2">
+            <div className="flex items-center gap-4 text-[11px] text-slate-500 mb-2 flex-wrap">
               <Legend dot="#10b981" label="Approved" />
               <Legend dot="#f59e0b" label="Pending" />
+              <Legend dot="#64748b" label="Blocked" />
               <Legend dot="#ef4444" label="Rejected" />
             </div>
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={200}>
               <BarChart data={approvalData} barCategoryGap={18}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
@@ -181,29 +197,30 @@ export const BuyerOverviewDashboard = ({
                 <Tooltip
                   contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, fontSize: 12 }}
                 />
-                <Bar dataKey="approved" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="approved" stackId="a" fill="#10b981" />
                 <Bar dataKey="pending" stackId="a" fill="#f59e0b" />
+                <Bar dataKey="blocked" stackId="a" fill="#64748b" />
                 <Bar dataKey="rejected" stackId="a" fill="#ef4444" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
             <p className="text-[11px] text-slate-400 mt-2">
-              Total approvals this month: <span className="font-semibold text-slate-700">{stats.approvedDocs}</span>
+              Total approvals this month: <span className="font-semibold text-slate-700">{totalThisMonth}</span>
             </p>
           </div>
 
           {/* Compliance Risk Breakdown */}
-          <div className="lg:col-span-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm p-5">
-            <h3 className="text-sm font-semibold text-slate-900 mb-4">Compliance Risk Breakdown</h3>
+          <div className="lg:col-span-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm p-4">
+            <h3 className="text-sm font-semibold text-slate-900 mb-3">Compliance Risk Breakdown</h3>
             <div className="flex items-center gap-4">
-              <div className="relative" style={{ width: 160, height: 160 }}>
+              <div className="relative" style={{ width: 150, height: 150 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={riskData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={50}
-                      outerRadius={75}
+                      innerRadius={48}
+                      outerRadius={72}
                       paddingAngle={2}
                       dataKey="value"
                     >
@@ -237,51 +254,50 @@ export const BuyerOverviewDashboard = ({
             </div>
             <button
               onClick={() => onTabChange('suppliers')}
-              className="mt-4 text-xs font-semibold text-sky-600 hover:text-sky-700 inline-flex items-center gap-1"
+              className="mt-3 text-xs font-semibold text-sky-600 hover:text-sky-700 inline-flex items-center gap-1"
             >
               View all suppliers <ChevronRight className="w-3 h-3" />
             </button>
           </div>
 
-          {/* Quick Actions */}
-          <div className="lg:col-span-3 rounded-2xl bg-white border border-slate-200/80 shadow-sm p-5">
-            <h3 className="text-sm font-semibold text-slate-900 mb-4">Quick Actions</h3>
-            <div className="space-y-2">
-              <ActionRow
-                icon={<FileCheck className="w-4 h-4 text-sky-600" />}
-                iconBg="bg-sky-100/70"
-                label="New Compliance Request"
-                onClick={onNewRequest}
-              />
-              <ActionRow
-                icon={<FlaskConical className="w-4 h-4 text-violet-600" />}
-                iconBg="bg-violet-100/70"
-                label="COA Analysis"
-                onClick={() => onTabChange('coa-analysis')}
-              />
-              <ActionRow
-                icon={<ShieldAlert className="w-4 h-4 text-emerald-600" />}
-                iconBg="bg-emerald-100/70"
-                label="Supplier Risk Review"
-                onClick={() => onTabChange('supplier-risk')}
-              />
-              <ActionRow
-                icon={<UserPlus className="w-4 h-4 text-indigo-600" />}
-                iconBg="bg-indigo-100/70"
-                label="Add New Supplier"
-                onClick={onAddSupplier}
-              />
+          {/* AI Summary — promoted to middle row */}
+          <div className="lg:col-span-3 rounded-2xl bg-gradient-to-br from-violet-50/60 to-white border border-violet-100 shadow-sm p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-violet-600" />
+                <h3 className="text-sm font-semibold text-slate-900">AI Summary</h3>
+              </div>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-violet-600 bg-violet-100/70 border border-violet-200 px-1.5 py-0.5 rounded">
+                Beta
+              </span>
             </div>
+            <ul className="space-y-2.5 text-xs text-slate-600 leading-relaxed">
+              <li className="flex gap-2">
+                <span className="text-violet-400 mt-1.5">•</span>
+                <span>Compliance score moved <span className="font-semibold text-slate-900">+4%</span> this month, driven by {stats.approvedDocs} new approvals.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-violet-400 mt-1.5">•</span>
+                <span><span className="font-semibold text-slate-900">{stats.pendingReview}</span> technical approvals pending review.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-violet-400 mt-1.5">•</span>
+                <span><span className="font-semibold text-slate-900">{stats.expiringSoon}</span> documents expire within 30 days — prioritize highest-risk first.</span>
+              </li>
+            </ul>
+            <button className="mt-3 text-xs font-semibold text-violet-600 hover:text-violet-700 inline-flex items-center gap-1">
+              View AI Recommendations <Sparkles className="w-3 h-3" />
+            </button>
           </div>
         </div>
 
-        {/* Lower Row: Trends + AI + Activity */}
+        {/* Lower Row: Trends + Quick Actions/Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* Compliance Trend */}
-          <div className="lg:col-span-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm p-5">
-            <div className="flex items-center justify-between mb-4">
+          <div className="lg:col-span-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm p-4">
+            <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-slate-900">Compliance Trend</h3>
-              <select className="text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none">
+              <select className="text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 outline-none">
                 <option>Last 6 Months</option>
               </select>
             </div>
@@ -303,10 +319,10 @@ export const BuyerOverviewDashboard = ({
           </div>
 
           {/* Upcoming Expiry Trend */}
-          <div className="lg:col-span-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm p-5">
-            <div className="flex items-center justify-between mb-4">
+          <div className="lg:col-span-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm p-4">
+            <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-slate-900">Upcoming Expiry Trend</h3>
-              <select className="text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none">
+              <select className="text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 outline-none">
                 <option>Next 90 Days</option>
               </select>
             </div>
@@ -319,10 +335,10 @@ export const BuyerOverviewDashboard = ({
                 <Line type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={2.5} dot={{ r: 4, fill: '#6366f1' }} />
               </LineChart>
             </ResponsiveContainer>
-            <div className="mt-3 flex items-center gap-2 text-xs bg-rose-50/60 border border-rose-100 rounded-lg px-3 py-2">
+            <div className="mt-2 flex items-center gap-2 text-xs bg-rose-50/60 border border-rose-100 rounded-lg px-3 py-1.5">
               <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
               <span className="text-slate-700">
-                <span className="font-semibold text-rose-600">{stats.expiringSoon}</span> documents expire within 30 days
+                <span className="font-semibold text-rose-600">{stats.expiringSoon}</span> expire within 30 days
               </span>
               <button
                 onClick={() => onTabChange('documents')}
@@ -333,40 +349,72 @@ export const BuyerOverviewDashboard = ({
             </div>
           </div>
 
-          {/* AI Summary */}
-          <div className="lg:col-span-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-violet-600" />
-                <h3 className="text-sm font-semibold text-slate-900">AI Summary</h3>
+          {/* Quick Actions + Recent Activity stacked */}
+          <div className="lg:col-span-4 space-y-4">
+            <div className="rounded-2xl bg-white border border-slate-200/80 shadow-sm p-4">
+              <div className="flex items-center justify-between mb-2.5">
+                <h3 className="text-sm font-semibold text-slate-900">Quick Actions</h3>
               </div>
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-violet-600 bg-violet-50 border border-violet-100 px-1.5 py-0.5 rounded">
-                Beta
-              </span>
+              <div className="space-y-1.5">
+                <ActionRow
+                  icon={<FileCheck className="w-4 h-4 text-sky-600" />}
+                  iconBg="bg-sky-100/70"
+                  label="New Compliance Request"
+                  onClick={onNewRequest}
+                />
+                <ActionRow
+                  icon={<FlaskConical className="w-4 h-4 text-violet-600" />}
+                  iconBg="bg-violet-100/70"
+                  label="COA Analysis"
+                  onClick={() => onTabChange('coa-analysis')}
+                />
+                <ActionRow
+                  icon={<ShieldAlert className="w-4 h-4 text-emerald-600" />}
+                  iconBg="bg-emerald-100/70"
+                  label="Supplier Risk Review"
+                  onClick={() => onTabChange('supplier-risk')}
+                />
+                <ActionRow
+                  icon={<UserPlus className="w-4 h-4 text-indigo-600" />}
+                  iconBg="bg-indigo-100/70"
+                  label="Add New Supplier"
+                  onClick={onAddSupplier}
+                />
+              </div>
+              <button
+                onClick={() => onTabChange('documents')}
+                className="mt-2.5 text-xs font-semibold text-sky-600 hover:text-sky-700 inline-flex items-center gap-1"
+              >
+                Manage workflows <ChevronRight className="w-3 h-3" />
+              </button>
             </div>
-            <ul className="space-y-3 text-xs text-slate-600 leading-relaxed">
-              <li className="flex gap-2">
-                <span className="text-slate-300 mt-1.5">•</span>
-                <span>Compliance score moved <span className="font-semibold text-slate-900">+4%</span> this month, driven by {stats.approvedDocs} new approvals.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="text-slate-300 mt-1.5">•</span>
-                <span><span className="font-semibold text-slate-900">{stats.pendingReview}</span> technical approvals are pending review.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="text-slate-300 mt-1.5">•</span>
-                <span><span className="font-semibold text-slate-900">{stats.expiringSoon}</span> supplier documents are due within 30 days — prioritize highest-risk first.</span>
-              </li>
-            </ul>
-            <button className="mt-4 text-xs font-semibold text-violet-600 hover:text-violet-700 inline-flex items-center gap-1">
-              View AI Recommendations <Sparkles className="w-3 h-3" />
-            </button>
+
+            <div className="rounded-2xl bg-white border border-slate-200/80 shadow-sm p-4">
+              <div className="flex items-center gap-2 mb-2.5">
+                <Activity className="w-4 h-4 text-slate-500" />
+                <h3 className="text-sm font-semibold text-slate-900">Recent Activity</h3>
+              </div>
+              <ul className="text-xs text-slate-600 space-y-2">
+                <li className="flex justify-between gap-2">
+                  <span>New approval — <span className="font-medium text-slate-900">Logic Foods</span></span>
+                  <span className="text-slate-400 shrink-0">2h</span>
+                </li>
+                <li className="flex justify-between gap-2">
+                  <span>Document expiring — <span className="font-medium text-slate-900">ISO 9001</span></span>
+                  <span className="text-slate-400 shrink-0">5h</span>
+                </li>
+                <li className="flex justify-between gap-2">
+                  <span>Supplier added — <span className="font-medium text-slate-900">Acme Co.</span></span>
+                  <span className="text-slate-400 shrink-0">1d</span>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
 
         {/* Manager Attention */}
-        <div className="rounded-2xl bg-white border border-slate-200/80 shadow-sm p-5">
-          <div className="flex items-center justify-between mb-4">
+        <div className="rounded-2xl bg-white border border-slate-200/80 shadow-sm p-4">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-slate-900">Manager Attention (Priority Actions)</h3>
             <button
               onClick={() => onTabChange('documents')}
@@ -419,13 +467,13 @@ const StatCard = ({
 }) => (
   <button
     onClick={onClick}
-    className="text-left rounded-2xl bg-white border border-slate-200/80 shadow-sm p-5 hover:shadow-md hover:border-slate-300 transition-all group"
+    className="text-left rounded-2xl bg-white border border-slate-200/80 shadow-sm p-4 hover:shadow-md hover:border-slate-300 transition-all group min-h-[112px]"
   >
-    <div className="flex items-start gap-3">
-      <div className={`p-2.5 rounded-xl ${iconBg} shrink-0`}>{icon}</div>
+    <div className="flex items-start gap-2.5">
+      <div className={`p-2 rounded-lg ${iconBg} shrink-0`}>{icon}</div>
       <div className="min-w-0 space-y-0.5">
         <p className="text-xs font-medium text-slate-500 leading-tight">{label}</p>
-        <p className="text-3xl font-bold text-slate-900 tabular-nums tracking-tight">{value}</p>
+        <p className="text-2xl font-bold text-slate-900 tabular-nums tracking-tight">{value}</p>
         <p className="text-[11px] text-slate-500 inline-flex items-center gap-1">
           {sub} {subIcon}
         </p>
@@ -454,7 +502,7 @@ const ActionRow = ({
 }) => (
   <button
     onClick={onClick}
-    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-slate-200/70 hover:border-slate-300 hover:bg-slate-50/60 transition-all group"
+    className="w-full flex items-center gap-3 px-2.5 py-2 rounded-lg border border-slate-200/70 hover:border-slate-300 hover:bg-slate-50/60 transition-all group"
   >
     <div className={`p-1.5 rounded-lg ${iconBg}`}>{icon}</div>
     <span className="text-xs font-medium text-slate-700 flex-1 text-left">{label}</span>
@@ -484,16 +532,16 @@ const AttentionRow = ({
   const label = priority.charAt(0).toUpperCase() + priority.slice(1);
   return (
     <tr className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors">
-      <td className="py-3 pr-4">
+      <td className="py-2.5 pr-4">
         <span className="inline-flex items-center gap-2 text-slate-700 font-medium">
           <span className={`w-2 h-2 rounded-full ${dot}`} />
           {label}
         </span>
       </td>
-      <td className="py-3 pr-4 font-medium text-slate-900">{supplier}</td>
-      <td className="py-3 pr-4 text-slate-600">{issue}</td>
-      <td className={`py-3 pr-4 font-semibold tabular-nums ${dueColor}`}>{due}</td>
-      <td className="py-3">
+      <td className="py-2.5 pr-4 font-medium text-slate-900">{supplier}</td>
+      <td className="py-2.5 pr-4 text-slate-600">{issue}</td>
+      <td className={`py-2.5 pr-4 font-semibold tabular-nums ${dueColor}`}>{due}</td>
+      <td className="py-2.5">
         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold border ${statusBg}`}>
           {status}
         </span>

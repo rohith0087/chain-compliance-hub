@@ -789,7 +789,7 @@ export function BuyerSidebarLayout({
 
       // Desktop: custom rail/pinned + optional overlay
       const inFlowWidth = mode === 'pinned' ? 280 : 72;
-      const overlayTopOffset = isImpersonating ? 48 : 0;
+      const overlayTopOffset = 72 + (isImpersonating ? 48 : 0);
 
       return (
         <>

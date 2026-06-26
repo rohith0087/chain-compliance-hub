@@ -91,14 +91,15 @@ function VersionButton() {
     <>
       <button
         onClick={() => setShowWhatsNew(true)}
-        className="w-full py-2.5 px-4 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors text-primary font-medium text-sm"
+        className="w-full px-1 py-1 text-[12px] text-slate-400 hover:text-slate-600 transition-colors text-left"
       >
-        v{APP_VERSION}
+        TraceR2C v{APP_VERSION}
       </button>
       <WhatsNewDialog open={showWhatsNew} onOpenChange={setShowWhatsNew} />
     </>
   );
 }
+
 
 interface NavigationItem {
   title: string;
@@ -427,11 +428,11 @@ export function BuyerSidebarLayout({
 
   return (
     <div className={`flex w-full ${activeTab === 'messages' ? 'h-screen overflow-hidden' : 'min-h-screen'} ${isImpersonating ? 'pt-12' : ''}`}>
-      <Sidebar className="border-r border-gray-200 bg-white">
-        <SidebarHeader className="border-b border-gray-200 px-3 py-4 bg-white">
+      <Sidebar className="border-r border-[#E5E7EB] bg-[#FAFAFB]">
+        <SidebarHeader className="border-b border-[#E5E7EB] px-4 py-3 bg-transparent">
           <div className="flex items-center gap-3">
             {/* Company Logo - displays uploaded logo or default Building2 icon */}
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary overflow-hidden">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary overflow-hidden shrink-0">
               {buyerProfile?.company_logo_url ? (
                 <>
                   <img 
@@ -439,7 +440,6 @@ export function BuyerSidebarLayout({
                     alt="Company Logo"
                     className="h-full w-full object-contain"
                     onError={(e) => {
-                      // Fallback to default icon if image fails to load
                       const target = e.currentTarget;
                       target.style.display = 'none';
                       const fallback = target.nextElementSibling as HTMLElement;
@@ -448,19 +448,18 @@ export function BuyerSidebarLayout({
                       }
                     }}
                   />
-                  {/* Hidden fallback icon */}
-                  <Building2 className="h-4 w-4 text-primary-foreground hidden" />
+                  <Building2 className="h-5 w-5 text-primary-foreground hidden" />
                 </>
               ) : (
-                <Building2 className="h-4 w-4 text-primary-foreground" />
+                <Building2 className="h-5 w-5 text-primary-foreground" />
               )}
             </div>
             {!collapsed && (
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold">
+              <div className="flex flex-col min-w-0">
+                <span className="text-[15px] font-semibold text-slate-900 truncate leading-tight">
                   {buyerProfile?.company_name || 'Buyer Portal'}
                 </span>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-[13px] text-slate-500 truncate leading-tight mt-0.5">
                   {user.name}
                 </span>
               </div>
@@ -470,99 +469,100 @@ export function BuyerSidebarLayout({
 
         <SidebarContent>
           {/* + New Request Button - Standalone at top */}
-          <SidebarGroup className="pb-0">
+          <SidebarGroup className="pt-3 pb-0 px-3">
             <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem data-guide-id="quick-new-request">
-                  <SidebarMenuButton 
-                    onClick={() => handleSpecialAction('new-request')}
-                    className="relative group bg-gradient-to-r from-primary to-primary-hover text-white hover:shadow-lg transition-all duration-300"
-                  >
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-white/30 blur-sm" />
-                      <Plus className="h-4 w-4 relative z-10" />
-                    </div>
-                    <span className="font-medium">New Request</span>
-                    {currentBranch && !collapsed && (
-                      <Badge className="ml-auto text-xs bg-white/20 text-white border-white/30">
-                        {currentBranch.branch_name}
-                      </Badge>
-                    )}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
+              <button
+                data-guide-id="quick-new-request"
+                onClick={() => handleSpecialAction('new-request')}
+                className="w-full h-12 rounded-[14px] bg-primary hover:bg-primary-hover text-primary-foreground font-semibold text-[15px] shadow-sm flex items-center justify-center gap-2.5 transition-colors"
+              >
+                <span className="h-7 w-7 rounded-full bg-white/15 flex items-center justify-center shrink-0">
+                  <Plus className="h-4 w-4" />
+                </span>
+                {!collapsed && <span>New Request</span>}
+                {currentBranch && !collapsed && (
+                  <Badge className="ml-1 text-[11px] bg-white/20 text-white border-white/30 font-medium">
+                    {currentBranch.branch_name}
+                  </Badge>
+                )}
+              </button>
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {/* Main Navigation */}
-          <SidebarGroup>
-            <SidebarGroupLabel>NAVIGATION</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {navigationItems.map((item) => (
-                <SidebarMenuItem 
-                  key={item.value} 
-                  className="relative" 
+
+          {/* Render a navigation group with Workspace/Admin separation */}
+          {(() => {
+            const adminValues = new Set(['settings']);
+            const workspaceItems = navigationItems.filter((i) => !adminValues.has(i.value));
+            const adminItems = navigationItems.filter((i) => adminValues.has(i.value));
+
+            const renderItem = (item: NavigationItem) => {
+              const active = isActiveRoute(item.value);
+              const expanded = isSubmenuExpanded(item);
+              const childActive = hasActiveSubmenu(item);
+              const showActive = active || childActive;
+              return (
+                <SidebarMenuItem
+                  key={item.value}
+                  className="relative px-2"
                   data-guide-id={`nav-${item.value}`}
                   onMouseEnter={() => handleMouseEnter(item.value, !!item.submenu)}
                   onMouseLeave={handleMouseLeave}
                 >
-                    {/* Active indicator gradient bar */}
-                    {isActiveRoute(item.value) && (
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary to-secondary rounded-r-full" />
+                  {showActive && (
+                    <div className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-primary" />
+                  )}
+                  <SidebarMenuButton
+                    isActive={showActive}
+                    onClick={() => (item.submenu ? toggleSubmenu(item.value) : handleMenuClick(item.value))}
+                    className={`group h-11 px-3 rounded-xl gap-3 text-[15px] font-medium transition-colors ${
+                      showActive
+                        ? 'bg-primary/10 text-primary hover:bg-primary/15 font-semibold'
+                        : 'text-slate-700 hover:bg-[#F1F5F9] hover:text-slate-900'
+                    }`}
+                  >
+                    <item.icon className="h-5 w-5 shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                    <span className="truncate">{item.title}</span>
+                    {item.submenu && (
+                      <ChevronDown
+                        className={`ml-auto h-4 w-4 transition-transform duration-[400ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
+                          expanded ? 'rotate-180' : ''
+                        }`}
+                      />
                     )}
-                    <SidebarMenuButton
-                      isActive={isActiveRoute(item.value) || hasActiveSubmenu(item)}
-                      onClick={() => item.submenu ? toggleSubmenu(item.value) : handleMenuClick(item.value)}
-                      className={`group transition-colors duration-200 ${
-                        isActiveRoute(item.value) 
-                          ? 'bg-primary/10 text-primary hover:bg-primary/15' 
-                          : 'hover:bg-muted/50'
+                    {item.badge && (
+                      <Badge className="ml-auto bg-primary text-white">{item.badge}</Badge>
+                    )}
+                  </SidebarMenuButton>
+                  {item.submenu && (
+                    <div
+                      className={`grid transition-all duration-[400ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
+                        expanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
                       }`}
                     >
-                      <div className="relative">
-                        {isActiveRoute(item.value) && (
-                          <div className="absolute inset-0 bg-primary/30 blur-lg" />
-                        )}
-                        <item.icon className="h-4 w-4 relative z-10 transition-transform duration-200 group-hover:scale-110" />
-                      </div>
-                      <span className={isActiveRoute(item.value) ? 'font-medium' : ''}>
-                        {item.title}
-                      </span>
-                      {item.submenu && (
-                      <ChevronDown 
-                          className={`ml-auto h-4 w-4 transition-transform duration-[400ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
-                            isSubmenuExpanded(item) ? 'rotate-180' : ''
-                          }`} 
-                        />
-                      )}
-                      {item.badge && (
-                        <Badge className="ml-auto bg-primary text-white">
-                          {item.badge}
-                        </Badge>
-                      )}
-                    </SidebarMenuButton>
-                    {item.submenu && (
-                      <div className={`grid transition-all duration-[400ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
-                        isSubmenuExpanded(item) ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-                      }`}>
-                        <div className="overflow-hidden">
-                          <SidebarMenuSub
-                            onMouseEnter={cancelHoverTimeout}
-                            onMouseLeave={handleMouseLeave}
-                          >
-                            {item.submenu.map((subItem) => (
+                      <div className="overflow-hidden">
+                        <SidebarMenuSub
+                          className="ml-7 mt-1 pl-3 border-l border-[#E5E7EB]"
+                          onMouseEnter={cancelHoverTimeout}
+                          onMouseLeave={handleMouseLeave}
+                        >
+                          {item.submenu.map((subItem) => {
+                            const subActive = isActiveRoute(subItem.value);
+                            return (
                               <SidebarMenuSubItem key={subItem.value}>
-                                <SidebarMenuSubButton
-                                  asChild
-                                  isActive={isActiveRoute(subItem.value)}
-                                >
+                                <SidebarMenuSubButton asChild isActive={subActive}>
                                   <button
                                     onClick={() => handleMenuClick(subItem.value)}
-                                    className="w-full group"
+                                    className={`w-full group h-8 px-3 rounded-lg text-[14px] transition-colors ${
+                                      subActive
+                                        ? 'bg-primary/5 text-primary font-medium'
+                                        : 'text-slate-500 hover:text-slate-900 hover:bg-[#F1F5F9]'
+                                    }`}
                                   >
-                                    {subItem.icon && <subItem.icon className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />}
-                                    <span>{subItem.title}</span>
+                                    {subItem.icon && (
+                                      <subItem.icon className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
+                                    )}
+                                    <span className="truncate">{subItem.title}</span>
                                     {subItem.badge && (
                                       <Badge variant="secondary" className="ml-auto">
                                         {subItem.badge}
@@ -571,42 +571,66 @@ export function BuyerSidebarLayout({
                                   </button>
                                 </SidebarMenuSubButton>
                               </SidebarMenuSubItem>
-                            ))}
-                          </SidebarMenuSub>
-                        </div>
+                            );
+                          })}
+                        </SidebarMenuSub>
                       </div>
-                    )}
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+                    </div>
+                  )}
+                </SidebarMenuItem>
+              );
+            };
+
+            return (
+              <>
+                {workspaceItems.length > 0 && (
+                  <SidebarGroup className="pt-3">
+                    <SidebarGroupLabel className="px-4 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      Workspace
+                    </SidebarGroupLabel>
+                    <SidebarGroupContent>
+                      <SidebarMenu className="gap-0.5">
+                        {workspaceItems.map(renderItem)}
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  </SidebarGroup>
+                )}
+                {adminItems.length > 0 && (
+                  <SidebarGroup className="pt-2">
+                    <SidebarGroupLabel className="px-4 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      Admin
+                    </SidebarGroupLabel>
+                    <SidebarGroupContent>
+                      <SidebarMenu className="gap-0.5">
+                        {adminItems.map(renderItem)}
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  </SidebarGroup>
+                )}
+              </>
+            );
+          })()}
         </SidebarContent>
 
-        <SidebarFooter className="p-3 space-y-3">
-          {/* Need help? Card */}
+        <SidebarFooter className="p-3 space-y-2 border-t border-[#E5E7EB]">
           {!collapsed && (
-            <div className="rounded-xl bg-muted/50 p-4 text-center">
-              <div className="flex items-center justify-center mb-2">
-                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                  <HelpCircle className="h-4 w-4 text-primary" />
-                </div>
+            <button
+              onClick={() => navigate('/help')}
+              className="w-full rounded-2xl bg-white border border-[#E5E7EB] p-3 flex items-center gap-3 hover:bg-[#F1F5F9] transition-colors text-left"
+            >
+              <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <HelpCircle className="h-5 w-5" />
               </div>
-              <p className="text-sm font-medium text-foreground">Need help?</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Visit our help center for FAQs and guides.</p>
-              <a 
-                href="/help" 
-                onClick={(e) => { e.preventDefault(); navigate('/help'); }}
-                className="inline-flex items-center gap-1 text-xs text-primary font-medium mt-2 hover:underline"
-              >
-                Go to Help Center
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-              </a>
-            </div>
+              <div className="min-w-0">
+                <div className="text-[14px] font-semibold text-slate-900 leading-tight">Need help?</div>
+                <div className="text-[12px] text-slate-500 truncate leading-tight mt-0.5">Docs & guides</div>
+              </div>
+            </button>
           )}
           <VersionButton />
         </SidebarFooter>
       </Sidebar>
+
 
       <div className={`flex-1 flex flex-col ${activeTab === 'messages' ? 'overflow-hidden' : ''}`}>
         {/* Top Header */}

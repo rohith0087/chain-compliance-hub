@@ -789,7 +789,7 @@ export function BuyerSidebarLayout({
 
       // Desktop: custom rail/pinned + optional overlay
       const inFlowWidth = mode === 'pinned' ? 280 : 72;
-      const overlayTopOffset = 72 + (isImpersonating ? 48 : 0);
+      const overlayTopOffset = isImpersonating ? 48 : 0;
 
       return (
         <>
@@ -813,7 +813,7 @@ export function BuyerSidebarLayout({
               <div
                 aria-hidden
                 style={{ top: overlayTopOffset }}
-                className="hidden md:block fixed left-0 bottom-0 w-2 z-30"
+                className="hidden md:block fixed left-0 bottom-0 w-2 z-50"
                 onMouseEnter={scheduleOverlayOpen}
               />
               <aside
@@ -825,7 +825,7 @@ export function BuyerSidebarLayout({
                   opacity: overlayOpen ? 1 : 0,
                   pointerEvents: overlayOpen ? 'auto' : 'none',
                 }}
-                className="hidden md:flex fixed left-0 bottom-0 z-40 flex-col border-r border-t border-[#E5E7EB] bg-[#FAFAFB] shadow-2xl overflow-hidden motion-reduce:transition-none"
+                className="hidden md:flex fixed left-0 bottom-0 z-50 flex-col border-r border-[#E5E7EB] bg-[#FAFAFB] shadow-2xl overflow-hidden motion-reduce:transition-none"
                 onMouseEnter={cancelOverlayClose}
                 onMouseLeave={scheduleOverlayClose}
               >
@@ -840,7 +840,7 @@ export function BuyerSidebarLayout({
 
       <div className={`flex-1 flex flex-col ${activeTab === 'messages' ? 'overflow-hidden' : ''}`}>
         {/* Top Header */}
-        <header className="h-[72px] border-t border-t-primary/10 bg-white/95 backdrop-blur-xl sticky top-0 z-50 shadow-sm">
+        <header className="h-[72px] border-t border-t-primary/10 bg-white/95 backdrop-blur-xl sticky top-0 z-40 shadow-sm">
           <div className="flex h-full items-center justify-between px-8">
             <div className="flex items-center gap-4">
               {isMobile ? (

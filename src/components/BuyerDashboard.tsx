@@ -367,6 +367,13 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
                 onNavigateToTab={setActiveTab} 
               />
             </div>
+          ) : dashboardView === 'overview' ? (
+            <BuyerOverviewDashboard
+              stats={dashboardStats}
+              onTabChange={setActiveTab}
+              onNewRequest={() => setShowRequestForm(true)}
+              onAddSupplier={() => setShowBulkInvite(true)}
+            />
           ) : (
             <div className="h-[calc(100vh-120px)] overflow-hidden flex flex-col animate-fade-in">
               {/* Top Metrics Bar - Fixed Height */}

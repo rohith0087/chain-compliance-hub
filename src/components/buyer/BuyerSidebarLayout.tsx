@@ -168,7 +168,55 @@ export function BuyerSidebarLayout({
   const sidebar = useSidebar();
   const collapsed = sidebar?.state === 'collapsed';
   const { isImpersonating, impersonatedCompany } = useImpersonation();
-  
+  const isMobile = useIsMobile();
+
+  // Sidebar display mode: pinned (280px in flow) vs auto-hide (72px icon rail with hover overlay)
+  const [mode, setMode] = useState<'pinned' | 'auto-hide'>('pinned');
+  const [overlayOpen, setOverlayOpen] = useState(false);
+  const openTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const closeTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('buyer-sidebar-mode') : null;
+    if (saved === 'auto-hide' || saved === 'pinned') setMode(saved);
+  }, []);
+  useEffect(() => {
+    try { localStorage.setItem('buyer-sidebar-mode', mode); } catch {}
+  }, [mode]);
+
+  const clearOverlayTimers = useCallback(() => {
+    if (openTimerRef.current) { clearTimeout(openTimerRef.current); openTimerRef.current = null; }
+    if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = null; }
+  }, []);
+  const scheduleOverlayOpen = useCallback(() => {
+    if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = null; }
+    if (openTimerRef.current) return;
+    openTimerRef.current = setTimeout(() => {
+      setOverlayOpen(true);
+      openTimerRef.current = null;
+    }, 1100);
+  }, []);
+  const scheduleOverlayClose = useCallback(() => {
+    if (openTimerRef.current) { clearTimeout(openTimerRef.current); openTimerRef.current = null; }
+    if (closeTimerRef.current) return;
+    closeTimerRef.current = setTimeout(() => {
+      setOverlayOpen(false);
+      closeTimerRef.current = null;
+    }, 300);
+  }, []);
+  const cancelOverlayClose = useCallback(() => {
+    if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = null; }
+  }, []);
+
+  // When switching back to pinned, drop any overlay state
+  useEffect(() => {
+    if (mode === 'pinned') {
+      clearOverlayTimers();
+      setOverlayOpen(false);
+    }
+  }, [mode, clearOverlayTimers]);
+  useEffect(() => () => clearOverlayTimers(), [clearOverlayTimers]);
+
   // Single active dropdown state (accordion behavior)
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);

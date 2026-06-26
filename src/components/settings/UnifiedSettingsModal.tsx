@@ -117,7 +117,8 @@ export function UnifiedSettingsModal({
                 
                 {/* Dynamic Content based on activeTab */}
                 {activeTab === 'general' && companyId && companyType && (
-                  <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    {companyType === 'buyer' && <DashboardViewPreference />}
                     <CompanyManagementDashboard 
                       companyId={companyId}
                       companyType={companyType}

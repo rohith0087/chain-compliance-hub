@@ -36,8 +36,8 @@ import {
   ShieldCheck,
   Activity,
   Inbox,
-  Pin,
-  PinOff
+  PanelLeft,
+  PanelLeftClose
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';

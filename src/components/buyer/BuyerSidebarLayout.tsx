@@ -35,8 +35,11 @@ import {
   ListTree,
   ShieldCheck,
   Activity,
-  Inbox
+  Inbox,
+  Pin,
+  PinOff
 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useTranslation } from 'react-i18next';
@@ -165,7 +168,55 @@ export function BuyerSidebarLayout({
   const sidebar = useSidebar();
   const collapsed = sidebar?.state === 'collapsed';
   const { isImpersonating, impersonatedCompany } = useImpersonation();
-  
+  const isMobile = useIsMobile();
+
+  // Sidebar display mode: pinned (280px in flow) vs auto-hide (72px icon rail with hover overlay)
+  const [mode, setMode] = useState<'pinned' | 'auto-hide'>('pinned');
+  const [overlayOpen, setOverlayOpen] = useState(false);
+  const openTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const closeTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('buyer-sidebar-mode') : null;
+    if (saved === 'auto-hide' || saved === 'pinned') setMode(saved);
+  }, []);
+  useEffect(() => {
+    try { localStorage.setItem('buyer-sidebar-mode', mode); } catch {}
+  }, [mode]);
+
+  const clearOverlayTimers = useCallback(() => {
+    if (openTimerRef.current) { clearTimeout(openTimerRef.current); openTimerRef.current = null; }
+    if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = null; }
+  }, []);
+  const scheduleOverlayOpen = useCallback(() => {
+    if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = null; }
+    if (openTimerRef.current) return;
+    openTimerRef.current = setTimeout(() => {
+      setOverlayOpen(true);
+      openTimerRef.current = null;
+    }, 1100);
+  }, []);
+  const scheduleOverlayClose = useCallback(() => {
+    if (openTimerRef.current) { clearTimeout(openTimerRef.current); openTimerRef.current = null; }
+    if (closeTimerRef.current) return;
+    closeTimerRef.current = setTimeout(() => {
+      setOverlayOpen(false);
+      closeTimerRef.current = null;
+    }, 300);
+  }, []);
+  const cancelOverlayClose = useCallback(() => {
+    if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = null; }
+  }, []);
+
+  // When switching back to pinned, drop any overlay state
+  useEffect(() => {
+    if (mode === 'pinned') {
+      clearOverlayTimers();
+      setOverlayOpen(false);
+    }
+  }, [mode, clearOverlayTimers]);
+  useEffect(() => () => clearOverlayTimers(), [clearOverlayTimers]);
+
   // Single active dropdown state (accordion behavior)
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -428,7 +479,10 @@ export function BuyerSidebarLayout({
 
   return (
     <div className={`flex w-full ${activeTab === 'messages' ? 'h-screen overflow-hidden' : 'min-h-screen'} ${isImpersonating ? 'pt-12' : ''}`}>
-      <Sidebar className="border-r border-[#E5E7EB] bg-[#FAFAFB]">
+      {(() => {
+      const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+      const fullBody = (
+        <>
         <SidebarHeader className="border-b border-[#E5E7EB] px-4 py-3 bg-transparent">
           <div className="flex items-center gap-3">
             {/* Company Logo - displays uploaded logo or default Building2 icon */}
@@ -629,7 +683,158 @@ export function BuyerSidebarLayout({
           )}
           <VersionButton />
         </SidebarFooter>
-      </Sidebar>
+        </>
+      );
+
+      const railBody = (
+        <div className="flex h-full flex-col items-center py-3 gap-2">
+          {/* Logo */}
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary overflow-hidden shrink-0">
+            {buyerProfile?.company_logo_url ? (
+              <img src={buyerProfile.company_logo_url} alt="Logo" className="h-full w-full object-contain" />
+            ) : (
+              <Building2 className="h-5 w-5 text-primary-foreground" />
+            )}
+          </div>
+
+          {/* New Request */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => handleSpecialAction('new-request')}
+                className="mt-2 h-11 w-11 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground flex items-center justify-center shadow-sm transition-colors"
+                aria-label="New Request"
+              >
+                <Plus className="h-5 w-5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">New Request</TooltipContent>
+          </Tooltip>
+
+          {/* Nav items - icon only */}
+          <div className="mt-2 flex flex-col items-center gap-1 w-full px-2">
+            {navigationItems.map((item) => {
+              const active = isActiveRoute(item.value) || (item.submenu?.some(s => isActiveRoute(s.value)) ?? false);
+              return (
+                <Tooltip key={item.value}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => {
+                        if (item.submenu) {
+                          // Open overlay so user can pick a sub-item
+                          cancelOverlayClose();
+                          setOverlayOpen(true);
+                          setActiveDropdown(item.value);
+                        } else {
+                          handleMenuClick(item.value);
+                        }
+                      }}
+                      className={`relative h-11 w-11 rounded-xl flex items-center justify-center transition-colors ${
+                        active ? 'bg-primary/10 text-primary' : 'text-slate-700 hover:bg-[#F1F5F9] hover:text-slate-900'
+                      }`}
+                      aria-label={item.title}
+                    >
+                      {active && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-primary" />}
+                      <item.icon className="h-5 w-5" />
+                      {item.badge ? (
+                        <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-primary text-white text-[10px] font-semibold flex items-center justify-center">
+                          {item.badge}
+                        </span>
+                      ) : null}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">{item.title}</TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </div>
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Help icon */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => navigate('/help')}
+                className="h-10 w-10 rounded-xl bg-white border border-[#E5E7EB] text-primary flex items-center justify-center hover:bg-[#F1F5F9] transition-colors"
+                aria-label="Help"
+              >
+                <HelpCircle className="h-5 w-5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Help & docs</TooltipContent>
+          </Tooltip>
+
+          {/* Version dot */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="text-[10px] text-slate-400 font-medium select-none" aria-label={`TraceR2C v${APP_VERSION}`}>
+                v{APP_VERSION}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="right">TraceR2C v{APP_VERSION}</TooltipContent>
+          </Tooltip>
+        </div>
+      );
+
+      // Mobile: shadcn Sheet via <Sidebar>
+      if (isMobile) {
+        return (
+          <Sidebar className="border-r border-[#E5E7EB] bg-[#FAFAFB]">
+            {fullBody}
+          </Sidebar>
+        );
+      }
+
+      // Desktop: custom rail/pinned + optional overlay
+      const inFlowWidth = mode === 'pinned' ? 280 : 72;
+      const overlayTopOffset = isImpersonating ? 48 : 0;
+
+      return (
+        <>
+          {/* In-flow sidebar (rail in auto-hide, full in pinned) */}
+          <aside
+            data-mode={mode}
+            style={{
+              width: inFlowWidth,
+              transition: `width 220ms ${EASE}`,
+            }}
+            className="hidden md:flex shrink-0 flex-col border-r border-[#E5E7EB] bg-[#FAFAFB] sticky top-0 h-screen overflow-hidden motion-reduce:transition-none"
+            onMouseEnter={mode === 'auto-hide' ? scheduleOverlayOpen : undefined}
+            onMouseLeave={mode === 'auto-hide' ? scheduleOverlayClose : undefined}
+          >
+            {mode === 'pinned' ? fullBody : railBody}
+          </aside>
+
+          {/* Auto-hide: edge trigger + overlay */}
+          {mode === 'auto-hide' && (
+            <>
+              <div
+                aria-hidden
+                className="hidden md:block fixed left-0 top-0 bottom-0 w-2 z-30"
+                onMouseEnter={scheduleOverlayOpen}
+              />
+              <aside
+                style={{
+                  width: 280,
+                  top: overlayTopOffset,
+                  transform: overlayOpen ? 'translateX(0)' : 'translateX(-110%)',
+                  transition: `transform ${overlayOpen ? 260 : 220}ms ${EASE}, opacity 200ms ${EASE}`,
+                  opacity: overlayOpen ? 1 : 0,
+                  pointerEvents: overlayOpen ? 'auto' : 'none',
+                }}
+                className="hidden md:flex fixed left-0 bottom-0 z-40 flex-col border-r border-[#E5E7EB] bg-[#FAFAFB] shadow-2xl overflow-hidden motion-reduce:transition-none"
+                onMouseEnter={cancelOverlayClose}
+                onMouseLeave={scheduleOverlayClose}
+              >
+                {fullBody}
+              </aside>
+            </>
+          )}
+        </>
+      );
+      })()}
 
 
       <div className={`flex-1 flex flex-col ${activeTab === 'messages' ? 'overflow-hidden' : ''}`}>
@@ -637,7 +842,26 @@ export function BuyerSidebarLayout({
         <header className="h-[72px] border-t border-t-primary/10 bg-white/95 backdrop-blur-xl sticky top-0 z-50 shadow-sm">
           <div className="flex h-full items-center justify-between px-8">
             <div className="flex items-center gap-4">
-              <SidebarTrigger className="-ml-1" />
+              {isMobile ? (
+                <SidebarTrigger className="-ml-1" />
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setMode((m) => (m === 'pinned' ? 'auto-hide' : 'pinned'))}
+                      className="-ml-1 h-9 w-9"
+                      aria-label={mode === 'pinned' ? 'Switch to auto-hide sidebar' : 'Pin sidebar'}
+                    >
+                      {mode === 'pinned' ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {mode === 'pinned' ? 'Auto-hide sidebar' : 'Pin sidebar'}
+                  </TooltipContent>
+                </Tooltip>
+              )}
               
               {/* Global Search Bar - Command Palette */}
               <div className="hidden md:block">

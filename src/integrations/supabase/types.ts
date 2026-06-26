@@ -3775,35 +3775,6 @@ export type Database = {
           },
         ]
       }
-      document_pins: {
-        Row: {
-          id: string
-          pinned_at: string
-          request_id: string
-          user_id: string
-        }
-        Insert: {
-          id?: string
-          pinned_at?: string
-          request_id: string
-          user_id: string
-        }
-        Update: {
-          id?: string
-          pinned_at?: string
-          request_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "document_pins_request_id_fkey"
-            columns: ["request_id"]
-            isOneToOne: false
-            referencedRelation: "document_requests"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       document_processing_logs: {
         Row: {
           created_at: string
@@ -3841,52 +3812,6 @@ export type Database = {
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "supplier_document_library"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      document_request_notes: {
-        Row: {
-          author_id: string
-          body: string
-          created_at: string
-          id: string
-          request_id: string
-        }
-        Insert: {
-          author_id: string
-          body: string
-          created_at?: string
-          id?: string
-          request_id: string
-        }
-        Update: {
-          author_id?: string
-          body?: string
-          created_at?: string
-          id?: string
-          request_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "document_request_notes_author_id_fkey"
-            columns: ["author_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_request_notes_author_id_fkey"
-            columns: ["author_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_roles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_request_notes_request_id_fkey"
-            columns: ["request_id"]
-            isOneToOne: false
-            referencedRelation: "document_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -6711,7 +6636,7 @@ export type Database = {
           notes: string | null
           reason: string
           reason_code: string | null
-          reviewer_id: string | null
+          reviewer_id: string
           selected_request_id: string | null
         }
         Insert: {
@@ -6726,7 +6651,7 @@ export type Database = {
           notes?: string | null
           reason: string
           reason_code?: string | null
-          reviewer_id?: string | null
+          reviewer_id: string
           selected_request_id?: string | null
         }
         Update: {
@@ -6741,7 +6666,7 @@ export type Database = {
           notes?: string | null
           reason?: string
           reason_code?: string | null
-          reviewer_id?: string | null
+          reviewer_id?: string
           selected_request_id?: string | null
         }
         Relationships: [
@@ -6855,167 +6780,6 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      integration_connections: {
-        Row: {
-          access_token: string | null
-          config: Json
-          connected_at: string
-          connected_by: string | null
-          id: string
-          last_error: string | null
-          last_synced_at: string | null
-          organization_id: string
-          provider: string
-          refresh_token: string | null
-          status: string
-          token_expires_at: string | null
-        }
-        Insert: {
-          access_token?: string | null
-          config?: Json
-          connected_at?: string
-          connected_by?: string | null
-          id?: string
-          last_error?: string | null
-          last_synced_at?: string | null
-          organization_id: string
-          provider: string
-          refresh_token?: string | null
-          status?: string
-          token_expires_at?: string | null
-        }
-        Update: {
-          access_token?: string | null
-          config?: Json
-          connected_at?: string
-          connected_by?: string | null
-          id?: string
-          last_error?: string | null
-          last_synced_at?: string | null
-          organization_id?: string
-          provider?: string
-          refresh_token?: string | null
-          status?: string
-          token_expires_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "integration_connections_connected_by_fkey"
-            columns: ["connected_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "integration_connections_connected_by_fkey"
-            columns: ["connected_by"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_roles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "integration_connections_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "buyers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      integration_oauth_state: {
-        Row: {
-          expires_at: string
-          initiated_by: string
-          organization_id: string
-          provider: string
-          return_url: string | null
-          state: string
-        }
-        Insert: {
-          expires_at?: string
-          initiated_by: string
-          organization_id: string
-          provider: string
-          return_url?: string | null
-          state: string
-        }
-        Update: {
-          expires_at?: string
-          initiated_by?: string
-          organization_id?: string
-          provider?: string
-          return_url?: string | null
-          state?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "integration_oauth_state_initiated_by_fkey"
-            columns: ["initiated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "integration_oauth_state_initiated_by_fkey"
-            columns: ["initiated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_roles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "integration_oauth_state_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "buyers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      integration_sync_log: {
-        Row: {
-          connection_id: string
-          created_at: string
-          event_type: string
-          id: string
-          payload: Json | null
-          request_id: string | null
-          status: string
-        }
-        Insert: {
-          connection_id: string
-          created_at?: string
-          event_type: string
-          id?: string
-          payload?: Json | null
-          request_id?: string | null
-          status: string
-        }
-        Update: {
-          connection_id?: string
-          created_at?: string
-          event_type?: string
-          id?: string
-          payload?: Json | null
-          request_id?: string | null
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "integration_sync_log_connection_id_fkey"
-            columns: ["connection_id"]
-            isOneToOne: false
-            referencedRelation: "integration_connections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "integration_sync_log_request_id_fkey"
-            columns: ["request_id"]
-            isOneToOne: false
-            referencedRelation: "document_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -10311,10 +10075,6 @@ export type Database = {
       attest_supplier_evidence_v1: {
         Args: { p_evidence_version_id: string; p_notes?: string }
         Returns: string
-      }
-      auto_accept_inbound_attachment_v1: {
-        Args: { p_attachment_id: string; p_final_storage_path: string }
-        Returns: Json
       }
       auto_verify_evidence_v1: {
         Args: { p_evidence_version_id: string }

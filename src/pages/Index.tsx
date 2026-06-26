@@ -412,362 +412,7 @@ const SOLUTIONS = [
   { tag: 'GPSR · DPP', name: 'EU expansion' },
 ];
 
-/* ------------------------- HERO: barcode side panel ----------------------- */
-
-const BARCODE_ROWS = 38;
-// deterministic pseudo-random bar pattern (no flicker across renders)
-const seededBars = (side: 'left' | 'right') => {
-  const rng = (seed: number) => {
-    let s = seed;
-    return () => {
-      s = (s * 9301 + 49297) % 233280;
-      return s / 233280;
-    };
-  };
-  const r = rng(side === 'left' ? 17 : 91);
-  return Array.from({ length: BARCODE_ROWS }, () => {
-    // 1–3 bars per row, each with x-offset and width
-    const segs = 1 + Math.floor(r() * 3);
-    return Array.from({ length: segs }, () => ({
-      x: Math.floor(r() * 70),
-      w: 6 + Math.floor(r() * 60),
-    }));
-  });
-};
-
-const BarcodePanel = ({ side }: { side: 'left' | 'right' }) => {
-  const reduce = useReducedMotion();
-  const rows = seededBars(side);
-  const maskId = `r2c-barcode-mask-${side}`;
-  return (
-    <motion.div
-      aria-hidden
-      initial={reduce ? false : { opacity: 0 }}
-      animate={{ opacity: 0.55 }}
-      transition={reduce ? { duration: 0 } : { delay: 0.5, duration: 1.0, ease: EASE }}
-      className="pointer-events-none absolute bottom-0 hidden h-[62%] w-[min(26vw,300px)] lg:block"
-      style={{ [side]: 0 } as React.CSSProperties}
-    >
-      <svg viewBox="0 0 100 224" preserveAspectRatio="none" className="h-full w-full">
-        <defs>
-          <linearGradient id={maskId} x1={side === 'left' ? '0%' : '100%'} y1="0%" x2={side === 'left' ? '100%' : '0%'} y2="0%">
-            <stop offset="0%" stopColor="white" stopOpacity="0.9" />
-            <stop offset="60%" stopColor="white" stopOpacity="0.45" />
-            <stop offset="100%" stopColor="white" stopOpacity="0" />
-          </linearGradient>
-          <mask id={`${maskId}-m`}>
-            <rect width="100" height="224" fill={`url(#${maskId})`} />
-          </mask>
-        </defs>
-        <g mask={`url(#${maskId}-m)`} fill="var(--r2c-stamp)">
-          {rows.flatMap((segs, i) =>
-            segs.map((s, j) => (
-              <rect
-                key={`${i}-${j}`}
-                x={s.x}
-                y={i * 4 + 0.4}
-                width={s.w}
-                height={1.2}
-                rx={0.4}
-              />
-            )),
-          )}
-        </g>
-      </svg>
-    </motion.div>
-  );
-};
-
-
-/* ------------------------- HERO: buyer dashboard mockup ------------------- */
-
-const KPI_CARDS = [
-  { label: 'Suppliers',        value: '7',   sub: 'Total suppliers',  tone: 'stamp'  as const, icon: '👥' },
-  { label: 'Active',           value: '23',  sub: 'Active suppliers', tone: 'caution' as const, icon: '◐' },
-  { label: 'Pending Review',   value: '3',   sub: 'Under review',     tone: 'verified' as const, icon: '◷' },
-  { label: 'Expiring',         value: '1',   sub: 'Within 60 days',   tone: 'recall'  as const, icon: '⚠' },
-];
-
-const TONE_BG: Record<'stamp'|'caution'|'verified'|'recall', { bg: string; fg: string }> = {
-  stamp:    { bg: 'rgba(22,73,58,0.10)',   fg: 'var(--r2c-stamp)'    },
-  caution:  { bg: 'rgba(184,115,26,0.12)', fg: 'var(--r2c-caution)'  },
-  verified: { bg: 'rgba(31,107,74,0.10)',  fg: 'var(--r2c-verified)' },
-  recall:   { bg: 'rgba(216,70,42,0.10)',  fg: 'var(--r2c-recall)'   },
-};
-
-const ATTENTION_ITEMS = [
-  { title: 'Test',                       supplier: 'Test Supplier', meta: 'Overdue 176d ago' },
-  { title: 'Manufacturing License',      supplier: 'Test Supplier', meta: 'Overdue 176d ago' },
-  { title: 'ISO 9001 Certificate',       supplier: 'Logic Foods',   meta: 'Overdue 138d ago' },
-  { title: 'OHSAS 18001 Certificate',    supplier: 'Test Supplier', meta: 'Overdue 55d ago'  },
-];
-
-const EXPIRY_ITEMS = [
-  { title: 'ISO 9001 Certificate',           supplier: 'Test Supplier · ISO 9001 Certificate',           tag: 'Expired 177d ago' },
-  { title: 'ISO 9001 Certificate',           supplier: 'Test Supplier · ISO 9001 Certificate',           tag: 'Expired 176d ago' },
-  { title: 'Approved Supplier Locations',    supplier: 'Test Supplier · Approved Supplier Locations',    tag: 'Expired 175d ago' },
-  { title: 'Completed Supplier Questionnaire', supplier: 'Test Supplier · Completed Supplier Questionnaire', tag: 'Expired 85d ago' },
-  { title: 'Safety Data Sheets (SDS)',       supplier: 'Test Supplier · Safety Data Sheets (SDS)',       tag: 'Expired 69d ago' },
-];
-
-const ACTIVITY_ITEMS = [
-  { icon: '↑',  title: 'process_change_agreement…', sub: 'Document uploaded',   time: '9h'  },
-  { icon: '↑',  title: 'process_change_agreement…', sub: 'Document uploaded',   time: '9h'  },
-  { icon: '📄', title: 'Process Change Agreement…', sub: 'Document requested',  time: '10h' },
-  { icon: '↑',  title: 'sample_npip_certificate…',  sub: 'Document uploaded',   time: '10h' },
-  { icon: '📄', title: 'NPIP Certification',         sub: 'Document requested',  time: '10h' },
-  { icon: '✓',  title: 'Document',                   sub: 'Document approved',   time: '3d'  },
-];
-
-const SIDEBAR_ITEMS = [
-  { label: 'Dashboard',            icon: '▦', active: true  },
-  { label: 'Suppliers',            icon: '◫', active: false, chevron: true },
-  { label: 'Requests & Documents', icon: '▤', active: false, chevron: true },
-  { label: 'Compliance',           icon: '◇', active: false, chevron: true },
-  { label: 'Onboarding Pipeline',  icon: '◧', active: false },
-  { label: 'Messages',             icon: '✉', active: false },
-  { label: 'Settings',             icon: '⚙', active: false },
-  { label: 'Subscription & Billing', icon: '◉', active: false },
-];
-
-const SupplierAppMockup = () => {
-  const reduce = useReducedMotion();
-
-  return (
-    <motion.div
-      initial={reduce ? false : { opacity: 0, y: 40, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={reduce ? { duration: 0 } : { delay: 0.35, duration: 0.8, ease: EASE }}
-      className="relative mx-auto w-full max-w-[1120px] overflow-hidden rounded-[14px] border border-[var(--r2c-line)] bg-[var(--r2c-surface)] shadow-[0_40px_80px_-30px_rgba(20,24,31,0.45),0_18px_36px_-18px_rgba(20,24,31,0.25)]"
-    >
-      {/* macOS title bar */}
-      <div className="relative grid h-9 grid-cols-[1fr_auto_1fr] items-center border-b border-[var(--r2c-line)] bg-[var(--r2c-surface-2)] px-4">
-        <div className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-[#FF5F57]" />
-          <span className="h-3 w-3 rounded-full bg-[#FEBC2E]" />
-          <span className="h-3 w-3 rounded-full bg-[#28C840]" />
-        </div>
-        <span className="font-data text-[12px] font-medium tracking-wide text-[var(--r2c-ink)]">TraceR2C · Buyer Workspace</span>
-        <span />
-      </div>
-
-      <div className="grid grid-cols-[220px_1fr]">
-        {/* ============================== sidebar ============================== */}
-        <aside className="flex flex-col border-r border-[var(--r2c-line)] bg-[var(--r2c-surface-2)]/60">
-          {/* buyer header */}
-          <div className="flex items-center gap-2.5 border-b border-[var(--r2c-line)] px-3 py-3">
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--r2c-stamp)] font-data text-[11px] font-bold text-white">TB</span>
-            <span className="flex flex-col leading-tight">
-              <span className="font-body text-[12.5px] font-semibold text-[var(--r2c-ink)]">Test Buyer</span>
-              <span className="font-data text-[10px] text-[var(--r2c-muted)]">Amit</span>
-            </span>
-          </div>
-
-          {/* + New Request CTA */}
-          <div className="px-3 pt-3">
-            <button className="flex w-full items-center justify-center gap-1.5 rounded-md bg-[var(--r2c-stamp)] px-3 py-2 font-body text-[12px] font-semibold text-white">
-              <span>+</span> New Request
-            </button>
-          </div>
-
-          {/* nav */}
-          <div className="mt-3 px-2">
-            <p className="px-2 font-data text-[10px] uppercase tracking-[0.14em] text-[var(--r2c-muted)]">Navigation</p>
-            <ul className="mt-1 space-y-0.5">
-              {SIDEBAR_ITEMS.map((item) => (
-                <li
-                  key={item.label}
-                  className={`flex items-center gap-2 rounded-md px-2 py-1.5 ${
-                    item.active
-                      ? 'bg-[var(--r2c-stamp)]/12 text-[var(--r2c-stamp)]'
-                      : 'text-[var(--r2c-ink)]'
-                  }`}
-                >
-                  <span className="font-data w-3.5 text-center text-[11px] leading-none">{item.icon}</span>
-                  <span className="font-body flex-1 text-[12px] font-medium">{item.label}</span>
-                  {item.chevron && <span className="font-data text-[9px] text-[var(--r2c-muted)]">›</span>}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* footer help card */}
-          <div className="mt-auto p-3">
-            <div className="rounded-md border border-[var(--r2c-line)] bg-[var(--r2c-surface)] p-2.5 text-center">
-              <span className="grid mx-auto h-5 w-5 place-items-center rounded-full bg-[var(--r2c-stamp)]/10 font-data text-[10px] text-[var(--r2c-stamp)]">?</span>
-              <p className="mt-1 font-body text-[10.5px] font-semibold text-[var(--r2c-ink)]">Need help?</p>
-              <a className="font-data text-[9.5px] text-[var(--r2c-stamp)]">Go to Help Center →</a>
-            </div>
-            <p className="mt-2 text-center font-data text-[9px] text-[var(--r2c-muted)]">v1.3</p>
-          </div>
-        </aside>
-
-        {/* ============================== main =================================== */}
-        <div className="flex min-w-0 flex-col bg-[var(--r2c-surface)]">
-          {/* top bar */}
-          <div className="flex items-center gap-3 border-b border-[var(--r2c-line)] px-4 py-2.5">
-            <span className="font-data text-[13px] text-[var(--r2c-muted)]">⊟</span>
-            <div className="flex flex-1 items-center gap-2 rounded-md border border-[var(--r2c-line)] bg-[var(--r2c-surface-2)]/60 px-2.5 py-1.5">
-              <span className="font-data text-[10.5px] text-[var(--r2c-muted)]">⌕</span>
-              <span className="font-body flex-1 text-[11.5px] text-[var(--r2c-muted)]">Search everything…</span>
-              <span className="rounded border border-[var(--r2c-line)] bg-[var(--r2c-surface)] px-1.5 font-data text-[9.5px] text-[var(--r2c-muted)]">⌘K</span>
-            </div>
-            <div className="flex items-center gap-1.5 rounded-md border border-[var(--r2c-line)] bg-[var(--r2c-surface-2)]/60 px-2.5 py-1.5">
-              <span className="font-data text-[10.5px] text-[var(--r2c-muted)]">⌂</span>
-              <span className="font-body text-[11.5px] text-[var(--r2c-ink)]">Select Branch</span>
-              <span className="font-data text-[9.5px] text-[var(--r2c-muted)]">▾</span>
-            </div>
-            <span className="font-data text-[14px] text-[var(--r2c-muted)]">⇄</span>
-            <span className="relative font-data text-[14px] text-[var(--r2c-muted)]">
-              ⌕<span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-[var(--r2c-recall)]" />
-            </span>
-            <span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--r2c-stamp)] font-data text-[10px] font-bold text-white">A</span>
-          </div>
-
-          {/* KPI row */}
-          <div className="grid grid-cols-5 gap-3 px-4 pt-4">
-            {KPI_CARDS.map((k) => {
-              const tone = TONE_BG[k.tone];
-              return (
-                <div key={k.label} className="rounded-lg border border-[var(--r2c-line)] bg-[var(--r2c-surface)] p-3">
-                  <div className="flex items-start justify-between">
-                    <span className="font-body text-[10.5px] font-medium text-[var(--r2c-muted)]">{k.label}</span>
-                    <span className="grid h-6 w-6 place-items-center rounded-md font-data text-[11px]" style={{ background: tone.bg, color: tone.fg }}>{k.icon}</span>
-                  </div>
-                  <p className="font-display mt-1 text-[22px] font-bold leading-none text-[var(--r2c-ink)]">{k.value}</p>
-                  <p className="mt-1 font-body text-[10px] text-[var(--r2c-muted)]">{k.sub}</p>
-                </div>
-              );
-            })}
-            {/* compliance score donut */}
-            <div className="rounded-lg border border-[var(--r2c-line)] bg-[var(--r2c-surface)] p-3">
-              <div className="flex items-start justify-between">
-                <span className="font-body text-[10.5px] font-medium text-[var(--r2c-muted)]">Compliance Score</span>
-              </div>
-              <div className="mt-1 flex items-center justify-between">
-                <p className="font-display text-[22px] font-bold leading-none text-[var(--r2c-ink)]">54%</p>
-                <svg width="34" height="34" viewBox="0 0 36 36" className="-rotate-90">
-                  <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(216,70,42,0.15)" strokeWidth="4" />
-                  <circle cx="18" cy="18" r="15" fill="none" stroke="var(--r2c-recall)" strokeWidth="4" strokeDasharray="50.9 94.2" strokeLinecap="round" />
-                </svg>
-              </div>
-              <p className="mt-1 font-body text-[10px] text-[var(--r2c-muted)]">Overall compliance</p>
-            </div>
-          </div>
-
-          {/* three-column body */}
-          <div className="grid grid-cols-[1fr_1.25fr_0.95fr] gap-3 p-4">
-            {/* Needs Your Attention */}
-            <div className="overflow-hidden rounded-lg border border-[var(--r2c-line)] bg-[var(--r2c-surface)]">
-              <div className="flex items-center gap-2 border-b border-[var(--r2c-line)] px-3 py-2.5">
-                <span className="text-[11px]" style={{ color: 'var(--r2c-caution)' }}>⚠</span>
-                <span className="font-body text-[12px] font-semibold text-[var(--r2c-ink)]">Needs Your Attention</span>
-              </div>
-              <div className="flex gap-1.5 px-3 pt-2.5">
-                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-data text-[10px] font-medium" style={{ background: TONE_BG.verified.bg, color: TONE_BG.verified.fg }}>
-                  3 Submitted
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-data text-[10px] font-medium" style={{ background: TONE_BG.recall.bg, color: TONE_BG.recall.fg }}>
-                  10 Overdue
-                </span>
-              </div>
-              <ul className="px-2 py-2">
-                {ATTENTION_ITEMS.map((it) => (
-                  <li key={it.title} className="flex items-start gap-2 rounded-md px-2 py-2 hover:bg-[var(--r2c-surface-2)]/50">
-                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: 'var(--r2c-recall)' }} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-body text-[11.5px] font-semibold text-[var(--r2c-ink)]">{it.title}</span>
-                      <span className="block font-body text-[10.5px] text-[var(--r2c-muted)]">{it.supplier}</span>
-                      <span className="block font-data text-[10px]" style={{ color: 'var(--r2c-recall)' }}>{it.meta}</span>
-                    </span>
-                    <span className="font-data text-[10px] text-[var(--r2c-muted)]">›</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="border-t border-[var(--r2c-line)] px-3 py-2 text-center font-data text-[10.5px] text-[var(--r2c-stamp)]">
-                View all attention items ›
-              </div>
-            </div>
-
-            {/* Document Expiry Tracker */}
-            <div className="overflow-hidden rounded-lg border border-[var(--r2c-line)] bg-[var(--r2c-surface)]">
-              <div className="flex items-center justify-between border-b border-[var(--r2c-line)] px-3 py-2.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px]" style={{ color: 'var(--r2c-stamp)' }}>▤</span>
-                  <span className="font-body text-[12px] font-semibold text-[var(--r2c-ink)]">Document Expiry Tracker</span>
-                </div>
-                <span className="rounded-md border border-[var(--r2c-line)] bg-[var(--r2c-surface-2)]/60 px-1.5 py-0.5 font-data text-[10px] text-[var(--r2c-muted)]">13 total</span>
-              </div>
-              <div className="flex gap-3 px-3 pt-2.5 font-data text-[10.5px]">
-                <span className="font-semibold text-[var(--r2c-ink)]">All <span className="ml-0.5 rounded-full bg-[var(--r2c-stamp)] px-1.5 py-0.5 text-[9px] text-white">13</span></span>
-                <span className="text-[var(--r2c-muted)]">Expired <span className="ml-0.5 rounded-full bg-[var(--r2c-recall)] px-1.5 py-0.5 text-[9px] text-white">12</span></span>
-                <span className="text-[var(--r2c-muted)]">7d <span className="ml-0.5 rounded-full bg-[var(--r2c-caution)] px-1.5 py-0.5 text-[9px] text-white">1</span></span>
-                <span className="text-[var(--r2c-muted)]">30d</span>
-                <span className="text-[var(--r2c-muted)]">60d</span>
-              </div>
-              <ul className="px-2 py-2">
-                {EXPIRY_ITEMS.map((it, i) => (
-                  <li key={i} className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-[var(--r2c-surface-2)]/50">
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-body text-[11.5px] font-semibold text-[var(--r2c-ink)]">{it.title}</span>
-                      <span className="block truncate font-body text-[10.5px] text-[var(--r2c-muted)]">{it.supplier}</span>
-                    </span>
-                    <span className="shrink-0 rounded-md px-2 py-0.5 font-data text-[10px] font-medium" style={{ background: TONE_BG.recall.bg, color: TONE_BG.recall.fg }}>{it.tag}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="border-t border-[var(--r2c-line)] px-3 py-2 text-center font-data text-[10.5px] text-[var(--r2c-stamp)]">
-                View all documents ›
-              </div>
-            </div>
-
-            {/* Quick Actions + Recent Activity */}
-            <div className="flex flex-col gap-3">
-              <div className="overflow-hidden rounded-lg border border-[var(--r2c-line)] bg-[var(--r2c-surface)]">
-                <div className="flex items-center gap-2 border-b border-[var(--r2c-line)] px-3 py-2.5">
-                  <span className="text-[11px]" style={{ color: 'var(--r2c-stamp)' }}>⚡</span>
-                  <span className="font-body text-[12px] font-semibold text-[var(--r2c-ink)]">Quick Actions</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 p-2.5">
-                  <button className="flex items-center justify-center gap-1.5 rounded-md bg-[var(--r2c-stamp)] px-2 py-2 font-body text-[10.5px] font-semibold text-white">+ New Request</button>
-                  <button className="flex items-center justify-center gap-1.5 rounded-md bg-[var(--r2c-verified)] px-2 py-2 font-body text-[10.5px] font-semibold text-white">⚗ COA Analysis</button>
-                  <button className="flex items-center justify-center gap-1.5 rounded-md border border-[var(--r2c-line)] bg-[var(--r2c-surface-2)]/60 px-2 py-2 font-body text-[10.5px] font-semibold text-[var(--r2c-ink)]">⛨ Supplier Risk</button>
-                  <button className="flex items-center justify-center gap-1.5 rounded-md border border-[var(--r2c-line)] bg-[var(--r2c-surface-2)]/60 px-2 py-2 font-body text-[10.5px] font-semibold text-[var(--r2c-ink)]">⌬ Suppliers</button>
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-hidden rounded-lg border border-[var(--r2c-line)] bg-[var(--r2c-surface)]">
-                <div className="flex items-center justify-between border-b border-[var(--r2c-line)] px-3 py-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px]" style={{ color: 'var(--r2c-stamp)' }}>↗</span>
-                    <span className="font-body text-[12px] font-semibold text-[var(--r2c-ink)]">Recent Activity</span>
-                  </div>
-                  <span className="font-data text-[10.5px] text-[var(--r2c-stamp)]">View all</span>
-                </div>
-                <ul className="px-2 py-1.5">
-                  {ACTIVITY_ITEMS.map((it, i) => (
-                    <li key={i} className="flex items-center gap-2 rounded-md px-2 py-1.5">
-                      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md font-data text-[10px]" style={{ background: TONE_BG.stamp.bg, color: TONE_BG.stamp.fg }}>{it.icon}</span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-body text-[11px] font-medium text-[var(--r2c-ink)]">{it.title}</span>
-                        <span className="block font-body text-[10px] text-[var(--r2c-muted)]">{it.sub}</span>
-                      </span>
-                      <span className="font-data text-[9.5px] text-[var(--r2c-muted)]">{it.time}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
-
 /* --------------------------------- page ----------------------------------- */
-
 
 const Index = () => {
   const navigate = useNavigate();
@@ -938,58 +583,60 @@ const Index = () => {
 
       {/* ================================ hero =============================== */}
       <section ref={heroRef} className="relative overflow-hidden border-b border-[var(--r2c-line)]">
-        <motion.div className="r2c-grid pointer-events-none absolute inset-0 opacity-40" style={{ y: reduce ? 0 : gridY }} />
-        {/* soft radial wash */}
+        <motion.div className="r2c-grid pointer-events-none absolute inset-0 opacity-70" style={{ y: reduce ? 0 : gridY }} />
+        {/* cool steel wash for depth (neutral charcoal, deliberately not warm) */}
         <div
           className="pointer-events-none absolute inset-0"
-          style={{ background: 'radial-gradient(60% 50% at 50% 35%, rgba(255,255,255,0.6), transparent 70%)' }}
+          style={{ background: 'radial-gradient(120% 85% at 100% 0%, rgba(20,24,31,0.05), transparent 55%)' }}
         />
 
-        {/* side barcode panels */}
-        <BarcodePanel side="left" />
-        <BarcodePanel side="right" />
+        <div className="relative mx-auto grid max-w-[1180px] grid-cols-1 gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:py-28">
+          {/* copy */}
+          <div>
+            <motion.div {...heroIn(0)}>
+              <Eyebrow>Compliance Operating System</Eyebrow>
+            </motion.div>
 
-        <div className="relative mx-auto flex max-w-[1180px] flex-col items-center px-5 pb-16 pt-20 text-center sm:px-8 lg:pb-24 lg:pt-24">
-          <motion.h1
-            {...heroIn(0.04)}
-            className="mt-2 max-w-[20ch] font-normal leading-[1.05] tracking-[-0.02em] text-[var(--r2c-ink)] text-[42px] sm:text-[60px] lg:text-[72px]"
-            style={{ fontFamily: 'Instrument Serif, "Cormorant Garamond", Georgia, serif' }}
-          >
-            Supplier compliance,{' '}
-            <span className="italic text-[var(--r2c-stamp)]">defensible at audit speed</span>
-          </motion.h1>
-
-
-          <motion.p
-            {...heroIn(0.16)}
-            className="mt-5 max-w-xl text-[15px] leading-[1.55] text-[var(--r2c-muted)] sm:text-[16px]"
-          >
-            A system of record for supplier evidence — reads every certificate, validates it against the rule that applies, and proves it at audit, customs, and recall.
-          </motion.p>
-
-          <motion.div {...heroIn(0.24)} className="mt-7 flex flex-wrap items-center justify-center gap-3">
-            <button
-              onClick={goAuth}
-              className="font-data inline-flex items-center rounded-full bg-[var(--r2c-ink)] px-7 py-3 text-[12px] font-semibold uppercase tracking-[0.16em] text-white transition-all hover:bg-[var(--r2c-stamp)] active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--r2c-stamp)]"
+            <motion.h1
+              {...heroIn(0.08)}
+              className="font-display mt-5 text-[40px] font-bold leading-[1.04] sm:text-[52px] lg:text-[58px]"
             >
-              Get started
-            </button>
-            <button
-              onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })}
-              className="font-data inline-flex items-center rounded-full border border-[var(--r2c-ink)] bg-transparent px-7 py-3 text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--r2c-ink)] transition-colors hover:bg-[var(--r2c-ink)]/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--r2c-ink)]"
-            >
-              Talk to us
-            </button>
-          </motion.div>
+              Make every supplier document something you can{' '}
+              <span className="relative whitespace-nowrap text-[var(--r2c-stamp)]">
+                defend
+                <motion.span
+                  aria-hidden
+                  className="absolute -bottom-0.5 left-0 h-[3px] w-full origin-left bg-[var(--r2c-stamp)]"
+                  initial={reduce ? false : { scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={reduce ? { duration: 0 } : { delay: 0.7, duration: 0.5, ease: EASE }}
+                />
+              </span>
+            </motion.h1>
 
-          {/* dashboard mockup */}
-          <div className="relative z-[1] mt-10 w-full">
-            <SupplierAppMockup />
+            <motion.p {...heroIn(0.16)} className="mt-7 max-w-lg text-[17px] leading-[1.6] text-[var(--r2c-muted)]">
+              TraceR2C reads each certificate, validates it against the rule that applies, and stamps it as
+              product-level evidence — so you clear customs, pass audits, and recall by lot, not by guess.
+            </motion.p>
+
+            <motion.div {...heroIn(0.24)} className="mt-9 flex flex-wrap items-center gap-3">
+              <PrimaryButton onClick={goAuth}>Book a demo</PrimaryButton>
+              <GhostButton onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })}>
+                Watch it read a certificate
+              </GhostButton>
+            </motion.div>
           </div>
 
+          {/* signature */}
+          <motion.div
+            initial={reduce ? false : { opacity: 0, y: 24, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={reduce ? { duration: 0 } : { delay: 0.3, duration: 0.7, ease: EASE }}
+          >
+            <EvidenceCard />
+          </motion.div>
         </div>
       </section>
-
 
       {/* ============================== platform ============================ */}
       <section id="platform" className="mx-auto max-w-[1180px] px-5 py-24 sm:px-8">

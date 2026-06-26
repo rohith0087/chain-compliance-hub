@@ -23,6 +23,7 @@ import { AddressFields, emptyAddressData, AddressData } from '@/components/share
 import { SafeSelect, SafeSelectItem } from '@/components/ui/SafeSelect';
 import { VALID_INDUSTRIES } from '@/config/industries';
 import { toast } from 'sonner';
+import { DashboardViewPreference } from '@/components/settings/DashboardViewPreference';
 
 interface CompanyManagementDashboardProps {
   companyId: string;

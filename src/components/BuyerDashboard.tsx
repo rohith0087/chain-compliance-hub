@@ -40,6 +40,7 @@ import { ExpiryPanel } from '@/components/dashboard/ExpiryPanel';
 import { ActivityQuickActionsPanel } from '@/components/dashboard/ActivityQuickActionsPanel';
 import { AuditorDashboardPanel } from '@/components/dashboard/auditor/AuditorDashboardPanel';
 import { getWorkspaceProfileForIndustry } from '@/config/workspaceProfiles';
+import { BuyerOverviewDashboard } from '@/components/dashboard/BuyerOverviewDashboard';
 import { motion } from 'framer-motion';
 import { Users, Clock, AlertTriangle } from 'lucide-react';
 import { useCommunicationThreads } from '@/hooks/useCommunicationThreads';
@@ -70,6 +71,16 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('buyerDashboard_activeTab') || 'dashboard';
   });
+  const [dashboardView, setDashboardView] = useState<'overview' | 'detailed'>(() => {
+    return (localStorage.getItem('buyerDashboard_view') as 'overview' | 'detailed') || 'overview';
+  });
+  useEffect(() => {
+    const handler = () => {
+      setDashboardView((localStorage.getItem('buyerDashboard_view') as 'overview' | 'detailed') || 'overview');
+    };
+    window.addEventListener('buyer-dashboard-view-changed', handler);
+    return () => window.removeEventListener('buyer-dashboard-view-changed', handler);
+  }, []);
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showBulkInvite, setShowBulkInvite] = useState(false);
@@ -356,6 +367,13 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
                 onNavigateToTab={setActiveTab} 
               />
             </div>
+          ) : dashboardView === 'overview' ? (
+            <BuyerOverviewDashboard
+              stats={dashboardStats}
+              onTabChange={setActiveTab}
+              onNewRequest={() => setShowRequestForm(true)}
+              onAddSupplier={() => setShowBulkInvite(true)}
+            />
           ) : (
             <div className="h-[calc(100vh-120px)] overflow-hidden flex flex-col animate-fade-in">
               {/* Top Metrics Bar - Fixed Height */}

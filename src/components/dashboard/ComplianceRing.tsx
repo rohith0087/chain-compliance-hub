@@ -8,9 +8,11 @@ interface ComplianceRingProps {
   strokeWidth?: number;
   label?: string;
   subtitle?: string;
+  showLabel?: boolean;
 }
 
-export function ComplianceRing({ score, size = 140, strokeWidth = 10, label, subtitle }: ComplianceRingProps) {
+export function ComplianceRing({ score, size = 140, strokeWidth = 10, label, subtitle, showLabel = true }: ComplianceRingProps) {
+
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const center = size / 2;
@@ -59,19 +61,22 @@ export function ComplianceRing({ score, size = 140, strokeWidth = 10, label, sub
         />
       </svg>
       {/* Center text */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <AnimatedNumber 
-          value={score} 
-          suffix="%" 
-          className={cn(
-            "font-bold text-foreground",
-            size <= 80 ? "text-lg" : size <= 120 ? "text-2xl" : "text-3xl"
+      {showLabel && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <AnimatedNumber 
+            value={score} 
+            suffix="%" 
+            className={cn(
+              "font-bold text-foreground",
+              size <= 80 ? "text-lg" : size <= 120 ? "text-2xl" : "text-3xl"
+            )}
+          />
+          {size > 80 && !label && (
+            <span className="text-xs text-muted-foreground">Completed</span>
           )}
-        />
-        {size > 80 && !label && (
-          <span className="text-xs text-muted-foreground">Completed</span>
-        )}
-      </div>
+        </div>
+      )}
+
     </div>
   );
 

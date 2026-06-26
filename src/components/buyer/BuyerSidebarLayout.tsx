@@ -681,7 +681,158 @@ export function BuyerSidebarLayout({
           )}
           <VersionButton />
         </SidebarFooter>
-      </Sidebar>
+        </>
+      );
+
+      const railBody = (
+        <div className="flex h-full flex-col items-center py-3 gap-2">
+          {/* Logo */}
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary overflow-hidden shrink-0">
+            {buyerProfile?.company_logo_url ? (
+              <img src={buyerProfile.company_logo_url} alt="Logo" className="h-full w-full object-contain" />
+            ) : (
+              <Building2 className="h-5 w-5 text-primary-foreground" />
+            )}
+          </div>
+
+          {/* New Request */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => handleSpecialAction('new-request')}
+                className="mt-2 h-11 w-11 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground flex items-center justify-center shadow-sm transition-colors"
+                aria-label="New Request"
+              >
+                <Plus className="h-5 w-5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">New Request</TooltipContent>
+          </Tooltip>
+
+          {/* Nav items - icon only */}
+          <div className="mt-2 flex flex-col items-center gap-1 w-full px-2">
+            {navigationItems.map((item) => {
+              const active = isActiveRoute(item.value) || (item.submenu?.some(s => isActiveRoute(s.value)) ?? false);
+              return (
+                <Tooltip key={item.value}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => {
+                        if (item.submenu) {
+                          // Open overlay so user can pick a sub-item
+                          cancelOverlayClose();
+                          setOverlayOpen(true);
+                          setActiveDropdown(item.value);
+                        } else {
+                          handleMenuClick(item.value);
+                        }
+                      }}
+                      className={`relative h-11 w-11 rounded-xl flex items-center justify-center transition-colors ${
+                        active ? 'bg-primary/10 text-primary' : 'text-slate-700 hover:bg-[#F1F5F9] hover:text-slate-900'
+                      }`}
+                      aria-label={item.title}
+                    >
+                      {active && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-primary" />}
+                      <item.icon className="h-5 w-5" />
+                      {item.badge ? (
+                        <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-primary text-white text-[10px] font-semibold flex items-center justify-center">
+                          {item.badge}
+                        </span>
+                      ) : null}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">{item.title}</TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </div>
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Help icon */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => navigate('/help')}
+                className="h-10 w-10 rounded-xl bg-white border border-[#E5E7EB] text-primary flex items-center justify-center hover:bg-[#F1F5F9] transition-colors"
+                aria-label="Help"
+              >
+                <HelpCircle className="h-5 w-5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Help & docs</TooltipContent>
+          </Tooltip>
+
+          {/* Version dot */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="text-[10px] text-slate-400 font-medium select-none" aria-label={`TraceR2C v${APP_VERSION}`}>
+                v{APP_VERSION}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="right">TraceR2C v{APP_VERSION}</TooltipContent>
+          </Tooltip>
+        </div>
+      );
+
+      // Mobile: shadcn Sheet via <Sidebar>
+      if (isMobile) {
+        return (
+          <Sidebar className="border-r border-[#E5E7EB] bg-[#FAFAFB]">
+            {fullBody}
+          </Sidebar>
+        );
+      }
+
+      // Desktop: custom rail/pinned + optional overlay
+      const inFlowWidth = mode === 'pinned' ? 280 : 72;
+      const overlayTopOffset = isImpersonating ? 48 : 0;
+
+      return (
+        <>
+          {/* In-flow sidebar (rail in auto-hide, full in pinned) */}
+          <aside
+            data-mode={mode}
+            style={{
+              width: inFlowWidth,
+              transition: `width 220ms ${EASE}`,
+            }}
+            className="hidden md:flex shrink-0 flex-col border-r border-[#E5E7EB] bg-[#FAFAFB] sticky top-0 h-screen overflow-hidden motion-reduce:transition-none"
+            onMouseEnter={mode === 'auto-hide' ? scheduleOverlayOpen : undefined}
+            onMouseLeave={mode === 'auto-hide' ? scheduleOverlayClose : undefined}
+          >
+            {mode === 'pinned' ? fullBody : railBody}
+          </aside>
+
+          {/* Auto-hide: edge trigger + overlay */}
+          {mode === 'auto-hide' && (
+            <>
+              <div
+                aria-hidden
+                className="hidden md:block fixed left-0 top-0 bottom-0 w-2 z-30"
+                onMouseEnter={scheduleOverlayOpen}
+              />
+              <aside
+                style={{
+                  width: 280,
+                  top: overlayTopOffset,
+                  transform: overlayOpen ? 'translateX(0)' : 'translateX(-110%)',
+                  transition: `transform ${overlayOpen ? 260 : 220}ms ${EASE}, opacity 200ms ${EASE}`,
+                  opacity: overlayOpen ? 1 : 0,
+                  pointerEvents: overlayOpen ? 'auto' : 'none',
+                }}
+                className="hidden md:flex fixed left-0 bottom-0 z-40 flex-col border-r border-[#E5E7EB] bg-[#FAFAFB] shadow-2xl overflow-hidden motion-reduce:transition-none"
+                onMouseEnter={cancelOverlayClose}
+                onMouseLeave={scheduleOverlayClose}
+              >
+                {fullBody}
+              </aside>
+            </>
+          )}
+        </>
+      );
+      })()}
 
 
       <div className={`flex-1 flex flex-col ${activeTab === 'messages' ? 'overflow-hidden' : ''}`}>

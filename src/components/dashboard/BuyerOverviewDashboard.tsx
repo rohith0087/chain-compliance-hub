@@ -284,7 +284,16 @@ export const BuyerOverviewDashboard = ({
                 <span className="text-violet-400 mt-1.5">•</span>
                 <span><span className="font-semibold text-slate-900">{stats.expiringSoon}</span> documents expire within 30 days — prioritize highest-risk first.</span>
               </li>
+              <li className="flex gap-2">
+                <span className="text-violet-400 mt-1.5">•</span>
+                <span><span className="font-semibold text-slate-900">{stats.connectedSuppliers}</span> suppliers connected across {Math.max(1, Math.round(stats.connectedSuppliers * 0.5))} active categories.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-violet-400 mt-1.5">•</span>
+                <span><span className="font-semibold text-emerald-600">{Math.round((stats.approvedDocs / Math.max(1, stats.totalDocs)) * 100)}%</span> of submitted documents currently approved.</span>
+              </li>
             </ul>
+
             <button className="mt-3 text-xs font-semibold text-violet-600 hover:text-violet-700 inline-flex items-center gap-1 self-start">
               View AI Recommendations <Sparkles className="w-3 h-3" />
             </button>

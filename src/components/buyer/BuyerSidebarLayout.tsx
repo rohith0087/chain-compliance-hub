@@ -35,8 +35,11 @@ import {
   ListTree,
   ShieldCheck,
   Activity,
-  Inbox
+  Inbox,
+  Pin,
+  PinOff
 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useTranslation } from 'react-i18next';

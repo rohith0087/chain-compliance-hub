@@ -71,6 +71,16 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('buyerDashboard_activeTab') || 'dashboard';
   });
+  const [dashboardView, setDashboardView] = useState<'overview' | 'detailed'>(() => {
+    return (localStorage.getItem('buyerDashboard_view') as 'overview' | 'detailed') || 'overview';
+  });
+  useEffect(() => {
+    const handler = () => {
+      setDashboardView((localStorage.getItem('buyerDashboard_view') as 'overview' | 'detailed') || 'overview');
+    };
+    window.addEventListener('buyer-dashboard-view-changed', handler);
+    return () => window.removeEventListener('buyer-dashboard-view-changed', handler);
+  }, []);
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showBulkInvite, setShowBulkInvite] = useState(false);

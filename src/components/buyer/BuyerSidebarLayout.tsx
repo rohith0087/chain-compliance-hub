@@ -854,7 +854,7 @@ export function BuyerSidebarLayout({
                       className="-ml-1 h-9 w-9"
                       aria-label={mode === 'pinned' ? 'Switch to auto-hide sidebar' : 'Pin sidebar'}
                     >
-                      {mode === 'pinned' ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                      {mode === 'pinned' ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>

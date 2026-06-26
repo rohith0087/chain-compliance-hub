@@ -1,62 +1,52 @@
-# Add buyer Dashboard View preference + new Overview dashboard
+# Settings modal polish + relocate Subscription
 
-Buyer-side only. No supplier, no schema, no backend, no other tabs touched.
+## 1. One close button only
 
-## 1. New setting in Settings → General
+`DialogContent` from shadcn already renders a built-in `X` in the top-right (with hover opacity transition). `UnifiedSettingsModal.tsx` adds a second custom `X` button on top of it.
 
-In `src/components/settings/UnifiedSettingsModal.tsx`, when the `general` tab is active **and** `companyType === 'buyer'`, render a new "Display Preferences" card above the existing `CompanyManagementDashboard`.
+Fix: **delete the custom close button** in `UnifiedSettingsModal.tsx` (the `<Button variant="ghost" ...>` wrapping `<X />` at lines ~165-173) and **drop the unused `X` import**. Then in `src/components/ui/dialog.tsx`, tune the built-in close so it matches the rest of the app:
 
-The card contains a single control:
+- Add `p-1.5 rounded-full hover:bg-slate-100 transition-colors` to the `DialogPrimitive.Close` className for a subtle round hover background.
+- Keep the existing opacity transition.
 
-- **Label:** Dashboard View
-- **Helper:** Choose how the buyer dashboard is rendered.
-- **Control:** segmented toggle (shadcn `RadioGroup` styled as pill segments) with two options:
-  - `Overview` — new sleek summary view (default)
-  - `Detailed` — the current full dashboard
+This is the only edit to `dialog.tsx` and is a one-class addition — no behavioral change to other dialogs (they currently get no hover bg, after change they get a subtle one which improves them all consistently).
 
-Persistence: `localStorage` key `buyerDashboard_view` (`'overview' | 'detailed'`). Lightweight, instant, no DB migration — matches existing pattern used for `buyerDashboard_activeTab` in `BuyerDashboard.tsx`. The setter dispatches a `storage`-like custom event (`window.dispatchEvent(new Event('buyer-dashboard-view-changed'))`) so the dashboard updates live without a reload.
+## 2. Dashboard View moves under General → Overview tab
 
-Supplier users never see this card (gated on `companyType`).
+Currently the General tab opens `CompanyManagementDashboard` with `defaultTab="company"`, and the Dashboard View card sits **above** it as a separate floating card — which feels detached and uses sky-blue colors that don't match the app's primary (indigo/blue).
 
-## 2. New Overview dashboard component
+Fix:
 
-Create `src/components/dashboard/BuyerOverviewDashboard.tsx` modeled on the uploaded screenshot. It is presentational and reads the same metric sources the current dashboard already loads via `useBuyerOverview`/the existing `dashboardStats` (passed in as props from `BuyerDashboard`). No new hooks, no new queries — reuses what's already fetched.
+- In `UnifiedSettingsModal.tsx`, **remove** the standalone `DashboardViewPreference` rendering above `CompanyManagementDashboard` and **change `defaultTab` from `"company"` to `"overview"`** so users land on the new Overview tab.
+- **Delete the local `DashboardViewPreference` component** from `UnifiedSettingsModal.tsx`.
+- Create a new file `src/components/settings/DashboardViewPreference.tsx` that exports the same toggle, restyled to match the app:
+  - Use shadcn `Card` (matches every other settings card)
+  - Use `text-primary`, `border-primary`, `bg-primary/5`, `ring-primary/20` semantic tokens — no hard-coded sky colors
+  - Heading `text-base font-semibold` matching `CompanyProfile` style, smaller `LayoutDashboard` icon in a `bg-primary/10` chip
+  - Selected option gets `border-primary bg-primary/5`, unselected hover gets `hover:border-border hover:bg-muted/30`
+- In `CompanyManagementDashboard.tsx`, inside the existing `<TabsContent value="overview">` block, render `<DashboardViewPreference />` at the **top** when `companyType === 'buyer'` (gated, so suppliers don't see it). It sits naturally above the stats grid.
 
-Sections, top to bottom:
+The toggle still writes to `localStorage` key `buyerDashboard_view` and dispatches `buyer-dashboard-view-changed` — no contract change with `BuyerDashboard.tsx`.
 
-1. **Stat row (5 cards)** — Total Suppliers, Active Suppliers, Technical Approvals Pending, Critical Issues / Expiring Soon, Overall Compliance Score (with mini ring). Each card: rounded-2xl, hairline border, soft tinted icon chip on the left, large tabular number, sublabel, and a colored delta line.
-2. **Middle row** — Technical Approval Overview (stacked bar, recharts), Compliance Risk Breakdown (donut, recharts), Quick Actions card (4 pill rows: New Compliance Request, COA Analysis, Supplier Risk Review, Add New Supplier — each wired to existing `setActiveTab` / `setShowRequestForm`).
-3. **Lower row** — Compliance Trend (line, recharts) + Upcoming Expiry Trend (line, recharts) + AI Summary card (static bullets sourced from existing AI summary if present, otherwise hidden) + Recent Activity list.
-4. **Manager Attention (Priority Actions)** — sleek table: Priority dot, Supplier, Issue, Due/Since, Status pill. Rows clickable → navigate to supplier/document like current AttentionPanel does.
+## 3. Move Subscription from main nav to Settings → Billing
 
-Styling: clean white cards on a `bg-slate-50/40` page background, slate-200 borders, generous padding (`p-6`), Inter-style numerics (`tabular-nums`, `tracking-tight`), subtle hover lift (`hover:shadow-md transition`), color tokens for status (emerald = approved, amber = pending, rose = critical, sky = info). No purple gradients. Uses existing `Card`, `Badge`, recharts components already in the project.
+- In `src/components/buyer/BuyerSidebarLayout.tsx`, **remove the "Subscription & Billing" / "Billing" item** from the main navigation array (lines ~352-356) and the `subscription`-related filter and click-handler branches that only existed for that item.
+- In `src/components/settings/UnifiedSettingsModal.tsx`:
+  - Replace the disabled `Billing (Soon)` placeholder at the bottom of the sidebar with an **active** nav button `{ id: 'billing', label: 'Billing', icon: CreditCard }`. Wire it to set `activeTab` like the others.
+  - Add a new content branch `activeTab === 'billing'` that renders `<SubscriptionPage />` inside the same scroll container used by other tabs. Wrap it in a `max-w-3xl mx-auto p-10 pb-20` container override by adding a small class wrapper to neutralize `SubscriptionPage`'s `min-h-screen` (use `<div className="[&>div]:min-h-0 [&>div]:bg-transparent">`); content remains identical.
+- In `BuyerDashboard.tsx`, the `activeTab === 'subscription'` route stays intact as a fallback (deep links / admin impersonation still work), but it is no longer reachable via the sidebar. No edits needed there.
 
-## 3. Wire it into BuyerDashboard
+## 4. Out of scope
 
-In `src/components/BuyerDashboard.tsx`, the existing `activeTab === 'dashboard'` branch currently renders the detailed view directly. Change it to:
-
-```tsx
-{activeTab === 'dashboard' && (
-  view === 'overview'
-    ? <BuyerOverviewDashboard ...stats onTabChange={setActiveTab} onNewRequest={...} />
-    : <ExistingDetailedDashboard /* unchanged JSX moved into a local component */ />
-)}
-```
-
-Add a `view` state initialized from `localStorage.getItem('buyerDashboard_view') ?? 'overview'`, listening to the `buyer-dashboard-view-changed` event to stay in sync when toggled from Settings.
-
-The detailed JSX is moved as-is into a small private component (or kept inline behind the conditional) — zero behavioral change to it.
-
-## 4. Safety / out of scope
-
-- Supplier dashboard, sidebar, routes, auth, RLS — untouched.
-- No new DB tables, no migrations, no edge function changes.
-- `companyId` reference fix from the previous turn stays as-is.
-- No edits to `tailwind.config.ts` or `index.css`; uses tokens already present.
-- Detailed dashboard remains the fallback so nothing existing breaks.
+- Supplier sidebar untouched.
+- No schema or backend changes.
+- `SubscriptionPage` itself unchanged — only embedded.
+- Workspace flag `renameSubscriptionToBilling` left alone; it no longer matters for the sidebar since the entry is gone.
 
 ## Files
 
-- **Edit** `src/components/settings/UnifiedSettingsModal.tsx` — add Display Preferences card for buyers in General tab.
-- **Edit** `src/components/BuyerDashboard.tsx` — add `view` state + conditional render.
-- **New** `src/components/dashboard/BuyerOverviewDashboard.tsx` — sleek overview page.
+- **Edit** `src/components/ui/dialog.tsx` — subtle hover bg on built-in close.
+- **Edit** `src/components/settings/UnifiedSettingsModal.tsx` — remove custom close + inline preference component, switch General defaultTab to overview, add Billing nav + content.
+- **New** `src/components/settings/DashboardViewPreference.tsx` — themed toggle card.
+- **Edit** `src/components/company/CompanyManagementDashboard.tsx` — render Dashboard View card at top of Overview tab for buyers.
+- **Edit** `src/components/buyer/BuyerSidebarLayout.tsx` — remove Subscription/Billing main nav entry.

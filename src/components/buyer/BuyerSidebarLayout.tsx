@@ -36,8 +36,8 @@ import {
   ShieldCheck,
   Activity,
   Inbox,
-  Pin,
-  PinOff
+  PanelLeft,
+  PanelLeftClose
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
@@ -789,7 +789,7 @@ export function BuyerSidebarLayout({
 
       // Desktop: custom rail/pinned + optional overlay
       const inFlowWidth = mode === 'pinned' ? 280 : 72;
-      const overlayTopOffset = isImpersonating ? 48 : 0;
+      const overlayTopOffset = 72 + (isImpersonating ? 48 : 0);
 
       return (
         <>
@@ -812,7 +812,8 @@ export function BuyerSidebarLayout({
             <>
               <div
                 aria-hidden
-                className="hidden md:block fixed left-0 top-0 bottom-0 w-2 z-30"
+                style={{ top: overlayTopOffset }}
+                className="hidden md:block fixed left-0 bottom-0 w-2 z-30"
                 onMouseEnter={scheduleOverlayOpen}
               />
               <aside
@@ -824,7 +825,7 @@ export function BuyerSidebarLayout({
                   opacity: overlayOpen ? 1 : 0,
                   pointerEvents: overlayOpen ? 'auto' : 'none',
                 }}
-                className="hidden md:flex fixed left-0 bottom-0 z-40 flex-col border-r border-[#E5E7EB] bg-[#FAFAFB] shadow-2xl overflow-hidden motion-reduce:transition-none"
+                className="hidden md:flex fixed left-0 bottom-0 z-40 flex-col border-r border-t border-[#E5E7EB] bg-[#FAFAFB] shadow-2xl overflow-hidden motion-reduce:transition-none"
                 onMouseEnter={cancelOverlayClose}
                 onMouseLeave={scheduleOverlayClose}
               >
@@ -854,7 +855,7 @@ export function BuyerSidebarLayout({
                       className="-ml-1 h-9 w-9"
                       aria-label={mode === 'pinned' ? 'Switch to auto-hide sidebar' : 'Pin sidebar'}
                     >
-                      {mode === 'pinned' ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                      {mode === 'pinned' ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>

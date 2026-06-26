@@ -483,7 +483,9 @@ export function BuyerSidebarLayout({
       const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
       const fullBody = (
         <>
-        {/* keep existing header/content/footer below */}
+        <SidebarHeader className="border-b border-[#E5E7EB] px-4 py-3 bg-transparent">
+          <div className="flex items-center gap-3">
+            {/* Company Logo - displays uploaded logo or default Building2 icon */}
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary overflow-hidden shrink-0">
               {buyerProfile?.company_logo_url ? (
                 <>

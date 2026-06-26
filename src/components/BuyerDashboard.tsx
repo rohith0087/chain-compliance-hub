@@ -40,6 +40,7 @@ import { ExpiryPanel } from '@/components/dashboard/ExpiryPanel';
 import { ActivityQuickActionsPanel } from '@/components/dashboard/ActivityQuickActionsPanel';
 import { AuditorDashboardPanel } from '@/components/dashboard/auditor/AuditorDashboardPanel';
 import { getWorkspaceProfileForIndustry } from '@/config/workspaceProfiles';
+import { BuyerOverviewDashboard } from '@/components/dashboard/BuyerOverviewDashboard';
 import { motion } from 'framer-motion';
 import { Users, Clock, AlertTriangle } from 'lucide-react';
 import { useCommunicationThreads } from '@/hooks/useCommunicationThreads';

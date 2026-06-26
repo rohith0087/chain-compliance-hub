@@ -813,7 +813,7 @@ export function BuyerSidebarLayout({
               <div
                 aria-hidden
                 style={{ top: overlayTopOffset }}
-                className="hidden md:block fixed left-0 bottom-0 w-2 z-30"
+                className="hidden md:block fixed left-0 bottom-0 w-2 z-50"
                 onMouseEnter={scheduleOverlayOpen}
               />
               <aside
@@ -825,7 +825,7 @@ export function BuyerSidebarLayout({
                   opacity: overlayOpen ? 1 : 0,
                   pointerEvents: overlayOpen ? 'auto' : 'none',
                 }}
-                className="hidden md:flex fixed left-0 bottom-0 z-40 flex-col border-r border-t border-[#E5E7EB] bg-[#FAFAFB] shadow-2xl overflow-hidden motion-reduce:transition-none"
+                className="hidden md:flex fixed left-0 bottom-0 z-50 flex-col border-r border-[#E5E7EB] bg-[#FAFAFB] shadow-2xl overflow-hidden motion-reduce:transition-none"
                 onMouseEnter={cancelOverlayClose}
                 onMouseLeave={scheduleOverlayClose}
               >

@@ -842,7 +842,26 @@ export function BuyerSidebarLayout({
         <header className="h-[72px] border-t border-t-primary/10 bg-white/95 backdrop-blur-xl sticky top-0 z-50 shadow-sm">
           <div className="flex h-full items-center justify-between px-8">
             <div className="flex items-center gap-4">
-              <SidebarTrigger className="-ml-1" />
+              {isMobile ? (
+                <SidebarTrigger className="-ml-1" />
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setMode((m) => (m === 'pinned' ? 'auto-hide' : 'pinned'))}
+                      className="-ml-1 h-9 w-9"
+                      aria-label={mode === 'pinned' ? 'Switch to auto-hide sidebar' : 'Pin sidebar'}
+                    >
+                      {mode === 'pinned' ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {mode === 'pinned' ? 'Auto-hide sidebar' : 'Pin sidebar'}
+                  </TooltipContent>
+                </Tooltip>
+              )}
               
               {/* Global Search Bar - Command Palette */}
               <div className="hidden md:block">

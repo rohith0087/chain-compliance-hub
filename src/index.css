@@ -207,29 +207,99 @@
     @apply border-border;
   }
 
+  html {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  }
+
   body {
     @apply bg-background text-foreground;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Archivo', 'IBM Plex Sans', system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .font-wordmark {
+    font-family: 'Instrument Serif', Georgia, serif;
+    letter-spacing: 0;
+  }
+
+  .font-data, .tabular-nums {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-feature-settings: 'tnum' 1;
   }
 
   /* Hide scrollbars globally */
   * {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
-  }
-  
-  *::-webkit-scrollbar {
-    display: none; /* Chrome, Safari and Opera */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
 
-  /* Utility class for hiding scrollbars specifically */
+  *::-webkit-scrollbar {
+    display: none;
+  }
+
   .scrollbar-hide {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
-  
+
   .scrollbar-hide::-webkit-scrollbar {
-    display: none; /* Chrome, Safari and Opera */
+    display: none;
   }
+}
+
+/* ============================================================
+ * Customs Hall — global motifs (hoisted from .r2c landing scope)
+ * Opt-in utilities usable on any app surface.
+ * ========================================================== */
+
+.app-grid {
+  background-image:
+    linear-gradient(to right, hsl(220 20% 10% / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(220 20% 10% / 0.05) 1px, transparent 1px);
+  background-size: 38px 38px;
+}
+
+@keyframes app-scan {
+  0%   { transform: translateY(-8%); opacity: 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { transform: translateY(108%); opacity: 0; }
+}
+.app-scan {
+  animation: app-scan 1100ms cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+.app-rise { display: block; overflow: hidden; padding-bottom: 0.1em; }
+.app-rise > span {
+  display: block;
+  transform: translateY(115%);
+  transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--rise-delay, 0s);
+}
+.app-rise.is-in > span { transform: translateY(0); }
+
+.app-link { position: relative; }
+.app-link::after {
+  content: '';
+  position: absolute;
+  left: 0; bottom: -3px;
+  height: 1.5px; width: 100%;
+  background: hsl(var(--foreground));
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.app-link:hover::after { transform: scaleX(1); transform-origin: left; }
+
+@media (prefers-reduced-motion: reduce) {
+  .app-rise > span { transform: none !important; transition: none !important; }
+  .app-scan { display: none; }
 }
 
 /* Minimalist Modern Theme Variables */

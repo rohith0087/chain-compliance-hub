@@ -295,47 +295,51 @@ export const BuyerOverviewDashboard = ({
         {/* Lower Row: Trends + Quick Actions/Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* Compliance Trend */}
-          <div className="lg:col-span-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm p-4">
+          <div className="lg:col-span-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm p-4 flex flex-col min-h-[260px]">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-slate-900">Compliance Trend</h3>
               <select className="text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 outline-none">
                 <option>Last 6 Months</option>
               </select>
             </div>
-            <ResponsiveContainer width="100%" height={170}>
-              <AreaChart data={complianceTrend}>
-                <defs>
-                  <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.25} />
-                    <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} domain={[0, 100]} />
-                <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, fontSize: 12 }} />
-                <Area type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2.5} fill="url(#trendGrad)" />
-              </AreaChart>
-            </ResponsiveContainer>
+            <div className="flex-1 min-h-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={complianceTrend}>
+                  <defs>
+                    <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity={0.25} />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} domain={[0, 100]} />
+                  <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, fontSize: 12 }} />
+                  <Area type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2.5} fill="url(#trendGrad)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
           {/* Upcoming Expiry Trend */}
-          <div className="lg:col-span-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm p-4">
+          <div className="lg:col-span-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm p-4 flex flex-col min-h-[260px]">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-slate-900">Upcoming Expiry Trend</h3>
               <select className="text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 outline-none">
                 <option>Next 90 Days</option>
               </select>
             </div>
-            <ResponsiveContainer width="100%" height={170}>
-              <LineChart data={expiryTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="bucket" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, fontSize: 12 }} />
-                <Line type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={2.5} dot={{ r: 4, fill: '#6366f1' }} />
-              </LineChart>
-            </ResponsiveContainer>
+            <div className="flex-1 min-h-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={expiryTrend}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="bucket" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, fontSize: 12 }} />
+                  <Line type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={2.5} dot={{ r: 4, fill: '#6366f1' }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
             <div className="mt-2 flex items-center gap-2 text-xs bg-rose-50/60 border border-rose-100 rounded-lg px-3 py-1.5">
               <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
               <span className="text-slate-700">
@@ -349,6 +353,7 @@ export const BuyerOverviewDashboard = ({
               </button>
             </div>
           </div>
+
 
           {/* Quick Actions + Recent Activity stacked */}
           <div className="lg:col-span-4 space-y-4">

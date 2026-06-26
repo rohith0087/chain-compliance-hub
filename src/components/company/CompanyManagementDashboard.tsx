@@ -23,6 +23,7 @@ import { AddressFields, emptyAddressData, AddressData } from '@/components/share
 import { SafeSelect, SafeSelectItem } from '@/components/ui/SafeSelect';
 import { VALID_INDUSTRIES } from '@/config/industries';
 import { toast } from 'sonner';
+import { DashboardViewPreference } from '@/components/settings/DashboardViewPreference';
 
 interface CompanyManagementDashboardProps {
   companyId: string;
@@ -317,6 +318,7 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
+          {companyType === 'buyer' && <DashboardViewPreference />}
           {/* Actionable Stats Overview - Now inside Overview tab only */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {/* Branches Card - Clickable */}

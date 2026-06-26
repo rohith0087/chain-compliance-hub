@@ -348,16 +348,11 @@ export function BuyerSidebarLayout({
       title: 'Settings',
       icon: Settings,
       value: 'settings'
-    },
-    {
-      title: wsFlags.renameSubscriptionToBilling ? 'Billing' : 'Subscription & Billing',
-      icon: CreditCard,
-      value: 'subscription'
     }
   ].filter(item => {
     // Filter out items based on permissions
-    // Company Management and Subscription require company owner (not just admin)
-    if (item.value === 'settings' || item.value === 'subscription') {
+    // Company Management requires company owner (not just admin)
+    if (item.value === 'settings') {
       return isCompanyOwner();
     }
     // Messages is always available - it navigates to /messages

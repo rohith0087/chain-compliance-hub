@@ -91,14 +91,15 @@ function VersionButton() {
     <>
       <button
         onClick={() => setShowWhatsNew(true)}
-        className="w-full py-2.5 px-4 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors text-primary font-medium text-sm"
+        className="w-full px-1 py-1 text-[12px] text-slate-400 hover:text-slate-600 transition-colors text-left"
       >
-        v{APP_VERSION}
+        TraceR2C v{APP_VERSION}
       </button>
       <WhatsNewDialog open={showWhatsNew} onOpenChange={setShowWhatsNew} />
     </>
   );
 }
+
 
 interface NavigationItem {
   title: string;
@@ -427,11 +428,11 @@ export function BuyerSidebarLayout({
 
   return (
     <div className={`flex w-full ${activeTab === 'messages' ? 'h-screen overflow-hidden' : 'min-h-screen'} ${isImpersonating ? 'pt-12' : ''}`}>
-      <Sidebar className="border-r border-gray-200 bg-white">
-        <SidebarHeader className="border-b border-gray-200 px-3 py-4 bg-white">
+      <Sidebar className="border-r border-[#E5E7EB] bg-[#FAFAFB]">
+        <SidebarHeader className="border-b border-[#E5E7EB] px-4 py-3 bg-transparent">
           <div className="flex items-center gap-3">
             {/* Company Logo - displays uploaded logo or default Building2 icon */}
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary overflow-hidden">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary overflow-hidden shrink-0">
               {buyerProfile?.company_logo_url ? (
                 <>
                   <img 
@@ -439,7 +440,6 @@ export function BuyerSidebarLayout({
                     alt="Company Logo"
                     className="h-full w-full object-contain"
                     onError={(e) => {
-                      // Fallback to default icon if image fails to load
                       const target = e.currentTarget;
                       target.style.display = 'none';
                       const fallback = target.nextElementSibling as HTMLElement;
@@ -448,19 +448,18 @@ export function BuyerSidebarLayout({
                       }
                     }}
                   />
-                  {/* Hidden fallback icon */}
-                  <Building2 className="h-4 w-4 text-primary-foreground hidden" />
+                  <Building2 className="h-5 w-5 text-primary-foreground hidden" />
                 </>
               ) : (
-                <Building2 className="h-4 w-4 text-primary-foreground" />
+                <Building2 className="h-5 w-5 text-primary-foreground" />
               )}
             </div>
             {!collapsed && (
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold">
+              <div className="flex flex-col min-w-0">
+                <span className="text-[15px] font-semibold text-slate-900 truncate leading-tight">
                   {buyerProfile?.company_name || 'Buyer Portal'}
                 </span>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-[13px] text-slate-500 truncate leading-tight mt-0.5">
                   {user.name}
                 </span>
               </div>
@@ -470,29 +469,26 @@ export function BuyerSidebarLayout({
 
         <SidebarContent>
           {/* + New Request Button - Standalone at top */}
-          <SidebarGroup className="pb-0">
+          <SidebarGroup className="pt-3 pb-0 px-3">
             <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem data-guide-id="quick-new-request">
-                  <SidebarMenuButton 
-                    onClick={() => handleSpecialAction('new-request')}
-                    className="relative group bg-gradient-to-r from-primary to-primary-hover text-white hover:shadow-lg transition-all duration-300"
-                  >
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-white/30 blur-sm" />
-                      <Plus className="h-4 w-4 relative z-10" />
-                    </div>
-                    <span className="font-medium">New Request</span>
-                    {currentBranch && !collapsed && (
-                      <Badge className="ml-auto text-xs bg-white/20 text-white border-white/30">
-                        {currentBranch.branch_name}
-                      </Badge>
-                    )}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
+              <button
+                data-guide-id="quick-new-request"
+                onClick={() => handleSpecialAction('new-request')}
+                className="w-full h-12 rounded-[14px] bg-primary hover:bg-primary-hover text-primary-foreground font-semibold text-[15px] shadow-sm flex items-center justify-center gap-2.5 transition-colors"
+              >
+                <span className="h-7 w-7 rounded-full bg-white/15 flex items-center justify-center shrink-0">
+                  <Plus className="h-4 w-4" />
+                </span>
+                {!collapsed && <span>New Request</span>}
+                {currentBranch && !collapsed && (
+                  <Badge className="ml-1 text-[11px] bg-white/20 text-white border-white/30 font-medium">
+                    {currentBranch.branch_name}
+                  </Badge>
+                )}
+              </button>
             </SidebarGroupContent>
           </SidebarGroup>
+
 
           {/* Main Navigation */}
           <SidebarGroup>

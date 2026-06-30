@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { AccountSettingsForm } from '@/components/settings/AccountSettingsForm';
 import { PasswordChangeForm } from '@/components/settings/PasswordChangeForm';
 import { IntegrationsDirectoryModal } from '@/components/settings/IntegrationsDirectoryModal';
+import { PasskeysSettingsSection } from '@/components/settings/PasskeysSettingsSection';
 import { useAuth } from '@/hooks/useAuth';
 
 const ProfileSettingsPage = () => {
@@ -80,6 +81,12 @@ const ProfileSettingsPage = () => {
               <h2 className="text-lg font-semibold">Password</h2>
             </div>
             <PasswordChangeForm />
+          </section>
+
+          <Separator />
+
+          <section>
+            <PasskeysSettingsSection />
           </section>
 
           <Separator />

@@ -7587,6 +7587,33 @@ export type Database = {
         }
         Relationships: []
       }
+      passkey_challenges: {
+        Row: {
+          ceremony_type: string
+          challenge: string
+          created_at: string
+          expires_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          ceremony_type: string
+          challenge: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          ceremony_type?: string
+          challenge?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       platform_admin_audit_logs: {
         Row: {
           action_type: string
@@ -9909,6 +9936,51 @@ export type Database = {
           total_consumed_credits?: number
           total_purchased_credits?: number
           updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_passkeys: {
+        Row: {
+          backed_up: boolean
+          counter: number
+          created_at: string
+          credential_id: string
+          device_type: string | null
+          id: string
+          last_used_at: string | null
+          nickname: string
+          public_key: string
+          transports: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          backed_up?: boolean
+          counter?: number
+          created_at?: string
+          credential_id: string
+          device_type?: string | null
+          id?: string
+          last_used_at?: string | null
+          nickname?: string
+          public_key: string
+          transports?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          backed_up?: boolean
+          counter?: number
+          created_at?: string
+          credential_id?: string
+          device_type?: string | null
+          id?: string
+          last_used_at?: string | null
+          nickname?: string
+          public_key?: string
+          transports?: string[]
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

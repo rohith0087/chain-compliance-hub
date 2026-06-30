@@ -508,12 +508,26 @@ const AuthPage = () => {
             className="w-full h-full object-cover mix-blend-screen opacity-90"
           />
         </div>
+
+        {/* Grain texture overlay */}
+        <div
+          aria-hidden
+          className="absolute inset-0 z-20 pointer-events-none opacity-[0.35] mix-blend-overlay"
+          style={{ backgroundImage: "url('/grain-texture.webp')", backgroundSize: '420px 420px', backgroundRepeat: 'repeat' }}
+        />
       </div>
 
       {/* Right Form Section */}
       <div className="w-full lg:w-1/2 flex items-center justify-center bg-[var(--r2c-bg)] relative overflow-hidden">
         {/* Subtle ambient glow so the liquid glass has something to refract, strictly using theme colors */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[var(--r2c-stamp)]/10 rounded-full blur-[80px] pointer-events-none" />
+
+        {/* Grain texture overlay tinted with the steel background */}
+        <div
+          aria-hidden
+          className="absolute inset-0 pointer-events-none opacity-[0.55] mix-blend-multiply"
+          style={{ backgroundImage: "url('/grain-texture.webp')", backgroundSize: '420px 420px', backgroundRepeat: 'repeat' }}
+        />
 
         {/* Top Right Actions */}
         <div className="absolute top-8 right-8 xl:right-12 z-50 hidden sm:flex items-center gap-8">

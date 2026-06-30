@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MFAGuard } from "@/components/auth/MFAGuard";
 import { TourProvider } from "@/components/support/TourProvider";
 
-import Index from "./pages/Index";
+
 import AuthPage from "./components/auth/AuthPage";
 import ResetPassword from "./pages/ResetPassword";
 import DynamicDashboard from "./components/dashboard/DynamicDashboard";

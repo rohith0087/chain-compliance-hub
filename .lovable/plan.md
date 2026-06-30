@@ -1,57 +1,40 @@
-# Passkey Frontend — Settings Enrollment & Management
+## Passkey Sign-in on `/auth`
 
-Adds WebAuthn passkey support so signed-in users can register, list, rename, and delete passkeys from Profile Settings. Uses `@simplewebauthn/browser` on the client and `@simplewebauthn/server` in two edge functions.
+Add a "Sign in with a passkey" option to the existing Sign In tab. Uses the passkeys already enrolled in Settings.
 
-## What gets built
+### Flow
+1. User clicks **Sign in with a passkey** button on the Sign In tab.
+   - Optional email field: if filled, do a discoverable + allowList-scoped auth; if empty, use fully discoverable (resident key) flow.
+2. Browser calls `passkey-auth-begin` edge function → returns `PublicKeyCredentialRequestOptions` + stores challenge.
+3. `@simplewebauthn/browser` `startAuthentication()` prompts the OS/browser (Touch ID, Windows Hello, security key…).
+4. Browser posts the assertion to `passkey-auth-finish` edge function.
+5. Edge function:
+   - Looks up the credential row in `user_passkeys` by `credential_id`.
+   - Verifies the assertion against stored `public_key` + `counter` via `@simplewebauthn/server`.
+   - Updates `counter` + `last_used_at`.
+   - Uses `service_role` admin client to mint a Supabase session for that `user_id` via `auth.admin.generateLink({ type: 'magiclink' })` → exchanges the resulting token hash, or uses `signInWithIdToken` pattern. **Concrete approach:** call `supabase.auth.admin.generateLink({ type: 'magiclink', email: user.email })`, extract the `hashed_token`, and return it to the client. The client then calls `supabase.auth.verifyOtp({ token_hash, type: 'magiclink' })` to establish the session.
+6. Client sets session and navigates to the post-login destination (same as password sign-in).
 
-### 1. Database
-New migration creating `public.user_passkeys`:
-- `user_id` (uuid → auth.users)
-- `credential_id` (text, unique) — base64url
-- `public_key` (bytea)
-- `counter` (bigint)
-- `transports` (text[])
-- `device_type` (text), `backed_up` (bool)
-- `nickname` (text) — user-editable label
-- `last_used_at`, `created_at`, `updated_at`
+### Files
 
-Plus a short-lived `public.passkey_challenges` table (`user_id`, `challenge`, `type`, `expires_at`) for ceremony state.
+**New edge functions** (verify_jwt = false; CORS; zod validation):
+- `supabase/functions/passkey-auth-begin/index.ts`
+  - Input: `{ email?: string }`
+  - If email: resolve user_id, fetch their passkeys → `allowCredentials`. Else: empty allowList (discoverable).
+  - `generateAuthenticationOptions({ rpID, allowCredentials, userVerification: 'preferred' })`
+  - Insert into `passkey_challenges` (ceremony_type='authentication', user_id nullable for discoverable).
+- `supabase/functions/passkey-auth-finish/index.ts`
+  - Input: assertion response from `startAuthentication`.
+  - Look up `user_passkeys` by `credential_id` → get `user_id`, `public_key`, `counter`.
+  - Look up matching challenge row, verify with `verifyAuthenticationResponse`.
+  - On success: bump `counter`, `last_used_at`; delete challenge; mint session via `generateLink` → return `{ token_hash, email }`.
 
-GRANTs + RLS: users select/update/delete their own rows; service_role full access (edge functions write via service role).
+**DB migration:** make `passkey_challenges.user_id` nullable (currently NOT NULL) to support discoverable flow. Add index on `user_passkeys.credential_id` if not present.
 
-### 2. Edge functions (verify JWT in code)
-- `passkey-register-begin` — returns `PublicKeyCredentialCreationOptions`, stores challenge.
-- `passkey-register-finish` — verifies attestation, inserts row in `user_passkeys`.
+**Frontend:**
+- `src/components/auth/AuthPage.tsx` — add "Sign in with a passkey" button under the password form (gated on `window.PublicKeyCredential`). On click → call begin → `startAuthentication` → finish → `supabase.auth.verifyOtp({ token_hash, type: 'magiclink' })` → reuse existing post-signin redirect logic. Surface errors via existing toast.
 
-(Sign-in ceremony is intentionally out of scope per your choice — Settings only.)
-
-Both use `@simplewebauthn/server` via `npm:` specifier, RP ID = `compliance.tracer2c.com` (matches your Supabase config), origin allowlist read from a constant.
-
-### 3. Frontend
-- Install `@simplewebauthn/browser` via `bun add`.
-- New component `src/components/settings/PasskeysSettingsSection.tsx`:
-  - Lists enrolled passkeys (nickname, device type, created, last used).
-  - "Add a passkey" button → calls begin → `startRegistration()` → calls finish → toast + refresh.
-  - Per-row Rename (inline) and Delete (confirm dialog) — direct supabase updates against `user_passkeys` (RLS-scoped).
-- Mount it in `ProfileSettingsPage.tsx` next to `MFASettingsSection`.
-- New hook `src/hooks/usePasskeys.tsx` for list/refresh/delete/rename.
-
-### 4. UX details
-- Browser support gate: hide "Add" button if `!window.PublicKeyCredential`.
-- Error handling for user cancel (`NotAllowedError`) — silent, no toast.
-- Empty state: short copy explaining what passkeys are.
-
-## Out of scope (can add later)
-- Passkey sign-in on `/auth` (requires discoverable-credentials flow + pre-auth challenge endpoint).
-- Signup-time enrollment prompt.
-
-## Files
-- migration (new tables + RLS + grants)
-- `supabase/functions/passkey-register-begin/index.ts`
-- `supabase/functions/passkey-register-finish/index.ts`
-- `src/hooks/usePasskeys.tsx`
-- `src/components/settings/PasskeysSettingsSection.tsx`
-- `src/pages/ProfileSettingsPage.tsx` (mount section)
-- `package.json` (+ `@simplewebauthn/browser`)
-
-Note: Your Supabase dashboard "Passkeys" toggle configures Supabase's native MFA-factor passkey path; this plan implements a self-managed WebAuthn store, which is the only way to get full enrollment/management UI today. The RP ID/origin you've set still apply.
+### Out of scope
+- Conditional UI / autofill (`mediation: 'conditional'`) — can be added later.
+- Passkey-only accounts (we assume the user enrolled a passkey while signed in via password).
+- MFA interaction (passkey sign-in bypasses password MFA since the passkey itself is multi-factor; keep current MFA flow untouched for password sign-in).

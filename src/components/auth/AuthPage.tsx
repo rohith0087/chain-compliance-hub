@@ -1036,25 +1036,46 @@ const AuthPage = () => {
                   </form>
                 </TabsContent>
               </Tabs>
-            </CardContent>
-          </Card>
-          
-          <p className="text-center text-xs text-muted-foreground mt-6">
-            By continuing, you agree to our Terms of Service and Privacy Policy
-          </p>
+
+              {/* Sign-in / Sign-up toggle line (matches reference) */}
+              {authStep === 'credentials' && (
+                <p className="text-center text-sm text-white/55 mt-5">
+                  {activeTab === 'login' ? (
+                    <>Don't have an account?{' '}
+                      <button type="button" onClick={() => setActiveTab('signup')} className="text-[#818CF8] hover:text-[#A5B4FC] font-medium">Sign up</button>
+                    </>
+                  ) : (
+                    <>Already have an account?{' '}
+                      <button type="button" onClick={() => setActiveTab('login')} className="text-[#818CF8] hover:text-[#A5B4FC] font-medium">Sign in</button>
+                    </>
+                  )}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* Legal footer below the card */}
+      <p className="text-center text-xs text-white/45 mt-6 max-w-md leading-relaxed">
+        By continuing, you agree to TraceR2C's{' '}
+        <a href="/terms" className="underline hover:text-white/70">Terms of Service</a>{' '}and{' '}
+        <a href="/privacy" className="underline hover:text-white/70">Privacy Policy</a>,
+        <br />
+        and to receive periodic emails with updates.
+      </p>
+
       {/* Floating Help Button for unauthenticated users */}
-      <HelpButton 
+      <HelpButton
         source="login_page"
         user={{
           email: email || undefined,
           name: fullName || undefined,
-          userType: 'guest'
+          userType: 'guest',
         }}
       />
     </div>
+
   );
 };
 

@@ -1054,7 +1054,7 @@ const AuthPage = () => {
             </div>
           </div>
         </div>
-      </div>
+
 
       {/* Legal footer below the card */}
       <p className="text-center text-xs text-white/45 mt-6 max-w-md leading-relaxed">

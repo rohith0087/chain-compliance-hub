@@ -546,3 +546,65 @@
   }
   .r2c-scan { display: none; }
 }
+
+/* Plasma-style auth form scoping (used by /auth) */
+.auth-plasma label {
+  color: rgba(255,255,255,0.78);
+  font-size: 13px;
+  font-weight: 500;
+}
+.auth-plasma input,
+.auth-plasma input[type="email"],
+.auth-plasma input[type="password"],
+.auth-plasma input[type="text"] {
+  background-color: #0F0F14 !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  color: #fff !important;
+  height: 44px;
+  border-radius: 8px;
+}
+.auth-plasma input::placeholder { color: rgba(255,255,255,0.35); }
+.auth-plasma input:focus-visible {
+  outline: none !important;
+  border-color: rgba(99,102,241,0.6) !important;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.18) !important;
+}
+
+/* Primary CTA (Sign In / Create Account) */
+.auth-plasma button[type="submit"]:not([disabled]) {
+  background-color: rgba(99,102,241,0.92);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: background-color .15s ease, opacity .15s ease;
+}
+.auth-plasma button[type="submit"]:not([disabled]):hover {
+  background-color: rgba(99,102,241,1);
+}
+.auth-plasma button[type="submit"][disabled] {
+  background-color: rgba(99,102,241,0.35);
+  color: rgba(255,255,255,0.55);
+  cursor: not-allowed;
+}
+
+/* Tabs trigger pill */
+.auth-plasma [role="tablist"] {
+  background-color: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+  padding: 3px;
+}
+.auth-plasma [role="tab"] {
+  color: rgba(255,255,255,0.55);
+  border-radius: 6px;
+  font-weight: 500;
+}
+.auth-plasma [role="tab"][data-state="active"] {
+  background-color: rgba(99,102,241,0.88);
+  color: #fff;
+}
+
+/* Role-picker buttons + helper text inside the form */
+.auth-plasma .text-foreground { color: #fff !important; }
+.auth-plasma .text-muted-foreground { color: rgba(255,255,255,0.5) !important; }

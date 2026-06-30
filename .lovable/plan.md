@@ -1,105 +1,86 @@
 ## Goal
-Lift the "Customs hall" theme out of its `.r2c` landing-page scope and make it the global look of the buyer + supplier app (auth, sidebars, top nav, dashboards, tables, modals, forms). Platform/super-admin dark dashboards stay untouched.
 
-## Scope
-- Re-skin: `/auth`, buyer shell, supplier shell, all pages inside those shells, shared dialogs, shadcn primitives (via tokens).
-- Untouched: `src/pages/PlatformAdminDashboard`, `SuperAdminDashboard`, anything under `src/components/platform-admin`, `src/components/super-admin`, and `src/components/admin` dark surfaces.
-- The marketing landing keeps its existing `.r2c` block — we're hoisting the *values*, not deleting the scoped class.
+Re-skin `/auth` to match the uploaded Plasma reference exactly: pure black canvas, a single centered two-pane card, grainy purple→magenta gradient hero on the left, dark form on the right, with the legal footer below the card. Keep all existing auth functionality (login, signup, MFA, forgot password, Turnstile) intact.
 
-## Design tokens (light mode, `:root` in `src/index.css`)
-Replace the current indigo-purple token block with the Customs hall palette, converted to the HSL triplet format Tailwind/shadcn expect:
+## Reference anatomy
 
 ```text
---background        0 0% 93%      /* #ECEDEA cool steel */
---surface           0 0% 93%
---surface-elevated  60 11% 95%    /* #F4F4F1 */
---card              0 0% 100%
---foreground        220 20% 10%   /* #14181F charcoal-navy */
---muted             0 0% 93%
---muted-foreground  220 5% 38%    /* #5A5F66 */
---border            180 7% 84%    /* #D3D8D9 hairline */
---input             180 7% 84%
---ring              159 51% 19%   /* pine */
-
---primary           159 51% 19%   /* #16493A deep pine */
---primary-foreground 0 0% 100%
---primary-hover     159 55% 15%
---primary-glow      178 67% 18%   /* #0F4C4A */
-
---secondary         220 20% 10%   /* ink as secondary */
---secondary-foreground 0 0% 100%
---accent            178 67% 18%
---accent-foreground 0 0% 100%
-
---success           150 56% 27%   /* #1F6B4A verified */
---warning           32 75% 41%    /* #B8731A caution */
---danger / --destructive  11 70% 51%  /* #D8462A recall */
-
---sidebar-background  60 11% 95%   /* #F4F4F1 */
---sidebar-foreground  220 20% 10%
---sidebar-border      180 7% 84%
---sidebar-accent      0 0% 93%
---sidebar-primary     159 51% 19%
-
---radius            0.5rem        /* tighter, more customs-stamp than pill */
+┌────────────────────────────────────────────────────────────┐
+│   (pure black canvas, small accent dot top-right)          │
+│                                                            │
+│      ┌───────────────────────┬───────────────────────┐     │
+│      │  PURPLE GRAIN PANEL   │   DARK FORM PANEL     │     │
+│      │  ⚡ TraceR2C          │                       │     │
+│      │                       │   Welcome to TraceR2C │     │
+│      │                       │   Sign up or sign in  │     │
+│      │                       │                       │     │
+│      │   "                   │   [ Continue Google ] │     │
+│      │   Testimonial quote   │   ───── or ─────      │     │
+│      │   in serif italic     │   [ Email Address  ]  │     │
+│      │                       │   [ Password    👁 ]  │     │
+│      │   👤 Name             │   [    Sign In     ]  │     │
+│      │      @handle          │   Don't have? Sign up │     │
+│      └───────────────────────┴───────────────────────┘     │
+│                                                            │
+│      By continuing, you agree to Terms and Privacy…        │
+└────────────────────────────────────────────────────────────┘
 ```
 
-Gradients/shadows refreshed to pine-on-steel:
-```text
---gradient-primary  linear-gradient(135deg, hsl(159 51% 19%), hsl(178 67% 18%))
---gradient-subtle   linear-gradient(180deg, hsl(0 0% 100%), hsl(0 0% 93%))
---gradient-hero     linear-gradient(135deg, hsl(0 0% 93%) 0%, hsl(159 51% 19% / 0.05) 100%)
---shadow-subtle     0 1px 0 hsl(180 7% 84%), 0 2px 8px -4px hsl(220 20% 10% / 0.06)
---shadow-elegant    0 12px 32px -16px hsl(159 51% 19% / 0.25)
-```
+## Visual spec (Plasma-exact)
 
-Dark mode `.dark` block: left as-is for now (admin dashboards already opt into their own dark tokens; nothing in the buyer/supplier shell toggles `.dark` today).
+- Canvas: `#000000`, no chrome, no nav, no "Book a demo".
+- Card: ~960×600, centered, rounded `1rem`, hairline border `rgba(255,255,255,0.06)`, no outer shadow.
+- Left pane (hero):
+  - Radial gradient from `#7B2D8E` (warm magenta, top-right) through `#5B2470` to `#2A1438` (bottom-left).
+  - Grain texture (the uploaded webp) overlaid at ~35% opacity, `mix-blend-overlay`, tiled.
+  - Top-left: lightning glyph + "TraceR2C" wordmark in white.
+  - Bottom-left block: oversized serif quote mark, italic serif testimonial pulled from existing copy, avatar circle + name/handle line in muted white.
+- Right pane (form):
+  - Solid `#0B0B0F` with the same grain overlay at ~15% opacity for cohesion.
+  - "Welcome to TraceR2C" (sans, 24px, white), "Sign up or sign in to your account" (13px, `rgba(255,255,255,0.55)`).
+  - Continue with Google button: full-width, `#1A1A1F` fill, `rgba(255,255,255,0.08)` border, white text, Google "G" mark.
+  - Divider row: thin hairlines + "or" label.
+  - Email / Password inputs: `#0F0F14` fill, `rgba(255,255,255,0.08)` border, 44px tall, white text, muted placeholder, eye toggle on password.
+  - Sign In button: full-width, brand-tinted indigo `#6366F1` at ~85% opacity over the dark card (matches the reference's translucent indigo CTA). Disabled state dims to ~40%.
+  - "Don't have an account? Sign up" link in indigo under the CTA.
+- Footer (outside the card): centered two-line muted text "By continuing, you agree to TraceR2C's Terms of Service and Privacy Policy, and to receive periodic emails with updates." — Terms / Privacy underlined.
+- Accent dot top-right of the canvas: 6px solid indigo `#6366F1`, decorative only.
 
-## Typography
-Install fontsource packages and wire them globally so the body inherits Customs hall fonts:
+## Component changes (`src/components/auth/AuthPage.tsx`)
 
-```text
-bun add @fontsource/archivo @fontsource/instrument-serif @fontsource/ibm-plex-sans @fontsource/ibm-plex-mono
-```
+1. Replace the current full-bleed split layout with a centered card:
+   - Outer wrapper: `min-h-screen bg-black flex flex-col items-center justify-center px-4 py-10`.
+   - Card: `grid lg:grid-cols-2 w-full max-w-[960px] rounded-2xl overflow-hidden border border-white/[0.06]`.
+   - On `<lg` collapse to single column: hide hero pane, keep form pane.
+2. Hero pane:
+   - Replace `ParticleBackground`, `login-art.jpg`, and current overlays with the new gradient + grain.
+   - Move wordmark inside the pane top-left, keep `navigate('/')` click.
+   - Add testimonial block (serif quote, body, avatar). Avatar: reuse `/logo.png` or a placeholder circle; copy can stay in code.
+3. Form pane:
+   - Remove the top-right nav and "Book a demo" button entirely (they don't exist in the reference).
+   - Rebuild header copy ("Welcome to TraceR2C" / subhead).
+   - Add a Google sign-in button that calls `supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } })`. Wire a `handleGoogleSignIn` handler beside the existing email/password flow.
+   - Keep the existing `handleSignIn`, `handleSignUp`, MFA step, forgot-password dialog, Turnstile widget, rate-limit logic, and validation — only their wrappers/classes change.
+   - Replace `Tabs` chrome with a tab look that matches the reference: when on Sign Up, the same shell shows the signup fields stacked below the Google button.
+   - "Sign up" / "Sign in" toggle line under the CTA replaces the current centered Tabs trigger on the login view (Tabs still drive state; the visible trigger becomes a text link).
+   - Drop the `.r2c-glass-card` / Customs Hall token usage on this page — replace with hardcoded Plasma palette via Tailwind arbitrary values (`bg-[#0B0B0F]`, `border-white/[0.08]`, etc.).
+4. Footer block: render once under the card, centered, muted, with Terms / Privacy as `<a>` placeholders (`/terms`, `/privacy`).
 
-- `src/main.tsx` — import the four font CSS entries.
-- `tailwind.config.ts` — extend `fontFamily`:
-  - `sans: ['"IBM Plex Sans"', ...defaults]` (body default)
-  - `display: ['Archivo', '"IBM Plex Sans"', ...]`
-  - `serif: ['"Instrument Serif"', 'Georgia', 'serif']` (wordmark/eyebrow only)
-  - `mono: ['"IBM Plex Mono"', ...defaults]` (data/tabular numerics)
-- `src/index.css` body rule: set `font-family: 'IBM Plex Sans', system-ui, sans-serif;` and apply `font-display` to `h1–h3` globally via a small `@layer base` rule, with `letter-spacing: -0.01em`.
+## Assets
 
-## Motifs available app-wide
-Promote the three signature motifs out of `.r2c` into global utilities so any shell/page can opt in:
+- Reuse the existing `public/grain-texture.webp` we just added; no new upload.
+- No new icons (lightning glyph already in `Wordmark`; Google "G" via inline SVG to avoid an extra dependency).
 
-- `.app-grid` — hairline grid backdrop (38px) for empty states, auth split panel, dashboard heroes.
-- `.app-scan` — one-shot scan-beam keyframe for evidence/compliance reveal cards.
-- `.app-rise` — masked line-rise for page H1s (auto-applied on `<h1>` inside auth + dashboard headers via a wrapper, not globally — avoids breaking dense tables).
-- `.app-link` — animated underline used by inline links (`<a>` inside prose; not nav buttons).
+## Scope guardrails
 
-The existing `.r2c-*` classes stay in place so the landing page is untouched.
+- This change is local to `src/components/auth/AuthPage.tsx` and does NOT alter the global `.r2c` Customs Hall tokens used elsewhere in the app. The Plasma look is hardcoded on this page only.
+- No changes to `ResetPassword.tsx`, `PlatformAdminLogin.tsx`, auth hooks, or Supabase config.
+- No backend/auth logic changes beyond adding the Google OAuth call (which only fires if the user clicks the button — if Google provider isn't enabled in Supabase, the existing toast/error surface handles it).
 
-## Surfaces that need light-touch follow-up
-Most pages already consume `bg-background`, `bg-card`, `text-foreground`, `border-border` — so the token swap cascades for free. Targeted adjustments:
+## Open questions before I build
 
-1. `src/pages/Auth.tsx` (and split panel) — apply `.app-grid` to the visual side, swap any hardcoded indigo gradient to `bg-gradient-primary`.
-2. `BuyerSidebarLayout` / supplier shell — sidebar already uses `--sidebar-*` tokens, so it re-skins automatically; verify the top-nav border picks up the new hairline color.
-3. Audit ~10 files flagged in exploration (`MessagesPage`, `HelpCenterPage`, `ProfileSettingsPage`, `ChatPage`, `AuditAssistantPage`, supplier upload modals, buyer onboarding/bulk-invite) for any hardcoded `bg-white` / `text-slate-*` / `bg-indigo-*` and replace with tokens.
-4. Replace any `rounded-2xl`/`rounded-full` on primary CTAs with `rounded-md` to match the tighter customs-stamp radius (only on layout containers — leave avatars/pills alone).
+1. The reference shows a "Continue with Google" button. Do you want Google OAuth wired up now (requires the Google provider enabled in Supabase Auth) — or render the button as visual-only / hide it for v1?
+2. The reference shows a single testimonial. Use the line currently in your hero ("Compliance you can read at a glance…") or write a new short quote with a fake attribution?
+3. Confirm: keep both Buyer/Supplier role selection on the Sign Up view (current behavior) — the reference doesn't show it, but removing it would break onboarding.
 
-## Out of scope
-- Platform admin + super admin dark theme.
-- The marketing `.r2c` scoped block (kept verbatim).
-- Any business logic, routing, data, or schema changes.
-
-## Risks & validation
-- Risk: a few components hardcode `text-white` / `bg-slate-50` and will look off-palette. Mitigation: grep + manual visual pass on auth, buyer dashboard, supplier dashboard, one document detail, one modal.
-- Validation: load `/auth`, buyer dashboard, supplier dashboard via Playwright at 1280×1800, screenshot each, confirm pine primary + steel background + Archivo headings render.
-
-## Deliverables
-1. Updated `src/index.css` tokens, body font, global motifs.
-2. Updated `tailwind.config.ts` fontFamily.
-3. `bun add` of four fontsource packages + imports in `src/main.tsx`.
-4. Targeted edits on ~6–10 component files with hardcoded colors.
-5. Playwright screenshot pass for verification.
+Answer those three and I'll implement exactly to spec.

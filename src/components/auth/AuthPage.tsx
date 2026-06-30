@@ -501,89 +501,110 @@ const AuthPage = () => {
 
 
   return (
-    <div className="r2c min-h-screen flex bg-[var(--r2c-bg)] text-[var(--r2c-ink)] relative">
-      
-      {/* Left Hero Section */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden transition-all duration-500 bg-[var(--r2c-ink)]">
-        
-        {/* Top Left Logo */}
-        <div className="absolute top-8 left-8 xl:left-12 z-50">
-          <button onClick={() => navigate('/')} aria-label="TraceR2C home" className="text-white hover:opacity-80 transition-opacity">
-            <Wordmark size={24} invertLogo className="text-white" />
-          </button>
-        </div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-black text-white px-4 py-10 relative overflow-hidden">
+      {/* Accent dot top-right */}
+      <span aria-hidden className="absolute top-6 right-8 h-1.5 w-1.5 rounded-full bg-[#6366F1]" />
 
-        <ParticleBackground />
-        
-        {/* Architectural Pencil Art */}
-        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-          <img 
-            src="/login-art.jpg" 
-            alt="Industry Architecture Blueprint" 
-            className="w-full h-full object-cover mix-blend-screen opacity-90"
+      {/* Centered two-pane card */}
+      <div className="grid w-full max-w-[960px] grid-cols-1 lg:grid-cols-2 rounded-2xl overflow-hidden border border-white/[0.06] bg-[#0B0B0F] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+
+        {/* Left Hero Pane */}
+        <div
+          className="relative hidden lg:flex flex-col justify-between min-h-[600px] p-10 overflow-hidden"
+          style={{
+            backgroundImage:
+              "radial-gradient(120% 90% at 85% 15%, #7B2D8E 0%, #5B2470 38%, #2A1438 75%, #1A0B22 100%)",
+          }}
+        >
+          {/* Grain overlay */}
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none opacity-[0.35] mix-blend-overlay"
+            style={{ backgroundImage: "url('/grain-texture.webp')", backgroundSize: '420px 420px', backgroundRepeat: 'repeat' }}
           />
-        </div>
 
-        {/* Grain texture overlay */}
-        <div
-          aria-hidden
-          className="absolute inset-0 z-20 pointer-events-none opacity-[0.35] mix-blend-overlay"
-          style={{ backgroundImage: "url('/grain-texture.webp')", backgroundSize: '420px 420px', backgroundRepeat: 'repeat' }}
-        />
-      </div>
-
-      {/* Right Form Section */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center bg-[var(--r2c-bg)] relative overflow-hidden">
-        {/* Subtle ambient glow so the liquid glass has something to refract, strictly using theme colors */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[var(--r2c-stamp)]/10 rounded-full blur-[80px] pointer-events-none" />
-
-        {/* Grain texture overlay tinted with the steel background */}
-        <div
-          aria-hidden
-          className="absolute inset-0 pointer-events-none opacity-[0.55] mix-blend-multiply"
-          style={{ backgroundImage: "url('/grain-texture.webp')", backgroundSize: '420px 420px', backgroundRepeat: 'repeat' }}
-        />
-
-        {/* Top Right Actions */}
-        <div className="absolute top-8 right-8 xl:right-12 z-50 hidden sm:flex items-center gap-8">
-          <nav className="hidden items-center gap-8 lg:flex">
-            {[
-              { label: 'Platform', href: '/#platform' },
-              { label: 'How it reads', href: '/#how' },
-              { label: 'Solutions', href: '/#solutions' },
-            ].map((n) => (
-              <a key={n.label} href={n.href} className="font-data text-[12px] uppercase tracking-wider text-[var(--r2c-ink)] hover:text-[var(--r2c-stamp)] transition-colors">
-                {n.label}
-              </a>
-            ))}
-          </nav>
+          {/* Wordmark top-left */}
           <button
             onClick={() => navigate('/')}
-            className="group inline-flex items-center gap-2 rounded-full bg-[var(--r2c-stamp)] px-6 py-2.5 text-[14px] font-medium text-white transition-all duration-200 hover:bg-[var(--r2c-stamp-deep)]"
+            aria-label="TraceR2C home"
+            className="relative z-10 inline-flex items-start text-white hover:opacity-80 transition-opacity"
           >
-            Book a demo
+            <Wordmark size={22} invertLogo className="text-white" />
           </button>
+
+          {/* Testimonial */}
+          <div className="relative z-10 max-w-[320px]">
+            <div className="font-serif text-6xl leading-none text-white/30 mb-3 select-none">"</div>
+            <p className="font-serif italic text-[22px] leading-[1.35] text-white">
+              Compliance you can read at a glance — every certificate, every clause, every supplier, in one place.
+            </p>
+            <div className="mt-6 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-white/10 ring-1 ring-white/20 flex items-center justify-center overflow-hidden">
+                <img src="/logo.png" alt="" className="h-6 w-6 object-contain brightness-0 invert opacity-90" />
+              </div>
+              <div className="leading-tight">
+                <div className="text-sm font-semibold text-white">TraceR2C Team</div>
+                <div className="text-xs text-white/55">@tracer2c</div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="w-full max-w-md relative z-10 p-6 sm:p-8 mt-16 lg:mt-0">
-          {/* Mobile Logo */}
-          <div className="flex lg:hidden items-center justify-center gap-3 mb-8 mt-12">
-            <Wordmark size={28} />
+        {/* Right Form Pane */}
+        <div className="relative bg-[#0B0B0F] p-8 sm:p-10 flex flex-col justify-center min-h-[600px]">
+          {/* Grain overlay */}
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none opacity-[0.12] mix-blend-overlay"
+            style={{ backgroundImage: "url('/grain-texture.webp')", backgroundSize: '420px 420px', backgroundRepeat: 'repeat' }}
+          />
+
+          {/* Mobile wordmark */}
+          <div className="flex lg:hidden items-center justify-center mb-6 relative z-10">
+            <Wordmark size={22} invertLogo className="text-white" />
           </div>
 
-          <Card className="r2c-glass-card mt-16 lg:mt-0">
-            <CardContent className="p-6 sm:p-8">
-              <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-foreground">
-                  {authStep === 'mfa' ? 'Verify Identity' : 'Welcome'}
-                </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {authStep === 'mfa' 
-                    ? 'Complete two-factor authentication'
-                    : activeTab === 'login' ? 'Login to your account' : 'Create your account'
-                  }
-                </p>
-              </div>
+          <div className="relative z-10 w-full max-w-sm mx-auto">
+            <div className="mb-6">
+              <h2 className="text-[22px] font-semibold text-white tracking-tight">
+                {authStep === 'mfa' ? 'Verify Identity' : 'Welcome to TraceR2C'}
+              </h2>
+              <p className="text-[13px] text-white/55 mt-1">
+                {authStep === 'mfa'
+                  ? 'Complete two-factor authentication'
+                  : 'Sign up or sign in to your account'}
+              </p>
+            </div>
+
+            {/* Google sign-in (hidden during MFA & signup-only flows show it too) */}
+            {authStep === 'credentials' && (
+              <>
+                <Button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={loading}
+                  className="w-full h-11 mb-4 bg-[#1A1A1F] hover:bg-[#22222A] border border-white/[0.08] text-white font-medium rounded-md flex items-center justify-center gap-3"
+                >
+                  <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden>
+                    <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z"/>
+                    <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
+                    <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.5-5.2l-6.2-5.2C29.2 35 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/>
+                    <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.3 5.6l6.2 5.2C40.9 35.5 44 30.2 44 24c0-1.2-.1-2.3-.4-3.5z"/>
+                  </svg>
+                  Continue with Google
+                </Button>
+
+                <div className="relative my-5">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-white/[0.08]" />
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="bg-[#0B0B0F] px-3 text-[11px] uppercase tracking-wider text-white/40">or</span>
+                  </div>
+                </div>
+              </>
+            )}
+
 
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 {authStep === 'credentials' && (

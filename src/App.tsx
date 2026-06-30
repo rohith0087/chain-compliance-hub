@@ -395,12 +395,12 @@ const AppRoutes = () => {
               <TourProvider>
                 <ImpersonationBanner />
                 <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/auth" element={
+                  <Route path="/" element={
                     <PublicRoute>
                       <AuthPage />
                     </PublicRoute>
                   } />
+                  <Route path="/auth" element={<Navigate to="/" replace />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   {import.meta.env.MODE === 'test' && (
                     <>

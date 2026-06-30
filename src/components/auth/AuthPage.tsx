@@ -564,7 +564,7 @@ const AuthPage = () => {
             <Wordmark size={22} invertLogo className="text-white" />
           </div>
 
-          <div className="relative z-10 w-full max-w-sm mx-auto">
+          <div className="auth-plasma relative z-10 w-full max-w-sm mx-auto">
             <div className="mb-6">
               <h2 className="text-[22px] font-semibold text-white tracking-tight">
                 {authStep === 'mfa' ? 'Verify Identity' : 'Welcome to TraceR2C'}

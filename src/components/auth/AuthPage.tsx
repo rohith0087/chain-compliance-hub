@@ -485,6 +485,21 @@ const AuthPage = () => {
     setResetLoading(false);
   };
 
+  const handleGoogleSignIn = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) {
+      toast({
+        title: "Google sign-in failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+
   return (
     <div className="r2c min-h-screen flex bg-[var(--r2c-bg)] text-[var(--r2c-ink)] relative">
       

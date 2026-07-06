@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
       effective_at: input.effective_at,
     };
     const [catalogResults, legacy] = await Promise.all([
-      loadCatalogResults(admin, input.buyer_id, input.subject_type, input.effective_at, facts),
+      loadCatalogResults(admin, input.buyer_id, input.subject_type, input.effective_at, facts, subjectContext.supplierId),
       loadLegacyResults(admin, input.buyer_id, input.subject_type, subjectContext.supplierId),
     ]);
     const results = [...catalogResults, ...legacy.results];

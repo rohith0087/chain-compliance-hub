@@ -16,6 +16,7 @@ import {
 
 interface ComplianceDecisionsViewProps {
   buyerId: string;
+  lockSupplierId?: string;   // workspace scope: fix subject to one supplier, hide pickers
 }
 
 type SubjectType = 'supplier' | 'facility' | 'product';
@@ -92,11 +93,11 @@ function DecisionCard({ result }: { result: DecisionResult }) {
   const includesSharedEvidence = result.explanation.includes(SHARED_EVIDENCE_MARKER);
   return (
     <div className={reviewCardContainerClass}>
-      <div className="space-y-2 border-b border-[#E5E7EB] p-4">
+      <div className="space-y-2 border-b border-border p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-base font-semibold text-[#111827]">{result.title}</p>
-            <p className="mt-1 text-sm text-[#6B7280]">{result.framework_code} · {result.framework_version}</p>
+            <p className="text-base font-semibold text-foreground">{result.title}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{result.framework_code} · {result.framework_version}</p>
           </div>
           <div className="flex items-center gap-2">
             {includesSharedEvidence && (
@@ -111,9 +112,9 @@ function DecisionCard({ result }: { result: DecisionResult }) {
         </div>
       </div>
       <div className="space-y-2 p-4 text-sm">
-        <p className="text-[#6B7280]">{result.explanation}</p>
+        <p className="text-muted-foreground">{result.explanation}</p>
         {result.evidence_claim_ids.length > 0 && (
-          <p className="text-xs text-[#6B7280]">{result.evidence_claim_ids.length} evidence claim(s) considered</p>
+          <p className="text-xs text-muted-foreground">{result.evidence_claim_ids.length} evidence claim(s) considered</p>
         )}
       </div>
     </div>
@@ -154,21 +155,21 @@ function ActionItemsPanel({ buyerId }: { buyerId: string }) {
 
   return (
     <div className={reviewCardContainerClass}>
-      <div className="border-b border-[#E5E7EB] p-4">
-        <p className="text-base font-semibold text-[#111827]">Action items</p>
-        <p className="mt-1 text-sm text-[#6B7280]">Open tasks, findings, and approvals for this organization.</p>
+      <div className="border-b border-border p-4">
+        <p className="text-base font-semibold text-foreground">Action items</p>
+        <p className="mt-1 text-sm text-muted-foreground">Open tasks, findings, and approvals for this organization.</p>
       </div>
       <div className="space-y-4 p-4">
         {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
 
         <div>
           <p className={`mb-2 ${reviewSectionHeaderClass}`}>Tasks ({tasks.length})</p>
-          {tasks.length === 0 ? <p className="text-sm text-[#6B7280]">No open tasks.</p> : (
+          {tasks.length === 0 ? <p className="text-sm text-muted-foreground">No open tasks.</p> : (
             <ul className="space-y-2">
               {tasks.map((task) => (
-                <li key={task.id} className="flex items-center justify-between gap-2 rounded-[12px] border border-[#E5E7EB] p-3 text-sm">
-                  <span className="text-[#111827]">{task.title} <span className="text-xs text-[#6B7280]">({task.task_type}{task.due_date ? `, due ${task.due_date}` : ''})</span></span>
-                  <Button size="sm" variant="outline" className="rounded-[10px] border-[#E5E7EB]" disabled={busyId === task.id}
+                <li key={task.id} className="flex items-center justify-between gap-2 rounded-[12px] border border-border p-3 text-sm">
+                  <span className="text-foreground">{task.title} <span className="text-xs text-muted-foreground">({task.task_type}{task.due_date ? `, due ${task.due_date}` : ''})</span></span>
+                  <Button size="sm" variant="outline" className="rounded-[10px] border-border" disabled={busyId === task.id}
                     onClick={() => runAction(task.id, () => db.rpc('complete_compliance_task_v1', { p_task_id: task.id }))}>
                     Complete
                   </Button>
@@ -180,12 +181,12 @@ function ActionItemsPanel({ buyerId }: { buyerId: string }) {
 
         <div>
           <p className={`mb-2 ${reviewSectionHeaderClass}`}>Findings ({findings.length})</p>
-          {findings.length === 0 ? <p className="text-sm text-[#6B7280]">No open findings.</p> : (
+          {findings.length === 0 ? <p className="text-sm text-muted-foreground">No open findings.</p> : (
             <ul className="space-y-2">
               {findings.map((finding) => (
-                <li key={finding.id} className="flex items-center justify-between gap-2 rounded-[12px] border border-[#E5E7EB] p-3 text-sm">
-                  <span className="text-[#111827]">{finding.description} <span className="ml-1 inline-flex items-center rounded-full border-0 bg-slate-50 px-2 py-0.5 text-[12px] font-medium text-slate-600">{finding.severity}</span></span>
-                  <Button size="sm" variant="outline" className="rounded-[10px] border-[#E5E7EB]" disabled={busyId === finding.id}
+                <li key={finding.id} className="flex items-center justify-between gap-2 rounded-[12px] border border-border p-3 text-sm">
+                  <span className="text-foreground">{finding.description} <span className="ml-1 inline-flex items-center rounded-full border-0 bg-muted px-2 py-0.5 text-[12px] font-medium text-muted-foreground">{finding.severity}</span></span>
+                  <Button size="sm" variant="outline" className="rounded-[10px] border-border" disabled={busyId === finding.id}
                     onClick={() => runAction(finding.id, () => db.rpc('resolve_compliance_finding_v1', { p_finding_id: finding.id }))}>
                     Resolve
                   </Button>
@@ -197,17 +198,17 @@ function ActionItemsPanel({ buyerId }: { buyerId: string }) {
 
         <div>
           <p className={`mb-2 ${reviewSectionHeaderClass}`}>Pending approvals ({approvals.length})</p>
-          {approvals.length === 0 ? <p className="text-sm text-[#6B7280]">No pending approvals.</p> : (
+          {approvals.length === 0 ? <p className="text-sm text-muted-foreground">No pending approvals.</p> : (
             <ul className="space-y-2">
               {approvals.map((approval) => (
-                <li key={approval.id} className="flex items-center justify-between gap-2 rounded-[12px] border border-[#E5E7EB] p-3 text-sm">
-                  <span className="text-[#111827]">{approval.approval_type.replace(/_/g, ' ')} requested {new Date(approval.requested_at).toLocaleDateString()}</span>
+                <li key={approval.id} className="flex items-center justify-between gap-2 rounded-[12px] border border-border p-3 text-sm">
+                  <span className="text-foreground">{approval.approval_type.replace(/_/g, ' ')} requested {new Date(approval.requested_at).toLocaleDateString()}</span>
                   <div className="flex gap-1.5">
                     <Button size="sm" className="rounded-[10px] bg-[#10B981] text-white hover:bg-[#059669]" disabled={busyId === approval.id}
                       onClick={() => runAction(approval.id, () => db.rpc('decide_compliance_approval_v1', { p_approval_id: approval.id, p_decision: 'approved', p_notes: null }))}>
                       Approve
                     </Button>
-                    <Button size="sm" variant="outline" className="rounded-[10px] border-[#FCA5A5] bg-white text-[#DC2626] hover:bg-[#FEF2F2]" disabled={busyId === approval.id}
+                    <Button size="sm" variant="outline" className="rounded-[10px] border-[#FCA5A5] bg-card text-[#DC2626] hover:bg-[#FEF2F2]" disabled={busyId === approval.id}
                       onClick={() => runAction(approval.id, () => db.rpc('decide_compliance_approval_v1', { p_approval_id: approval.id, p_decision: 'rejected', p_notes: null }))}>
                       Reject
                     </Button>
@@ -222,10 +223,10 @@ function ActionItemsPanel({ buyerId }: { buyerId: string }) {
   );
 }
 
-export default function ComplianceDecisionsView({ buyerId }: ComplianceDecisionsViewProps) {
+export default function ComplianceDecisionsView({ buyerId, lockSupplierId }: ComplianceDecisionsViewProps) {
   const [subjectType, setSubjectType] = useState<SubjectType>('supplier');
   const [subjects, setSubjects] = useState<Record<SubjectType, SubjectOption[]>>({ supplier: [], facility: [], product: [] });
-  const [subjectId, setSubjectId] = useState('');
+  const [subjectId, setSubjectId] = useState(lockSupplierId ?? '');
   const [effectiveAt, setEffectiveAt] = useState(() => new Date().toISOString().slice(0, 10));
   const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [evaluating, setEvaluating] = useState(false);
@@ -273,7 +274,7 @@ export default function ComplianceDecisionsView({ buyerId }: ComplianceDecisions
     return () => { active = false; };
   }, [buyerId]);
 
-  useEffect(() => { setSubjectId(''); setResponse(null); }, [subjectType]);
+  useEffect(() => { if (!lockSupplierId) { setSubjectId(''); setResponse(null); } }, [subjectType, lockSupplierId]);
 
   const sortedResults = useMemo(
     () => [...(response?.results || [])].sort((a, b) => outcomeSeverity[a.outcome] - outcomeSeverity[b.outcome]),
@@ -301,34 +302,38 @@ export default function ComplianceDecisionsView({ buyerId }: ComplianceDecisions
   };
 
   return (
-    <div className="h-[calc(100vh-80px)] overflow-y-auto bg-white p-6">
+    <div className="h-[calc(100vh-80px)] overflow-y-auto bg-card p-6">
       <div className="mx-auto max-w-6xl space-y-6">
         <div>
           <div className="flex items-center gap-2"><ShieldCheck className="h-6 w-6 text-[#2563EB]" /><h1 className={reviewPageTitleClass}>Compliance Decisions</h1></div>
           <p className={`mt-1 ${reviewPageSubtitleClass}`}>Computed compliance status, derived from verified evidence and requirement applicability - not a manually selected document status.</p>
         </div>
 
-        <Tabs value={subjectType} onValueChange={(value) => setSubjectType(value as SubjectType)}>
-          <TabsList>
-            <TabsTrigger value="supplier">Supplier</TabsTrigger>
-            <TabsTrigger value="facility">Facility</TabsTrigger>
-            <TabsTrigger value="product">Product</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {!lockSupplierId && (
+          <Tabs value={subjectType} onValueChange={(value) => setSubjectType(value as SubjectType)}>
+            <TabsList>
+              <TabsTrigger value="supplier">Supplier</TabsTrigger>
+              <TabsTrigger value="facility">Facility</TabsTrigger>
+              <TabsTrigger value="product">Product</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
 
         <div className={reviewCardContainerClass}>
-          <div className="border-b border-[#E5E7EB] p-4">
-            <p className="text-base font-semibold text-[#111827]">Evaluate compliance</p>
-            <p className="mt-1 text-sm text-[#6B7280]">Select a subject and an evaluation date.</p>
+          <div className="border-b border-border p-4">
+            <p className="text-base font-semibold text-foreground">Evaluate compliance</p>
+            <p className="mt-1 text-sm text-muted-foreground">{lockSupplierId ? 'Pick an evaluation date and compute this supplier’s status.' : 'Select a subject and an evaluation date.'}</p>
           </div>
-          <div className="grid gap-4 p-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Select value={subjectId} onValueChange={setSubjectId} disabled={loadingSubjects}>
-                <SelectTrigger className="rounded-[10px] border-[#E5E7EB]"><SelectValue placeholder={loadingSubjects ? 'Loading…' : 'Select subject'} /></SelectTrigger>
-                <SelectContent>{subjects[subjectType].map((subject) => <SelectItem key={subject.id} value={subject.id}>{subject.label}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <Input className="rounded-[10px] border-[#E5E7EB]" type="date" value={effectiveAt} onChange={(event) => setEffectiveAt(event.target.value)} />
+          <div className={`grid gap-4 p-4 ${lockSupplierId ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
+            {!lockSupplierId && (
+              <div className="space-y-2">
+                <Select value={subjectId} onValueChange={setSubjectId} disabled={loadingSubjects}>
+                  <SelectTrigger className="rounded-[10px] border-border"><SelectValue placeholder={loadingSubjects ? 'Loading…' : 'Select subject'} /></SelectTrigger>
+                  <SelectContent>{subjects[subjectType].map((subject) => <SelectItem key={subject.id} value={subject.id}>{subject.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            )}
+            <Input className="rounded-[10px] border-border" type="date" value={effectiveAt} onChange={(event) => setEffectiveAt(event.target.value)} />
             <Button className="rounded-[10px] bg-[#10B981] text-white hover:bg-[#059669]" onClick={evaluate} disabled={evaluating || loadingSubjects}>
               {evaluating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Evaluate compliance
             </Button>

@@ -20,11 +20,11 @@ const statusConfig = {
   },
   resolved: {
     label: 'Resolved',
-    className: 'bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-900/50 dark:text-gray-400 dark:border-gray-700',
+    className: 'bg-muted text-muted-foreground border-border dark:bg-gray-900/50 dark:text-muted-foreground/70 dark:border-gray-700',
   },
   closed: {
     label: 'Closed',
-    className: 'bg-gray-50 text-gray-400 border-gray-200 dark:bg-gray-900/50 dark:text-gray-500 dark:border-gray-700',
+    className: 'bg-muted text-muted-foreground/70 border-border dark:bg-gray-900/50 dark:text-muted-foreground dark:border-gray-700',
   },
 };
 

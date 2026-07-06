@@ -74,7 +74,7 @@ export const OnboardingNotification: React.FC<OnboardingNotificationProps> = ({
       case 'rejected':
         return <XCircle className="w-5 h-5 text-red-600" />;
       default:
-        return <Clock className="w-5 h-5 text-gray-600" />;
+        return <Clock className="w-5 h-5 text-muted-foreground" />;
     }
   };
 
@@ -89,7 +89,7 @@ export const OnboardingNotification: React.FC<OnboardingNotificationProps> = ({
       case 'rejected':
         return 'bg-red-100 text-red-800';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-foreground';
     }
   };
 

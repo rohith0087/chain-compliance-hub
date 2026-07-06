@@ -122,7 +122,7 @@ const NotificationCenter = ({ onNavigate, onOpenHelpCenter }: NotificationCenter
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="relative group hover:shadow-md transition-all duration-200">
+        <Button variant="ghost" size="icon" className="relative group h-9 w-9 rounded-full transition-colors">
           <Bell className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
           {unreadCount > 0 && (
             <Badge 

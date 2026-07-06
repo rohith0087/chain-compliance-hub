@@ -116,11 +116,11 @@ export default function DocumentNotesPanel({ documentId }: DocumentNotesPanelPro
   };
 
   return (
-    <div className="flex w-[360px] flex-shrink-0 flex-col border-l border-[#E5E7EB] bg-white">
+    <div className="flex w-[360px] flex-shrink-0 flex-col border-l border-border bg-card">
       {/* Panel header */}
-      <div className="flex items-center gap-2 border-b border-[#E5E7EB] px-4 py-3.5">
+      <div className="flex items-center gap-2 border-b border-border px-4 py-3.5">
         <StickyNote className="h-4 w-4 text-amber-500" />
-        <p className="text-[15px] font-bold text-[#111827]">Notes</p>
+        <p className="text-[15px] font-bold text-foreground">Notes</p>
         {notes.length > 0 && (
           <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
             {notes.length}
@@ -132,15 +132,15 @@ export default function DocumentNotesPanel({ documentId }: DocumentNotesPanelPro
       <div className="flex-1 overflow-y-auto">
         {loading ? (
           <div className="flex h-full items-center justify-center py-12">
-            <Loader2 className="h-5 w-5 animate-spin text-[#6B7280]" />
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : notes.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-16 px-6 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-50">
               <StickyNote className="h-5 w-5 text-amber-400" />
             </div>
-            <p className="text-[13px] font-medium text-[#374151]">No notes yet</p>
-            <p className="text-[12px] text-[#9CA3AF]">Add the first note to keep a record of observations or decisions.</p>
+            <p className="text-[13px] font-medium text-foreground/80">No notes yet</p>
+            <p className="text-[12px] text-muted-foreground/70">Add the first note to keep a record of observations or decisions.</p>
           </div>
         ) : (
           <div className="space-y-0 divide-y divide-[#F3F4F6] p-4 pb-2">
@@ -158,11 +158,11 @@ export default function DocumentNotesPanel({ documentId }: DocumentNotesPanelPro
                   <div className="min-w-0 flex-1">
                     {/* Name + time */}
                     <div className="flex items-baseline gap-2">
-                      <span className="text-[13px] font-semibold text-[#111827] truncate">{name || email || 'Unknown'}</span>
-                      <span className="flex-shrink-0 text-[11px] text-[#9CA3AF]">{relativeTime(note.created_at)}</span>
+                      <span className="text-[13px] font-semibold text-foreground truncate">{name || email || 'Unknown'}</span>
+                      <span className="flex-shrink-0 text-[11px] text-muted-foreground/70">{relativeTime(note.created_at)}</span>
                     </div>
                     {/* Body */}
-                    <p className="mt-1 text-[13px] leading-[1.5] text-[#374151] whitespace-pre-wrap break-words">{note.body}</p>
+                    <p className="mt-1 text-[13px] leading-[1.5] text-foreground/80 whitespace-pre-wrap break-words">{note.body}</p>
                   </div>
                 </div>
               );
@@ -173,8 +173,8 @@ export default function DocumentNotesPanel({ documentId }: DocumentNotesPanelPro
       </div>
 
       {/* Compose area */}
-      <div className="border-t border-[#E5E7EB] p-3">
-        <div className="relative rounded-[12px] border border-[#E5E7EB] bg-[#F9FAFB] transition-colors focus-within:border-amber-400 focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(251,191,36,0.12)]">
+      <div className="border-t border-border p-3">
+        <div className="relative rounded-[12px] border border-border bg-muted transition-colors focus-within:border-amber-400 focus-within:bg-card focus-within:shadow-[0_0_0_3px_rgba(251,191,36,0.12)]">
           <Textarea
             placeholder="Add a note… (⌘↵ to send)"
             value={draft}
@@ -182,11 +182,11 @@ export default function DocumentNotesPanel({ documentId }: DocumentNotesPanelPro
             onKeyDown={onKeyDown}
             rows={3}
             maxLength={2000}
-            className="resize-none rounded-[12px] border-0 bg-transparent px-3 pt-3 pb-10 text-[13px] text-[#111827] placeholder:text-[#9CA3AF] focus-visible:ring-0 shadow-none"
+            className="resize-none rounded-[12px] border-0 bg-transparent px-3 pt-3 pb-10 text-[13px] text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-0 shadow-none"
           />
           <div className="absolute bottom-2.5 right-2.5 flex items-center gap-2">
             {draft.length > 0 && (
-              <span className="text-[11px] text-[#9CA3AF] tabular-nums">{draft.length}/2000</span>
+              <span className="text-[11px] text-muted-foreground/70 tabular-nums">{draft.length}/2000</span>
             )}
             <Button
               size="icon"

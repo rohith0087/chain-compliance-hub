@@ -86,7 +86,7 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'submitted': return 'bg-blue-100 text-blue-800';
       case 'rejected': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      default: return 'bg-muted text-foreground';
     }
   };
 
@@ -96,7 +96,7 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
       case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
       case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'low': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      default: return 'bg-muted text-foreground border-border';
     }
   };
 
@@ -166,10 +166,10 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                   <div className="space-y-6">
                     {/* Request Information */}
                     <div>
-                      <h4 className="font-semibold mb-3 text-gray-900">Request Information</h4>
+                      <h4 className="font-semibold mb-3 text-foreground">Request Information</h4>
                       <div className="grid md:grid-cols-2 gap-4">
                        <div>
-                         <p className="text-sm font-medium text-gray-500">Document Type</p>
+                         <p className="text-sm font-medium text-muted-foreground">Document Type</p>
                          <p className="text-sm capitalize">{request.document_type}</p>
                          {isCustomTemplate && (
                            <Badge variant="outline" className="mt-1 bg-purple-50 text-purple-700 border-purple-200">
@@ -178,17 +178,17 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                          )}
                        </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-500">Category</p>
+                          <p className="text-sm font-medium text-muted-foreground">Category</p>
                           <p className="text-sm capitalize">{request.category}</p>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-500">Priority</p>
+                          <p className="text-sm font-medium text-muted-foreground">Priority</p>
                           <Badge className={getPriorityColor(request.priority || 'medium')} variant="outline">
                             {request.priority || 'medium'}
                           </Badge>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-500">Status</p>
+                          <p className="text-sm font-medium text-muted-foreground">Status</p>
                           <Badge className={getStatusColor(request.status)} variant="secondary">
                             {getStatusIcon(request.status)}
                             <span className="ml-1 capitalize">{request.status}</span>
@@ -200,9 +200,9 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                     {/* Description */}
                     {request.description && (
                       <div>
-                        <h4 className="font-semibold mb-3 text-gray-900">Description</h4>
-                        <div className="p-3 bg-gray-50 rounded-lg">
-                          <p className="text-sm text-gray-700">{request.description}</p>
+                        <h4 className="font-semibold mb-3 text-foreground">Description</h4>
+                        <div className="p-3 bg-muted rounded-lg">
+                          <p className="text-sm text-foreground/80">{request.description}</p>
                         </div>
                       </div>
                     )}
@@ -210,7 +210,7 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                     {/* Buyer Information */}
                     {request.buyers && (
                       <div>
-                        <h4 className="font-semibold mb-3 text-gray-900">Requested By</h4>
+                        <h4 className="font-semibold mb-3 text-foreground">Requested By</h4>
                         <div className="flex items-center gap-3 p-3 border rounded-lg">
                           <CompanyLogo 
                             logoUrl={request.buyers.company_logo_url}
@@ -219,8 +219,8 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                           />
                           <div>
                             <p className="font-medium">{request.buyers.company_name}</p>
-                            <p className="text-sm text-gray-600">{request.buyers.industry}</p>
-                            <p className="text-sm text-gray-500">{request.buyers.contact_email}</p>
+                            <p className="text-sm text-muted-foreground">{request.buyers.industry}</p>
+                            <p className="text-sm text-muted-foreground">{request.buyers.contact_email}</p>
                           </div>
                         </div>
                       </div>
@@ -228,13 +228,13 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
 
                     {/* Timeline */}
                     <div>
-                      <h4 className="font-semibold mb-3 text-gray-900">Timeline</h4>
+                      <h4 className="font-semibold mb-3 text-foreground">Timeline</h4>
                       <div className="grid md:grid-cols-2 gap-4">
                         <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-gray-500" />
+                          <Calendar className="w-4 h-4 text-muted-foreground" />
                           <div>
                             <p className="text-sm font-medium">Created</p>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                               {formatDate(request.created_at)}
                             </p>
                           </div>
@@ -244,7 +244,7 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                             <AlertCircle className="w-4 h-4 text-orange-500" />
                             <div>
                               <p className="text-sm font-medium">Due Date</p>
-                              <p className="text-sm text-gray-600">
+                              <p className="text-sm text-muted-foreground">
                                 {formatDate(request.due_date)}
                               </p>
                             </div>
@@ -256,9 +256,9 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                     {/* Notes */}
                     {request.notes && (
                       <div>
-                        <h4 className="font-semibold mb-3 text-gray-900">Additional Notes</h4>
-                        <div className="p-3 bg-gray-50 rounded-lg">
-                          <p className="text-sm text-gray-700">{request.notes}</p>
+                        <h4 className="font-semibold mb-3 text-foreground">Additional Notes</h4>
+                        <div className="p-3 bg-muted rounded-lg">
+                          <p className="text-sm text-foreground/80">{request.notes}</p>
                         </div>
                       </div>
                     )}
@@ -284,7 +284,7 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                       </div>
                     )}
 
-                    {request.document_uploads?.length>1&&<div><h4 className="mb-3 font-semibold text-gray-900">Version history</h4><div className="space-y-2">{[...request.document_uploads].sort((a:any,b:any)=>Number(b.version||0)-Number(a.version||0)).map((upload:any)=><div key={upload.id} className="flex items-center justify-between rounded-md border p-2 text-sm"><span>Version {upload.version||1} · {upload.file_name}</span><Badge className={getStatusColor(upload.status)}>{upload.status}</Badge></div>)}</div></div>}
+                    {request.document_uploads?.length>1&&<div><h4 className="mb-3 font-semibold text-foreground">Version history</h4><div className="space-y-2">{[...request.document_uploads].sort((a:any,b:any)=>Number(b.version||0)-Number(a.version||0)).map((upload:any)=><div key={upload.id} className="flex items-center justify-between rounded-md border p-2 text-sm"><span>Version {upload.version||1} · {upload.file_name}</span><Badge className={getStatusColor(upload.status)}>{upload.status}</Badge></div>)}</div></div>}
                   </div>
                 </DialogContent>
               </Dialog>
@@ -364,7 +364,7 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
         />
         
         <CardContent className="pt-0">
-          <div className="flex items-center justify-between text-sm text-gray-600">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
             <div className="flex items-center space-x-4">
               <span>Type: {request.document_type}</span>
               <span>Category: {request.category}</span>
@@ -377,7 +377,7 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
           
           {request.buyers && (
             <div className="mt-3 pt-3 border-t">
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <CompanyLogo 
                   logoUrl={request.buyers.company_logo_url}
                   companyName={request.buyers.company_name}

@@ -134,9 +134,9 @@ const SupplierSelection = ({ selectedIndustry, buyerProfile, onComplete }: Suppl
     return (
       <Card>
         <CardContent className="p-6 text-center">
-          <Building2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <Building2 className="w-12 h-12 text-muted-foreground/70 mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">No Suppliers Found</h3>
-          <p className="text-gray-600 mb-4">
+          <p className="text-muted-foreground mb-4">
             There are currently no suppliers in the {selectedIndustry} industry.
           </p>
           <Button onClick={onComplete}>Continue Without Connections</Button>
@@ -153,7 +153,7 @@ const SupplierSelection = ({ selectedIndustry, buyerProfile, onComplete }: Suppl
             <Users className="w-5 h-5" />
             Select Suppliers to Connect With
           </CardTitle>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             Choose suppliers in the {selectedIndustry} industry that you'd like to connect with. 
             Some may require approval while others will connect automatically.
           </p>
@@ -174,7 +174,7 @@ const SupplierSelection = ({ selectedIndustry, buyerProfile, onComplete }: Suppl
                         <label htmlFor={supplier.id} className="font-semibold cursor-pointer">
                           {supplier.company_name}
                         </label>
-                        <p className="text-sm text-gray-600">{supplier.contact_email}</p>
+                        <p className="text-sm text-muted-foreground">{supplier.contact_email}</p>
                       </div>
                     </div>
                     <Badge variant={supplier.auto_approve_connections ? "default" : "secondary"}>
@@ -184,7 +184,7 @@ const SupplierSelection = ({ selectedIndustry, buyerProfile, onComplete }: Suppl
                 </CardHeader>
                 {supplier.description && (
                   <CardContent>
-                    <p className="text-sm text-gray-600">{supplier.description}</p>
+                    <p className="text-sm text-muted-foreground">{supplier.description}</p>
                   </CardContent>
                 )}
               </Card>

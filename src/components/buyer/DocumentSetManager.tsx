@@ -394,8 +394,8 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
             <div className="rounded-full bg-[#EFF6FF] p-4 mb-4 inline-flex">
               <Package className="h-10 w-10 text-[#2563EB]" />
             </div>
-            <h3 className="text-lg font-semibold text-[#111827] mb-2">Create Your First Document Set</h3>
-            <p className="text-[#6B7280] text-center max-w-md mb-6 mx-auto">
+            <h3 className="text-lg font-semibold text-foreground mb-2">Create Your First Document Set</h3>
+            <p className="text-muted-foreground text-center max-w-md mb-6 mx-auto">
               Document Sets let you reuse the same documents across multiple supplier requests.
               Save time by creating templates for common compliance packages.
             </p>
@@ -408,7 +408,7 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
               <Badge variant="outline" className="text-xs">Quality Certifications</Badge>
             </div>
 
-            <p className="text-sm text-[#6B7280] text-center">
+            <p className="text-sm text-muted-foreground text-center">
               Create a set from the "New Request" page by selecting documents and clicking "Save as Set"
             </p>
           </div>
@@ -418,7 +418,7 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
             {pageDocumentSets.map((set) => (
               <Card
                 key={set.id}
-                className="group cursor-pointer rounded-[16px] border border-[#E5E7EB] shadow-[0_1px_3px_rgba(15,23,42,0.06)] hover:shadow-md hover:border-[#D1D5DB] hover:-translate-y-0.5 transition-all duration-200"
+                className="group cursor-pointer rounded-[16px] border border-border shadow-[0_1px_3px_rgba(15,23,42,0.06)] hover:shadow-md hover:border-border hover:-translate-y-0.5 transition-all duration-200"
                 onClick={() => handleEdit(set)}
               >
                 <CardHeader className="pb-3">
@@ -465,7 +465,7 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
                   {/* Badges row */}
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {set.is_default && (
-                      <Badge variant="outline" className="text-[12px] px-2 py-0.5 rounded-full font-medium bg-slate-50 text-slate-600 border-slate-200">Default</Badge>
+                      <Badge variant="outline" className="text-[12px] px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground border-border">Default</Badge>
                     )}
                     {isPopularSet(set.usage_count || 0) && (
                       <Badge variant="outline" className="text-[12px] px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 border-emerald-200">

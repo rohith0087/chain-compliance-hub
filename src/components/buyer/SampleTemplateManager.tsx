@@ -139,10 +139,10 @@ function TemplatePreviewContent({ template }: { template: SampleTemplate }) {
         </Button>
       )}
       {signedUrl && template.sample_mime_type?.startsWith('image/') && (
-        <img src={signedUrl} alt="Preview" className="max-w-full h-auto rounded-[10px] border border-[#E5E7EB]" />
+        <img src={signedUrl} alt="Preview" className="max-w-full h-auto rounded-[10px] border border-border" />
       )}
       {signedUrl && template.sample_mime_type === 'application/pdf' && (
-        <iframe src={signedUrl} className="w-full h-[400px] rounded-[10px] border border-[#E5E7EB]" title="PDF Preview" />
+        <iframe src={signedUrl} className="w-full h-[400px] rounded-[10px] border border-border" title="PDF Preview" />
       )}
     </div>
   );
@@ -393,7 +393,7 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
   const uploadStatusTabs: Array<{ value: 'all' | 'uploaded' | 'not-uploaded'; label: string; count: number; badgeClass: string }> = [
     { value: 'all', label: 'All', count: stats.total, badgeClass: 'bg-[#EAF1FF] text-[#2563EB]' },
     { value: 'uploaded', label: 'Uploaded', count: stats.configured, badgeClass: 'bg-[#ECFDF5] text-[#047857]' },
-    { value: 'not-uploaded', label: 'Needs Template', count: stats.remaining, badgeClass: 'bg-[#F3F4F6] text-[#374151]' },
+    { value: 'not-uploaded', label: 'Needs Template', count: stats.remaining, badgeClass: 'bg-muted text-foreground/80' },
   ];
 
   return (
@@ -419,8 +419,8 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
             <FileText className="h-5 w-5 text-[#2563EB]" />
           </div>
           <div>
-            <p className="text-[20px] font-bold text-[#111827] leading-none">{stats.total}</p>
-            <p className="text-[12px] text-[#6B7280]">Document Types</p>
+            <p className="text-[20px] font-bold text-foreground leading-none">{stats.total}</p>
+            <p className="text-[12px] text-muted-foreground">Document Types</p>
           </div>
         </div>
         <div className={reviewMetricCardClass}>
@@ -428,8 +428,8 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
             <CheckCircle2 className="h-5 w-5 text-emerald-600" />
           </div>
           <div>
-            <p className="text-[20px] font-bold text-[#111827] leading-none">{stats.configured}</p>
-            <p className="text-[12px] text-[#6B7280]">Templates Uploaded</p>
+            <p className="text-[20px] font-bold text-foreground leading-none">{stats.configured}</p>
+            <p className="text-[12px] text-muted-foreground">Templates Uploaded</p>
           </div>
         </div>
         <div className={reviewMetricCardClass}>
@@ -437,14 +437,14 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
             <XCircle className="h-5 w-5 text-amber-600" />
           </div>
           <div>
-            <p className="text-[20px] font-bold text-[#111827] leading-none">{stats.remaining}</p>
-            <p className="text-[12px] text-[#6B7280]">Without Templates</p>
+            <p className="text-[20px] font-bold text-foreground leading-none">{stats.remaining}</p>
+            <p className="text-[12px] text-muted-foreground">Without Templates</p>
           </div>
         </div>
       </div>
 
       {/* Upload Status tabs */}
-      <div className="h-[56px] border-b border-[#E5E7EB] flex items-center gap-9">
+      <div className="h-[56px] border-b border-border flex items-center gap-9">
         {uploadStatusTabs.map((tab) => {
           const isActive = uploadStatus === tab.value;
           return (
@@ -452,7 +452,7 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
               key={tab.value}
               onClick={() => setUploadStatus(tab.value)}
               className={`relative h-full flex items-center gap-2 text-[14px] font-semibold transition-colors ${
-                isActive ? 'text-[#2563EB]' : 'text-[#4B5563] hover:text-[#111827]'
+                isActive ? 'text-[#2563EB]' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               {tab.label}
@@ -468,7 +468,7 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex-1 relative min-w-[220px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9CA3AF]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
           <Input
             placeholder="Search document types..."
             value={searchQuery}
@@ -500,7 +500,7 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
         </Select>
         <Select value={selectedSetId} onValueChange={setSelectedSetId}>
           <SelectTrigger className={`w-[180px] ${reviewToolbarSelectTriggerClass}`}>
-            <FolderOpen className="h-3.5 w-3.5 mr-1 text-[#9CA3AF]" />
+            <FolderOpen className="h-3.5 w-3.5 mr-1 text-muted-foreground/70" />
             <SelectValue placeholder="All Document Sets" />
           </SelectTrigger>
           <SelectContent>
@@ -516,7 +516,7 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
           </SelectContent>
         </Select>
         {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-9 text-[#6B7280]">
+          <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-9 text-muted-foreground">
             <X className="h-3.5 w-3.5 mr-1" />
             Clear all
           </Button>
@@ -524,8 +524,8 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
       </div>
 
       {hasActiveFilters && (
-        <div className="flex items-center gap-2 text-[13px] text-[#6B7280]">
-          <span>Showing <span className="font-medium text-[#111827]">{stats.filteredTotal}</span> of {stats.total} document types</span>
+        <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+          <span>Showing <span className="font-medium text-foreground">{stats.filteredTotal}</span> of {stats.total} document types</span>
           {stats.filteredConfigured > 0 && (
             <Badge variant="secondary" className="text-xs">
               {stats.filteredConfigured} with templates
@@ -538,13 +538,13 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="h-[88px] bg-gray-100 rounded-[16px] animate-pulse" />
+            <div key={i} className="h-[88px] bg-muted rounded-[16px] animate-pulse" />
           ))}
         </div>
       ) : filteredDocTypes.length === 0 ? (
         <div className={reviewEmptyStateContainerClass}>
-          <FileImage className="mx-auto h-12 w-12 text-[#9CA3AF] mb-4" />
-          <p className="text-[#6B7280]">No document types match your search</p>
+          <FileImage className="mx-auto h-12 w-12 text-muted-foreground/70 mb-4" />
+          <p className="text-muted-foreground">No document types match your search</p>
         </div>
       ) : (
         <div className={reviewCardContainerClass}>
@@ -557,8 +557,8 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
               <div
                 key={doc.id}
                 className={`h-[88px] flex items-center justify-between px-4 ${
-                  index !== pageDocTypes.length - 1 ? 'border-b border-[#EEF2F7]' : ''
-                } ${hasTemplate ? 'bg-emerald-50/30' : 'hover:bg-gray-50/50'}`}
+                  index !== pageDocTypes.length - 1 ? 'border-b border-border' : ''
+                } ${hasTemplate ? 'bg-emerald-50/30' : 'hover:bg-muted/50'}`}
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className={`w-[40px] h-[40px] rounded-[10px] flex items-center justify-center flex-shrink-0 ${hasTemplate ? 'bg-[#F0FDF4]' : 'bg-[#EFF6FF]'}`}>
@@ -566,7 +566,7 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-[14px] font-semibold text-[#111827] truncate">{doc.title}</p>
+                      <p className="text-[14px] font-semibold text-foreground truncate">{doc.title}</p>
                       {hasTemplate && (
                         <Badge variant="outline" className="text-[12px] px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 border-emerald-200">
                           <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -574,7 +574,7 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-[13px] text-[#6B7280] truncate">
+                    <p className="text-[13px] text-muted-foreground truncate">
                       {hasTemplate
                         ? `${template.sample_file_name} · ${formatFileSize(template.sample_file_size)}`
                         : doc.category
@@ -645,7 +645,7 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
           </DialogHeader>
           {viewingTemplate && (
             <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 border border-[#E5E7EB] rounded-[12px] bg-gray-50/50">
+              <div className="flex items-center gap-3 p-3 border border-border rounded-[12px] bg-muted/50">
                 <FileText className="h-8 w-8 text-[#2563EB]" />
                 <div>
                   <p className="font-medium">{viewingTemplate.sample_file_name}</p>

@@ -117,7 +117,7 @@ const RequestsList = ({ onNewRequest }: RequestsListProps) => {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'submitted': return 'bg-blue-100 text-blue-800';
       case 'rejected': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      default: return 'bg-muted text-foreground';
     }
   };
 
@@ -213,9 +213,9 @@ const RequestsList = ({ onNewRequest }: RequestsListProps) => {
           {filteredRequests.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
-                <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Document Requests</h3>
-                <p className="text-gray-500">You haven't created any document requests yet.</p>
+                <FileText className="w-12 h-12 text-muted-foreground/70 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">No Document Requests</h3>
+                <p className="text-muted-foreground">You haven't created any document requests yet.</p>
               </CardContent>
             </Card>
           ) : (
@@ -235,7 +235,7 @@ const RequestsList = ({ onNewRequest }: RequestsListProps) => {
                             <span className="ml-1 capitalize">{request.status}</span>
                           </Badge>
                         </CardTitle>
-                        <p className="text-sm text-gray-600">{request.description || 'No description'}</p>
+                        <p className="text-sm text-muted-foreground">{request.description || 'No description'}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -251,27 +251,27 @@ const RequestsList = ({ onNewRequest }: RequestsListProps) => {
                 <CardContent>
                   <div className="grid md:grid-cols-2 gap-4 mb-4">
                     <div className="space-y-2">
-                      <div className="flex items-center text-sm text-gray-600">
+                      <div className="flex items-center text-sm text-muted-foreground">
                         <span className="font-medium w-20">Type:</span>
                         <span className="capitalize">{request.document_type}</span>
                       </div>
-                      <div className="flex items-center text-sm text-gray-600">
+                      <div className="flex items-center text-sm text-muted-foreground">
                         <span className="font-medium w-20">Category:</span>
                         <span className="capitalize">{request.category}</span>
                       </div>
                       {request.suppliers && (
-                        <div className="flex items-center text-sm text-gray-600">
+                        <div className="flex items-center text-sm text-muted-foreground">
                           <Building2 className="w-4 h-4 mr-1" />
                           <span>Supplier: {request.suppliers.company_name}</span>
                         </div>
                       )}
                     </div>
                     <div className="space-y-2">
-                      <div className="flex items-center text-sm text-gray-600">
+                      <div className="flex items-center text-sm text-muted-foreground">
                         <Calendar className="w-4 h-4 mr-1" />
                         <span>Requested: {formatDate(request.created_at)}</span>
                       </div>
-                      <div className="flex items-center text-sm text-gray-600">
+                      <div className="flex items-center text-sm text-muted-foreground">
                         <Calendar className="w-4 h-4 mr-1" />
                         <span>Due: {formatDate(request.due_date)}</span>
                       </div>
@@ -281,15 +281,15 @@ const RequestsList = ({ onNewRequest }: RequestsListProps) => {
                   {/* Uploaded Documents Section */}
                   {request.document_uploads && request.document_uploads.length > 0 && (
                     <div>
-                      <h4 className="font-medium text-gray-900 mb-3">Uploaded Documents:</h4>
+                      <h4 className="font-medium text-foreground mb-3">Uploaded Documents:</h4>
                       <div className="space-y-3">
                         {request.document_uploads.map((upload: any) => (
-                          <div key={upload.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div key={upload.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                             <div className="flex items-center space-x-3">
-                              <FileText className="w-5 h-5 text-gray-500" />
+                              <FileText className="w-5 h-5 text-muted-foreground" />
                               <div>
                                 <p className="font-medium text-sm">{upload.file_name}</p>
-                                <div className="flex items-center space-x-3 text-xs text-gray-500">
+                                <div className="flex items-center space-x-3 text-xs text-muted-foreground">
                                   <span>{formatFileSize(upload.file_size || 0)}</span>
                                   <Badge className={getStatusColor(upload.status)} variant="outline">
                                     {upload.status}

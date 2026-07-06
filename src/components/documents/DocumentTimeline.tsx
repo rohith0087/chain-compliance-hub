@@ -46,7 +46,7 @@ const DocumentTimeline = ({ events }: DocumentTimelineProps) => {
       case 'rejected': return 'text-red-600 bg-red-100';
       case 'expired': return 'text-orange-600 bg-orange-100';
       case 'reminder': return 'text-yellow-600 bg-yellow-100';
-      default: return 'text-gray-600 bg-gray-100';
+      default: return 'text-muted-foreground bg-muted';
     }
   };
 
@@ -75,10 +75,10 @@ const DocumentTimeline = ({ events }: DocumentTimelineProps) => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-medium text-gray-900">{event.title}</h4>
-                    <span className="text-xs text-gray-500">{formatDate(event.date)}</span>
+                    <h4 className="text-sm font-medium text-foreground">{event.title}</h4>
+                    <span className="text-xs text-muted-foreground">{formatDate(event.date)}</span>
                   </div>
-                  <p className="text-sm text-gray-600 mt-1">{event.description}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
                   {event.documentTitle && (
                     <div className="mt-2">
                       <Badge variant="outline" className="text-xs">
@@ -88,15 +88,15 @@ const DocumentTimeline = ({ events }: DocumentTimelineProps) => {
                   )}
                 </div>
                 {index < events.length - 1 && (
-                  <div className="absolute left-4 top-8 w-0.5 h-4 bg-gray-200"></div>
+                  <div className="absolute left-4 top-8 w-0.5 h-4 bg-muted"></div>
                 )}
               </div>
             ))}
           </div>
         ) : (
           <div className="text-center py-8">
-            <FileCheck className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">No activity yet</p>
+            <FileCheck className="w-12 h-12 text-muted-foreground/70 mx-auto mb-4" />
+            <p className="text-muted-foreground">No activity yet</p>
           </div>
         )}
       </CardContent>

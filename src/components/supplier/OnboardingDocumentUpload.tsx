@@ -462,7 +462,7 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
                       <Button
                         variant="outline"
                         size="sm"
-                        className="bg-white border-blue-300 text-blue-700 hover:bg-blue-100"
+                        className="bg-card border-blue-300 text-blue-700 hover:bg-blue-100"
                         onClick={async () => {
                           try {
                             const { data, error } = await supabase.storage
@@ -617,8 +617,8 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
                       {!isCompleted && (
                         <div className="space-y-4">
                           {!documentNotAvailable[requirement.id] ? (
-                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                              <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                            <div className="border-2 border-dashed border-border rounded-lg p-4 text-center">
+                              <Upload className="w-8 h-8 text-muted-foreground/70 mx-auto mb-2" />
                               <p className="text-sm font-medium mb-2">
                                 {hasTemplate ? 'Upload completed template' : 'Upload document'}
                               </p>
@@ -636,7 +636,7 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
                                 Supported formats: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG (Max 10MB)
                               </p>
                               
-                              <div className="mt-4 pt-4 border-t border-gray-200">
+                              <div className="mt-4 pt-4 border-t border-border">
                                 <div className="flex items-center space-x-2">
                                   <Checkbox
                                     id={`unavailable-${requirement.id}`}

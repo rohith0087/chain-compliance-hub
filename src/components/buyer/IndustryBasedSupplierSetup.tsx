@@ -163,7 +163,7 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
             <Building2 className="w-5 h-5" />
             Hey! You don't have any suppliers in your network yet
           </CardTitle>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             Let's fix that! Select an industry below to discover and connect with relevant suppliers for your business needs.
           </p>
         </CardHeader>
@@ -195,9 +195,9 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
             {selectedIndustry && !loading && suppliers.length === 0 && (
               <Card>
                 <CardContent className="p-6 text-center">
-                  <Building2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <Building2 className="w-12 h-12 text-muted-foreground/70 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No Suppliers Found</h3>
-                  <p className="text-gray-600">
+                  <p className="text-muted-foreground">
                     There are currently no suppliers in the {selectedIndustry} industry.
                   </p>
                 </CardContent>
@@ -225,9 +225,9 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
                               <label htmlFor={supplier.id} className="font-semibold cursor-pointer">
                                 {supplier.company_name}
                               </label>
-                              <p className="text-sm text-gray-600">{supplier.contact_email}</p>
+                              <p className="text-sm text-muted-foreground">{supplier.contact_email}</p>
                               {supplier.phone && (
-                                <p className="text-sm text-gray-600">{supplier.phone}</p>
+                                <p className="text-sm text-muted-foreground">{supplier.phone}</p>
                               )}
                             </div>
                           </div>
@@ -239,10 +239,10 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
                       {(supplier.description || supplier.address) && (
                         <CardContent>
                           {supplier.description && (
-                            <p className="text-sm text-gray-600 mb-2">{supplier.description}</p>
+                            <p className="text-sm text-muted-foreground mb-2">{supplier.description}</p>
                           )}
                           {supplier.address && (
-                            <p className="text-sm text-gray-500">{supplier.address}</p>
+                            <p className="text-sm text-muted-foreground">{supplier.address}</p>
                           )}
                         </CardContent>
                       )}

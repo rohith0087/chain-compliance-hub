@@ -403,7 +403,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                 {files.map((fileEntry) => (
                   <div 
                     key={fileEntry.id} 
-                    className="rounded-xl border border-slate-200/60 bg-slate-50/40 p-4 space-y-4 shadow-sm"
+                    className="rounded-xl border border-border/60 bg-muted/40 p-4 space-y-4 shadow-sm"
                   >
                     {/* File Header */}
                     <div className="flex items-start justify-between">
@@ -488,7 +488,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                                 no_expiration: e.target.checked,
                                 expiration_date: e.target.checked ? '' : fileEntry.expiration_date
                               })}
-                              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                              className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                             />
                             <label
                               htmlFor={`no-expiration-${fileEntry.id}`}
@@ -510,9 +510,9 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                     </div>
 
                     {/* Tags Section */}
-                    <div className="rounded-lg border border-slate-200/60 bg-muted/30 p-3 space-y-2">
+                    <div className="rounded-lg border border-border/60 bg-muted/30 p-3 space-y-2">
                       <Label className="text-xs font-medium flex items-center gap-1.5">
-                        <Tag className="h-3 w-3 text-slate-500" />
+                        <Tag className="h-3 w-3 text-muted-foreground" />
                         Tags
                       </Label>
                       <div className="flex gap-2">

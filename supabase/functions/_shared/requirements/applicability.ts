@@ -74,13 +74,28 @@ export async function loadCatalogResults(
   subjectType: SubjectType,
   effectiveAt: string,
   facts: Record<string, unknown>,
+  supplierId?: string,
 ): Promise<RequirementEvaluationResultV1[]> {
-  const { data: frameworks, error: frameworkError } = await admin.from('requirement_frameworks')
-    .select('id, code, owner_buyer_id');
+  const [{ data: frameworks, error: frameworkError }, { data: activations, error: activationError }] = await Promise.all([
+    admin.from('requirement_frameworks').select('id, code, owner_buyer_id'),
+    admin.from('buyer_framework_activations').select('framework_id, supplier_id')
+      .eq('buyer_id', buyerId).is('deactivated_at', null),
+  ]);
   if (frameworkError) throw frameworkError;
+  if (activationError) throw activationError;
 
+  // Global frameworks are opt-in: they only apply where the buyer activated
+  // them (buyer-wide when supplier_id is null, else for that supplier). The
+  // buyer's own custom frameworks always apply, as before.
+  const activatedFrameworkIds = new Set(
+    (activations || [])
+      .filter((activation) => activation.supplier_id === null
+        || (supplierId !== undefined && activation.supplier_id === supplierId))
+      .map((activation) => activation.framework_id),
+  );
   const accessibleFrameworks = (frameworks || []).filter((framework) =>
-    framework.owner_buyer_id === null || framework.owner_buyer_id === buyerId
+    framework.owner_buyer_id === buyerId
+    || (framework.owner_buyer_id === null && activatedFrameworkIds.has(framework.id))
   );
   if (accessibleFrameworks.length === 0) return [];
 

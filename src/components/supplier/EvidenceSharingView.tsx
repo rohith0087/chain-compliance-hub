@@ -54,8 +54,8 @@ interface AuditLogEntry {
 const statusConfig: Record<ClaimStatus, { label: string; icon: typeof CheckCircle2; className: string }> = {
   extracted: { label: 'Needs review', icon: ClipboardCheck, className: 'border-amber-200 bg-amber-50 text-amber-800' },
   verified: { label: 'Verified', icon: CheckCircle2, className: 'border-emerald-200 bg-emerald-50 text-emerald-800' },
-  rejected: { label: 'Rejected', icon: XCircle, className: 'border-slate-200 bg-slate-50 text-slate-700' },
-  superseded: { label: 'Superseded', icon: XCircle, className: 'border-slate-200 bg-slate-50 text-slate-500' },
+  rejected: { label: 'Rejected', icon: XCircle, className: 'border-border bg-muted text-foreground/80' },
+  superseded: { label: 'Superseded', icon: XCircle, className: 'border-border bg-muted text-muted-foreground' },
 };
 
 const PURPOSE_OPTIONS = [
@@ -290,7 +290,7 @@ function LegacyEvidenceSharingView({ supplierId }: EvidenceSharingViewProps) {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={grant.status === 'active' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-50 text-slate-600'}>
+                      <Badge variant="outline" className={grant.status === 'active' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-border bg-muted text-muted-foreground'}>
                         {grant.status === 'active' ? 'Active' : 'Revoked'}
                       </Badge>
                       {grant.status === 'active' && (

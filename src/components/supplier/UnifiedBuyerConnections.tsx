@@ -137,7 +137,7 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
     if (connection.status === 'pending') return connection.initiated_by === 'supplier' ? { status: 'requested', label: 'Connection Requested', color: 'bg-purple-100 text-purple-800', icon: <Clock className="w-4 h-4 text-purple-500" />, action: 'awaiting_buyer' } : { status: 'pending_approval', label: 'Pending Your Approval', color: 'bg-orange-100 text-orange-800', icon: <AlertCircle className="w-4 h-4 text-orange-500" />, action: 'approve_reject' };
     if (connection.status === 'rejected') return { status: 'rejected', label: 'Connection Rejected', color: 'bg-red-100 text-red-800', icon: <XCircle className="w-4 h-4 text-red-500" />, action: 'none' };
     if (connection.status === 'approved') {
-      if (!onboardingRequest) return { status: 'connected_no_onboarding', label: 'Connected - No Onboarding', color: 'bg-gray-100 text-gray-800', icon: <CheckCircle className="w-4 h-4 text-gray-500" />, action: 'request_onboarding', description: `${wsT.buyer} has not initiated onboarding process yet` };
+      if (!onboardingRequest) return { status: 'connected_no_onboarding', label: 'Connected - No Onboarding', color: 'bg-muted text-foreground', icon: <CheckCircle className="w-4 h-4 text-muted-foreground" />, action: 'request_onboarding', description: `${wsT.buyer} has not initiated onboarding process yet` };
       
       // Check if under_review or partially_approved but has rejected documents (needs resubmission)
       const hasRejectedDocuments = (onboardingRequest.status === 'under_review' || onboardingRequest.status === 'partially_approved') && onboardingRequest.rejection_reason;
@@ -161,9 +161,9 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
         },
         approved: { status: 'fully_connected', label: 'Fully Connected', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="w-4 h-4 text-green-500" />, action: 'none', description: 'Onboarding complete' } 
       };
-      return statusMap[onboardingRequest.status] || { status: 'unknown', label: 'Status Unknown', color: 'bg-gray-100 text-gray-800', icon: <AlertCircle className="w-4 h-4 text-gray-500" />, action: 'none' };
+      return statusMap[onboardingRequest.status] || { status: 'unknown', label: 'Status Unknown', color: 'bg-muted text-foreground', icon: <AlertCircle className="w-4 h-4 text-muted-foreground" />, action: 'none' };
     }
-    return { status: 'unknown', label: 'Unknown Status', color: 'bg-gray-100 text-gray-800', icon: <AlertCircle className="w-4 h-4 text-gray-500" />, action: 'none' };
+    return { status: 'unknown', label: 'Unknown Status', color: 'bg-muted text-foreground', icon: <AlertCircle className="w-4 h-4 text-muted-foreground" />, action: 'none' };
   };
 
   const handleRequestOnboarding = async (connection: any) => {
@@ -205,10 +205,10 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
               />
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">{displayStatus.icon}<h3 className="font-semibold text-lg">{buyerInfo?.company_name}</h3></div>
-                <div className="space-y-1 text-sm text-gray-600">
+                <div className="space-y-1 text-sm text-muted-foreground">
                   <div className="flex items-center"><Users className="w-4 h-4 mr-2" /><span>{buyerInfo?.industry}</span></div>
                   <div className="flex items-center"><Mail className="w-4 h-4 mr-2" /><span>{buyerInfo?.contact_email}</span></div>
-                  {displayStatus.description && <p className="text-xs text-gray-500 italic">{displayStatus.description}</p>}
+                  {displayStatus.description && <p className="text-xs text-muted-foreground italic">{displayStatus.description}</p>}
                 </div>
               </div>
             </div>
@@ -317,10 +317,10 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
             <Button variant={filterTab === 'active_onboarding' ? 'default' : 'ghost'} size="sm" onClick={() => setFilterTab('active_onboarding')}>Active Onboarding ({connectedBuyers.filter(c => ['onboarding_pending', 'onboarding_in_progress', 'under_review', 'onboarding_requested'].includes(getConnectionDisplayStatus(c).status)).length})</Button>
             <Button variant={filterTab === 'connected_only' ? 'default' : 'ghost'} size="sm" onClick={() => setFilterTab('connected_only')}>Connected Only ({connectedBuyers.filter(c => ['connected_no_onboarding', 'fully_connected'].includes(getConnectionDisplayStatus(c).status)).length})</Button>
           </div>
-          {filteredConnectedBuyers.length > 0 ? <div className="space-y-4">{filteredConnectedBuyers.map(c => renderBuyerCard(c, false))}</div> : <Card><CardContent className="py-12 text-center"><Users className="w-12 h-12 text-gray-400 mb-4 mx-auto" /><p className="text-gray-600">No {wsT.buyers.toLowerCase()} found</p></CardContent></Card>}
+          {filteredConnectedBuyers.length > 0 ? <div className="space-y-4">{filteredConnectedBuyers.map(c => renderBuyerCard(c, false))}</div> : <Card><CardContent className="py-12 text-center"><Users className="w-12 h-12 text-muted-foreground/70 mb-4 mx-auto" /><p className="text-muted-foreground">No {wsT.buyers.toLowerCase()} found</p></CardContent></Card>}
         </TabsContent>
         <TabsContent value="pending" className="space-y-4">
-          {requests.length > 0 ? <div className="space-y-4">{requests.map(c => renderBuyerCard(c, true))}</div> : <Card><CardContent className="py-12 text-center"><Clock className="w-12 h-12 text-gray-400 mb-4 mx-auto" /><p className="text-gray-600">No pending requests</p></CardContent></Card>}
+          {requests.length > 0 ? <div className="space-y-4">{requests.map(c => renderBuyerCard(c, true))}</div> : <Card><CardContent className="py-12 text-center"><Clock className="w-12 h-12 text-muted-foreground/70 mb-4 mx-auto" /><p className="text-muted-foreground">No pending requests</p></CardContent></Card>}
         </TabsContent>
       </Tabs>
 

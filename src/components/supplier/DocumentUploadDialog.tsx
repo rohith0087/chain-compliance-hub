@@ -485,13 +485,13 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
                   "rounded-xl border p-4 shadow-sm",
                   isResubmission 
                     ? "border-orange-200/60 bg-orange-50/40" 
-                    : "border-slate-200/60 bg-slate-50/40"
+                    : "border-border/60 bg-muted/40"
                 )}>
                   <div className="flex items-center gap-2 mb-3">
-                    <FileText className={cn("h-4 w-4", isResubmission ? "text-orange-600" : "text-slate-600")} />
+                    <FileText className={cn("h-4 w-4", isResubmission ? "text-orange-600" : "text-muted-foreground")} />
                     <h3 className={cn(
                       "text-sm font-semibold uppercase tracking-wide",
-                      isResubmission ? "text-orange-900" : "text-slate-700"
+                      isResubmission ? "text-orange-900" : "text-foreground/80"
                     )}>Request Details</h3>
                   </div>
                   <div className="space-y-1.5">
@@ -564,8 +564,8 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
 
                 {/* Current Document Info for Resubmission */}
                 {isResubmission && updateMetadataOnly && latestUpload && (
-                  <div className="rounded-xl border border-slate-200/60 bg-slate-50/40 p-4 shadow-sm">
-                    <p className="text-sm font-semibold text-slate-700 mb-2">Current Document</p>
+                  <div className="rounded-xl border border-border/60 bg-muted/40 p-4 shadow-sm">
+                    <p className="text-sm font-semibold text-foreground/80 mb-2">Current Document</p>
                     <div className="flex items-center space-x-2">
                       <File className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">{latestUpload.file_name}</span>
@@ -823,10 +823,10 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
                 </div>
 
                 {/* Additional Options Section */}
-                <div className="rounded-xl border border-slate-200/60 bg-muted/30 p-4 shadow-sm space-y-4">
+                <div className="rounded-xl border border-border/60 bg-muted/30 p-4 shadow-sm space-y-4">
                   <div className="flex items-center gap-2 mb-1">
-                    <Link2 className="h-4 w-4 text-slate-600" />
-                    <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Additional Options</h3>
+                    <Link2 className="h-4 w-4 text-muted-foreground" />
+                    <h3 className="text-sm font-semibold text-foreground/80 uppercase tracking-wide">Additional Options</h3>
                   </div>
 
                   {/* Link Items */}
@@ -867,7 +867,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
                   {/* Notes */}
                   <div className="space-y-1.5">
                     <Label htmlFor="notes" className="flex items-center gap-2 text-xs font-medium text-foreground">
-                      <MessageSquare className="w-3.5 h-3.5 text-slate-500" />
+                      <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
                       Additional Notes (Optional)
                     </Label>
                     <Textarea

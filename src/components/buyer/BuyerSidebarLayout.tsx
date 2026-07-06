@@ -33,6 +33,10 @@ import {
   ArrowLeftRight,
   FlaskConical,
   ListTree,
+  BookOpenCheck,
+  ClipboardCheck,
+  Gauge,
+  Wand2,
   ShieldCheck,
   Activity,
   Inbox,
@@ -78,6 +82,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { BranchSelector } from '@/components/company/BranchSelector';
 
 import { CommandPaletteSearch } from './CommandPaletteSearch';
@@ -94,7 +99,7 @@ function VersionButton() {
     <>
       <button
         onClick={() => setShowWhatsNew(true)}
-        className="w-full px-1 py-1 text-[12px] text-slate-400 hover:text-slate-600 transition-colors text-left"
+        className="w-full px-1 py-1 text-[12px] text-muted-foreground/70 hover:text-foreground/80 transition-colors text-left"
       >
         TraceR2C v{APP_VERSION}
       </button>
@@ -340,10 +345,16 @@ export function BuyerSidebarLayout({
   ].filter(Boolean) as { title: string; value: string; icon: any }[];
 
   const complianceSubmenu = [
-    { title: 'Workbench', value: 'compliance', icon: BarChart3 },
+    // Command Center and the old Workbench were the same job on two pages — merged
+    // into one home at 'compliance' (renders Command Center for decisions-engine orgs,
+    // the legacy dashboard otherwise).
+    { title: 'Command Center', value: 'compliance', icon: Gauge },
+    requirementEngineEnabled && { title: 'Frameworks', value: 'frameworks', icon: BookOpenCheck },
     requirementEngineEnabled && { title: 'Requirements', value: 'requirements', icon: ListTree },
-    complianceDecisionsEnabled && { title: 'Compliance Decisions', value: 'compliance-decisions', icon: ShieldCheck },
-    dossiersEnabled && { title: 'Dossiers', value: 'dossiers', icon: FileText },
+    requirementEngineEnabled && { title: 'Requirement Extractor', value: 'requirement-extractor', icon: Wand2 },
+    // Per-supplier Decisions, Evidence review, Assistant and Dossiers now live inside the
+    // consolidated Supplier Compliance workspace (opened from Frameworks coverage or Suppliers).
+    complianceDecisionsEnabled && { title: 'Review Queue', value: 'mapping-review', icon: ClipboardCheck },
     { title: wsTerms.supplier_risk, value: 'supplier-risk', icon: AlertTriangle },
     !wsFlags.hideItemCompliance && { title: 'Item Compliance', value: 'item-compliance', icon: Package },
     !wsFlags.hideFacilityMatrix && { title: 'Facility Matrix', value: 'facility-matrix', icon: Building2 }
@@ -483,7 +494,7 @@ export function BuyerSidebarLayout({
       const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
       const fullBody = (
         <>
-        <SidebarHeader className="border-b border-[#E5E7EB] px-4 py-3 bg-transparent">
+        <SidebarHeader className="border-b border-sidebar-border px-4 py-3 bg-transparent">
           <div className="flex items-center gap-3">
             {/* Company Logo - displays uploaded logo or default Building2 icon */}
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary overflow-hidden shrink-0">
@@ -510,10 +521,10 @@ export function BuyerSidebarLayout({
             </div>
             {!collapsed && (
               <div className="flex flex-col min-w-0">
-                <span className="text-[15px] font-semibold text-slate-900 truncate leading-tight">
+                <span className="text-[15px] font-semibold text-foreground truncate leading-tight">
                   {buyerProfile?.company_name || 'Buyer Portal'}
                 </span>
-                <span className="text-[13px] text-slate-500 truncate leading-tight mt-0.5">
+                <span className="text-[13px] text-muted-foreground truncate leading-tight mt-0.5">
                   {user.name}
                 </span>
               </div>
@@ -528,14 +539,14 @@ export function BuyerSidebarLayout({
               <button
                 data-guide-id="quick-new-request"
                 onClick={() => handleSpecialAction('new-request')}
-                className="w-full h-12 rounded-[14px] bg-primary hover:bg-primary-hover text-primary-foreground font-semibold text-[15px] shadow-sm flex items-center justify-center gap-2.5 transition-colors"
+                className="w-full h-12 rounded-[14px] cta-texture text-primary-foreground font-semibold text-[15px] shadow-sm flex items-center justify-center gap-2.5 transition-colors"
               >
-                <span className="h-7 w-7 rounded-full bg-white/15 flex items-center justify-center shrink-0">
+                <span className="h-7 w-7 rounded-full bg-card/15 flex items-center justify-center shrink-0">
                   <Plus className="h-4 w-4" />
                 </span>
                 {!collapsed && <span>New Request</span>}
                 {currentBranch && !collapsed && (
-                  <Badge className="ml-1 text-[11px] bg-white/20 text-white border-white/30 font-medium">
+                  <Badge className="ml-1 text-[11px] bg-card/20 text-white border-white/30 font-medium">
                     {currentBranch.branch_name}
                   </Badge>
                 )}
@@ -572,7 +583,7 @@ export function BuyerSidebarLayout({
                     className={`group h-11 px-3 rounded-xl gap-3 text-[15px] font-medium transition-colors ${
                       showActive
                         ? 'bg-primary/10 text-primary hover:bg-primary/15 font-semibold'
-                        : 'text-slate-700 hover:bg-[#F1F5F9] hover:text-slate-900'
+                        : 'text-foreground/80 hover:bg-sidebar-accent hover:text-foreground'
                     }`}
                   >
                     <item.icon className="h-5 w-5 shrink-0 transition-transform duration-200 group-hover:scale-110" />
@@ -596,7 +607,7 @@ export function BuyerSidebarLayout({
                     >
                       <div className="overflow-hidden">
                         <SidebarMenuSub
-                          className="ml-7 mt-1 pl-3 border-l border-[#E5E7EB]"
+                          className="ml-7 mt-1 pl-3 border-l border-sidebar-border"
                           onMouseEnter={cancelHoverTimeout}
                           onMouseLeave={handleMouseLeave}
                         >
@@ -610,7 +621,7 @@ export function BuyerSidebarLayout({
                                     className={`w-full group h-8 px-3 rounded-lg text-[14px] transition-colors ${
                                       subActive
                                         ? 'bg-primary/5 text-primary font-medium'
-                                        : 'text-slate-500 hover:text-slate-900 hover:bg-[#F1F5F9]'
+                                        : 'text-muted-foreground hover:text-foreground hover:bg-sidebar-accent'
                                     }`}
                                   >
                                     {subItem.icon && (
@@ -639,7 +650,7 @@ export function BuyerSidebarLayout({
               <>
                 {workspaceItems.length > 0 && (
                   <SidebarGroup className="pt-3">
-                    <SidebarGroupLabel className="px-4 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    <SidebarGroupLabel className="px-4 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
                       Workspace
                     </SidebarGroupLabel>
                     <SidebarGroupContent>
@@ -651,7 +662,7 @@ export function BuyerSidebarLayout({
                 )}
                 {adminItems.length > 0 && (
                   <SidebarGroup className="pt-2">
-                    <SidebarGroupLabel className="px-4 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    <SidebarGroupLabel className="px-4 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
                       Admin
                     </SidebarGroupLabel>
                     <SidebarGroupContent>
@@ -666,18 +677,18 @@ export function BuyerSidebarLayout({
           })()}
         </SidebarContent>
 
-        <SidebarFooter className="p-3 space-y-2 border-t border-[#E5E7EB]">
+        <SidebarFooter className="p-3 space-y-2 border-t border-sidebar-border">
           {!collapsed && (
             <button
               onClick={() => navigate('/help')}
-              className="w-full rounded-2xl bg-white border border-[#E5E7EB] p-3 flex items-center gap-3 hover:bg-[#F1F5F9] transition-colors text-left"
+              className="w-full rounded-2xl bg-card border border-sidebar-border p-3 flex items-center gap-3 hover:bg-sidebar-accent transition-colors text-left"
             >
               <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <HelpCircle className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <div className="text-[14px] font-semibold text-slate-900 leading-tight">Need help?</div>
-                <div className="text-[12px] text-slate-500 truncate leading-tight mt-0.5">Docs & guides</div>
+                <div className="text-[14px] font-semibold text-foreground leading-tight">Need help?</div>
+                <div className="text-[12px] text-muted-foreground truncate leading-tight mt-0.5">Docs & guides</div>
               </div>
             </button>
           )}
@@ -702,7 +713,7 @@ export function BuyerSidebarLayout({
             <TooltipTrigger asChild>
               <button
                 onClick={() => handleSpecialAction('new-request')}
-                className="mt-2 h-11 w-11 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground flex items-center justify-center shadow-sm transition-colors"
+                className="mt-2 h-11 w-11 rounded-xl cta-texture text-primary-foreground flex items-center justify-center shadow-sm transition-colors"
                 aria-label="New Request"
               >
                 <Plus className="h-5 w-5" />
@@ -730,7 +741,7 @@ export function BuyerSidebarLayout({
                         }
                       }}
                       className={`relative h-11 w-11 rounded-xl flex items-center justify-center transition-colors ${
-                        active ? 'bg-primary/10 text-primary' : 'text-slate-700 hover:bg-[#F1F5F9] hover:text-slate-900'
+                        active ? 'bg-primary/10 text-primary' : 'text-foreground/80 hover:bg-sidebar-accent hover:text-foreground'
                       }`}
                       aria-label={item.title}
                     >
@@ -757,7 +768,7 @@ export function BuyerSidebarLayout({
             <TooltipTrigger asChild>
               <button
                 onClick={() => navigate('/help')}
-                className="h-10 w-10 rounded-xl bg-white border border-[#E5E7EB] text-primary flex items-center justify-center hover:bg-[#F1F5F9] transition-colors"
+                className="h-10 w-10 rounded-xl bg-card border border-sidebar-border text-primary flex items-center justify-center hover:bg-sidebar-accent transition-colors"
                 aria-label="Help"
               >
                 <HelpCircle className="h-5 w-5" />
@@ -769,7 +780,7 @@ export function BuyerSidebarLayout({
           {/* Version dot */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="text-[10px] text-slate-400 font-medium select-none" aria-label={`TraceR2C v${APP_VERSION}`}>
+              <span className="text-[10px] text-muted-foreground/70 font-medium select-none" aria-label={`TraceR2C v${APP_VERSION}`}>
                 v{APP_VERSION}
               </span>
             </TooltipTrigger>
@@ -781,7 +792,7 @@ export function BuyerSidebarLayout({
       // Mobile: shadcn Sheet via <Sidebar>
       if (isMobile) {
         return (
-          <Sidebar className="border-r border-[#E5E7EB] bg-[#FAFAFB]">
+          <Sidebar className="border-r border-sidebar-border bg-sidebar">
             {fullBody}
           </Sidebar>
         );
@@ -800,7 +811,7 @@ export function BuyerSidebarLayout({
               width: inFlowWidth,
               transition: `width 220ms ${EASE}`,
             }}
-            className="hidden md:flex shrink-0 flex-col border-r border-[#E5E7EB] bg-[#FAFAFB] sticky top-0 h-screen overflow-hidden motion-reduce:transition-none"
+            className="hidden md:flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar sticky top-0 h-screen overflow-hidden motion-reduce:transition-none"
             onMouseEnter={mode === 'auto-hide' ? scheduleOverlayOpen : undefined}
             onMouseLeave={mode === 'auto-hide' ? scheduleOverlayClose : undefined}
           >
@@ -825,7 +836,7 @@ export function BuyerSidebarLayout({
                   opacity: overlayOpen ? 1 : 0,
                   pointerEvents: overlayOpen ? 'auto' : 'none',
                 }}
-                className="hidden md:flex fixed left-0 bottom-0 z-50 flex-col border-r border-[#E5E7EB] bg-[#FAFAFB] shadow-2xl overflow-hidden motion-reduce:transition-none"
+                className="hidden md:flex fixed left-0 bottom-0 z-50 flex-col border-r border-sidebar-border bg-sidebar shadow-2xl overflow-hidden motion-reduce:transition-none"
                 onMouseEnter={cancelOverlayClose}
                 onMouseLeave={scheduleOverlayClose}
               >
@@ -840,7 +851,7 @@ export function BuyerSidebarLayout({
 
       <div className={`flex-1 flex flex-col ${activeTab === 'messages' ? 'overflow-hidden' : ''}`}>
         {/* Top Header */}
-        <header className="h-[72px] border-t border-t-primary/10 bg-white/95 backdrop-blur-xl sticky top-0 z-40 shadow-sm">
+        <header className="h-[72px] border-t border-t-primary/10 bg-card/95 backdrop-blur-xl sticky top-0 z-40 shadow-sm">
           <div className="flex h-full items-center justify-between px-8">
             <div className="flex items-center gap-4">
               {isMobile ? (
@@ -918,7 +929,9 @@ export function BuyerSidebarLayout({
                 </Tooltip>
               )}
               
-              <NotificationCenter 
+              <ThemeToggle />
+
+              <NotificationCenter
                 onNavigate={(tab, referenceId) => {
                   if (tab === 'create-onboarding') {
                     onTabChange('onboarding');

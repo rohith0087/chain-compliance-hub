@@ -54,7 +54,7 @@ export const BuyerIdCard = ({ buyerId, buyerProfile, userProfile }: BuyerIdCardP
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-200">
+        <div className="flex items-center justify-between p-3 bg-card rounded-lg border border-blue-200">
           <div className="flex items-center gap-3">
             <code className="font-mono text-lg font-semibold text-blue-900 tracking-wider">
               {showId ? buyerId : maskedId}

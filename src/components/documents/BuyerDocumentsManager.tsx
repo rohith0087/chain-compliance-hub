@@ -733,8 +733,8 @@ const BuyerDocumentsManager = ({
       {/* Page Title Block */}
       <div className="pt-7 pb-5 flex justify-between items-start">
         <div className="flex flex-col gap-1.5">
-          <h1 className="text-[26px] font-bold text-[#111827] leading-none">All Documents</h1>
-          <p className="text-[15px] text-[#6B7280]">Manage and review supplier compliance documents</p>
+          <h1 className="text-[26px] font-bold text-foreground leading-none">All Documents</h1>
+          <p className="text-[15px] text-muted-foreground">Manage and review supplier compliance documents</p>
         </div>
       </div>
 
@@ -753,17 +753,17 @@ const BuyerDocumentsManager = ({
       />
 
       {/* Status tabs */}
-      <div className="h-[56px] border-b border-[#E5E7EB] flex items-center gap-9">
+      <div className="h-[56px] border-b border-border flex items-center gap-9">
         {statusTabs.map((tab) => {
           const isActive = statusTab === tab.value;
           const badgeColors = tab.pinned
             ? (isActive ? 'bg-amber-100 text-amber-700' : 'bg-amber-50 text-amber-600')
             : ({
                 all: 'bg-[#EAF1FF] text-[#2563EB]',
-                pending_approval: 'bg-[#F3F4F6] text-[#374151]',
+                pending_approval: 'bg-muted text-foreground/80',
                 approved: 'bg-[#ECFDF5] text-[#047857]',
                 declined: 'bg-[#FEF2F2] text-[#DC2626]',
-              }[tab.value] || 'bg-gray-100 text-gray-600');
+              }[tab.value] || 'bg-muted text-muted-foreground');
           const count =
             tab.value === 'all' ? statusCounts.all
             : tab.value === 'pending_approval' ? statusCounts.pending_approval
@@ -774,14 +774,14 @@ const BuyerDocumentsManager = ({
           return (
             <div key={tab.value} className="flex items-center gap-9 h-full">
               {tab.pinned && (
-                <div className="h-5 w-px bg-[#E5E7EB] flex-shrink-0 -ml-[18px]" />
+                <div className="h-5 w-px bg-muted flex-shrink-0 -ml-[18px]" />
               )}
               <button
                 onClick={() => setStatusTab(tab.value)}
                 className={`relative h-full flex items-center gap-2 text-[14px] font-semibold transition-colors ${
                   isActive
                     ? tab.pinned ? 'text-amber-600' : 'text-[#2563EB]'
-                    : 'text-[#4B5563] hover:text-[#111827]'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {tab.pinned && <Pin className="h-3.5 w-3.5 flex-shrink-0" />}
@@ -940,20 +940,20 @@ const BuyerDocumentsManager = ({
       )}
 
       {sortedDocuments.length === 0 ? (
-        <div className="text-center py-14 border border-dashed border-[#E5E7EB] rounded-[16px] bg-white">
+        <div className="text-center py-14 border border-dashed border-border rounded-[16px] bg-card">
           {statusTab === 'pinned' ? (
             <>
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 mx-auto mb-3">
                 <Pin className="w-6 h-6 text-amber-400" />
               </div>
-              <h3 className="text-[15px] font-semibold text-[#111827] mb-1">No pinned documents yet</h3>
-              <p className="text-[13px] text-[#6B7280] max-w-xs mx-auto">Pin any document using the <Pin className="inline w-3.5 h-3.5 text-[#6B7280] mx-0.5" /> button in the actions column — they'll appear here for quick access, newest first.</p>
+              <h3 className="text-[15px] font-semibold text-foreground mb-1">No pinned documents yet</h3>
+              <p className="text-[13px] text-muted-foreground max-w-xs mx-auto">Pin any document using the <Pin className="inline w-3.5 h-3.5 text-muted-foreground mx-0.5" /> button in the actions column — they'll appear here for quick access, newest first.</p>
             </>
           ) : (
             <>
-              <FileText className="w-12 h-12 text-[#D1D5DB] mx-auto mb-3" />
-              <h3 className="text-[15px] font-semibold text-[#111827] mb-1">No Documents Found</h3>
-              <p className="text-[13px] text-[#6B7280]">
+              <FileText className="w-12 h-12 text-muted-foreground/70 mx-auto mb-3" />
+              <h3 className="text-[15px] font-semibold text-foreground mb-1">No Documents Found</h3>
+              <p className="text-[13px] text-muted-foreground">
                 {activeFilterCount > 0 || statusTab !== 'all' ? "No documents match your current filters." : "No documents available."}
               </p>
             </>
@@ -998,24 +998,24 @@ const BuyerDocumentsManager = ({
           ))}
         </div>
       ) : (
-        <div className="rounded-[16px] border border-[#E5E7EB] bg-white overflow-hidden shadow-[0_1px_2px_rgba(16,24,40,0.04)] w-full">
+        <div className="rounded-[16px] border border-border bg-card overflow-hidden shadow-[0_1px_2px_rgba(16,24,40,0.04)] w-full">
           <Table className="table-fixed w-full">
-            <TableHeader className="h-[56px] bg-white border-b border-[#E5E7EB]">
+            <TableHeader className="h-[56px] bg-card border-b border-border">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="w-[4%] px-3">
                   <Checkbox checked={allPageSelected} onCheckedChange={(checked) => handleSelectAll(checked === true)} />
                 </TableHead>
-                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-[#6B7280] px-3 w-[28%]">Document</TableHead>
-                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-[#6B7280] px-3 w-[14%]">Supplier</TableHead>
-                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-[#6B7280] px-3 w-[12%]">
+                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-muted-foreground px-3 w-[28%]">Document</TableHead>
+                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-muted-foreground px-3 w-[14%]">Supplier</TableHead>
+                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-muted-foreground px-3 w-[12%]">
                   <button className="flex items-center gap-1 truncate" onClick={() => toggleSort('created_at')}>
                     <Calendar className="w-3.5 h-3.5 flex-shrink-0" /><span className="truncate">Date</span><SortIcon column="created_at" />
                   </button>
                 </TableHead>
-                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-[#6B7280] px-3 w-[10%]">Uploader</TableHead>
-                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-[#6B7280] px-3 w-[6%]">Size</TableHead>
-                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-[#6B7280] px-3 w-[10%]">Status</TableHead>
-                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-[#6B7280] text-right px-3 w-[16%]">Actions</TableHead>
+                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-muted-foreground px-3 w-[10%]">Uploader</TableHead>
+                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-muted-foreground px-3 w-[6%]">Size</TableHead>
+                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-muted-foreground px-3 w-[10%]">Status</TableHead>
+                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-muted-foreground text-right px-3 w-[16%]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1030,7 +1030,7 @@ const BuyerDocumentsManager = ({
                 const insight = aiInsight(doc, latestUpload?.expiration_date);
 
                 return (
-                  <TableRow key={doc.id} className="h-[88px] border-b border-[#EEF2F7] hover:bg-gray-50/50">
+                  <TableRow key={doc.id} className="h-[88px] border-b border-border hover:bg-muted/50">
                     <TableCell className="px-3 py-3">
                       <Checkbox
                         checked={selectedDocuments.has(doc.id)}
@@ -1051,34 +1051,34 @@ const BuyerDocumentsManager = ({
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 min-w-0">
-                            <p className={`text-[14px] font-semibold text-[#111827] truncate ${hasFile ? 'hover:text-[#2563EB]' : ''}`} title={doc.title || doc.document_type}>{doc.title || doc.document_type}</p>
+                            <p className={`text-[14px] font-semibold text-foreground truncate ${hasFile ? 'hover:text-[#2563EB]' : ''}`} title={doc.title || doc.document_type}>{doc.title || doc.document_type}</p>
                             {pinnedIds.has(doc.id) && (
                               <Pin className="h-3 w-3 flex-shrink-0 text-amber-500 fill-amber-400" />
                             )}
                           </div>
-                          <p className="text-[13px] text-[#6B7280]">ID: {doc.id.slice(0, 8).toUpperCase()}</p>
+                          <p className="text-[13px] text-muted-foreground">ID: {doc.id.slice(0, 8).toUpperCase()}</p>
                         </div>
                       </button>
                     </TableCell>
                     <TableCell className="px-3 py-3">
                       <div className="text-[14px] truncate">
-                        <p className="font-medium text-[#111827] truncate" title={doc.suppliers?.company_name}>{doc.suppliers?.company_name || 'Unknown'}</p>
-                        <p className="text-[#6B7280]">{supplierShortId(doc.supplier_id)}</p>
+                        <p className="font-medium text-foreground truncate" title={doc.suppliers?.company_name}>{doc.suppliers?.company_name || 'Unknown'}</p>
+                        <p className="text-muted-foreground">{supplierShortId(doc.supplier_id)}</p>
                       </div>
                     </TableCell>
-                    <TableCell className="px-3 py-3 text-[13px] text-[#4B5563] truncate">
+                    <TableCell className="px-3 py-3 text-[13px] text-muted-foreground truncate">
                       <div className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-[#9CA3AF] flex-shrink-0" />
+                        <Calendar className="w-3.5 h-3.5 text-muted-foreground/70 flex-shrink-0" />
                         <span className="truncate">{formatDate(doc.created_at)}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="px-3 py-3 text-[13px] text-[#4B5563] truncate">
+                    <TableCell className="px-3 py-3 text-[13px] text-muted-foreground truncate">
                       <div className="flex items-center gap-1.5" title={latestUpload?.uploader?.full_name}>
-                        <User className="w-3.5 h-3.5 text-[#9CA3AF] flex-shrink-0" />
+                        <User className="w-3.5 h-3.5 text-muted-foreground/70 flex-shrink-0" />
                         <span className="truncate">{latestUpload?.uploader?.full_name || '—'}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="px-3 py-3 text-[13px] text-[#6B7280] truncate">
+                    <TableCell className="px-3 py-3 text-[13px] text-muted-foreground truncate">
                       <span className="truncate">{formatFileSize(latestUpload?.file_size)}</span>
                     </TableCell>
                     <TableCell className="px-3 py-3">
@@ -1092,12 +1092,12 @@ const BuyerDocumentsManager = ({
                               <Sparkles className="w-3 h-3" />
                             </button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-72 p-3 text-xs bg-white border-[#E5E7EB] shadow-[0_12px_24px_rgba(15,23,42,0.12)] rounded-[12px]">
+                          <PopoverContent className="w-72 p-3 text-xs bg-card border-border shadow-[0_12px_24px_rgba(15,23,42,0.12)] rounded-[12px]">
                             <div className="flex items-start gap-2">
                               <Sparkles className="w-4 h-4 text-[#4F46E5] mt-0.5" />
                               <div>
-                                <p className="font-semibold mb-1 text-[#111827]">{insight.label}</p>
-                                <p className="text-[#6B7280] leading-relaxed">{insight.description}</p>
+                                <p className="font-semibold mb-1 text-foreground">{insight.label}</p>
+                                <p className="text-muted-foreground leading-relaxed">{insight.description}</p>
                               </div>
                             </div>
                           </PopoverContent>
@@ -1111,22 +1111,22 @@ const BuyerDocumentsManager = ({
                             <Button size="icon" className="h-[36px] w-[36px] bg-[#10B981] hover:bg-[#059669] text-white rounded-[10px] shadow-sm flex-shrink-0" disabled={approveLoading === doc.id} onClick={() => onApprove(doc.id)} title="Approve">
                               <Check className="w-4 h-4" />
                             </Button>
-                            <Button size="icon" variant="outline" className="h-[36px] w-[36px] bg-white text-[#DC2626] border-[#FCA5A5] hover:bg-[#FEF2F2] rounded-[10px] shadow-sm flex-shrink-0" disabled={declineLoading === doc.id} onClick={() => onDecline(doc.id)} title="Decline">
+                            <Button size="icon" variant="outline" className="h-[36px] w-[36px] bg-card text-[#DC2626] border-[#FCA5A5] hover:bg-[#FEF2F2] rounded-[10px] shadow-sm flex-shrink-0" disabled={declineLoading === doc.id} onClick={() => onDecline(doc.id)} title="Decline">
                               <X className="w-4 h-4" />
                             </Button>
                           </>
                         ) : (
-                          <Button size="sm" variant="outline" className="h-[36px] px-[12px] bg-white text-[#374151] border-[#E5E7EB] hover:bg-gray-50 rounded-[10px] font-semibold shadow-sm" onClick={() => handleView(doc)}>
+                          <Button size="sm" variant="outline" className="h-[36px] px-[12px] bg-card text-foreground/80 border-border hover:bg-muted rounded-[10px] font-semibold shadow-sm" onClick={() => handleView(doc)}>
                             View
                           </Button>
                         )}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button size="icon" variant="ghost" className="h-[36px] w-[36px] rounded-[10px] bg-white border border-transparent text-[#6B7280] hover:bg-[#F3F4F6] shadow-none">
+                            <Button size="icon" variant="ghost" className="h-[36px] w-[36px] rounded-[10px] bg-card border border-transparent text-muted-foreground hover:bg-muted shadow-none">
                               <MoreVertical className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="rounded-[12px] shadow-[0_12px_24px_rgba(15,23,42,0.12)] border-[#E5E7EB]">
+                          <DropdownMenuContent align="end" className="rounded-[12px] shadow-[0_12px_24px_rgba(15,23,42,0.12)] border-border">
                             <DropdownMenuItem onClick={() => pinnedIds.has(doc.id) ? handleUnpin(doc.id) : handlePin(doc.id)} disabled={pinBusy === doc.id}>
                               {pinnedIds.has(doc.id)
                                 ? <><PinOff className="w-3.5 h-3.5 mr-2 text-amber-500" />Unpin</>
@@ -1143,7 +1143,7 @@ const BuyerDocumentsManager = ({
                                 <LinkIcon className="w-3.5 h-3.5 mr-2" />Create link
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuSeparator className="bg-[#EEF2F7]" />
+                            <DropdownMenuSeparator className="bg-muted" />
                             {canWithdraw && (
                               <DropdownMenuItem onClick={() => onWithdraw(doc.id, doc.title || doc.document_type)} disabled={withdrawLoading === doc.id} className="text-[#DC2626] focus:text-[#DC2626]">
                                 <Ban className="w-3.5 h-3.5 mr-2" />Withdraw request

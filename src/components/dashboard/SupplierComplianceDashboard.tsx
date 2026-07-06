@@ -203,7 +203,7 @@ const SupplierComplianceDashboard = () => {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="inline-flex h-12 items-center gap-1 rounded-full bg-white border border-border/40 p-1.5 justify-start shadow-sm">
+        <TabsList className="inline-flex h-12 items-center gap-1 rounded-full bg-card border border-border/40 p-1.5 justify-start shadow-sm">
           <TabsTrigger 
             value="overview"
             className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground"
@@ -303,7 +303,7 @@ const SupplierComplianceDashboard = () => {
                         <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg border-red-200 bg-red-50">
                           <div>
                             <p className="font-medium">{request.title}</p>
-                            <p className="text-sm text-gray-600">{request.buyers?.company_name}</p>
+                            <p className="text-sm text-muted-foreground">{request.buyers?.company_name}</p>
                           </div>
                           <Badge variant="destructive">
                             {daysUntilDue <= 0 ? 'Overdue' : `${daysUntilDue} days left`}
@@ -312,7 +312,7 @@ const SupplierComplianceDashboard = () => {
                       );
                     })
                   ) : (
-                    <p className="text-gray-500 text-center py-4">No urgent actions required</p>
+                    <p className="text-muted-foreground text-center py-4">No urgent actions required</p>
                   )}
                 </div>
               </CardContent>
@@ -330,7 +330,7 @@ const SupplierComplianceDashboard = () => {
                         <FileCheck className="w-5 h-5 text-blue-500" />
                         <div>
                           <p className="font-medium">{request.title}</p>
-                          <p className="text-sm text-gray-500">{request.buyers?.company_name}</p>
+                          <p className="text-sm text-muted-foreground">{request.buyers?.company_name}</p>
                         </div>
                       </div>
                       <Badge 
@@ -369,8 +369,8 @@ const SupplierComplianceDashboard = () => {
                       </div>
                       <div>
                         <h3 className="font-medium">{buyer.company_name}</h3>
-                        <p className="text-sm text-gray-500">{buyer.industry}</p>
-                        <p className="text-xs text-gray-400">
+                        <p className="text-sm text-muted-foreground">{buyer.industry}</p>
+                        <p className="text-xs text-muted-foreground/70">
                           {buyer.totalRequests} requests • {buyer.approvedRequests} approved
                         </p>
                       </div>

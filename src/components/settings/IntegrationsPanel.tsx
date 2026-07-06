@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { publicEnvironment } from '@/config/env';
 import { toast } from 'sonner';
+import { AiIntegrationSection } from './AiIntegrationSection';
 
 const SUPABASE_URL = publicEnvironment.VITE_SUPABASE_URL;
 
@@ -52,7 +53,7 @@ const PROVIDERS: ProviderMeta[] = [
     name: 'Slack',
     tagline: 'Submit · approve · reject alerts → your #compliance channel',
     logoEl: (
-      <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white border border-[#E8E8E8] flex-shrink-0">
+      <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-card border border-border flex-shrink-0">
         <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" xmlns="http://www.w3.org/2000/svg">
           <path d="M5.56 16.58A2.52 2.52 0 103.04 19.1h2.52v-2.52zm1.26 0A2.52 2.52 0 109.34 19.1V12.8H6.82v3.78z" fill="#E01E5A"/>
           <path d="M7.42 5.56A2.52 2.52 0 104.9 3.04v2.52h2.52zm0 1.26A2.52 2.52 0 104.9 9.34h6.3V6.82H7.42z" fill="#36C5F0"/>
@@ -86,7 +87,7 @@ const PROVIDERS: ProviderMeta[] = [
     name: 'Notion',
     tagline: 'Sync approved docs to your compliance database in Notion',
     logoEl: (
-      <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#F5F5F5] flex-shrink-0">
+      <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-muted flex-shrink-0">
         <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" xmlns="http://www.w3.org/2000/svg">
           {/* 3D cube front face */}
           <rect x="4" y="10" width="13" height="12" rx="0.5" fill="#1A1A1A"/>
@@ -206,9 +207,9 @@ function SlackConfigForm({ organizationId, existing, onSaved }: SlackConfigFormP
   };
 
   return (
-    <div className="mt-3 rounded-[12px] border border-[#E5E7EB] bg-[#F9FAFB] p-4 space-y-4">
+    <div className="mt-3 rounded-[12px] border border-border bg-muted p-4 space-y-4">
       <div>
-        <p className="text-[12px] font-medium text-[#374151] mb-3">
+        <p className="text-[12px] font-medium text-foreground/80 mb-3">
           Create a Slack app with <span className="font-semibold">Incoming Webhooks</span> enabled, then paste the webhook URL below.{' '}
           <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline inline-flex items-center gap-0.5">
             Setup guide <ExternalLink className="h-3 w-3" />
@@ -216,7 +217,7 @@ function SlackConfigForm({ organizationId, existing, onSaved }: SlackConfigFormP
         </p>
         <div className="space-y-3">
           <div>
-            <Label className="text-[12px] text-[#374151]">Webhook URL</Label>
+            <Label className="text-[12px] text-foreground/80">Webhook URL</Label>
             <Input
               placeholder="https://hooks.slack.com/services/T.../B.../..."
               value={webhookUrl}
@@ -225,7 +226,7 @@ function SlackConfigForm({ organizationId, existing, onSaved }: SlackConfigFormP
             />
           </div>
           <div>
-            <Label className="text-[12px] text-[#374151]">Channel name (optional)</Label>
+            <Label className="text-[12px] text-foreground/80">Channel name (optional)</Label>
             <Input
               placeholder="#compliance"
               value={channelName}
@@ -237,7 +238,7 @@ function SlackConfigForm({ organizationId, existing, onSaved }: SlackConfigFormP
       </div>
 
       <div>
-        <p className="text-[11px] font-semibold text-[#9CA3AF] uppercase tracking-wide mb-2">Notify on</p>
+        <p className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wide mb-2">Notify on</p>
         <div className="grid grid-cols-2 gap-2">
           {([
             ['Document submitted', onSubmit, setOnSubmit],
@@ -250,9 +251,9 @@ function SlackConfigForm({ organizationId, existing, onSaved }: SlackConfigFormP
                 type="checkbox"
                 checked={value}
                 onChange={(e) => setter(e.target.checked)}
-                className="h-4 w-4 rounded border-[#D1D5DB] accent-blue-600"
+                className="h-4 w-4 rounded border-border accent-blue-600"
               />
-              <span className="text-[12px] text-[#374151]">{label}</span>
+              <span className="text-[12px] text-foreground/80">{label}</span>
             </label>
           ))}
         </div>
@@ -262,7 +263,7 @@ function SlackConfigForm({ organizationId, existing, onSaved }: SlackConfigFormP
         size="sm"
         onClick={() => void save()}
         disabled={saving || !webhookUrl}
-        className="h-8 rounded-[8px] bg-[#111827] text-white text-[12px] font-semibold hover:bg-[#374151]"
+        className="h-8 rounded-[8px] bg-primary text-white text-[12px] font-semibold hover:bg-primary-hover"
       >
         {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : existing ? 'Save changes' : 'Connect Slack'}
       </Button>
@@ -337,12 +338,12 @@ function IntegrationRow({ meta, connection, organizationId, onRefresh }: Integra
   };
 
   return (
-    <div className="rounded-[12px] border border-[#E5E7EB] bg-white">
+    <div className="rounded-[12px] border border-border bg-card">
       <div className="flex items-center gap-3 p-4">
         {meta.logoEl}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-[14px] font-semibold text-[#111827]">{meta.name}</span>
+            <span className="text-[14px] font-semibold text-foreground">{meta.name}</span>
             {isConnected && (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-100">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
@@ -355,9 +356,9 @@ function IntegrationRow({ meta, connection, organizationId, onRefresh }: Integra
               </span>
             )}
           </div>
-          <p className="text-[12px] text-[#6B7280] mt-0.5 truncate">{meta.tagline}</p>
+          <p className="text-[12px] text-muted-foreground mt-0.5 truncate">{meta.tagline}</p>
           {isConnected && connection?.connected_at && (
-            <p className="text-[11px] text-[#9CA3AF] mt-0.5">
+            <p className="text-[11px] text-muted-foreground/70 mt-0.5">
               Connected {relativeDate(connection.connected_at)}
               {connection.last_synced_at && ` · last sync ${relativeDate(connection.last_synced_at)}`}
             </p>
@@ -372,7 +373,7 @@ function IntegrationRow({ meta, connection, organizationId, onRefresh }: Integra
             <>
               <button
                 onClick={() => setExpanded((v) => !v)}
-                className="flex items-center gap-1.5 rounded-[8px] border border-[#E5E7EB] bg-white px-3 py-1.5 text-[12px] font-medium text-[#374151] hover:bg-[#F9FAFB] transition-colors"
+                className="flex items-center gap-1.5 rounded-[8px] border border-border bg-card px-3 py-1.5 text-[12px] font-medium text-foreground/80 hover:bg-muted transition-colors"
               >
                 Configure
                 {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
@@ -380,7 +381,7 @@ function IntegrationRow({ meta, connection, organizationId, onRefresh }: Integra
               <button
                 onClick={() => void disconnect()}
                 disabled={disconnecting}
-                className="flex items-center gap-1.5 rounded-[8px] border border-[#E5E7EB] bg-white px-2.5 py-1.5 text-[12px] font-medium text-red-500 hover:bg-red-50 transition-colors"
+                className="flex items-center gap-1.5 rounded-[8px] border border-border bg-card px-2.5 py-1.5 text-[12px] font-medium text-red-500 hover:bg-red-50 transition-colors"
                 title="Disconnect"
               >
                 {disconnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
@@ -389,7 +390,7 @@ function IntegrationRow({ meta, connection, organizationId, onRefresh }: Integra
           ) : meta.webhookMode ? (
             <button
               onClick={() => setExpanded((v) => !v)}
-              className="flex items-center gap-1.5 rounded-[8px] bg-[#111827] px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-[#374151] transition-colors"
+              className="flex items-center gap-1.5 rounded-[8px] bg-primary px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-primary-hover transition-colors"
             >
               <PlugZap className="h-3.5 w-3.5" />
               Connect
@@ -398,7 +399,7 @@ function IntegrationRow({ meta, connection, organizationId, onRefresh }: Integra
             <button
               onClick={() => void startOAuth()}
               disabled={connecting}
-              className="flex items-center gap-1.5 rounded-[8px] bg-[#111827] px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-[#374151] transition-colors disabled:opacity-60"
+              className="flex items-center gap-1.5 rounded-[8px] bg-primary px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-primary-hover transition-colors disabled:opacity-60"
             >
               {connecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PlugZap className="h-3.5 w-3.5" />}
               Connect
@@ -409,7 +410,7 @@ function IntegrationRow({ meta, connection, organizationId, onRefresh }: Integra
 
       {/* Expanded config */}
       {expanded && (
-        <div className="border-t border-[#F3F4F6] px-4 pb-4">
+        <div className="border-t border-border px-4 pb-4">
           {meta.webhookMode ? (
             <SlackConfigForm
               organizationId={organizationId}
@@ -422,9 +423,9 @@ function IntegrationRow({ meta, connection, organizationId, onRefresh }: Integra
               {isConnected ? (
                 <div className="space-y-3">
                   {meta.id === 'notion' && (
-                    <div className="rounded-[10px] bg-[#F9FAFB] border border-[#E5E7EB] p-3">
-                      <p className="text-[12px] font-medium text-[#374151] mb-1">Workspace</p>
-                      <p className="text-[13px] text-[#111827] font-semibold">
+                    <div className="rounded-[10px] bg-muted border border-border p-3">
+                      <p className="text-[12px] font-medium text-foreground/80 mb-1">Workspace</p>
+                      <p className="text-[13px] text-foreground font-semibold">
                         {String(connection!.config.workspace_name || '—')}
                       </p>
                       {!connection!.config.target_database_id && (
@@ -435,16 +436,16 @@ function IntegrationRow({ meta, connection, organizationId, onRefresh }: Integra
                     </div>
                   )}
                   {(meta.id === 'box' || meta.id === 'sharepoint') && (
-                    <div className="rounded-[10px] bg-[#F9FAFB] border border-[#E5E7EB] p-3">
-                      <p className="text-[12px] text-[#374151]">
+                    <div className="rounded-[10px] bg-muted border border-border p-3">
+                      <p className="text-[12px] text-foreground/80">
                         Approved documents will be automatically synced to your {meta.name} folder.
                       </p>
                     </div>
                   )}
                   {meta.id === 'docusign' && (
-                    <div className="rounded-[10px] bg-[#F9FAFB] border border-[#E5E7EB] p-3">
-                      <p className="text-[12px] font-medium text-[#374151] mb-1">Account</p>
-                      <p className="text-[13px] text-[#111827] font-semibold">
+                    <div className="rounded-[10px] bg-muted border border-border p-3">
+                      <p className="text-[12px] font-medium text-foreground/80 mb-1">Account</p>
+                      <p className="text-[13px] text-foreground font-semibold">
                         {String(connection!.config.account_id || '—')}
                       </p>
                     </div>
@@ -452,13 +453,13 @@ function IntegrationRow({ meta, connection, organizationId, onRefresh }: Integra
                   <button
                     onClick={() => void startOAuth()}
                     disabled={connecting}
-                    className="text-[12px] text-[#6B7280] hover:text-[#111827] underline underline-offset-2"
+                    className="text-[12px] text-muted-foreground hover:text-foreground underline underline-offset-2"
                   >
                     Reconnect / reauthorize
                   </button>
                 </div>
               ) : (
-                <p className="mt-3 text-[12px] text-[#6B7280]">
+                <p className="mt-3 text-[12px] text-muted-foreground">
                   Click Connect to authorize TraceR2C to access your {meta.name} account via OAuth.
                 </p>
               )}
@@ -520,7 +521,7 @@ export function IntegrationsPanel({ organizationId }: IntegrationsPanelProps) {
 
   if (!organizationId) {
     return (
-      <div className="flex items-center justify-center py-16 text-[13px] text-[#9CA3AF]">
+      <div className="flex items-center justify-center py-16 text-[13px] text-muted-foreground/70">
         Loading organization…
       </div>
     );
@@ -531,8 +532,8 @@ export function IntegrationsPanel({ organizationId }: IntegrationsPanelProps) {
       <div>
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-[16px] font-bold text-[#111827]">Integrations</h2>
-            <p className="text-[13px] text-[#6B7280] mt-0.5">
+            <h2 className="text-[16px] font-bold text-foreground">Integrations</h2>
+            <p className="text-[13px] text-muted-foreground mt-0.5">
               Connect your tools. Each integration is scoped to your organization.
             </p>
           </div>
@@ -547,13 +548,14 @@ export function IntegrationsPanel({ organizationId }: IntegrationsPanelProps) {
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-5 w-5 animate-spin text-[#9CA3AF]" />
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/70" />
         </div>
       ) : (
         <div className="space-y-6">
+          <AiIntegrationSection organizationId={organizationId} />
           {SECTIONS.map((sec) => (
             <div key={sec.id} className="space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9CA3AF]">{sec.label}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">{sec.label}</p>
               {PROVIDERS.filter((p) => p.section === sec.id).map((meta) => (
                 <IntegrationRow
                   key={meta.id}

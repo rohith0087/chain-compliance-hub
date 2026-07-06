@@ -317,7 +317,7 @@ const ComplianceDashboard = ({ userRole, data }: ComplianceDashboardProps) => {
                     <FileCheck className="w-5 h-5 text-blue-500" />
                     <div>
                       <p className="font-medium">{category.category}</p>
-                      <p className="text-sm text-gray-500">{category.count} documents</p>
+                      <p className="text-sm text-muted-foreground">{category.count} documents</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -343,7 +343,7 @@ const ComplianceDashboard = ({ userRole, data }: ComplianceDashboardProps) => {
           <CardContent>
             <div className="space-y-3">
               {upcomingDeadlines.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-muted-foreground">
                   <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>No upcoming deadlines</p>
                 </div>
@@ -363,7 +363,7 @@ const ComplianceDashboard = ({ userRole, data }: ComplianceDashboardProps) => {
                           ? 'border-red-200 bg-red-50' 
                           : isUrgent 
                           ? 'border-yellow-200 bg-yellow-50'
-                          : 'border-gray-200'
+                          : 'border-border'
                       }`}
                     >
                       <div className="flex items-center space-x-3">
@@ -376,7 +376,7 @@ const ComplianceDashboard = ({ userRole, data }: ComplianceDashboardProps) => {
                         )}
                         <div>
                           <p className="font-medium">{deadline.title}</p>
-                          <p className="text-sm text-gray-500">{deadline.category}</p>
+                          <p className="text-sm text-muted-foreground">{deadline.category}</p>
                         </div>
                       </div>
                       <Badge 

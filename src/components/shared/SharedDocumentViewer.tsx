@@ -127,7 +127,7 @@ const SharedDocumentViewer: React.FC = () => {
       case 'admin_only':
         return 'bg-red-100 text-red-800 border-red-300';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-300';
+        return 'bg-muted text-foreground border-border';
     }
   };
 

@@ -111,7 +111,7 @@ export const SimulationOnboardingUploadModal = () => {
               </div>
 
               {/* Template Download Button */}
-              <div className="flex items-center justify-between p-3 border rounded-lg bg-white">
+              <div className="flex items-center justify-between p-3 border rounded-lg bg-card">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-blue-100">
                     <FileText className="h-5 w-5 text-blue-600" />

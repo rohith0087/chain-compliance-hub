@@ -99,10 +99,10 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid #e5e7eb;
+  border: 1px solid hsl(var(--border));
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+  background: hsl(var(--card) / 0.98);
+  box-shadow: 0 24px 70px rgba(8, 10, 18, 0.32);
   backdrop-filter: blur(16px);
   z-index: 999;
   animation: compliance-assistant-panel-in 180ms ease-out;
@@ -119,8 +119,8 @@
   gap: 16px;
   padding: 20px;
   flex: 0 0 auto;
-  border-bottom: 1px solid #eef2f7;
-  background: linear-gradient(135deg, rgba(239, 246, 255, 0.9), rgba(240, 253, 250, 0.85));
+  border-bottom: 1px solid hsl(var(--border));
+  background: linear-gradient(135deg, hsl(var(--primary) / 0.08), hsl(var(--card)));
 }
 
 .compliance-assistant-panel__identity {
@@ -137,8 +137,8 @@
   height: 38px;
   place-items: center;
   border-radius: 12px;
-  color: #fff;
-  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  color: hsl(var(--primary-foreground));
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
   box-shadow: 0 8px 20px rgba(37, 99, 235, 0.2);
 }
 
@@ -150,7 +150,7 @@
 
 .compliance-assistant-panel h2 {
   margin: 0;
-  color: #0f172a;
+  color: hsl(var(--foreground));
   font-size: 18px;
   font-weight: 700;
   line-height: 1.3;
@@ -162,8 +162,8 @@
   gap: 3px;
   padding: 3px 8px;
   border-radius: 999px;
-  background: #e8f1ff;
-  color: #1f6fe5;
+  background: hsl(var(--primary) / 0.12);
+  color: hsl(var(--primary));
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -171,7 +171,7 @@
 
 .compliance-assistant-panel__header p {
   margin: 3px 0 0;
-  color: #64748b;
+  color: hsl(var(--muted-foreground));
   font-size: 12px;
   line-height: 1.45;
 }
@@ -190,17 +190,17 @@
   width: 34px;
   height: 34px;
   place-items: center;
-  border: 1px solid #e2e8f0;
+  border: 1px solid hsl(var(--border));
   border-radius: 999px;
-  color: #475569;
-  background: rgba(255, 255, 255, 0.86);
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--card) / 0.6);
   cursor: pointer;
 }
 
 .compliance-assistant-panel__expand:hover,
 .compliance-assistant-panel__close:hover {
-  color: #0f172a;
-  background: #fff;
+  color: hsl(var(--foreground));
+  background: hsl(var(--card));
 }
 
 .compliance-assistant-panel__body {
@@ -216,8 +216,8 @@
   margin: 0 0 12px;
   padding: 8px 10px;
   border-radius: 10px;
-  background: #f8fafc;
-  color: #94a3b8;
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
   font-size: 10.5px;
   line-height: 1.4;
   text-align: center;
@@ -226,7 +226,7 @@
 
 .compliance-assistant-panel__greeting {
   margin: 0 0 12px;
-  color: #0f172a;
+  color: hsl(var(--foreground));
   font-size: 14px;
   font-weight: 600;
   line-height: 1.4;
@@ -255,15 +255,15 @@
 
 .compliance-assistant-message--user {
   align-self: flex-end;
-  color: #fff;
-  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  color: hsl(var(--primary-foreground));
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
 }
 
 .compliance-assistant-message--assistant {
   align-self: flex-start;
-  color: #0f172a;
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
+  color: hsl(var(--foreground));
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
 }
 
 /* Structured cards (supplier grids, document tables, etc.) are shared with
@@ -288,8 +288,8 @@
 .compliance-assistant-markdown ul,
 .compliance-assistant-markdown ol { margin: 0 0 8px; padding-left: 18px; }
 .compliance-assistant-markdown li { margin-bottom: 2px; }
-.compliance-assistant-markdown strong { font-weight: 700; color: #0f172a; }
-.compliance-assistant-markdown a { color: #2563eb; text-decoration: underline; word-break: break-all; }
+.compliance-assistant-markdown strong { font-weight: 700; color: hsl(var(--foreground)); }
+.compliance-assistant-markdown a { color: hsl(var(--primary)); text-decoration: underline; word-break: break-all; }
 .compliance-assistant-markdown h1,
 .compliance-assistant-markdown h2,
 .compliance-assistant-markdown h3,
@@ -297,19 +297,19 @@
   margin: 0 0 6px;
   font-size: 13.5px;
   font-weight: 700;
-  color: #0f172a;
+  color: hsl(var(--foreground));
   line-height: 1.4;
 }
 .compliance-assistant-markdown code {
-  background: #eef2f7;
+  background: hsl(var(--border));
   border-radius: 4px;
   padding: 1px 5px;
   font-size: 12px;
   word-break: break-all;
 }
 .compliance-assistant-markdown pre {
-  background: #0f172a;
-  color: #e2e8f0;
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
   border-radius: 8px;
   padding: 10px;
   overflow-x: auto;
@@ -319,8 +319,8 @@
 .compliance-assistant-markdown blockquote {
   margin: 0 0 8px;
   padding-left: 10px;
-  border-left: 2px solid #cbd5e1;
-  color: #475569;
+  border-left: 2px solid hsl(var(--border));
+  color: hsl(var(--muted-foreground));
 }
 
 .compliance-assistant-doc-list {
@@ -335,9 +335,9 @@
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid hsl(var(--border));
   border-radius: 10px;
-  background: #fff;
+  background: hsl(var(--card));
 }
 
 .compliance-assistant-doc-card__icon {
@@ -347,8 +347,8 @@
   width: 26px;
   height: 26px;
   border-radius: 8px;
-  background: #eff6ff;
-  color: #2563eb;
+  background: hsl(var(--primary) / 0.09);
+  color: hsl(var(--primary));
 }
 
 .compliance-assistant-doc-card__body {
@@ -360,7 +360,7 @@
   margin: 0;
   font-size: 12.5px;
   font-weight: 600;
-  color: #0f172a;
+  color: hsl(var(--foreground));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -369,7 +369,7 @@
 .compliance-assistant-doc-card__meta {
   margin: 1px 0 0;
   font-size: 11px;
-  color: #6b7280;
+  color: hsl(var(--muted-foreground));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -381,15 +381,15 @@
   flex: 0 0 auto;
   width: 26px;
   height: 26px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid hsl(var(--border));
   border-radius: 8px;
-  background: #fff;
-  color: #2563eb;
+  background: hsl(var(--card));
+  color: hsl(var(--primary));
   cursor: pointer;
 }
 
 .compliance-assistant-doc-card__view:hover {
-  background: #eff6ff;
+  background: hsl(var(--primary) / 0.09);
 }
 
 .compliance-assistant-typing {
@@ -399,15 +399,15 @@
   gap: 4px;
   padding: 11px 14px;
   border-radius: 14px;
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
 }
 
 .compliance-assistant-typing span {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #94a3b8;
+  background: hsl(var(--muted-foreground));
   animation: assistant-typing-bounce 1.1s ease-in-out infinite;
 }
 
@@ -421,7 +421,7 @@
 
 .compliance-assistant-panel__eyebrow {
   margin: 0 0 10px;
-  color: #475569;
+  color: hsl(var(--muted-foreground));
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -445,11 +445,11 @@
   gap: 9px;
   width: 100%;
   padding: 11px 14px;
-  border: 1px solid #dbeafe;
+  border: 1px solid hsl(var(--primary) / 0.16);
   border-radius: 999px;
   cursor: pointer;
-  color: #0f172a;
-  background: #eff6ff;
+  color: hsl(var(--foreground));
+  background: hsl(var(--primary) / 0.09);
   font-size: 13px;
   font-weight: 600;
   text-align: left;
@@ -464,13 +464,13 @@
   width: 26px;
   height: 26px;
   border-radius: 999px;
-  color: #fff;
-  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  color: hsl(var(--primary-foreground));
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
 }
 
 .compliance-assistant-panel__prompts button:hover {
-  border-color: #93c5fd;
-  background: #dbeafe;
+  border-color: hsl(var(--primary) / 0.40);
+  background: hsl(var(--primary) / 0.16);
   transform: translateX(2px);
 }
 
@@ -483,18 +483,18 @@
 }
 
 .compliance-assistant-panel__followups button {
-  border: 1px solid #bfdbfe;
+  border: 1px solid hsl(var(--primary) / 0.30);
   border-radius: 999px;
   padding: 6px 11px;
   font-size: 12px;
   font-weight: 600;
-  color: #1d4ed8;
-  background: #eff6ff;
+  color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.09);
   cursor: pointer;
 }
 
 .compliance-assistant-panel__followups button:hover {
-  background: #dbeafe;
+  background: hsl(var(--primary) / 0.16);
 }
 
 .compliance-assistant-panel__inputbar {
@@ -502,7 +502,7 @@
   align-items: center;
   gap: 8px;
   flex: 0 0 auto;
-  border-top: 1px solid #eef2f7;
+  border-top: 1px solid hsl(var(--border));
   padding-top: 16px;
   min-height: 36px;
 }
@@ -510,18 +510,18 @@
 .compliance-assistant-panel__input {
   flex: 1;
   min-width: 0;
-  border: 1px solid #e5e7eb;
+  border: 1px solid hsl(var(--border));
   border-radius: 999px;
   padding: 10px 14px;
   font-size: 13px;
-  color: #0f172a;
-  background: #f8fafc;
+  color: hsl(var(--foreground));
+  background: hsl(var(--muted));
 }
 
 .compliance-assistant-panel__input:focus {
   outline: none;
-  border-color: #93c5fd;
-  background: #fff;
+  border-color: hsl(var(--primary) / 0.40);
+  background: hsl(var(--card));
 }
 
 .compliance-assistant-panel__send {
@@ -532,8 +532,8 @@
   height: 36px;
   border: 0;
   border-radius: 999px;
-  color: #fff;
-  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  color: hsl(var(--primary-foreground));
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
   cursor: pointer;
   box-shadow: 0 8px 18px rgba(37, 99, 235, 0.25);
 }

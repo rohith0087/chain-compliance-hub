@@ -13,8 +13,10 @@ import {
 import { 
   Building2, Search, ArrowLeft, Mail, Phone, 
   Send, RefreshCw, Eye, MoreHorizontal, UserPlus, 
-  Users, Check, X, Calendar, Clock, MessageSquare
+  Users, Check, X, Calendar, Clock, MessageSquare, ShieldCheck, Download
 } from 'lucide-react';
+import SupplierComplianceExportModal from '@/components/exports/SupplierComplianceExportModal';
+import { renderSupplierReport, supplierReportFileName, downloadBlob, type SupplierReportData } from '@/services/SupplierReportService';
 import { CompanyLogo } from '@/components/ui/CompanyLogo';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -61,7 +63,7 @@ interface ConnectionRequest {
   };
 }
 
-const SupplierDiscovery = () => {
+const SupplierDiscovery = ({ onOpenCompliance, onViewSupplier }: { onOpenCompliance?: (supplierId: string, supplierName: string) => void; onViewSupplier?: (supplierId: string, supplierName: string) => void } = {}) => {
   const { currentBranch, allBranchesView } = useBranchContext();
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [filteredSuppliers, setFilteredSuppliers] = useState<any[]>([]);
@@ -75,6 +77,7 @@ const SupplierDiscovery = () => {
   const [showSupplierDetail, setShowSupplierDetail] = useState(false);
   const [currentView, setCurrentView] = useState<'suppliers' | 'branches'>('suppliers');
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'connected' | 'discover' | 'pending'>('connected');
   const [availableSuppliers, setAvailableSuppliers] = useState<any[]>([]);
   const [filteredAvailableSuppliers, setFilteredAvailableSuppliers] = useState<any[]>([]);
@@ -243,6 +246,12 @@ const SupplierDiscovery = () => {
   };
 
   const handleViewSupplier = (supplier: any) => {
+    // Connected suppliers open the redesigned full-page detail + report; fall back
+    // to the modal (discover/pending contexts, or when no handler is provided).
+    if (onViewSupplier && getConnectionStatus(supplier.id) === 'approved') {
+      onViewSupplier(supplier.id, supplier.company_name);
+      return;
+    }
     setSelectedSupplier(supplier);
     setShowSupplierDetail(true);
   };
@@ -250,6 +259,26 @@ const SupplierDiscovery = () => {
   const getConnectionStatus = (supplierId: string) => {
     const connection = connections.find(c => c.supplier_id === supplierId);
     return connection?.status === 'active' ? 'approved' : connection?.status || null;
+  };
+
+  // Generate a first-class PDF report for each selected supplier (real compliance
+  // data + AI summary from supplier-report-v1, rendered by SupplierReportService).
+  const handleExportSupplierReports = async (selectedIds: string[]) => {
+    let ok = 0;
+    for (const id of selectedIds) {
+      try {
+        const { data, error } = await supabase.functions.invoke('supplier-report-v1', {
+          body: { buyer_id: buyerProfile?.id, supplier_id: id },
+        });
+        if (error || !data) throw error || new Error('No report data');
+        downloadBlob(renderSupplierReport(data as SupplierReportData), supplierReportFileName(data as SupplierReportData));
+        ok += 1;
+      } catch (e) {
+        console.error('Report export failed for', id, e);
+      }
+    }
+    if (ok > 0) toast({ title: 'Reports generated', description: `Downloaded ${ok} report${ok > 1 ? 's' : ''}.` });
+    else toast({ title: 'Export failed', description: 'Could not generate the report(s).', variant: 'destructive' });
   };
 
   const getConnectionDate = (supplierId: string) => {
@@ -485,6 +514,10 @@ const SupplierDiscovery = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="rounded-[10px]" onClick={() => setShowExportModal(true)} disabled={suppliers.length === 0}>
+            <Download className="h-4 w-4 mr-2" />
+            Export Reports
+          </Button>
           <Button variant="outline" size="sm" className="rounded-[10px]" onClick={() => setShowInviteModal(true)}>
             <UserPlus className="h-4 w-4 mr-2" />
             Invite
@@ -508,7 +541,7 @@ const SupplierDiscovery = () => {
       {/* Integrated Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9CA3AF]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
           <Input
             placeholder={`Search ${terms.suppliers.toLowerCase()}...`}
             value={searchTerm}
@@ -532,10 +565,10 @@ const SupplierDiscovery = () => {
       </div>
 
       {/* Status tabs */}
-      <div className="h-[56px] border-b border-[#E5E7EB] flex items-center gap-9">
+      <div className="h-[56px] border-b border-border flex items-center gap-9">
         {[
           { value: 'connected' as const, label: `My ${terms.suppliers}`, count: suppliers.length, badgeClass: 'bg-[#EAF1FF] text-[#2563EB]' },
-          { value: 'discover' as const, label: 'Discover', count: availableSuppliers.length, badgeClass: 'bg-[#F3F4F6] text-[#374151]' },
+          { value: 'discover' as const, label: 'Discover', count: availableSuppliers.length, badgeClass: 'bg-muted text-foreground/80' },
           { value: 'pending' as const, label: 'Pending', count: totalPendingCount, badgeClass: 'bg-[#FEF2F2] text-[#DC2626]' },
         ].map((tab) => {
           const isActive = activeTab === tab.value;
@@ -544,7 +577,7 @@ const SupplierDiscovery = () => {
               key={tab.value}
               onClick={() => setActiveTab(tab.value)}
               className={`relative h-full flex items-center gap-2 text-[14px] font-semibold transition-colors ${
-                isActive ? 'text-[#2563EB]' : 'text-[#4B5563] hover:text-[#111827]'
+                isActive ? 'text-[#2563EB]' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               {tab.label}
@@ -562,9 +595,9 @@ const SupplierDiscovery = () => {
         <TabsContent value="connected" className="mt-6">
           {filteredSuppliers.length === 0 ? (
             <div className={reviewEmptyStateContainerClass}>
-              <Building2 className="w-12 h-12 mx-auto mb-4 text-[#9CA3AF]" />
-              <h3 className="font-medium text-[#111827] mb-1">No connected {terms.suppliers.toLowerCase()}</h3>
-              <p className="text-sm text-[#6B7280] mb-4">
+              <Building2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground/70" />
+              <h3 className="font-medium text-foreground mb-1">No connected {terms.suppliers.toLowerCase()}</h3>
+              <p className="text-sm text-muted-foreground mb-4">
                 Start by discovering and connecting with {terms.suppliers.toLowerCase()}
               </p>
               <Button variant="outline" size="sm" className="rounded-[10px]" onClick={() => setActiveTab('discover')}>
@@ -582,6 +615,7 @@ const SupplierDiscovery = () => {
                       supplier={supplier}
                       onView={() => handleViewSupplier(supplier)}
                       onMessage={() => navigate(`/messages?supplier=${supplier.id}`)}
+                      onCompliance={onOpenCompliance ? () => onOpenCompliance(supplier.id, supplier.company_name) : undefined}
                     />
                   ))}
               </div>
@@ -606,9 +640,9 @@ const SupplierDiscovery = () => {
         <TabsContent value="discover" className="mt-6">
           {filteredAvailableSuppliers.length === 0 ? (
             <div className={reviewEmptyStateContainerClass}>
-              <Search className="w-12 h-12 mx-auto mb-4 text-[#9CA3AF]" />
-              <h3 className="font-medium text-[#111827] mb-1">No {terms.suppliers.toLowerCase()} found</h3>
-              <p className="text-sm text-[#6B7280]">
+              <Search className="w-12 h-12 mx-auto mb-4 text-muted-foreground/70" />
+              <h3 className="font-medium text-foreground mb-1">No {terms.suppliers.toLowerCase()} found</h3>
+              <p className="text-sm text-muted-foreground">
                 {searchTerm || selectedIndustry !== 'all'
                   ? "Try adjusting your filters"
                   : `All available ${terms.suppliers.toLowerCase()} are already connected or pending`}
@@ -665,8 +699,8 @@ const SupplierDiscovery = () => {
                           size="sm"
                         />
                         <div className="min-w-0">
-                          <p className="text-[14px] font-semibold text-[#111827] truncate">{request.supplier.company_name}</p>
-                          <p className="text-[13px] text-[#6B7280] flex items-center gap-1">
+                          <p className="text-[14px] font-semibold text-foreground truncate">{request.supplier.company_name}</p>
+                          <p className="text-[13px] text-muted-foreground flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
                             {format(new Date(request.requested_at), 'MMM d, yyyy')}
                             {request.supplier.industry && (
@@ -691,7 +725,7 @@ const SupplierDiscovery = () => {
                         <Button
                           size="icon"
                           variant="outline"
-                          className="h-[36px] w-[36px] bg-white text-[#DC2626] border-[#FCA5A5] hover:bg-[#FEF2F2] rounded-[10px] shadow-sm"
+                          className="h-[36px] w-[36px] bg-card text-[#DC2626] border-[#FCA5A5] hover:bg-[#FEF2F2] rounded-[10px] shadow-sm"
                           onClick={() => handleRejectConnection(request.id)}
                           disabled={processingIds.has(request.id)}
                           title="Reject"
@@ -721,8 +755,8 @@ const SupplierDiscovery = () => {
                           <Clock className="h-5 w-5 text-amber-600" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[14px] font-semibold text-[#111827] truncate">{request.supplier?.company_name}</p>
-                          <p className="text-[13px] text-[#6B7280] flex items-center gap-1">
+                          <p className="text-[14px] font-semibold text-foreground truncate">{request.supplier?.company_name}</p>
+                          <p className="text-[13px] text-muted-foreground flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
                             Sent {format(new Date(request.requested_at), 'MMM d, yyyy')}
                           </p>
@@ -748,8 +782,8 @@ const SupplierDiscovery = () => {
           {totalPendingCount === 0 && (
             <div className={reviewEmptyStateContainerClass}>
               <Check className="w-12 h-12 mx-auto mb-4 text-emerald-500/60" />
-              <h3 className="font-medium text-[#111827] mb-1">All caught up!</h3>
-              <p className="text-sm text-[#6B7280]">
+              <h3 className="font-medium text-foreground mb-1">All caught up!</h3>
+              <p className="text-sm text-muted-foreground">
                 No pending connection requests at this time
               </p>
             </div>
@@ -758,6 +792,16 @@ const SupplierDiscovery = () => {
       </Tabs>
 
       {/* Modals */}
+      <SupplierComplianceExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        suppliers={suppliers.map((s: any) => ({
+          id: s.id, company_name: s.company_name, industry: s.industry, company_logo_url: s.company_logo_url,
+          complianceScore: 0, totalRequests: 0, approvedRequests: 0, pendingRequests: 0, rejectedRequests: 0,
+        }))}
+        onExport={(selectedIds) => handleExportSupplierReports(selectedIds)}
+      />
+
       {showInviteModal && buyerProfile && user && (
         <InviteSupplierModal
           buyerId={buyerProfile.id}
@@ -776,6 +820,7 @@ const SupplierDiscovery = () => {
         allIndustries={VALID_INDUSTRIES}
         connectionStatus={selectedSupplier ? getConnectionStatus(selectedSupplier.id) : undefined}
         connectionDate={selectedSupplier ? getConnectionDate(selectedSupplier.id) : undefined}
+        onOpenCompliance={onOpenCompliance}
       />
 
       <ConnectionApprovalModal
@@ -793,7 +838,7 @@ const SupplierDiscovery = () => {
 };
 
 // Compact card for connected suppliers
-const CompactSupplierCard = ({ supplier, onView, onMessage }: { supplier: any; onView: () => void; onMessage: () => void }) => (
+const CompactSupplierCard = ({ supplier, onView, onMessage, onCompliance }: { supplier: any; onView: () => void; onMessage: () => void; onCompliance?: () => void }) => (
   <div className={`${reviewCardContainerClass} p-4 hover:shadow-md transition-shadow group`}>
     <div className="flex items-start gap-3">
       <CompanyLogo
@@ -802,7 +847,7 @@ const CompactSupplierCard = ({ supplier, onView, onMessage }: { supplier: any; o
         size="sm"
       />
       <div className="flex-1 min-w-0 cursor-pointer" onClick={onView}>
-        <h4 className="text-[14px] font-semibold text-[#111827] truncate group-hover:text-[#2563EB] transition-colors">
+        <h4 className="text-[14px] font-semibold text-foreground truncate group-hover:text-[#2563EB] transition-colors">
           {supplier.company_name}
         </h4>
         {supplier.industry && (
@@ -810,7 +855,7 @@ const CompactSupplierCard = ({ supplier, onView, onMessage }: { supplier: any; o
             {supplier.industry}
           </Badge>
         )}
-        <div className="mt-2 space-y-1 text-[13px] text-[#6B7280]">
+        <div className="mt-2 space-y-1 text-[13px] text-muted-foreground">
           {supplier.contact_email && (
             <div className="flex items-center gap-1.5 truncate">
               <Mail className="h-3 w-3 flex-shrink-0" />
@@ -826,6 +871,20 @@ const CompactSupplierCard = ({ supplier, onView, onMessage }: { supplier: any; o
         </div>
       </div>
       <div className="flex items-center gap-1 flex-shrink-0">
+        {onCompliance && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCompliance();
+            }}
+            title="Compliance workspace"
+          >
+            <ShieldCheck className="h-4 w-4 text-muted-foreground hover:text-[#2563EB]" />
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="icon"
@@ -836,7 +895,7 @@ const CompactSupplierCard = ({ supplier, onView, onMessage }: { supplier: any; o
           }}
           title="Send Message"
         >
-          <MessageSquare className="h-4 w-4 text-[#6B7280] hover:text-[#2563EB]" />
+          <MessageSquare className="h-4 w-4 text-muted-foreground hover:text-[#2563EB]" />
         </Button>
         <Button
           variant="ghost"
@@ -845,7 +904,7 @@ const CompactSupplierCard = ({ supplier, onView, onMessage }: { supplier: any; o
           onClick={onView}
           title="View Details"
         >
-          <Eye className="h-4 w-4 text-[#6B7280]" />
+          <Eye className="h-4 w-4 text-muted-foreground" />
         </Button>
       </div>
     </div>
@@ -873,7 +932,7 @@ const DiscoverSupplierCard = ({
           size="sm"
         />
         <div className="min-w-0">
-          <h4 className="text-[14px] font-semibold text-[#111827] truncate">{supplier.company_name}</h4>
+          <h4 className="text-[14px] font-semibold text-foreground truncate">{supplier.company_name}</h4>
           {supplier.industry && (
             <Badge variant="outline" className={`mt-1 text-[12px] px-2 py-0.5 rounded-full font-medium ${getIndustryBadgeClass(supplier.industry, VALID_INDUSTRIES)}`}>
               {supplier.industry}

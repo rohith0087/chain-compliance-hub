@@ -24,6 +24,7 @@ import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { SupplierItemFacilityView } from './SupplierItemFacilityView';
 import SupplierInsightsModal from '@/components/supplier/SupplierInsightsModal';
+import SupplierFrameworkCoverageCard from '@/components/buyer/SupplierFrameworkCoverageCard';
 import {
   STATUS_BADGE_CONFIG,
   getIndustryBadgeClass,
@@ -62,6 +63,7 @@ interface SupplierProfileModalProps {
   allIndustries: readonly string[];
   connectionStatus?: string | null;
   connectionDate?: string | null;
+  onOpenCompliance?: (supplierId: string, supplierName: string) => void;
 }
 
 // Reuses the same compliance-metric and risk-assessment calculation as
@@ -117,6 +119,7 @@ export function SupplierProfileModal({
   allIndustries,
   connectionStatus,
   connectionDate,
+  onOpenCompliance,
 }: SupplierProfileModalProps) {
   const [requests, setRequests] = useState<SupplierProfileRequest[]>([]);
   const [loading, setLoading] = useState(false);
@@ -188,11 +191,11 @@ export function SupplierProfileModal({
       <Dialog open={isOpen && !showFullInsights} onOpenChange={onClose}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto gap-0 rounded-[16px] p-0 [&>button]:hidden">
           {/* Header */}
-          <div className="flex items-start justify-between gap-3 border-b border-[#E5E7EB] bg-white px-5 py-4">
+          <div className="flex items-start justify-between gap-3 border-b border-border bg-card px-5 py-4">
             <div className="flex min-w-0 items-center gap-3">
               <CompanyLogo logoUrl={supplier.company_logo_url} companyName={supplier.company_name} size="md" />
               <div className="min-w-0">
-                <p className="truncate text-[18px] font-bold text-[#111827]">{supplier.company_name}</p>
+                <p className="truncate text-[18px] font-bold text-foreground">{supplier.company_name}</p>
                 <div className="mt-1 flex items-center gap-2">
                   {supplier.industry && (
                     <Badge variant="outline" className={`text-[12px] px-2 py-0.5 rounded-full font-medium ${getIndustryBadgeClass(supplier.industry, allIndustries)}`}>
@@ -207,7 +210,7 @@ export function SupplierProfileModal({
                 </div>
               </div>
             </div>
-            <Button size="icon" variant="ghost" className="h-[36px] w-[36px] rounded-[10px] text-[#6B7280] hover:bg-gray-100 flex-shrink-0" onClick={onClose}>
+            <Button size="icon" variant="ghost" className="h-[36px] w-[36px] rounded-[10px] text-muted-foreground hover:bg-muted flex-shrink-0" onClick={onClose}>
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -220,8 +223,8 @@ export function SupplierProfileModal({
                   <Target className="h-5 w-5 text-emerald-600" />
                 </div>
                 <div>
-                  <p className="text-[20px] font-bold text-[#111827] leading-none">{loading ? '—' : `${complianceScore}%`}</p>
-                  <p className="text-[12px] text-[#6B7280]">Compliance</p>
+                  <p className="text-[20px] font-bold text-foreground leading-none">{loading ? '—' : `${complianceScore}%`}</p>
+                  <p className="text-[12px] text-muted-foreground">Compliance</p>
                 </div>
               </div>
               <div className={reviewMetricCardClass}>
@@ -229,8 +232,8 @@ export function SupplierProfileModal({
                   <Package className="h-5 w-5 text-[#2563EB]" />
                 </div>
                 <div>
-                  <p className="text-[20px] font-bold text-[#111827] leading-none">{loading ? '—' : totalRequests}</p>
-                  <p className="text-[12px] text-[#6B7280]">Total Requests</p>
+                  <p className="text-[20px] font-bold text-foreground leading-none">{loading ? '—' : totalRequests}</p>
+                  <p className="text-[12px] text-muted-foreground">Total Requests</p>
                 </div>
               </div>
               <div className={reviewMetricCardClass}>
@@ -238,8 +241,8 @@ export function SupplierProfileModal({
                   <Clock className="h-5 w-5 text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-[20px] font-bold text-[#111827] leading-none">{loading ? '—' : pendingRequests}</p>
-                  <p className="text-[12px] text-[#6B7280]">Pending</p>
+                  <p className="text-[20px] font-bold text-foreground leading-none">{loading ? '—' : pendingRequests}</p>
+                  <p className="text-[12px] text-muted-foreground">Pending</p>
                 </div>
               </div>
               <div className={reviewMetricCardClass}>
@@ -247,8 +250,8 @@ export function SupplierProfileModal({
                   <AlertTriangle className="h-5 w-5 text-red-600" />
                 </div>
                 <div>
-                  <p className="text-[20px] font-bold text-[#111827] leading-none">{loading ? '—' : overdueCount}</p>
-                  <p className="text-[12px] text-[#6B7280]">Overdue</p>
+                  <p className="text-[20px] font-bold text-foreground leading-none">{loading ? '—' : overdueCount}</p>
+                  <p className="text-[12px] text-muted-foreground">Overdue</p>
                 </div>
               </div>
             </div>
@@ -261,19 +264,19 @@ export function SupplierProfileModal({
                     <Badge variant="outline" className={`text-[12px] px-2 py-0.5 rounded-full font-medium ${riskBadgeClass}`}>
                       {riskAssessment.level} Risk
                     </Badge>
-                    <Info className="h-3.5 w-3.5 text-[#9CA3AF]" />
+                    <Info className="h-3.5 w-3.5 text-muted-foreground/70" />
                   </div>
                 </HoverCardTrigger>
                 <HoverCardContent className="w-80 rounded-[12px]">
                   <div className="space-y-2">
-                    <h4 className="text-sm font-semibold text-[#111827]">Risk assessment details</h4>
-                    <p className="text-sm text-[#6B7280]">
-                      Risk level: <span className="font-medium text-[#111827]">{riskAssessment.level}</span> (Score: {riskAssessment.score}/100)
+                    <h4 className="text-sm font-semibold text-foreground">Risk assessment details</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Risk level: <span className="font-medium text-foreground">{riskAssessment.level}</span> (Score: {riskAssessment.score}/100)
                     </p>
                     <div className="space-y-1">
-                      <p className="text-xs font-medium text-[#374151]">Contributing factors:</p>
+                      <p className="text-xs font-medium text-foreground/80">Contributing factors:</p>
                       {riskAssessment.factors.map((factor) => (
-                        <p key={factor} className="text-xs text-[#6B7280]">• {factor}</p>
+                        <p key={factor} className="text-xs text-muted-foreground">• {factor}</p>
                       ))}
                     </div>
                   </div>
@@ -288,41 +291,41 @@ export function SupplierProfileModal({
               </div>
               <div className="px-4 pb-4 space-y-3">
                 <div className="flex items-center gap-3">
-                  <Mail className="w-4 h-4 text-[#9CA3AF] flex-shrink-0" />
-                  <span className="text-sm text-[#374151] truncate">{supplier.contact_email || 'Not provided'}</span>
+                  <Mail className="w-4 h-4 text-muted-foreground/70 flex-shrink-0" />
+                  <span className="text-sm text-foreground/80 truncate">{supplier.contact_email || 'Not provided'}</span>
                   {supplier.contact_email && (
                     <div className="flex items-center gap-1 ml-auto flex-shrink-0">
                       <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleCopyEmail} title="Copy email">
-                        <Copy className="h-3.5 w-3.5 text-[#6B7280]" />
+                        <Copy className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
                       <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleContact} title="Email supplier">
-                        <ExternalLink className="h-3.5 w-3.5 text-[#6B7280]" />
+                        <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
                     </div>
                   )}
                 </div>
                 {supplier.phone && (
                   <div className="flex items-center gap-3">
-                    <Phone className="w-4 h-4 text-[#9CA3AF] flex-shrink-0" />
-                    <span className="text-sm text-[#374151]">{supplier.phone}</span>
+                    <Phone className="w-4 h-4 text-muted-foreground/70 flex-shrink-0" />
+                    <span className="text-sm text-foreground/80">{supplier.phone}</span>
                   </div>
                 )}
                 {supplier.address && (
                   <div className="flex items-center gap-3">
-                    <MapPin className="w-4 h-4 text-[#9CA3AF] flex-shrink-0" />
-                    <span className="text-sm text-[#374151]">{supplier.address}</span>
+                    <MapPin className="w-4 h-4 text-muted-foreground/70 flex-shrink-0" />
+                    <span className="text-sm text-foreground/80">{supplier.address}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-3">
-                  <Calendar className="w-4 h-4 text-[#9CA3AF] flex-shrink-0" />
-                  <span className="text-sm text-[#374151]">
+                  <Calendar className="w-4 h-4 text-muted-foreground/70 flex-shrink-0" />
+                  <span className="text-sm text-foreground/80">
                     {connectionDate && !isNaN(new Date(connectionDate).getTime())
                       ? `Connected ${format(new Date(connectionDate), 'MMM d, yyyy')}`
                       : 'Connection date unavailable'}
                   </span>
                 </div>
                 {supplier.description && (
-                  <p className="text-sm text-[#6B7280] leading-relaxed pt-1">{supplier.description}</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed pt-1">{supplier.description}</p>
                 )}
               </div>
             </div>
@@ -338,17 +341,17 @@ export function SupplierProfileModal({
                     const statusConfig = STATUS_BADGE_CONFIG[request.status] || STATUS_BADGE_CONFIG.pending;
                     const StatusIcon = statusConfig.icon;
                     return (
-                      <div key={request.id} className="flex items-center gap-3 p-3 rounded-[16px] border border-[#E5E7EB]">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-[#F9FAFB] border border-[#F3F4F6]">
-                          <StatusIcon className="w-3.5 h-3.5 text-[#6B7280]" />
+                      <div key={request.id} className="flex items-center gap-3 p-3 rounded-[16px] border border-border">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-muted border border-border">
+                          <StatusIcon className="w-3.5 h-3.5 text-muted-foreground" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-[#111827] truncate">{request.title || request.document_type}</p>
+                          <p className="text-sm font-medium text-foreground truncate">{request.title || request.document_type}</p>
                         </div>
                         <Badge variant="outline" className={`text-[12px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${statusConfig.className}`}>
                           {statusConfig.label}
                         </Badge>
-                        <span className="text-xs text-[#6B7280] whitespace-nowrap flex-shrink-0">
+                        <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
                           {format(new Date(request.updated_at || request.created_at), 'MMM d')}
                         </span>
                       </div>
@@ -358,10 +361,17 @@ export function SupplierProfileModal({
               </div>
             )}
 
+            {/* Frameworks & compliance — computed coverage, same SSOT as the workspace */}
+            <SupplierFrameworkCoverageCard
+              buyerId={buyerId}
+              supplierId={supplier.id}
+              onOpenWorkspace={onOpenCompliance ? () => { onClose(); onOpenCompliance(supplier.id, supplier.company_name); } : undefined}
+            />
+
             {/* Item-Facility Matrix */}
             <div className={reviewCardContainerClass}>
               <div className="px-4 pt-4 pb-2 flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-[#6B7280]" />
+                <Building2 className="h-4 w-4 text-muted-foreground" />
                 <h3 className={reviewSectionHeaderClass}>Item-Facility Matrix</h3>
               </div>
               <div className="px-4 pb-4">
@@ -371,7 +381,7 @@ export function SupplierProfileModal({
 
             <Button
               variant="outline"
-              className="w-full rounded-[10px] border-[#E5E7EB]"
+              className="w-full rounded-[10px] border-border"
               onClick={() => setShowFullInsights(true)}
               disabled={totalRequests === 0}
             >

@@ -587,15 +587,15 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[1100px] h-[90vh] bg-[#F6F8FC] rounded-[20px] p-0 overflow-hidden border-0 shadow-2xl flex flex-col gap-0 backdrop-blur-sm">
+      <DialogContent className="max-w-[1100px] h-[90vh] bg-muted rounded-[20px] p-0 overflow-hidden border-0 shadow-2xl flex flex-col gap-0 backdrop-blur-sm">
         
         {/* Modal Header & Stepper */}
-        <div className="bg-white border-b border-[#E4E7EC] px-8 py-5 flex items-center justify-between sticky top-0 z-10 shrink-0">
+        <div className="bg-card border-b border-border px-8 py-5 flex items-center justify-between sticky top-0 z-10 shrink-0">
           <div>
-            <DialogTitle className="text-[22px] font-bold text-[#111827] mb-1">
+            <DialogTitle className="text-[22px] font-bold text-foreground mb-1">
               Create Document Request
             </DialogTitle>
-            <DialogDescription className="text-[#667085] text-[15px]">
+            <DialogDescription className="text-muted-foreground text-[15px]">
               {step === 1 ? 'Choose the compliance documents you want to request from suppliers.' : step === 2 ? 'Configure who should receive this request and set the request details.' : 'Review the request details before sending it to suppliers.'}
               {currentBranch && (
                 <span className="block mt-1">
@@ -608,18 +608,18 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
           {/* Stepper */}
           <div className="flex items-center gap-3 pr-8">
             <div className="flex items-center gap-2">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-bold ${step >= 1 ? 'bg-[#2F5BEA] text-white' : 'bg-[#F3F5F9] text-[#98A2B3]'}`}>1</div>
-              <span className={`text-[14px] font-semibold ${step >= 1 ? 'text-[#2F5BEA]' : 'text-[#98A2B3]'}`}>Select Documents</span>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-bold ${step >= 1 ? 'bg-primary text-white' : 'bg-muted text-muted-foreground/70'}`}>1</div>
+              <span className={`text-[14px] font-semibold ${step >= 1 ? 'text-primary' : 'text-muted-foreground/70'}`}>Select Documents</span>
             </div>
-            <div className="w-12 h-[1px] bg-[#E4E7EC]"></div>
+            <div className="w-12 h-[1px] bg-muted"></div>
             <div className="flex items-center gap-2">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-bold ${step >= 2 ? 'bg-[#2F5BEA] text-white' : 'bg-[#F3F5F9] text-[#98A2B3]'}`}>2</div>
-              <span className={`text-[14px] font-semibold ${step >= 2 ? 'text-[#2F5BEA]' : 'text-[#98A2B3]'}`}>Configure Request</span>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-bold ${step >= 2 ? 'bg-primary text-white' : 'bg-muted text-muted-foreground/70'}`}>2</div>
+              <span className={`text-[14px] font-semibold ${step >= 2 ? 'text-primary' : 'text-muted-foreground/70'}`}>Configure Request</span>
             </div>
-            <div className="w-12 h-[1px] bg-[#E4E7EC]"></div>
+            <div className="w-12 h-[1px] bg-muted"></div>
             <div className="flex items-center gap-2">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-bold ${step >= 3 ? 'bg-[#2F5BEA] text-white' : 'bg-[#F3F5F9] text-[#98A2B3]'}`}>3</div>
-              <span className={`text-[14px] font-semibold ${step >= 3 ? 'text-[#2F5BEA]' : 'text-[#98A2B3]'}`}>Review & Send</span>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-bold ${step >= 3 ? 'bg-primary text-white' : 'bg-muted text-muted-foreground/70'}`}>3</div>
+              <span className={`text-[14px] font-semibold ${step >= 3 ? 'text-primary' : 'text-muted-foreground/70'}`}>Review & Send</span>
             </div>
           </div>
         </div>
@@ -630,7 +630,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
           <div className="flex flex-col h-full space-y-6 overflow-hidden">
             {/* Entity Type Selection */}
             <div className="flex items-center gap-4 shrink-0">
-              <Label htmlFor="entity-type" className="font-bold text-[#111827] text-[14px]">
+              <Label htmlFor="entity-type" className="font-bold text-foreground text-[14px]">
                 {wsFlags.lockEntityType ? 'Engagement Type' : 'Entity Type'}
               </Label>
               <Select 
@@ -718,19 +718,19 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
 
         {/* Sticky Footer */}
         {step !== 4 && (
-        <div className="bg-white border-t border-[#E4E7EC] px-8 py-5 flex items-center justify-between sticky bottom-0 z-10 shrink-0">
-          <Button variant="outline" className="border-[#E4E7EC] text-[#111827] bg-white rounded-[10px] h-11 px-6 font-semibold shadow-sm" onClick={onClose}>
+        <div className="bg-card border-t border-border px-8 py-5 flex items-center justify-between sticky bottom-0 z-10 shrink-0">
+          <Button variant="outline" className="border-border text-foreground bg-card rounded-[10px] h-11 px-6 font-semibold shadow-sm" onClick={onClose}>
             Cancel
           </Button>
           <div className="flex items-center gap-3">
             {step > 1 && (
-              <Button variant="outline" className="border-[#E4E7EC] text-[#111827] bg-white rounded-[10px] h-11 px-6 font-semibold shadow-sm" onClick={() => setStep(step - 1)}>
+              <Button variant="outline" className="border-border text-foreground bg-card rounded-[10px] h-11 px-6 font-semibold shadow-sm" onClick={() => setStep(step - 1)}>
                 Back
               </Button>
             )}
             {step < 3 ? (
               <Button 
-                className="bg-[#2F5BEA] hover:bg-[#1D4ED8] text-white rounded-[10px] h-11 px-8 font-semibold shadow-sm transition-colors" 
+                className="cta-texture text-white rounded-[10px] h-11 px-8 font-semibold shadow-sm" 
                 onClick={() => setStep(step + 1)}
                 disabled={step === 1 && selectedDocuments.length === 0}
               >
@@ -738,7 +738,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
               </Button>
             ) : (
               <Button 
-                className="bg-[#2F5BEA] hover:bg-[#1D4ED8] text-white rounded-[10px] h-11 px-8 font-semibold shadow-sm transition-colors" 
+                className="cta-texture text-white rounded-[10px] h-11 px-8 font-semibold shadow-sm" 
                 onClick={() => handleCreateRequests(pendingSampleDocument)}
                 disabled={loading || selectedDocuments.length === 0 || formData.suppliers.length === 0}
               >

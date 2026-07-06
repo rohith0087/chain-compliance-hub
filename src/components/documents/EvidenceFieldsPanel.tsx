@@ -28,7 +28,7 @@ const ATTESTATION_LABEL: Record<string, string> = {
 };
 
 function confidenceClass(confidence: number | null): string {
-  if (confidence == null) return 'bg-slate-50 text-slate-600 border-slate-200';
+  if (confidence == null) return 'bg-muted text-muted-foreground border-border';
   if (confidence >= 0.9) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
   if (confidence >= 0.7) return 'bg-amber-50 text-amber-700 border-amber-200';
   return 'bg-red-50 text-red-700 border-red-200';
@@ -132,36 +132,36 @@ export default function EvidenceFieldsPanel({ documentId, onVisibilityChange }: 
 
   if (loading) {
     return (
-      <div className="flex w-[360px] flex-shrink-0 items-center justify-center border-l border-[#E5E7EB] bg-white">
-        <Loader2 className="h-5 w-5 animate-spin text-[#6B7280]" />
+      <div className="flex w-[360px] flex-shrink-0 items-center justify-center border-l border-border bg-card">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
   if (!link) {
     if (!pending) return null;
     return (
-      <div className="w-[360px] flex-shrink-0 overflow-y-auto border-l border-[#E5E7EB] bg-white p-4">
-        <p className="text-sm text-[#6B7280]">Extraction in progress…</p>
+      <div className="w-[360px] flex-shrink-0 overflow-y-auto border-l border-border bg-card p-4">
+        <p className="text-sm text-muted-foreground">Extraction in progress…</p>
       </div>
     );
   }
 
   return (
-    <div className="w-[360px] flex-shrink-0 overflow-y-auto border-l border-[#E5E7EB] bg-white">
-      <div className="flex items-center gap-2 border-b border-[#E5E7EB] p-4">
+    <div className="w-[360px] flex-shrink-0 overflow-y-auto border-l border-border bg-card">
+      <div className="flex items-center gap-2 border-b border-border p-4">
         <Sparkles className="h-4 w-4 text-violet-600" />
-        <p className="text-[15px] font-bold text-[#111827]">Extracted Evidence</p>
+        <p className="text-[15px] font-bold text-foreground">Extracted Evidence</p>
       </div>
       <div className="space-y-4 p-4">
         {latestAttestation ? (
-          <div className="rounded-[10px] border border-[#E5E7EB] bg-gray-50/50 p-3">
-            <p className="text-sm font-semibold text-[#111827]">{ATTESTATION_LABEL[latestAttestation.attestation_type] || latestAttestation.attestation_type}</p>
-            {latestAttestation.notes && <p className="mt-1 text-xs text-[#6B7280]">{latestAttestation.notes}</p>}
+          <div className="rounded-[10px] border border-border bg-muted/50 p-3">
+            <p className="text-sm font-semibold text-foreground">{ATTESTATION_LABEL[latestAttestation.attestation_type] || latestAttestation.attestation_type}</p>
+            {latestAttestation.notes && <p className="mt-1 text-xs text-muted-foreground">{latestAttestation.notes}</p>}
           </div>
         ) : null}
 
         {fields.length === 0 ? (
-          <p className="text-sm text-[#6B7280]">No structured fields were extracted.</p>
+          <p className="text-sm text-muted-foreground">No structured fields were extracted.</p>
         ) : (
           fields.map((field) => {
             const value = edits[field.field_name] ?? String(field.normalized_value ?? field.raw_value ?? '');
@@ -176,16 +176,16 @@ export default function EvidenceFieldsPanel({ documentId, onVisibilityChange }: 
                   )}
                 </div>
                 {latestAttestation ? (
-                  <p className="text-sm text-[#374151]">{value || '—'}</p>
+                  <p className="text-sm text-foreground/80">{value || '—'}</p>
                 ) : (
                   <Input
-                    className="h-9 rounded-[10px] border-[#E5E7EB] text-sm"
+                    className="h-9 rounded-[10px] border-border text-sm"
                     value={value}
                     onChange={(event) => setEdits((current) => ({ ...current, [field.field_name]: event.target.value }))}
                   />
                 )}
                 {(field.source_page || field.source_quote) && (
-                  <p className="text-xs text-[#6B7280]">{field.source_page ? `Page ${field.source_page}` : ''}{field.source_quote ? ` — "${field.source_quote}"` : ''}</p>
+                  <p className="text-xs text-muted-foreground">{field.source_page ? `Page ${field.source_page}` : ''}{field.source_quote ? ` — "${field.source_quote}"` : ''}</p>
                 )}
               </div>
             );

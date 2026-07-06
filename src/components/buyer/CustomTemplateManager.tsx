@@ -48,7 +48,7 @@ interface TemplateStatusConfig {
 // (STATUS_BADGE_CONFIG), so it gets its own small, page-local config.
 const TEMPLATE_STATUS_CONFIG: Record<'active' | 'inactive' | 'expired', TemplateStatusConfig> = {
   active: { label: 'Active', icon: CheckCircle, className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  inactive: { label: 'Inactive', icon: Ban, className: 'bg-slate-50 text-slate-600 border-slate-200' },
+  inactive: { label: 'Inactive', icon: Ban, className: 'bg-muted text-muted-foreground border-border' },
   expired: { label: 'Expired', icon: AlertTriangle, className: 'bg-red-50 text-red-700 border-red-200' },
 };
 
@@ -280,10 +280,10 @@ export const CustomTemplateManager = () => {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+        <div className="h-8 bg-muted rounded animate-pulse"></div>
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-[88px] bg-gray-100 rounded-[16px] animate-pulse"></div>
+            <div key={i} className="h-[88px] bg-muted rounded-[16px] animate-pulse"></div>
           ))}
         </div>
       </div>
@@ -307,7 +307,7 @@ export const CustomTemplateManager = () => {
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex-1 relative min-w-[220px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9CA3AF]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
           <Input
             placeholder="Search templates..."
             value={searchTerm}
@@ -331,11 +331,11 @@ export const CustomTemplateManager = () => {
 
       {filteredTemplates.length === 0 ? (
         <div className={reviewEmptyStateContainerClass}>
-          <FileText className="mx-auto h-12 w-12 text-[#9CA3AF] mb-4" />
-          <h3 className="text-lg font-medium text-[#111827] mb-2">
+          <FileText className="mx-auto h-12 w-12 text-muted-foreground/70 mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">
             {searchTerm || selectedCategory !== 'all' ? 'No templates found' : 'No templates yet'}
           </h3>
-          <p className="text-[#6B7280] mb-4">
+          <p className="text-muted-foreground mb-4">
             {searchTerm || selectedCategory !== 'all'
               ? 'Try adjusting your search criteria'
               : 'Upload your first custom template to get started'}
@@ -351,7 +351,7 @@ export const CustomTemplateManager = () => {
         <div className={reviewCardContainerClass}>
           <Table>
             <TableHeader>
-              <TableRow className="h-[56px] bg-white border-b border-[#E5E7EB] hover:bg-white">
+              <TableRow className="h-[56px] bg-card border-b border-border hover:bg-card">
                 <TableHead className={`px-3 ${reviewSectionHeaderClass}`}>Template</TableHead>
                 <TableHead className={`px-3 ${reviewSectionHeaderClass}`}>Category</TableHead>
                 <TableHead className={`px-3 ${reviewSectionHeaderClass}`}>Document Type</TableHead>
@@ -366,16 +366,16 @@ export const CustomTemplateManager = () => {
                 const status = getTemplateStatus(template);
                 const StatusIcon = status.icon;
                 return (
-                  <TableRow key={template.id} className="h-[88px] border-b border-[#EEF2F7] hover:bg-gray-50/50">
+                  <TableRow key={template.id} className="h-[88px] border-b border-border hover:bg-muted/50">
                     <TableCell className="px-3 py-3">
                       <div className="flex items-start gap-3">
                         <div className="w-[40px] h-[40px] rounded-[10px] bg-[#EFF6FF] flex items-center justify-center flex-shrink-0">
                           <FileText className="w-5 h-5 text-[#2563EB]" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[14px] font-semibold text-[#111827] truncate" title={template.template_name}>{template.template_name}</p>
+                          <p className="text-[14px] font-semibold text-foreground truncate" title={template.template_name}>{template.template_name}</p>
                           {template.description && (
-                            <p className="text-[13px] text-[#6B7280] truncate" title={template.description}>{template.description}</p>
+                            <p className="text-[13px] text-muted-foreground truncate" title={template.description}>{template.description}</p>
                           )}
                         </div>
                       </div>
@@ -385,18 +385,18 @@ export const CustomTemplateManager = () => {
                         {template.category}
                       </Badge>
                     </TableCell>
-                    <TableCell className="px-3 py-3 text-[13px] text-[#4B5563] truncate">{template.document_type}</TableCell>
+                    <TableCell className="px-3 py-3 text-[13px] text-muted-foreground truncate">{template.document_type}</TableCell>
                     <TableCell className="px-3 py-3">
                       <Badge variant="outline" className={`text-[12px] px-2 py-0.5 rounded-full font-medium border flex items-center justify-center w-fit ${status.className}`}>
                         <StatusIcon className="w-3 h-3 mr-1" />{status.label}
                       </Badge>
                     </TableCell>
-                    <TableCell className="px-3 py-3 text-[13px] text-[#4B5563]">
+                    <TableCell className="px-3 py-3 text-[13px] text-muted-foreground">
                       {formatFileSize(template.file_size)} · Used {template.usage_count}x
                     </TableCell>
-                    <TableCell className="px-3 py-3 text-[13px] text-[#4B5563]">
+                    <TableCell className="px-3 py-3 text-[13px] text-muted-foreground">
                       <div className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-[#9CA3AF] flex-shrink-0" />
+                        <Calendar className="w-3.5 h-3.5 text-muted-foreground/70 flex-shrink-0" />
                         {new Date(template.created_at).toLocaleDateString()}
                       </div>
                     </TableCell>

@@ -25,7 +25,7 @@ const RegionSelector = () => {
         <DialogTrigger asChild>
           <Button 
             variant="outline" 
-            className="bg-white shadow-lg hover:shadow-xl border-2 border-blue-200 hover:border-blue-300"
+            className="bg-card shadow-lg hover:shadow-xl border-2 border-blue-200 hover:border-blue-300"
           >
             <Globe className="w-4 h-4 mr-2" />
             {currentRegionData?.flag} {t(`regionSelector.regions.${currentRegion.replace('-', '')}`)}
@@ -42,7 +42,7 @@ const RegionSelector = () => {
                 className={`cursor-pointer transition-all hover:shadow-md ${
                   currentRegion === region.code 
                     ? 'ring-2 ring-blue-500 bg-blue-50' 
-                    : 'hover:bg-gray-50'
+                    : 'hover:bg-muted'
                 }`}
                 onClick={() => handleRegionSelect(region.code)}
               >
@@ -52,7 +52,7 @@ const RegionSelector = () => {
                       <div className="text-2xl">{region.flag}</div>
                       <div>
                         <p className="font-medium">{t(`regionSelector.regions.${region.code.replace('-', '')}`)}</p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-muted-foreground">
                           {region.languages.map(lang => 
                             lang === 'en' ? 'English' : 'Español'
                           ).join(', ')}

@@ -142,8 +142,8 @@ export const SupplierSimulationDashboard = () => {
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         {/* Sidebar - Matches real SupplierSidebarLayout */}
-        <Sidebar className="border-r bg-white/80 backdrop-blur-sm">
-          <SidebarHeader className="border-b border-gray-200/50 px-3 py-4 bg-white/50">
+        <Sidebar className="border-r bg-card/80 backdrop-blur-sm">
+          <SidebarHeader className="border-b border-border/50 px-3 py-4 bg-card/50">
             <div className="flex items-center gap-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-600 overflow-hidden">
                 <Shield className="h-4 w-4 text-white" />
@@ -214,7 +214,7 @@ export const SupplierSimulationDashboard = () => {
             </SidebarGroup>
           </SidebarContent>
 
-          <SidebarFooter className="border-t border-gray-200/50 p-3 bg-white/50">
+          <SidebarFooter className="border-t border-border/50 p-3 bg-card/50">
             <div className="flex items-center gap-3">
               <Avatar className="h-6 w-6">
                 <AvatarFallback>D</AvatarFallback>
@@ -234,7 +234,7 @@ export const SupplierSimulationDashboard = () => {
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
           {/* Top Header */}
-          <header className="h-14 border-b border-gray-200/50 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 sticky top-0 z-50">
+          <header className="h-14 border-b border-border/50 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 sticky top-0 z-50">
             <div className="flex h-full items-center justify-between px-4">
               <div className="flex items-center gap-4">
                 <SidebarTrigger className="-ml-1" />

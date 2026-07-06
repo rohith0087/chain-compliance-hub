@@ -253,7 +253,7 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
               Auto-approve buyer connection requests
             </Label>
           </div>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             When enabled, buyers can connect with you instantly without requiring approval.
           </p>
 

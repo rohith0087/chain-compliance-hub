@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, CheckCircle2, ExternalLink, FileQuestion, Loader2, ShieldCheck, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ChevronDown, ExternalLink, FileQuestion, ListChecks, Loader2, ShieldCheck, SlidersHorizontal, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { reviewCardContainerClass } from '@/components/documents/buyerReviewDesignSystem';
 import type {
   RequirementEvaluationResponseV1,
   RequirementEvaluationResultV1,
@@ -29,7 +30,7 @@ type BooleanChoice = 'unknown' | 'yes' | 'no';
 
 const outcomeConfig = {
   applies: { label: 'Applies', icon: CheckCircle2, className: 'border-emerald-200 bg-emerald-50 text-emerald-800' },
-  does_not_apply: { label: 'Does not apply', icon: XCircle, className: 'border-slate-200 bg-slate-50 text-slate-700' },
+  does_not_apply: { label: 'Does not apply', icon: XCircle, className: 'border-border bg-muted text-foreground/80' },
   indeterminate: { label: 'Needs information', icon: FileQuestion, className: 'border-amber-200 bg-amber-50 text-amber-800' },
 } as const;
 
@@ -120,6 +121,7 @@ export default function RequirementEngineView({ buyerId, onNavigateToDocuments }
   const [evaluating, setEvaluating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<RequirementEvaluationResponseV1 | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -220,49 +222,81 @@ export default function RequirementEngineView({ buyerId, onNavigateToDocuments }
     setEvaluating(false);
   };
 
+  const totalResults = response?.results.length ?? 0;
+
   return (
     <div className="h-[calc(100vh-80px)] overflow-y-auto p-6">
-      <div className="mx-auto max-w-6xl space-y-6">
+      <div className="mx-auto max-w-6xl space-y-5">
         <div>
           <div className="flex items-center gap-2"><ShieldCheck className="h-6 w-6 text-primary" /><h1 className="text-2xl font-semibold">Requirement Engine</h1></div>
-          <p className="mt-1 text-sm text-muted-foreground">Deterministic, versioned applicability results. Draft regulatory content is excluded until human review and publication.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            See which framework requirements apply to a supplier, facility, or product — deterministic and versioned.
+            <span className="text-muted-foreground/70"> Read-only: this evaluates applicability, it doesn’t create requests.</span>
+          </p>
         </div>
 
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Development preview</AlertTitle>
-          <AlertDescription>Existing onboarding and document-request workflows remain authoritative. This view does not create or change requests.</AlertDescription>
-        </Alert>
+        {/* Compact evaluation bar — the primary action, not a wall of inputs */}
+        <div className={reviewCardContainerClass}>
+          <div className="grid gap-3 p-4 md:grid-cols-4">
+            <div className="space-y-1.5"><Label className="text-xs">Subject type</Label><Select value={subjectType} onValueChange={(value) => setSubjectType(value as SubjectType)}><SelectTrigger className="rounded-[10px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="supplier">Supplier</SelectItem><SelectItem value="facility">Facility</SelectItem><SelectItem value="product">Product</SelectItem></SelectContent></Select></div>
+            <div className="space-y-1.5"><Label className="text-xs">Subject</Label><Select value={subjectId} onValueChange={setSubjectId} disabled={loadingSubjects}><SelectTrigger className="rounded-[10px]"><SelectValue placeholder={loadingSubjects ? 'Loading…' : 'Select subject'} /></SelectTrigger><SelectContent>{subjects[subjectType].map((subject) => <SelectItem key={subject.id} value={subject.id}>{subject.label}</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-1.5"><Label className="text-xs">Evaluation date</Label><Input type="date" className="rounded-[10px]" value={effectiveAt} onChange={(event) => setEffectiveAt(event.target.value)} /></div>
+            <div className="flex items-end"><Button className="w-full rounded-[10px]" onClick={evaluate} disabled={evaluating || loadingSubjects || !subjectId}>{evaluating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ListChecks className="mr-2 h-4 w-4" />}Evaluate</Button></div>
+          </div>
 
-        <Card>
-          <CardHeader><CardTitle>Evaluate applicability</CardTitle><CardDescription>Select a supplier, facility, or product and provide authoritative facts.</CardDescription></CardHeader>
-          <CardContent className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            <div className="space-y-2"><Label>Subject type</Label><Select value={subjectType} onValueChange={(value) => setSubjectType(value as SubjectType)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="supplier">Supplier</SelectItem><SelectItem value="facility">Facility</SelectItem><SelectItem value="product">Product</SelectItem></SelectContent></Select></div>
-            <div className="space-y-2"><Label>Subject</Label><Select value={subjectId} onValueChange={setSubjectId} disabled={loadingSubjects}><SelectTrigger><SelectValue placeholder={loadingSubjects ? 'Loading…' : 'Select subject'} /></SelectTrigger><SelectContent>{subjects[subjectType].map((subject) => <SelectItem key={subject.id} value={subject.id}>{subject.label}</SelectItem>)}</SelectContent></Select></div>
-            <div className="space-y-2"><Label>Evaluation date</Label><Input type="date" value={effectiveAt} onChange={(event) => setEffectiveAt(event.target.value)} /></div>
-            <div className="space-y-2"><Label>Destination country</Label><Input value={destinationCountry} maxLength={2} onChange={(event) => setDestinationCountry(event.target.value.toUpperCase())} /></div>
-            <div className="space-y-2"><Label>Children's product classification</Label><Select value={isChildrenProduct} onValueChange={(value) => setIsChildrenProduct(value as BooleanChoice)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unknown">Unknown</SelectItem><SelectItem value="yes">Yes</SelectItem><SelectItem value="no">No</SelectItem></SelectContent></Select></div>
-            <div className="space-y-2"><Label>Maximum intended user age</Label><Input type="number" min={0} max={120} value={intendedUserAgeMax} onChange={(event) => setIntendedUserAgeMax(event.target.value)} placeholder="Unknown" /></div>
-            <div className="space-y-2"><Label>Consumer product under CPSC</Label><Select value={isCpscProduct} onValueChange={(value) => setIsCpscProduct(value as BooleanChoice)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unknown">Unknown</SelectItem><SelectItem value="yes">Yes</SelectItem><SelectItem value="no">No</SelectItem></SelectContent></Select></div>
-            <div className="space-y-2"><Label>Subject to a CPSC rule</Label><Select value={isSubjectToRule} onValueChange={(value) => setIsSubjectToRule(value as BooleanChoice)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unknown">Unknown</SelectItem><SelectItem value="yes">Yes</SelectItem><SelectItem value="no">No</SelectItem></SelectContent></Select></div>
-            <div className="space-y-2"><Label>Applicable rule identifiers</Label><Input value={applicableRuleIds} onChange={(event) => setApplicableRuleIds(event.target.value)} placeholder="16 CFR 1110, comma-separated" /></div>
-            <div className="space-y-2"><Label>Domestic or imported</Label><Select value={importStatus} onValueChange={(value) => setImportStatus(value as typeof importStatus)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unknown">Unknown</SelectItem><SelectItem value="domestic">Domestic</SelectItem><SelectItem value="imported">Imported</SelectItem></SelectContent></Select></div>
-            <div className="space-y-2"><Label>Import entry mode</Label><Select value={entryMode} onValueChange={(value) => setEntryMode(value as typeof entryMode)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unknown">Unknown</SelectItem><SelectItem value="general">General entry</SelectItem><SelectItem value="foreign_trade_zone">Foreign Trade Zone</SelectItem></SelectContent></Select></div>
-            <div className="flex items-end"><Button className="w-full" onClick={evaluate} disabled={evaluating || loadingSubjects}>{evaluating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Evaluate requirements</Button></div>
-          </CardContent>
-        </Card>
+          {/* CPSC/product facts tucked away — only relevant for consumer-product frameworks */}
+          <div className="border-t border-border">
+            <button className="flex w-full items-center gap-2 px-4 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground" onClick={() => setShowAdvanced((v) => !v)}>
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              Product &amp; import facts (optional — refines consumer-product / CPSC rules)
+              <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+            </button>
+            {showAdvanced && (
+              <div className="grid gap-4 border-t border-border p-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="space-y-2"><Label>Destination country</Label><Input value={destinationCountry} maxLength={2} onChange={(event) => setDestinationCountry(event.target.value.toUpperCase())} /></div>
+                <div className="space-y-2"><Label>Children's product classification</Label><Select value={isChildrenProduct} onValueChange={(value) => setIsChildrenProduct(value as BooleanChoice)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unknown">Unknown</SelectItem><SelectItem value="yes">Yes</SelectItem><SelectItem value="no">No</SelectItem></SelectContent></Select></div>
+                <div className="space-y-2"><Label>Maximum intended user age</Label><Input type="number" min={0} max={120} value={intendedUserAgeMax} onChange={(event) => setIntendedUserAgeMax(event.target.value)} placeholder="Unknown" /></div>
+                <div className="space-y-2"><Label>Consumer product under CPSC</Label><Select value={isCpscProduct} onValueChange={(value) => setIsCpscProduct(value as BooleanChoice)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unknown">Unknown</SelectItem><SelectItem value="yes">Yes</SelectItem><SelectItem value="no">No</SelectItem></SelectContent></Select></div>
+                <div className="space-y-2"><Label>Subject to a CPSC rule</Label><Select value={isSubjectToRule} onValueChange={(value) => setIsSubjectToRule(value as BooleanChoice)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unknown">Unknown</SelectItem><SelectItem value="yes">Yes</SelectItem><SelectItem value="no">No</SelectItem></SelectContent></Select></div>
+                <div className="space-y-2"><Label>Applicable rule identifiers</Label><Input value={applicableRuleIds} onChange={(event) => setApplicableRuleIds(event.target.value)} placeholder="16 CFR 1110, comma-separated" /></div>
+                <div className="space-y-2"><Label>Domestic or imported</Label><Select value={importStatus} onValueChange={(value) => setImportStatus(value as typeof importStatus)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unknown">Unknown</SelectItem><SelectItem value="domestic">Domestic</SelectItem><SelectItem value="imported">Imported</SelectItem></SelectContent></Select></div>
+                <div className="space-y-2"><Label>Import entry mode</Label><Select value={entryMode} onValueChange={(value) => setEntryMode(value as typeof entryMode)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unknown">Unknown</SelectItem><SelectItem value="general">General entry</SelectItem><SelectItem value="foreign_trade_zone">Foreign Trade Zone</SelectItem></SelectContent></Select></div>
+              </div>
+            )}
+          </div>
+        </div>
 
         {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>Evaluation unavailable</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
 
+        {/* Results — the finished, prominent part */}
+        {!response && !error && (
+          <div className="rounded-lg border border-dashed p-12 text-center">
+            <ListChecks className="mx-auto mb-3 h-8 w-8 text-muted-foreground/60" />
+            <p className="font-medium text-foreground">Pick a subject and evaluate</p>
+            <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+              You’ll get every framework requirement grouped by whether it <span className="font-medium text-emerald-600">applies</span>,
+              is <span className="font-medium text-amber-600">indeterminate</span> (needs more facts), or <span className="font-medium">doesn’t apply</span> — each with the reasoning.
+            </p>
+          </div>
+        )}
+
         {response && (
-          <div className="space-y-8">
+          <div className="space-y-6">
+            {/* Summary chips */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium">{totalResults} requirement{totalResults !== 1 ? 's' : ''} evaluated:</span>
+              <Badge className="border-emerald-200 bg-emerald-50 text-emerald-800">{groupedResults.applies.length} apply</Badge>
+              <Badge className="border-amber-200 bg-amber-50 text-amber-800">{groupedResults.indeterminate.length} indeterminate</Badge>
+              <Badge variant="outline">{groupedResults.does_not_apply.length} don’t apply</Badge>
+            </div>
+
             {(['applies', 'indeterminate', 'does_not_apply'] as const).map((outcome) => (
-              <section key={outcome} className="space-y-3">
-                <h2 className="text-lg font-semibold">{outcomeConfig[outcome].label} ({groupedResults[outcome].length})</h2>
-                {groupedResults[outcome].length === 0
-                  ? <p className="text-sm text-muted-foreground">No requirements in this category.</p>
-                  : <div className="grid gap-4 lg:grid-cols-2">{groupedResults[outcome].map((result) => <RequirementCard key={`${result.framework_code}-${result.requirement_key}-${result.framework_version}`} result={result} onNavigateToDocuments={onNavigateToDocuments} />)}</div>}
-              </section>
+              groupedResults[outcome].length > 0 && (
+                <section key={outcome} className="space-y-3">
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{outcomeConfig[outcome].label} ({groupedResults[outcome].length})</h2>
+                  <div className="grid gap-4 lg:grid-cols-2">{groupedResults[outcome].map((result) => <RequirementCard key={`${result.framework_code}-${result.requirement_key}-${result.framework_version}`} result={result} onNavigateToDocuments={onNavigateToDocuments} />)}</div>
+                </section>
+              )
             ))}
             <p className="text-xs text-muted-foreground">Evaluation {response.evaluation_id} · evaluator {response.evaluator_version} · correlation {response.correlation_id}</p>
           </div>

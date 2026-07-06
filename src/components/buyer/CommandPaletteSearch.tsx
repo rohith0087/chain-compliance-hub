@@ -334,7 +334,7 @@ export function CommandPaletteSearch({
       case 'under_review':
         return 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/60 dark:text-blue-300 dark:border-blue-700';
       default:
-        return 'bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800 dark:text-gray-300';
+        return 'bg-muted text-muted-foreground border-border dark:bg-gray-800 dark:text-muted-foreground/70';
     }
   };
 

@@ -80,8 +80,10 @@ async function buildStatements(admin: SupabaseAdmin, buyerId: string, subjectTyp
     const claimIds: string[] = row.evidence_claim_ids || [];
     return {
       decision_result_id: row.decision_result_id,
-      requirement_version_id: row.requirement_version_id,
-      legacy_mapping_id: row.legacy_mapping_id,
+      // compliance_current_status no longer projects these columns; the
+      // dossier contract requires string|null, so undefined must coalesce.
+      requirement_version_id: row.requirement_version_id ?? null,
+      legacy_mapping_id: row.legacy_mapping_id ?? null,
       framework_code: row.framework_code,
       framework_version: row.framework_version,
       requirement_key: row.requirement_key,

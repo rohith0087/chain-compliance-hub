@@ -57,19 +57,30 @@ const ResponseActionButtons: React.FC<ResponseActionButtonsProps> = ({
   };
 
   const handleCopy = async () => {
+    // Copy the on-screen rendered node so tables/bold/lists survive a paste into
+    // email or docs (rich text/html), with a clean plain-text fallback.
+    const rendered = document.querySelector(`[data-copy-id="${message.id}"]`) as HTMLElement | null;
+    const html = rendered?.innerHTML?.trim();
+    const plain = (rendered?.innerText?.trim()) || extractPlainText(message);
     try {
-      const plainText = extractPlainText(message);
-      await navigator.clipboard.writeText(plainText);
-      toast({
-        title: "Copied to clipboard",
-        description: "Response copied successfully",
-      });
+      if (html && typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/html": new Blob([html], { type: "text/html" }),
+            "text/plain": new Blob([plain], { type: "text/plain" }),
+          }),
+        ]);
+      } else {
+        await navigator.clipboard.writeText(plain);
+      }
+      toast({ title: "Copied to clipboard", description: "Formatting preserved" });
     } catch (error) {
-      toast({
-        title: "Failed to copy",
-        description: "Could not copy response to clipboard",
-        variant: "destructive",
-      });
+      try {
+        await navigator.clipboard.writeText(plain);
+        toast({ title: "Copied to clipboard", description: "Response copied" });
+      } catch {
+        toast({ title: "Failed to copy", description: "Could not copy response to clipboard", variant: "destructive" });
+      }
     }
   };
 

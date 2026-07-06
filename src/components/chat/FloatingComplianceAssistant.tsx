@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
+import MarkdownMessage from '@/components/chat/MarkdownMessage';
+import ThinkingIndicator from '@/components/chat/ThinkingIndicator';
 import { ExternalLink, FileSearch, FileText, ListChecks, Mail, Maximize2, Send, ShieldAlert, Sparkles, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -461,7 +462,7 @@ export function FloatingComplianceAssistant() {
                     ) : message.role === 'assistant' ? (
                       <>
                         <div className="compliance-assistant-markdown">
-                          <ReactMarkdown>{normalizeAssistantText(message.content)}</ReactMarkdown>
+                          <MarkdownMessage>{normalizeAssistantText(message.content)}</MarkdownMessage>
                         </div>
                         {message.documents && message.documents.length > 0 && (
                           <div className="compliance-assistant-doc-list">
@@ -493,8 +494,9 @@ export function FloatingComplianceAssistant() {
                   );
                 })}
                 {sending && (
-                  <div className="compliance-assistant-typing" aria-label="Working behind the scenes">
-                    <span /><span /><span />
+                  <div className="flex items-center gap-2" aria-label="Working behind the scenes">
+                    <span className="compliance-assistant-typing"><span /><span /><span /></span>
+                    <ThinkingIndicator className="text-[13px] text-muted-foreground" />
                   </div>
                 )}
               </div>

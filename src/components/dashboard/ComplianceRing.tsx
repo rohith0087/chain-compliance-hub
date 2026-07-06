@@ -20,13 +20,13 @@ export function ComplianceRing({ score, size = 140, strokeWidth = 10, label, sub
   const getColor = (score: number) => {
     if (score >= 80) return 'stroke-green-500';
     if (score >= 60) return 'stroke-amber-500';
-    return 'stroke-red-500';
+    return 'stroke-[hsl(var(--danger))]';
   };
 
   const getGlowColor = (score: number) => {
     if (score >= 80) return 'drop-shadow-[0_0_8px_rgba(34,197,94,0.5)]';
     if (score >= 60) return 'drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]';
-    return 'drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]';
+    return 'drop-shadow-[0_0_8px_rgba(244,123,116,0.5)]';
   };
 
   const ring = (

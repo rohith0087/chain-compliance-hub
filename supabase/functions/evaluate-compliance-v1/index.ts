@@ -16,7 +16,11 @@ import {
 import { deriveComplianceOutcome, type CoverageState } from '../_shared/compliance/outcome.ts';
 import { isGrantActive, matchesGrant, normalizeDocType, type EvidenceSharingGrant } from '../_shared/compliance/grants.ts';
 import { matchCanonicalEvidence, type CanonicalCoverageData, type CanonicalEvidenceMatch } from '../_shared/compliance/canonicalCoverage.ts';
-import { isAuthorizedCronRequest, isServiceRoleRequest } from '../_shared/systemAuth.ts';
+import {
+  applyMappingPolicy, findMappingForVersion, groupMappings, mappingKey, rejectedVersionIds,
+  type RequirementEvidenceMapping,
+} from '../_shared/compliance/mappingPolicy.ts';
+import { isInternalSystemRequest } from '../_shared/systemAuth.ts';
 
 type SupabaseAdmin = ReturnType<typeof createClient>;
 
@@ -166,7 +170,9 @@ Deno.serve(async (req) => {
       return jsonResponse(context, { error: 'Invalid request', details: parsed.error.flatten() }, 400);
     }
     const input = parsed.data;
-    const systemRequest = isServiceRoleRequest(req) || await isAuthorizedCronRequest(req, admin);
+    // Any trusted internal caller (the reevaluation processor, cron, or a
+    // service-role recovery call) is accepted through the one shared door.
+    const systemRequest = await isInternalSystemRequest(req, admin);
     let actorId: string;
     if (systemRequest) {
       const { data: owner, error: ownerError } = await admin.from('buyers').select('profile_id').eq('id',input.buyer_id).maybeSingle();
@@ -247,17 +253,41 @@ Deno.serve(async (req) => {
 
     const canonicalEnabled = await isBuyerFeatureEnabled(admin, input.buyer_id, 'canonical_evidence_v1');
     const [catalogResults, legacy, coverageData, canonicalCoverageData, reviewPolicy] = await Promise.all([
-      loadCatalogResults(admin, input.buyer_id, input.subject_type, input.effective_at, facts),
+      loadCatalogResults(admin, input.buyer_id, input.subject_type, input.effective_at, facts, subjectContext.supplierId),
       loadLegacyResults(admin, input.buyer_id, input.subject_type, subjectContext.supplierId),
       loadCoverageData(admin, input.buyer_id, subjectContext.supplierId),
       canonicalEnabled ? loadCanonicalCoverageData(admin,input.buyer_id,subjectContext.supplierId) : Promise.resolve(null),
-      canonicalEnabled ? admin.from('evidence_review_policies').select('default_minimum_validity_days,document_type_overrides').eq('buyer_id',input.buyer_id).maybeSingle() : Promise.resolve({data:null,error:null}),
+      canonicalEnabled ? admin.from('evidence_review_policies').select('default_minimum_validity_days,document_type_overrides,require_mapping_approval').eq('buyer_id',input.buyer_id).maybeSingle() : Promise.resolve({data:null,error:null}),
     ]);
     if (reviewPolicy.error) throw reviewPolicy.error;
     const canonicalMatchPolicy = {
       defaultMinimumValidityDays: reviewPolicy.data?.default_minimum_validity_days ?? 90,
       documentTypeOverrides: reviewPolicy.data?.document_type_overrides || {},
     };
+    const requireMappingApproval = reviewPolicy.data?.require_mapping_approval === true;
+
+    // Phase 3: human decisions on (requirement, evidence version) mappings.
+    // Rejected mappings exclude that evidence; approved mappings carry the
+    // reviewer into the compliance explanation; in strict mode canonical
+    // evidence without an approved mapping cannot make a requirement compliant.
+    const { data: mappingRows, error: mappingRowsError } = canonicalEnabled
+      ? await admin.from('requirement_evidence_mappings')
+        .select('id, framework_code, requirement_key, evidence_version_id, status, decided_by, decided_at')
+        .eq('buyer_id', input.buyer_id).eq('subject_type', input.subject_type).eq('subject_id', input.subject_id)
+      : { data: [], error: null };
+    if (mappingRowsError) throw mappingRowsError;
+    const mappingsByRequirement = groupMappings((mappingRows || []) as RequirementEvidenceMapping[]);
+    const approverIds = [...new Set((mappingRows || [])
+      .filter((row: RequirementEvidenceMapping) => row.status === 'approved' && row.decided_by)
+      .map((row: RequirementEvidenceMapping) => row.decided_by as string))];
+    const { data: approverProfiles, error: approverError } = approverIds.length
+      ? await admin.from('profiles').select('id, full_name').in('id', approverIds)
+      : { data: [], error: null };
+    if (approverError) throw approverError;
+    const approverNameById = new Map((approverProfiles || []).map((profile: { id: string; full_name: string | null }) => [profile.id, profile.full_name]));
+    const recordTypeById = new Map((canonicalCoverageData?.records || []).map((record) => [record.id, record.canonical_document_type]));
+    const docTypeByVersionId = new Map((canonicalCoverageData?.versions || []).map((version) => [version.id, recordTypeById.get(version.evidence_record_id) ?? null]));
+    const proposedMappingInserts: Array<Record<string, unknown>> = [];
     // Catalog and legacy requirements are independently deduplicated within
     // their own loaders, but a catalog requirement's stable_key can in
     // principle still collide with a legacy normalized key under the same
@@ -275,8 +305,9 @@ Deno.serve(async (req) => {
     const grantSourcedByRequirement = new Map<string, string[]>();
     const canonicalMatchesByRequirement = new Map<string, CanonicalEvidenceMatch[]>();
     const decisionResults: ComplianceDecisionResultV1[] = applicabilityResults.map((result) => {
+      const requirementMappings = mappingsByRequirement.get(mappingKey(result.framework_code, result.requirement_key));
       const canonical = canonicalCoverageData
-        ? matchCanonicalEvidence(result.required_evidence,canonicalCoverageData,input.subject_type,input.subject_id,input.effective_at,canonicalMatchPolicy)
+        ? matchCanonicalEvidence(result.required_evidence,canonicalCoverageData,input.subject_type,input.subject_id,input.effective_at,canonicalMatchPolicy,rejectedVersionIds(requirementMappings))
         : null;
       const primaryDocType = result.required_evidence[0]?.document_type;
       const legacyCoverage = primaryDocType
@@ -296,6 +327,40 @@ Deno.serve(async (req) => {
       if (useCanonical && canonical!.matches.length) canonicalMatchesByRequirement.set(result.requirement_key,canonical!.matches);
 
       const mapped = deriveComplianceOutcome(result.outcome, result.required_evidence.length > 0, coverage, input.effective_at);
+
+      // Queue machine-eligible matches without a mapping row as proposals for
+      // the human review queue, then apply the mapping-approval policy.
+      if (canonical) {
+        for (const match of canonical.matches) {
+          if (!findMappingForVersion(requirementMappings, match.evidenceVersionId)) {
+            proposedMappingInserts.push({
+              buyer_id: input.buyer_id,
+              supplier_id: subjectContext.supplierId,
+              subject_type: input.subject_type,
+              subject_id: input.subject_id,
+              framework_code: result.framework_code,
+              framework_version: result.framework_version,
+              requirement_key: result.requirement_key,
+              requirement_title: result.title,
+              evidence_version_id: match.evidenceVersionId,
+              evidence_document_type: docTypeByVersionId.get(match.evidenceVersionId) ?? null,
+              match_score: match.score,
+              match_reasons: match.reasons,
+            });
+          }
+        }
+      }
+      const usedMatch = useCanonical && canonical!.matches.length ? canonical!.matches[0] : null;
+      const usedMapping = usedMatch ? findMappingForVersion(requirementMappings, usedMatch.evidenceVersionId) : undefined;
+      const policyAdjusted = applyMappingPolicy(mapped, {
+        // Strict mode only gates compliance derived from canonical evidence;
+        // facts-only compliant outcomes have no mapping to approve.
+        requireMappingApproval: requireMappingApproval && Boolean(usedMatch),
+        usedMapping,
+        reviewerName: usedMapping?.decided_by ? approverNameById.get(usedMapping.decided_by) ?? null : null,
+        validUntil: usedMatch?.expiryDate ?? null,
+      });
+
       const sharedNote = grantSourcedGrantIds.length > 0
         ? ' This decision includes evidence shared by the supplier under an active sharing grant.'
         : '';
@@ -311,14 +376,22 @@ Deno.serve(async (req) => {
         requirement_key: result.requirement_key,
         title: result.title,
         applicability_outcome: result.outcome,
-        outcome: mapped.outcome,
-        explanation: `${result.explanation} ${mapped.explanation}${sharedNote}`,
+        outcome: policyAdjusted.outcome,
+        explanation: `${result.explanation} ${policyAdjusted.explanation}${sharedNote}`,
         evidence_claim_ids: claimIds,
         decision_version: DECISION_ENGINE_VERSION,
         effective_from: result.effective_from,
         effective_to: result.effective_to,
       };
     });
+
+    if (proposedMappingInserts.length) {
+      const { error: proposalError } = await admin.from('requirement_evidence_mappings').upsert(
+        proposedMappingInserts,
+        { onConflict: 'buyer_id,subject_type,subject_id,framework_code,requirement_key,evidence_version_id', ignoreDuplicates: true },
+      );
+      if (proposalError) throw proposalError;
+    }
 
     const { data: evaluationId, error: recordError } = await admin.rpc('record_compliance_decision_v1', {
       p_evaluation: {

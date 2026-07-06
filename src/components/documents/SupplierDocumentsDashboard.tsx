@@ -636,7 +636,7 @@ const SupplierDocumentsDashboard = () => {
                   <Filter className="w-4 h-4 mr-2" />
                   Filters
                   {activeFiltersCount > 0 && (
-                    <Badge variant="secondary" className="ml-2 bg-white text-green-600">
+                    <Badge variant="secondary" className="ml-2 bg-card text-green-600">
                       {activeFiltersCount}
                     </Badge>
                   )}
@@ -848,9 +848,9 @@ const SupplierDocumentsDashboard = () => {
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Documents Found</h3>
-                  <p className="text-gray-500">
+                  <FileText className="w-16 h-16 text-muted-foreground/70 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">No Documents Found</h3>
+                  <p className="text-muted-foreground">
                     {Object.values(filters).some(f => f !== '') 
                       ? "No documents match your current filters." 
                       : "You don't have any document requests yet."}

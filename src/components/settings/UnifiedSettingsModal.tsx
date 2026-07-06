@@ -45,25 +45,25 @@ export function UnifiedSettingsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[1100px] h-[85vh] p-0 gap-0 overflow-hidden bg-white flex flex-col border-none shadow-2xl rounded-2xl">
+      <DialogContent className="max-w-[1100px] h-[85vh] p-0 gap-0 overflow-hidden bg-card flex flex-col border-none shadow-2xl rounded-2xl">
 
         {/* Main Content Area */}
         <div className="flex flex-1 overflow-hidden h-full">
 
           {/* Sidebar */}
-          <div className="w-[280px] shrink-0 border-r border-slate-200 bg-[#FAFAFA] flex flex-col relative z-10">
+          <div className="w-[280px] shrink-0 border-r border-border bg-muted flex flex-col relative z-10">
             {/* Header / Search */}
             <div className="p-4 flex flex-col gap-4">
               <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
                 <Input
                   placeholder="Search settings..."
-                  className="pl-9 h-9 bg-white border-slate-200 shadow-sm rounded-lg focus-visible:ring-1 focus-visible:ring-slate-300 text-sm"
+                  className="pl-9 h-9 bg-card border-border shadow-sm rounded-lg focus-visible:ring-1 focus-visible:ring-slate-300 text-sm"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
-              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-1">
+              <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
                 Settings
               </div>
             </div>
@@ -79,8 +79,8 @@ export function UnifiedSettingsModal({
                     onClick={() => setActiveTab(item.id)}
                     className={`flex items-center gap-3 w-full px-3 py-2 text-sm rounded-lg transition-colors ${
                       isActive
-                        ? 'font-semibold text-slate-900 bg-slate-200/60'
-                        : 'font-medium text-slate-600 hover:bg-slate-200/40 hover:text-slate-900'
+                        ? 'font-semibold text-foreground bg-muted/60'
+                        : 'font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground'
                     }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -90,15 +90,15 @@ export function UnifiedSettingsModal({
               })}
             </nav>
 
-            <div className="p-4 border-t border-slate-200 bg-[#FAFAFA] space-y-2">
-              <div className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-600 cursor-not-allowed opacity-50">
+            <div className="p-4 border-t border-border bg-muted space-y-2">
+              <div className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-muted-foreground cursor-not-allowed opacity-50">
                 <Laptop className="w-4 h-4" /> Desktop App (Soon)
               </div>
             </div>
           </div>
 
           {/* Right Content Area */}
-          <div className="flex-1 flex flex-col h-full bg-white relative overflow-hidden">
+          <div className="flex-1 flex flex-col h-full bg-card relative overflow-hidden">
 
             <div className="flex-1 overflow-y-auto">
               <div className="max-w-3xl mx-auto p-10 pb-20">
@@ -119,8 +119,8 @@ export function UnifiedSettingsModal({
                 {activeTab === 'general' && (!companyId || !companyType) && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div>
-                      <h2 className="text-xl font-bold font-serif text-slate-900 mb-1">General</h2>
-                      <p className="text-sm text-slate-500">Company management requires an active company context.</p>
+                      <h2 className="text-xl font-bold font-serif text-foreground mb-1">General</h2>
+                      <p className="text-sm text-muted-foreground">Company management requires an active company context.</p>
                     </div>
                   </div>
                 )}
@@ -128,8 +128,8 @@ export function UnifiedSettingsModal({
                 {activeTab === 'account' && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div>
-                      <h2 className="text-xl font-bold font-serif text-slate-900 mb-1">Account</h2>
-                      <p className="text-sm text-slate-500">Manage your personal profile and preferences.</p>
+                      <h2 className="text-xl font-bold font-serif text-foreground mb-1">Account</h2>
+                      <p className="text-sm text-muted-foreground">Manage your personal profile and preferences.</p>
                     </div>
                     <AccountSettingsForm />
                   </div>
@@ -138,8 +138,8 @@ export function UnifiedSettingsModal({
                 {activeTab === 'security' && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div>
-                      <h2 className="text-xl font-bold font-serif text-slate-900 mb-1">Security</h2>
-                      <p className="text-sm text-slate-500">Update your password and secure your account.</p>
+                      <h2 className="text-xl font-bold font-serif text-foreground mb-1">Security</h2>
+                      <p className="text-sm text-muted-foreground">Update your password and secure your account.</p>
                     </div>
                     <PasswordChangeForm />
                   </div>
@@ -148,8 +148,8 @@ export function UnifiedSettingsModal({
                 {activeTab === 'notifications' && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div>
-                      <h2 className="text-xl font-bold font-serif text-slate-900 mb-1">Notifications</h2>
-                      <p className="text-sm text-slate-500">Choose what updates you want to receive and how.</p>
+                      <h2 className="text-xl font-bold font-serif text-foreground mb-1">Notifications</h2>
+                      <p className="text-sm text-muted-foreground">Choose what updates you want to receive and how.</p>
                     </div>
                     <NotificationSettingsForm />
                   </div>

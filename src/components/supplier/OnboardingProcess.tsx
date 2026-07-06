@@ -213,7 +213,7 @@ export const OnboardingProcess: React.FC<OnboardingProcessProps> = ({
                   <div className={`p-2 rounded-full ${
                     isCompleted ? 'bg-green-100 text-green-600' :
                     isCurrent ? 'bg-primary/10 text-primary' :
-                    'bg-gray-100 text-gray-400'
+                    'bg-muted text-muted-foreground/70'
                   }`}>
                     {isCompleted ? (
                       <CheckCircle className="w-5 h-5" />

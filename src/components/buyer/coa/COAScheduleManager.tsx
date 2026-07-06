@@ -19,7 +19,7 @@ const frequencyLabels: Record<string, string> = {
 const statusStyles: Record<string, { color: string; icon: any }> = {
   active: { color: 'bg-green-100 text-green-700 border-green-300', icon: CheckCircle2 },
   overdue: { color: 'bg-red-100 text-red-700 border-red-300', icon: AlertTriangle },
-  paused: { color: 'bg-gray-100 text-gray-600 border-gray-300', icon: Clock },
+  paused: { color: 'bg-muted text-muted-foreground border-border', icon: Clock },
 };
 
 export function COAScheduleManager() {

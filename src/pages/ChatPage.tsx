@@ -11,7 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { publicEnvironment } from "@/config/env";
-import ReactMarkdown from "react-markdown";
+import MarkdownMessage from "@/components/chat/MarkdownMessage";
+import ThinkingIndicator from "@/components/chat/ThinkingIndicator";
 import ComplianceVisualizer from "@/components/chat/ComplianceVisualizer";
 import DailyInsightsPanel from "@/components/chat/DailyInsightsPanel";
 import ActionExecutor from "@/components/chat/ActionExecutor";
@@ -53,6 +54,8 @@ import {
   TrendingUp,
   Home,
   Trash2,
+  AtSign,
+  X,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
@@ -162,6 +165,14 @@ interface StructuredResponse {
 }
 
 type CompanyInfo = { id: string; type: "buyer" | "supplier"; industry?: string } | null;
+type ScopedSupplier = { id: string; name: string } | null;
+
+interface ChatPageProps {
+  /** When true, renders without full-screen chrome/headers for embedding (e.g. the supplier workspace). */
+  embedded?: boolean;
+  /** Pre-scope the conversation to one supplier (locks the scope chip). */
+  lockedSupplier?: { id: string; name: string };
+}
 
 /* ------------ Helpers ------------ */
 
@@ -251,7 +262,7 @@ function extractImageB64(obj?: any): string | null {
 
 /* ------------ Component ------------ */
 
-const ChatPage: React.FC = () => {
+const ChatPage: React.FC<ChatPageProps> = ({ embedded = false, lockedSupplier }) => {
   const { user, profile } = useAuth();
   const { t: wsT } = useWorkspaceProfile();
   const { toast } = useToast();
@@ -285,6 +296,49 @@ const ChatPage: React.FC = () => {
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Supplier scoping via @/ mentions (one chat bar for everything).
+  const [connectedSuppliers, setConnectedSuppliers] = useState<Array<{ id: string; name: string }>>([]);
+  const [scopedSupplier, setScopedSupplier] = useState<ScopedSupplier>(lockedSupplier ?? null);
+  const [mention, setMention] = useState<{ open: boolean; query: string }>({ open: false, query: "" });
+
+  // Keep the scope locked to the embedding supplier if it changes.
+  useEffect(() => { if (lockedSupplier) setScopedSupplier(lockedSupplier); }, [lockedSupplier?.id]);
+
+  // Load this buyer's connected suppliers for the @mention picker.
+  useEffect(() => {
+    if (!companyInfo || companyInfo.type !== 'buyer') return;
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from('buyer_supplier_connections')
+        .select('supplier_id, suppliers(id, company_name)')
+        .eq('buyer_id', companyInfo.id)
+        .eq('status', 'approved');
+      if (!active) return;
+      const opts = ((data || []) as Array<{ suppliers: { id: string; company_name: string } | { id: string; company_name: string }[] | null }>)
+        .flatMap((row) => { const s = Array.isArray(row.suppliers) ? row.suppliers[0] : row.suppliers; return s ? [{ id: s.id, name: s.company_name }] : []; });
+      setConnectedSuppliers(opts);
+    })();
+    return () => { active = false; };
+  }, [companyInfo]);
+
+  // Detect an "@…" or leading "/" trigger at the caret and open the picker.
+  function handleInputChange(value: string) {
+    setInputMessage(value);
+    const m = value.match(/(?:^|\s)([@/])([\w-]*)$/);
+    if (m && connectedSuppliers.length > 0) setMention({ open: true, query: m[2].toLowerCase() });
+    else if (mention.open) setMention({ open: false, query: "" });
+  }
+
+  function pickScopedSupplier(s: { id: string; name: string }) {
+    setScopedSupplier(s);
+    setInputMessage((prev) => prev.replace(/(?:^|\s)[@/][\w-]*$/, '').replace(/^\s+/, ''));
+    setMention({ open: false, query: "" });
+    inputRef.current?.focus();
+  }
+
+  const mentionMatches = connectedSuppliers.filter((s) => s.name.toLowerCase().includes(mention.query)).slice(0, 6);
 
   useEffect(() => {
     const state = location.state as { initialPrompt?: string; sessionId?: string } | null;
@@ -521,6 +575,7 @@ const ChatPage: React.FC = () => {
           question: userMsg.content,
           buyer_id: companyInfo.id,
           session_id: currentSession,
+          supplier_id: scopedSupplier?.id ?? null,
           user_context: {
             user_id: user.id,
             company_type: companyInfo.type,
@@ -1098,11 +1153,7 @@ const ChatPage: React.FC = () => {
 
         {/* Narrative / markdown - only if no structured content */}
         {!isError && (parsed.response || parsed.content) && !hasStructuredContent(parsed.response || parsed.content || '') && (
-          <div className="text-muted-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown>
-              {parsed.response || parsed.content || ""}
-            </ReactMarkdown>
-          </div>
+          <MarkdownMessage>{parsed.response || parsed.content || ""}</MarkdownMessage>
         )}
 
         {/* Document request creation success */}
@@ -1243,9 +1294,7 @@ const ChatPage: React.FC = () => {
               }`}
             >
               <h4 className="font-semibold text-card-foreground">{s.title}</h4>
-              <div className="text-muted-foreground leading-relaxed prose prose-sm max-w-none dark:prose-invert">
-                <ReactMarkdown>{s.content}</ReactMarkdown>
-              </div>
+              <MarkdownMessage>{s.content}</MarkdownMessage>
             </div>
           ))}
 
@@ -1578,10 +1627,46 @@ const ChatPage: React.FC = () => {
     }, 100);
   };
 
+  /* ---- Scope chip + @mention picker (shared by both input bars) ---- */
+
+  const renderMentionDropdown = () => {
+    if (!mention.open || mentionMatches.length === 0) return null;
+    return (
+      <div className="absolute bottom-full left-0 mb-2 w-72 max-h-60 overflow-y-auto rounded-xl border border-border bg-popover p-1 shadow-lg z-50">
+        <div className="px-2 py-1 text-[11px] uppercase tracking-wide text-muted-foreground">Scope to a supplier</div>
+        {mentionMatches.map((s) => (
+          <button
+            key={s.id}
+            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-accent"
+            onClick={() => pickScopedSupplier(s)}
+          >
+            <Building className="h-4 w-4 text-muted-foreground" />
+            <span className="truncate">{s.name}</span>
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  const renderScopeChip = () => {
+    if (!scopedSupplier) return null;
+    return (
+      <div className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 pl-2.5 pr-1.5 py-1 text-xs font-medium text-primary shrink-0">
+        <AtSign className="h-3 w-3" />
+        <span className="max-w-[140px] truncate">{scopedSupplier.name}</span>
+        {!lockedSupplier && (
+          <button className="rounded-full p-0.5 hover:bg-primary/20" onClick={() => setScopedSupplier(null)} title="Clear supplier scope">
+            <X className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+    );
+  };
+
   /* ---- UI ---- */
 
   return (
-    <div className="h-screen bg-background flex overflow-hidden">
+    <div className={embedded ? "flex h-[calc(100vh-190px)] min-h-[460px] overflow-hidden bg-transparent" : "h-screen bg-background flex overflow-hidden"}>
 
       {/* History Sheet (Universal - triggered by menu button) */}
       <Sheet open={showHistory} onOpenChange={setShowHistory}>
@@ -1648,14 +1733,25 @@ const ChatPage: React.FC = () => {
           {messages.length === 0 ? (
             /* Discovery Landing Page */
             <div className="flex flex-col min-h-full">
-              {/* Header with Menu Button */}
+              {/* Header — Home (far left) + Menu, then greeting on the right */}
+              {!embedded && (
               <div className="flex items-center justify-between gap-3 py-2 px-4 border-b border-border">
                 <div className="flex items-center gap-3">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-lg"
+                    onClick={() => navigate('/dashboard')}
+                    title="Go to Dashboard"
+                  >
+                    <Home className="w-5 h-5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="rounded-lg"
                     onClick={() => setShowHistory(true)}
+                    title="Chat history"
                   >
                     <Menu className="w-5 h-5" />
                   </Button>
@@ -1663,47 +1759,48 @@ const ChatPage: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-muted-foreground">
-                    {isLoading 
-                      ? (activeFunction 
-                          ? `${functionDisplayNames[activeFunction] || 'Processing'}...` 
+                    {isLoading
+                      ? (activeFunction
+                          ? `${functionDisplayNames[activeFunction] || 'Processing'}...`
                           : 'Searching...')
                       : `Hey ${profile?.full_name?.split(' ')[0] || 'there'}, good ${getTimeOfDayGreeting()}!`
                     }
                   </span>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="rounded-lg"
-                    onClick={() => navigate('/dashboard')}
-                    title="Go to Dashboard"
-                  >
-                    <Home className="w-5 h-5" />
-                  </Button>
                 </div>
               </div>
+              )}
 
               {/* Centered Content */}
-              <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 bg-white">
+              <div className={`flex-1 flex flex-col items-center justify-center px-6 bg-card ${embedded ? 'py-6' : 'py-12'}`}>
                 <div className="w-full max-w-2xl space-y-8">
                   {/* Discovery Headline */}
-                  <div className="text-center space-y-2">
-                    <h1 className="text-3xl md:text-4xl font-semibold text-foreground">
-                      Explore suppliers, documents, and compliance insights
-                    </h1>
-                    <p className="text-muted-foreground text-base">
-                      Ask questions, search your data, or click a suggestion below
-                    </p>
-                  </div>
+                  {!embedded && (
+                    <div className="text-center space-y-2">
+                      <h1 className="text-3xl md:text-4xl font-semibold text-foreground">
+                        Explore suppliers, documents, and compliance insights
+                      </h1>
+                      <p className="text-muted-foreground text-base">
+                        Ask questions, search your data, or click a suggestion below
+                      </p>
+                    </div>
+                  )}
+                  {embedded && scopedSupplier && (
+                    <div className="text-center space-y-1">
+                      <h2 className="text-lg font-semibold text-foreground">Ask about {scopedSupplier.name}</h2>
+                      <p className="text-sm text-muted-foreground">Grounded in this supplier's requirements, evidence and gaps. Type @ to switch suppliers.</p>
+                    </div>
+                  )}
                   
                   {/* Smart Search Input */}
                   <div className="relative flex items-center gap-2 bg-card border border-border rounded-2xl shadow-lg hover:shadow-xl transition-all p-3">
-                    <Search className="w-5 h-5 text-muted-foreground ml-2" />
+                    {renderMentionDropdown()}
+                    {scopedSupplier ? <div className="ml-1">{renderScopeChip()}</div> : <Search className="w-5 h-5 text-muted-foreground ml-2" />}
                     <Input
                       ref={inputRef}
                       value={inputMessage}
-                      onChange={(e) => setInputMessage(e.target.value)}
+                      onChange={(e) => handleInputChange(e.target.value)}
                       onKeyPress={handleKeyPress}
-                      placeholder="Find suppliers missing compliance documents..."
+                      placeholder={scopedSupplier ? `Ask about ${scopedSupplier.name}…` : "Ask anything — type @ to focus on a supplier"}
                       className="flex-1 border-0 focus-visible:ring-0 text-base bg-transparent"
                       disabled={isLoading || isRecording || isTranscribing}
                     />
@@ -1781,15 +1878,26 @@ const ChatPage: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col flex-1 bg-white">
-              {/* Header with Menu Button for Chat View */}
+            <div className="flex flex-col flex-1 bg-card">
+              {/* Header — Home (far left) + Menu, then greeting on the right */}
+              {!embedded && (
               <div className="flex items-center justify-between gap-3 py-2 px-4 border-b border-border sticky top-0 bg-background z-10">
                 <div className="flex items-center gap-3">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-lg"
+                    onClick={() => navigate('/dashboard')}
+                    title="Go to Dashboard"
+                  >
+                    <Home className="w-5 h-5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="rounded-lg"
                     onClick={() => setShowHistory(true)}
+                    title="Chat history"
                   >
                     <Menu className="w-5 h-5" />
                   </Button>
@@ -1797,25 +1905,17 @@ const ChatPage: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-muted-foreground">
-                    {isLoading 
-                      ? (activeFunction 
-                          ? `${functionDisplayNames[activeFunction] || 'Processing'}...` 
+                    {isLoading
+                      ? (activeFunction
+                          ? `${functionDisplayNames[activeFunction] || 'Processing'}...`
                           : 'Searching...')
                       : `Hey ${profile?.full_name?.split(' ')[0] || 'there'}, good ${getTimeOfDayGreeting()}!`
                     }
                   </span>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="rounded-lg"
-                    onClick={() => navigate('/dashboard')}
-                    title="Go to Dashboard"
-                  >
-                    <Home className="w-5 h-5" />
-                  </Button>
                 </div>
               </div>
-              <div className="space-y-1 px-6 py-6 max-w-4xl mx-auto w-full bg-white">
+              )}
+              <div className="space-y-1 px-6 py-6 max-w-4xl mx-auto w-full bg-card">
                 {messages.map((m) => (
                   <div key={m.id} className="flex items-start gap-4 p-6 transition-colors group">
                     <div
@@ -1831,11 +1931,18 @@ const ChatPage: React.FC = () => {
                       <div className="font-medium text-sm text-foreground">
                         {m.role === "user" ? "You" : "Compliance AI"}
                       </div>
-                      <div className="prose prose-sm max-w-none">
+                      <div className="prose prose-sm max-w-none" data-copy-id={m.id}>
                         {m.role === "assistant" ? (
                           m.metadata?.structured_response || typeof m.content !== "string"
                             ? renderStructuredMessage(m)
-                            : <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{m.content}</p>
+                            : hasStructuredContent(m.content)
+                              ? <StructuredResponseRenderer
+                                  content={m.content}
+                                  onEmailSupplier={handleEmailSupplier}
+                                  onViewSupplierDetails={handleViewSupplierDetails}
+                                  onQuickAction={handleStructuredQuickAction}
+                                />
+                              : <MarkdownMessage>{m.content}</MarkdownMessage>
                         ) : typeof m.content === "string" ? (
                           <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{m.content}</p>
                         ) : (
@@ -1877,7 +1984,7 @@ const ChatPage: React.FC = () => {
                           style={{ animationDelay: "0.2s" }}
                         />
                       </div>
-                      Analyzing your request...
+                      <ThinkingIndicator />
                     </div>
                   </div>
                 </div>
@@ -1890,15 +1997,16 @@ const ChatPage: React.FC = () => {
           <div className="sticky bottom-0 p-6 pb-8">
             <div className="max-w-3xl mx-auto">
               <div className="relative flex items-center gap-2 bg-background/95 backdrop-blur-sm border border-border/50 rounded-full shadow-lg hover:shadow-xl transition-all p-3 px-4">
+                {renderMentionDropdown()}
                 {/* Mic Button */}
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className={`rounded-full transition-all ${
-                    isRecording 
-                      ? 'bg-destructive text-destructive-foreground animate-pulse' 
-                      : isTranscribing 
-                        ? 'bg-primary/20' 
+                    isRecording
+                      ? 'bg-destructive text-destructive-foreground animate-pulse'
+                      : isTranscribing
+                        ? 'bg-primary/20'
                         : ''
                   }`}
                   onClick={handleMicClick}
@@ -1912,12 +2020,13 @@ const ChatPage: React.FC = () => {
                     <Mic className="w-5 h-5 text-muted-foreground" />
                   )}
                 </Button>
+                {renderScopeChip()}
                 <Input
                   ref={inputRef}
                   value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
+                  onChange={(e) => handleInputChange(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Ask about documents, compliance, or regulations..."
+                  placeholder={scopedSupplier ? `Ask about ${scopedSupplier.name}…` : "Ask anything — type @ to focus on a supplier"}
                   className="flex-1 border-0 focus-visible:ring-0 text-base bg-transparent"
                   disabled={isLoading || isRecording || isTranscribing}
                 />

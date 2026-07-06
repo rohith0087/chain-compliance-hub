@@ -137,7 +137,7 @@ const DocumentActivityChain = ({
       case 'downloaded': return 'bg-orange-100 text-orange-700 border-orange-200';
       case 'link_created': return 'bg-cyan-100 text-cyan-700 border-cyan-200';
       case 'link_accessed': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+      default: return 'bg-muted text-foreground/80 border-border';
     }
   };
 

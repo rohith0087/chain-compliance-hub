@@ -14,6 +14,7 @@ import { dossierPdfFileName, renderDossierPdf } from '@/services/DossierPDFServi
 
 interface DossierGeneratorViewProps {
   buyerId: string;
+  lockSupplierId?: string;   // workspace scope: fix subject to one supplier, hide pickers
 }
 
 type SubjectType = 'supplier' | 'facility' | 'product';
@@ -79,10 +80,10 @@ function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url);
 }
 
-export default function DossierGeneratorView({ buyerId }: DossierGeneratorViewProps) {
+export default function DossierGeneratorView({ buyerId, lockSupplierId }: DossierGeneratorViewProps) {
   const [subjectType, setSubjectType] = useState<SubjectType>('supplier');
   const [subjects, setSubjects] = useState<Record<SubjectType, SubjectOption[]>>({ supplier: [], facility: [], product: [] });
-  const [subjectId, setSubjectId] = useState('');
+  const [subjectId, setSubjectId] = useState(lockSupplierId ?? '');
   const [effectiveAt, setEffectiveAt] = useState(() => new Date().toISOString().slice(0, 10));
   const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -133,7 +134,7 @@ export default function DossierGeneratorView({ buyerId }: DossierGeneratorViewPr
   }, [buyerId]);
 
   useEffect(() => { void loadSubjects(); }, [loadSubjects]);
-  useEffect(() => { setSubjectId(''); setResult(null); setVerifyResult(null); }, [subjectType]);
+  useEffect(() => { if (!lockSupplierId) { setSubjectId(''); setResult(null); setVerifyResult(null); } }, [subjectType, lockSupplierId]);
 
   useEffect(() => {
     let active = true;
@@ -228,21 +229,25 @@ export default function DossierGeneratorView({ buyerId }: DossierGeneratorViewPr
           </p>
         </div>
 
-        <Tabs value={subjectType} onValueChange={(value) => setSubjectType(value as SubjectType)}>
-          <TabsList>
-            <TabsTrigger value="supplier">Supplier</TabsTrigger>
-            <TabsTrigger value="facility">Facility</TabsTrigger>
-            <TabsTrigger value="product">Product</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {!lockSupplierId && (
+          <Tabs value={subjectType} onValueChange={(value) => setSubjectType(value as SubjectType)}>
+            <TabsList>
+              <TabsTrigger value="supplier">Supplier</TabsTrigger>
+              <TabsTrigger value="facility">Facility</TabsTrigger>
+              <TabsTrigger value="product">Product</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
 
         <Card>
-          <CardHeader><CardTitle>Generate dossier</CardTitle><CardDescription>Select a subject and an effective date.</CardDescription></CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-3">
-            <Select value={subjectId} onValueChange={setSubjectId} disabled={loadingSubjects}>
-              <SelectTrigger><SelectValue placeholder={loadingSubjects ? 'Loading…' : 'Select subject'} /></SelectTrigger>
-              <SelectContent>{subjects[subjectType].map((subject) => <SelectItem key={subject.id} value={subject.id}>{subject.label}</SelectItem>)}</SelectContent>
-            </Select>
+          <CardHeader><CardTitle>Generate dossier</CardTitle><CardDescription>{lockSupplierId ? 'Pick an effective date and generate a signed dossier for this supplier.' : 'Select a subject and an effective date.'}</CardDescription></CardHeader>
+          <CardContent className={`grid gap-4 ${lockSupplierId ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
+            {!lockSupplierId && (
+              <Select value={subjectId} onValueChange={setSubjectId} disabled={loadingSubjects}>
+                <SelectTrigger><SelectValue placeholder={loadingSubjects ? 'Loading…' : 'Select subject'} /></SelectTrigger>
+                <SelectContent>{subjects[subjectType].map((subject) => <SelectItem key={subject.id} value={subject.id}>{subject.label}</SelectItem>)}</SelectContent>
+              </Select>
+            )}
             <Input type="date" value={effectiveAt} onChange={(event) => setEffectiveAt(event.target.value)} />
             <Button onClick={generate} disabled={generating || loadingSubjects}>
               {generating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Generate dossier

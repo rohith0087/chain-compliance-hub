@@ -101,7 +101,7 @@ export const OnboardingActivityFeed = ({ buyerId, isOpen, onClose, onRequestClic
         'declined': { message: 'Onboarding declined', icon: XCircle, color: 'text-red-500' },
       };
       
-      const statusInfo = statusMessages[newRecord.status] || { message: 'Status updated', icon: FileText, color: 'text-gray-500' };
+      const statusInfo = statusMessages[newRecord.status] || { message: 'Status updated', icon: FileText, color: 'text-muted-foreground' };
       
       return {
         id: `${newRecord.id}-${Date.now()}`,

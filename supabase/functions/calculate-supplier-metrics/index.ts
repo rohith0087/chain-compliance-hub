@@ -178,6 +178,22 @@ serve(async (req) => {
         if (onTimeRate < 70) riskScore += 20;
         else if (onTimeRate < 85) riskScore += 10;
 
+        // Compliance-chain contribution: open requirement gaps detected by the
+        // Phase 4 engine. Sum weighted signals (expired 1.0 … requested 0.5)
+        // into a bounded 0-30 band so a supplier failing framework
+        // requirements is scored as risky even if its request stats look fine.
+        const { data: openSignals } = await supabaseClient
+          .from('risk_signals')
+          .select('signal_type, weight')
+          .eq('buyer_id', connection.buyer_id)
+          .eq('supplier_id', connection.supplier_id)
+          .eq('status', 'open');
+        const signalWeightSum = (openSignals || []).reduce((sum: number, s: { weight: number }) => sum + Number(s.weight || 0), 0);
+        const chainRisk = Math.min(30, Math.round(signalWeightSum * 6));
+        riskScore += chainRisk;
+        const openSignalCount = (openSignals || []).length;
+        riskScore = Math.min(100, riskScore);
+
         // Determine risk level
         let riskLevel = 'low';
         if (riskScore >= 60) riskLevel = 'critical';
@@ -190,6 +206,7 @@ serve(async (req) => {
         if (overdueRequests > 2) riskFactors.push(`${overdueRequests} overdue requests`);
         if (rejectedRequests > 1) riskFactors.push(`${rejectedRequests} rejected documents`);
         if (onTimeRate < 70) riskFactors.push('Poor on-time submission rate');
+        if (openSignalCount > 0) riskFactors.push(`${openSignalCount} open compliance gap${openSignalCount > 1 ? 's' : ''}`);
 
         // Insert or update metrics
         const { error: metricsError } = await supabaseClient

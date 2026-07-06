@@ -83,7 +83,7 @@ export const SimulationDocumentUploadModal = () => {
                     <p className="text-xs text-muted-foreground mt-1">
                       The buyer uploaded this sample for your reference
                     </p>
-                    <div className="mt-3 p-2 bg-white rounded border flex items-center justify-between gap-2 overflow-hidden">
+                    <div className="mt-3 p-2 bg-card rounded border flex items-center justify-between gap-2 overflow-hidden">
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         <FileText className="h-4 w-4 text-blue-500 flex-shrink-0" />
                         <div className="min-w-0 flex-1">

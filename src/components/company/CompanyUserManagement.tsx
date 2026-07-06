@@ -44,7 +44,7 @@ const roleOptions = [
 const statusColors = {
   active: 'bg-green-100 text-green-800',
   pending: 'bg-yellow-100 text-yellow-800',
-  inactive: 'bg-gray-100 text-gray-800'
+  inactive: 'bg-muted text-foreground'
 };
 
 export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({

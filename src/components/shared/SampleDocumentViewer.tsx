@@ -126,7 +126,7 @@ const SampleDocumentViewer = ({
                 variant="outline"
                 onClick={handlePreview}
                 disabled={loading}
-                className="bg-white dark:bg-background"
+                className="bg-card dark:bg-background"
               >
                 {loading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -147,7 +147,7 @@ const SampleDocumentViewer = ({
                 variant="outline"
                 onClick={handleDownload}
                 disabled={loading}
-                className="bg-white dark:bg-background"
+                className="bg-card dark:bg-background"
               >
                 {loading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -163,7 +163,7 @@ const SampleDocumentViewer = ({
 
           {/* Buyer's notes */}
           {notes && (
-            <div className="text-sm bg-white/60 dark:bg-background/40 p-3 rounded-md border border-blue-100 dark:border-blue-800">
+            <div className="text-sm bg-card/60 dark:bg-background/40 p-3 rounded-md border border-blue-100 dark:border-blue-800">
               <p className="font-medium text-blue-800 dark:text-blue-300 mb-1">Buyer's Instructions:</p>
               <p className="text-muted-foreground whitespace-pre-wrap">{notes}</p>
             </div>

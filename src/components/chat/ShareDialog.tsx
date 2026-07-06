@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Copy, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import MarkdownMessage from "@/components/chat/MarkdownMessage";
 
 interface Message {
   id: string;
@@ -31,6 +32,7 @@ const ShareDialog: React.FC<ShareDialogProps> = ({
   message,
 }) => {
   const { toast } = useToast();
+  const previewRef = useRef<HTMLDivElement>(null);
 
   const extractDisplayText = (msg: Message): string => {
     const structured = msg.metadata?.structured_response;
@@ -59,19 +61,27 @@ const ShareDialog: React.FC<ShareDialogProps> = ({
   };
 
   const handleCopyText = async () => {
+    const html = previewRef.current?.innerHTML?.trim();
+    const plain = previewRef.current?.innerText?.trim() || extractDisplayText(message);
     try {
-      const text = extractDisplayText(message);
-      await navigator.clipboard.writeText(text);
-      toast({
-        title: "Copied!",
-        description: "Response text copied to clipboard",
-      });
+      if (html && typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/html": new Blob([html], { type: "text/html" }),
+            "text/plain": new Blob([plain], { type: "text/plain" }),
+          }),
+        ]);
+      } else {
+        await navigator.clipboard.writeText(plain);
+      }
+      toast({ title: "Copied!", description: "Formatting preserved" });
     } catch (error) {
-      toast({
-        title: "Failed to copy",
-        description: "Could not copy text to clipboard",
-        variant: "destructive",
-      });
+      try {
+        await navigator.clipboard.writeText(plain);
+        toast({ title: "Copied!", description: "Response text copied to clipboard" });
+      } catch {
+        toast({ title: "Failed to copy", description: "Could not copy text to clipboard", variant: "destructive" });
+      }
     }
   };
 
@@ -97,10 +107,8 @@ const ShareDialog: React.FC<ShareDialogProps> = ({
               <span className="text-sm font-semibold text-primary">Compliance Copilot</span>
             </div>
             
-            <div className="prose prose-sm max-w-none">
-              <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">
-                {responseText}
-              </p>
+            <div ref={previewRef}>
+              <MarkdownMessage>{responseText}</MarkdownMessage>
             </div>
 
             <div className="mt-4 pt-4 border-t text-xs text-muted-foreground">

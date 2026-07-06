@@ -74,6 +74,36 @@ export async function isAuthorizedCronRequest(
   return !error && data === true;
 }
 
+/**
+ * Single door for trusted internal/system invocations. Superset of every
+ * mechanism, so one edge function calling another (or a cron job) is accepted
+ * whether it presents a service-role bearer, the SYSTEM_INVOCATION_SECRET env
+ * secret, or the vault-backed cron secret. Callees should prefer this over
+ * hand-rolling a subset of checks — mismatches between a caller's chosen
+ * mechanism and a callee's accepted subset have repeatedly caused silent 401s.
+ */
+export async function isInternalSystemRequest(req: Request, admin: CronAuthClient): Promise<boolean> {
+  if (isServiceRoleRequest(req)) return true;
+  if (validateSystemSecret(req)) return true;
+  return isAuthorizedCronRequest(req, admin);
+}
+
+/**
+ * Standard headers for one edge function to call another as a trusted internal
+ * caller. The Authorization bearer (publishable key) is only there to satisfy
+ * the platform's verify_jwt gateway; X-System-Secret is what isInternalSystemRequest
+ * actually trusts. Pass the publishable key from the caller (env import kept out
+ * of this module to avoid a cycle).
+ */
+export function internalInvokeHeaders(publishableKey: string, extra: Record<string, string> = {}): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${publishableKey}`,
+    'X-System-Secret': Deno.env.get('SYSTEM_INVOCATION_SECRET') ?? '',
+    ...extra,
+  };
+}
+
 export function systemAuthErrorResponse(corsHeaders: Record<string, string>): Response {
   return new Response(
     JSON.stringify({ error: 'Unauthorized: Invalid or missing system secret' }),

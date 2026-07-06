@@ -62,7 +62,7 @@ const statusConfig: Record<ClaimStatus, { label: string; icon: typeof CheckCircl
   extracted: { label: 'Needs review', icon: ClipboardCheck, className: 'bg-amber-50 text-amber-700 border-amber-200' },
   verified: { label: 'Verified', icon: CheckCircle2, className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
   rejected: { label: 'Rejected', icon: XCircle, className: 'bg-red-50 text-red-700 border-red-200' },
-  superseded: { label: 'Superseded', icon: XCircle, className: 'bg-slate-50 text-slate-600 border-slate-200' },
+  superseded: { label: 'Superseded', icon: XCircle, className: 'bg-muted text-muted-foreground border-border' },
 };
 
 const CORRECTABLE_FIELDS = ['issuer', 'certificate_number', 'issue_date', 'expiry_date', 'source_page'] as const;
@@ -181,11 +181,11 @@ function ClaimDetail({ claim, onActionComplete }: { claim: EvidenceClaim; onActi
       )}
 
       {editingField && (
-        <div className="rounded-[12px] border border-[#E5E7EB] bg-white">
-          <div className="border-b border-[#E5E7EB] px-3 py-2"><p className="text-sm font-semibold text-[#111827]">Correct {editingField.replace(/_/g, ' ')}</p></div>
+        <div className="rounded-[12px] border border-border bg-card">
+          <div className="border-b border-border px-3 py-2"><p className="text-sm font-semibold text-foreground">Correct {editingField.replace(/_/g, ' ')}</p></div>
           <div className="space-y-2 p-3">
-            <Input className="rounded-[10px] border-[#E5E7EB]" value={editValue} onChange={(event) => setEditValue(event.target.value)} placeholder="New value" />
-            <Textarea className="rounded-[10px] border-[#E5E7EB]" value={editReason} onChange={(event) => setEditReason(event.target.value)} placeholder="Reason for this correction" />
+            <Input className="rounded-[10px] border-border" value={editValue} onChange={(event) => setEditValue(event.target.value)} placeholder="New value" />
+            <Textarea className="rounded-[10px] border-border" value={editReason} onChange={(event) => setEditReason(event.target.value)} placeholder="Reason for this correction" />
             <div className="flex gap-2">
               <Button size="sm" className="rounded-[10px] bg-[#10B981] text-white hover:bg-[#059669]" onClick={submitCorrection} disabled={busy}>Save correction</Button>
               <Button size="sm" variant="ghost" className="rounded-[10px]" onClick={() => setEditingField(null)}>Cancel</Button>
@@ -248,7 +248,7 @@ function LegacyEvidenceVerificationView({ buyerId }: EvidenceVerificationViewPro
   const selectedClaim = claims.find((claim) => claim.id === selectedClaimId) || filteredClaims[0] || null;
 
   return (
-    <div className="h-[calc(100vh-80px)] overflow-y-auto bg-white p-6">
+    <div className="h-[calc(100vh-80px)] overflow-y-auto bg-card p-6">
       <div className="mx-auto max-w-6xl space-y-6">
         <div>
           <h1 className={reviewPageTitleClass}>Evidence Verification</h1>
@@ -283,13 +283,13 @@ function LegacyEvidenceVerificationView({ buyerId }: EvidenceVerificationViewPro
                     key={claim.id}
                     type="button"
                     onClick={() => setSelectedClaimId(claim.id)}
-                    className={`w-full rounded-[12px] border p-3 text-left text-sm transition-colors ${selectedClaim?.id === claim.id ? 'border-[#2563EB] bg-[#EAF1FF]' : 'border-[#E5E7EB] bg-white hover:bg-gray-50/50'}`}
+                    className={`w-full rounded-[12px] border p-3 text-left text-sm transition-colors ${selectedClaim?.id === claim.id ? 'border-[#2563EB] bg-[#EAF1FF]' : 'border-border bg-card hover:bg-muted/50'}`}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium text-[#111827]">{claim.document_type || claim.issuer || 'Unknown evidence'}</span>
+                      <span className="font-medium text-foreground">{claim.document_type || claim.issuer || 'Unknown evidence'}</span>
                       <span className={`inline-flex items-center gap-1 rounded-full border-0 px-2 py-0.5 text-[12px] font-medium ${config.className}`}><Icon className="h-3 w-3" />{config.label}</span>
                     </div>
-                    <p className="mt-1 text-xs text-[#6B7280]">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       {claim.issuer || 'Unknown issuer'} · {claim.certificate_number || 'No certificate number'}
                     </p>
                   </button>
@@ -297,9 +297,9 @@ function LegacyEvidenceVerificationView({ buyerId }: EvidenceVerificationViewPro
               })}
             </div>
             <div className={reviewCardContainerClass}>
-              <div className="border-b border-[#E5E7EB] p-4">
-                <p className="text-base font-semibold text-[#111827]">{selectedClaim?.document_type || selectedClaim?.issuer || 'Evidence claim'}</p>
-                <p className="mt-1 text-sm text-[#6B7280]">Extraction model {selectedClaim?.extraction_model_version}</p>
+              <div className="border-b border-border p-4">
+                <p className="text-base font-semibold text-foreground">{selectedClaim?.document_type || selectedClaim?.issuer || 'Evidence claim'}</p>
+                <p className="mt-1 text-sm text-muted-foreground">Extraction model {selectedClaim?.extraction_model_version}</p>
               </div>
               <div className="p-4">
                 {selectedClaim && <ClaimDetail claim={selectedClaim} onActionComplete={load} />}

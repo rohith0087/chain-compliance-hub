@@ -32,7 +32,7 @@ export const SupplierDetailModal: React.FC<SupplierDetailModalProps> = ({
       case 'rejected':
         return 'bg-red-50 text-red-700 border-red-200';
       default:
-        return 'bg-gray-50 text-gray-700 border-gray-200';
+        return 'bg-muted text-foreground/80 border-border';
     }
   };
 

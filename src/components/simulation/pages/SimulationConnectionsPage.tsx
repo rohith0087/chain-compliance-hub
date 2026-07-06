@@ -239,7 +239,7 @@ export const SimulationConnectionsPage = () => {
                   </div>
                   
                   {pendingConnectionRequest.notes && (
-                    <div className="p-3 bg-white/50 rounded-lg border border-blue-100">
+                    <div className="p-3 bg-card/50 rounded-lg border border-blue-100">
                       <p className="text-sm text-muted-foreground italic">
                         "{pendingConnectionRequest.notes}"
                       </p>
@@ -393,7 +393,7 @@ export const SimulationConnectionsPage = () => {
                             <div 
                               key={doc.id}
                               className={`flex items-center justify-between p-3 rounded-lg border ${
-                                isUploaded ? 'bg-green-50 border-green-200' : 'bg-white'
+                                isUploaded ? 'bg-green-50 border-green-200' : 'bg-card'
                               }`}
                             >
                               <div className="flex items-center gap-3">
@@ -476,7 +476,7 @@ export const SimulationConnectionsPage = () => {
                             <div 
                               key={field.id}
                               className={`flex items-center justify-between p-3 rounded-lg border ${
-                                isCompleted ? 'bg-green-50 border-green-200' : 'bg-white'
+                                isCompleted ? 'bg-green-50 border-green-200' : 'bg-card'
                               }`}
                             >
                               <div className="flex items-center gap-3">

@@ -49,7 +49,7 @@ export const SupplierConnectionStatus: React.FC<SupplierConnectionStatusProps> =
       default:
         return {
           label: status,
-          color: 'bg-gray-100 text-gray-800',
+          color: 'bg-muted text-foreground',
           icon: <Users className="w-3 h-3" />
         };
     }

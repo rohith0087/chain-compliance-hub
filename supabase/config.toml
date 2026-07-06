@@ -291,9 +291,28 @@ verify_jwt = false
 [functions.evaluate-compliance-v1]
 verify_jwt = true
 
-# Phase 3 outbox dispatcher - cron-triggered, same isServiceRoleRequest pattern.
-[functions.process-compliance-events-v1]
+# Phase 1+2 framework activation: instantiates activations and generates
+# supplier document requests from published framework requirements.
+[functions.activate-framework-v1]
 verify_jwt = true
+
+# Phase 5A: AI second-opinion on proposed requirement<->evidence mappings.
+[functions.analyze-evidence-mapping-v1]
+verify_jwt = true
+
+# Phase 5B: AI extraction of requirement drafts from a spec/standard.
+[functions.extract-requirements-v1]
+verify_jwt = true
+
+# Phase 5C: grounded Q&A scoped to one supplier's computed compliance state.
+[functions.compliance-qa-v1]
+verify_jwt = true
+
+# Phase 3 outbox dispatcher - cron-triggered, same isServiceRoleRequest pattern.
+# verify_jwt must be false like the sibling process-* jobs, or the platform
+# rejects every scheduled invocation with 401 before the function runs.
+[functions.process-compliance-events-v1]
+verify_jwt = false
 
 [functions.process-compliance-reevaluations-v1]
 verify_jwt = false
@@ -334,3 +353,11 @@ verify_jwt = true
 
 [functions.cleanup-inbound-email-v1]
 verify_jwt = false
+
+# Phase 5+: bring-your-own-AI config test (tiny live completion to validate keys).
+[functions.test-ai-config-v1]
+verify_jwt = true
+
+# Phase 5+: reports which AI providers have a platform key (booleans, no secrets).
+[functions.ai-platform-keys-v1]
+verify_jwt = true

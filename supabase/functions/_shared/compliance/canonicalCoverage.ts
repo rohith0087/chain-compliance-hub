@@ -51,6 +51,9 @@ function hasMinimumValidity(expiry: string | null, effectiveAt: string, minimumV
 export function matchCanonicalEvidence(
   requiredEvidence: RequiredEvidenceDefinitionV1[], data: CanonicalCoverageData,
   subjectType: SubjectType, subjectId: string, effectiveAt: string, policy: CanonicalMatchPolicy = {},
+  // Phase 3: evidence versions whose mapping to this requirement a reviewer
+  // rejected; excluded from eligibility even when machine-valid.
+  excludedVersionIds: Set<string> = new Set(),
 ): { coverage: CoverageState; matches: CanonicalEvidenceMatch[]; grantIds: string[] } {
   if (requiredEvidence.length === 0) return {
     coverage: { hasVerifiedClaim: false, verifiedExpiryDate: null, hasRejectedClaim: false, hasUnverifiedClaim: false, hasUpload: false, hasOpenRequest: false },
@@ -67,6 +70,7 @@ export function matchCanonicalEvidence(
     hasCandidate ||= candidates.length > 0;
     hasRejected ||= candidates.some((candidate) => candidate.lifecycle_status === 'rejected');
     const eligible = candidates.flatMap((version) => {
+      if (excludedVersionIds.has(version.id)) return [];
       if (version.lifecycle_status !== 'current' || !validAt(version.expiry_date, effectiveAt) || !hasMinimumValidity(version.expiry_date,effectiveAt,minimumValidityDays)) return [];
       const latestAttestation = data.attestations.find((row) => row.evidence_version_id === version.id && ['supplier_verification','buyer_verification','rejection'].includes(row.attestation_type));
       const verified = latestAttestation?.outcome === 'accepted' && ['supplier_verification','buyer_verification'].includes(latestAttestation.attestation_type);

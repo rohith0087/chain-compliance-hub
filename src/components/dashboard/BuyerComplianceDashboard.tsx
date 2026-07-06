@@ -696,7 +696,7 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
           <p className={reviewPageSubtitleClass}>Review, verify, and act on supplier compliance issues</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={loadDashboardData} className="h-9 text-[#6B7280] rounded-[10px]">
+          <Button variant="ghost" size="sm" onClick={loadDashboardData} className="h-9 text-muted-foreground rounded-[10px]">
             Refresh
           </Button>
           <Button
@@ -712,11 +712,11 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
 
       {/* Branch indicator */}
       {currentBranch && !allBranchesView && (
-        <Alert className="border-[#E5E7EB] bg-gray-50/50 rounded-[16px]">
+        <Alert className="border-border bg-muted/50 rounded-[16px]">
           <Building2 className="h-4 w-4" />
           <AlertTitle className="text-sm font-medium">Branch View</AlertTitle>
-          <AlertDescription className="text-sm text-[#6B7280]">
-            Showing data for: <span className="font-medium text-[#111827]">{currentBranch.branch_name}</span>
+          <AlertDescription className="text-sm text-muted-foreground">
+            Showing data for: <span className="font-medium text-foreground">{currentBranch.branch_name}</span>
           </AlertDescription>
         </Alert>
       )}
@@ -741,7 +741,7 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
           {/* Priority Review Queue */}
           <div className={reviewCardContainerClass}>
             <div className="flex items-center justify-between px-4 pt-4 pb-1">
-              <h3 className="text-[15px] font-bold text-[#111827]">Priority Review Queue</h3>
+              <h3 className="text-[15px] font-bold text-foreground">Priority Review Queue</h3>
               {onNavigateToComplianceDecisions && (
                 <Button variant="ghost" size="sm" className="text-xs text-[#2563EB] hover:text-[#1D4ED8]" onClick={onNavigateToComplianceDecisions}>
                   View all in Compliance Decisions <ChevronRight className="w-3 h-3 ml-1" />
@@ -749,11 +749,11 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
               )}
             </div>
             {!workbenchLoading && priorityItems.length === 0 ? (
-              <p className="px-4 pb-4 text-sm text-[#6B7280]">Nothing needs review right now.</p>
+              <p className="px-4 pb-4 text-sm text-muted-foreground">Nothing needs review right now.</p>
             ) : (
               <Table>
                 <TableHeader>
-                  <TableRow className="h-[48px] bg-white border-b border-[#E5E7EB] hover:bg-white">
+                  <TableRow className="h-[48px] bg-card border-b border-border hover:bg-card">
                     <TableHead className={`px-3 ${reviewSectionHeaderClass}`}>Type</TableHead>
                     <TableHead className={`px-3 ${reviewSectionHeaderClass}`}>Item</TableHead>
                     <TableHead className={`px-3 ${reviewSectionHeaderClass}`}>Detail</TableHead>
@@ -761,14 +761,14 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
                 </TableHeader>
                 <TableBody>
                   {priorityItems.map((item) => (
-                    <TableRow key={item.id} className="h-[48px] border-b border-[#EEF2F7] hover:bg-gray-50/50">
+                    <TableRow key={item.id} className="h-[48px] border-b border-border hover:bg-muted/50">
                       <TableCell className="px-3">
                         <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[12px] font-medium capitalize ${PRIORITY_KIND_BADGE[item.kind]}`}>
                           {item.kind}
                         </span>
                       </TableCell>
-                      <TableCell className="px-3 text-sm text-[#111827] truncate max-w-md">{item.label}</TableCell>
-                      <TableCell className="px-3 text-sm text-[#6B7280]">{item.meta}</TableCell>
+                      <TableCell className="px-3 text-sm text-foreground truncate max-w-md">{item.label}</TableCell>
+                      <TableCell className="px-3 text-sm text-muted-foreground">{item.meta}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -780,11 +780,11 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
           {attentionItems.length > 0 && (
             <div className={reviewCardContainerClass}>
               <div className="flex items-center justify-between px-4 pt-4 pb-1">
-                <h3 className="text-[15px] font-bold text-[#111827]">Attention Required (Next 7 Days)</h3>
+                <h3 className="text-[15px] font-bold text-foreground">Attention Required (Next 7 Days)</h3>
               </div>
               <Table>
                 <TableHeader>
-                  <TableRow className="h-[48px] bg-white border-b border-[#E5E7EB] hover:bg-white">
+                  <TableRow className="h-[48px] bg-card border-b border-border hover:bg-card">
                     <TableHead className={`px-3 ${reviewSectionHeaderClass}`}>Supplier</TableHead>
                     <TableHead className={`px-3 ${reviewSectionHeaderClass}`}>Document</TableHead>
                     <TableHead className={`px-3 ${reviewSectionHeaderClass}`}>Due</TableHead>
@@ -793,16 +793,16 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
                 </TableHeader>
                 <TableBody>
                   {attentionItems.map((item) => (
-                    <TableRow key={item.id} className="h-[48px] border-b border-[#EEF2F7] hover:bg-gray-50/50">
-                      <TableCell className="px-3 text-sm font-medium text-[#111827]">{item.suppliers?.company_name}</TableCell>
-                      <TableCell className="px-3 text-sm text-[#374151] truncate max-w-xs">{item.title}</TableCell>
+                    <TableRow key={item.id} className="h-[48px] border-b border-border hover:bg-muted/50">
+                      <TableCell className="px-3 text-sm font-medium text-foreground">{item.suppliers?.company_name}</TableCell>
+                      <TableCell className="px-3 text-sm text-foreground/80 truncate max-w-xs">{item.title}</TableCell>
                       <TableCell className="px-3 text-sm">
                         {item.daysUntil < 0 ? (
                           <span className="text-red-600">Overdue {Math.abs(item.daysUntil)}d</span>
                         ) : item.daysUntil === 0 ? (
                           <span className="text-red-600">Today</span>
                         ) : (
-                          <span className={item.daysUntil <= 3 ? 'text-amber-600' : 'text-[#374151]'}>
+                          <span className={item.daysUntil <= 3 ? 'text-amber-600' : 'text-foreground/80'}>
                             {item.daysUntil}d
                           </span>
                         )}
@@ -832,7 +832,7 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
           <div className="sticky top-6 space-y-4">
             <div className={reviewCardContainerClass}>
               <div className="px-4 pt-4 pb-2">
-                <h3 className="text-[15px] font-bold text-[#111827]">Overview</h3>
+                <h3 className="text-[15px] font-bold text-foreground">Overview</h3>
               </div>
               <div className="px-4 pb-4 divide-y divide-[#EEF2F7]">
                 {[
@@ -843,11 +843,11 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
                   { icon: TrendingUp, color: 'text-emerald-600', label: 'Compliance Coverage', value: `${overallStats.avgComplianceScore}%` },
                 ].map((row) => (
                   <div key={row.label} className="flex items-center justify-between py-2 first:pt-0 last:pb-0">
-                    <span className="flex items-center gap-2 text-sm text-[#374151]">
+                    <span className="flex items-center gap-2 text-sm text-foreground/80">
                       <row.icon className={`h-3.5 w-3.5 ${row.color}`} />
                       {row.label}
                     </span>
-                    <span className="text-sm font-semibold text-[#111827]">{row.value}</span>
+                    <span className="text-sm font-semibold text-foreground">{row.value}</span>
                   </div>
                 ))}
                 {!workbenchLoading && decisionSummary.totalDecisions > 0 && (
@@ -859,11 +859,11 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
                       { icon: ShieldCheck, color: 'text-emerald-600', label: 'Requirement Compliance', value: decisionSummary.complianceRate !== null ? `${decisionSummary.complianceRate}%` : '—' },
                     ].map((row) => (
                       <div key={row.label} className="flex items-center justify-between py-2 first:pt-0 last:pb-0">
-                        <span className="flex items-center gap-2 text-sm text-[#374151]">
+                        <span className="flex items-center gap-2 text-sm text-foreground/80">
                           <row.icon className={`h-3.5 w-3.5 ${row.color}`} />
                           {row.label}
                         </span>
-                        <span className="text-sm font-semibold text-[#111827]">{row.value}</span>
+                        <span className="text-sm font-semibold text-foreground">{row.value}</span>
                       </div>
                     ))}
                   </>
@@ -876,20 +876,20 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
               <div className={reviewCardContainerClass}>
                 <div className="px-4 pt-4 pb-2 flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-violet-600" />
-                  <h3 className="text-[15px] font-bold text-[#111827]">AI Verification Flags</h3>
+                  <h3 className="text-[15px] font-bold text-foreground">AI Verification Flags</h3>
                 </div>
                 <div className="px-4 pb-4">
                   {aiFlags.length === 0 ? (
-                    <p className="text-sm text-[#6B7280]">No flags — all evidence current and validated.</p>
+                    <p className="text-sm text-muted-foreground">No flags — all evidence current and validated.</p>
                   ) : (
                     <ul className="space-y-2">
                       {aiFlags.map((flag) => (
                         <li key={flag.type} className="flex items-center justify-between text-sm gap-2">
-                          <span className="flex items-center gap-2 text-[#374151] min-w-0">
+                          <span className="flex items-center gap-2 text-foreground/80 min-w-0">
                             <AlertTriangle className="h-3.5 w-3.5 text-amber-600 flex-shrink-0" />
                             <span className="truncate">{flag.label}</span>
                           </span>
-                          <span className="inline-flex items-center rounded-full bg-slate-50 text-slate-600 border border-slate-200 px-2 py-0.5 text-[12px] font-medium flex-shrink-0">{flag.count}</span>
+                          <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground border border-border px-2 py-0.5 text-[12px] font-medium flex-shrink-0">{flag.count}</span>
                         </li>
                       ))}
                     </ul>
@@ -902,17 +902,17 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
             {!workbenchLoading && coverageGaps.length > 0 && (
               <div className={reviewCardContainerClass}>
                 <div className="px-4 pt-4 pb-2">
-                  <h3 className="text-[15px] font-bold text-[#111827]">Requirement Coverage Gaps</h3>
+                  <h3 className="text-[15px] font-bold text-foreground">Requirement Coverage Gaps</h3>
                 </div>
                 <div className="px-4 pb-4 space-y-3">
                   {coverageGaps.map((gap) => (
                     <div key={gap.frameworkCode} className="space-y-1">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium text-[#111827]">{gap.frameworkCode}</span>
-                        <span className="text-[#6B7280]">{gap.percentage}%</span>
+                        <span className="font-medium text-foreground">{gap.frameworkCode}</span>
+                        <span className="text-muted-foreground">{gap.percentage}%</span>
                       </div>
                       <Progress value={gap.percentage} className="h-1.5" />
-                      <p className="text-xs text-[#6B7280]">{gap.missing} missing</p>
+                      <p className="text-xs text-muted-foreground">{gap.missing} missing</p>
                     </div>
                   ))}
                 </div>

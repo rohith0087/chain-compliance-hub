@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
 import { handleCorsPreflightRequest } from '../_shared/corsHeaders.ts';
 import { getSupabaseSecretKey, requireEnv } from '../_shared/env.ts';
 import { createRequestContext, jsonResponse, logEvent } from '../_shared/requestContext.ts';
-import { isServiceRoleRequest } from '../_shared/systemAuth.ts';
+import { isInternalSystemRequest } from '../_shared/systemAuth.ts';
 
 type SupabaseAdmin = ReturnType<typeof createClient>;
 
@@ -61,12 +61,22 @@ async function dispatchEvent(admin: SupabaseAdmin, event: DomainEvent): Promise<
       break;
     }
     case 'task_created': {
+      const taskId = typeof payload.task_id === 'string' ? payload.task_id : null;
       if (typeof payload.assignee_id === 'string') {
         await notifyUser(
           admin, payload.assignee_id, 'compliance_task_assigned',
           'New compliance task assigned',
           'You have been assigned a new compliance task.',
-          typeof payload.task_id === 'string' ? payload.task_id : null,
+          taskId,
+        );
+      } else {
+        // Unassigned tasks (e.g. gap-engine corrective actions) have no owner
+        // yet, so notify the buyer's admins that action is waiting.
+        await notifyBuyerAdmins(
+          admin, event.buyer_id, 'compliance_task_created',
+          'New compliance task',
+          typeof payload.title === 'string' ? payload.title : 'A compliance task needs attention.',
+          taskId,
         );
       }
       break;
@@ -105,11 +115,16 @@ Deno.serve(async (req) => {
   const preflight = handleCorsPreflightRequest(req);
   if (preflight) return preflight;
   if (req.method !== 'POST') return jsonResponse(context, { error: 'Method not allowed' }, 405, { Allow: 'POST' });
-  if (!isServiceRoleRequest(req)) return jsonResponse(context, { error: 'Service role required' }, 403);
 
   const admin = createClient(requireEnv('SUPABASE_URL'), getSupabaseSecretKey(), {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  // One shared door for every trusted internal caller (cron secret, env
+  // secret, or service-role bearer).
+  if (!(await isInternalSystemRequest(req, admin))) {
+    return jsonResponse(context, { error: 'Service role required' }, 403);
+  }
 
   const summary = { processed: 0, published: 0, failed: 0, dead_letter: 0 };
 

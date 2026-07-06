@@ -136,18 +136,18 @@ export function AuditorDashboardPanel({ buyerId, onNavigateToTab }: AuditorDashb
       </div>
 
       {/* Global AI Strip */}
-      <div className="bg-gradient-to-b from-white to-slate-50 border border-border rounded-2xl p-4 flex flex-col md:flex-row md:items-center gap-4 shadow-sm mb-6">
+      <div className="bg-gradient-to-b from-card to-slate-50 border border-border rounded-2xl p-4 flex flex-col md:flex-row md:items-center gap-4 shadow-sm mb-6">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 shrink-0 flex items-center justify-center shadow-[0_4px_12px_rgba(37,99,235,0.28)]">
           <Sparkles className="w-5 h-5 text-white" />
         </div>
-        <div className="text-[14.5px] text-slate-700 leading-relaxed flex-1">
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-700 border border-blue-200 bg-white rounded-full px-2.5 py-0.5 mr-2 align-text-bottom">
+        <div className="text-[14.5px] text-foreground/80 leading-relaxed flex-1">
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-700 border border-blue-200 bg-card rounded-full px-2.5 py-0.5 mr-2 align-text-bottom">
             <Sparkles className="w-3 h-3" /> AI Briefing
           </span>
-          <b className="text-slate-900 font-semibold">2 audits this week.</b> Himalaya Foods is overdue on 2 documents and due tomorrow — your most urgent item.
-          Spice Mills needs 1 more doc before Friday. <b className="text-slate-900 font-semibold">3 audits are ready to finalize.</b>
+          <b className="text-foreground font-semibold">2 audits this week.</b> Himalaya Foods is overdue on 2 documents and due tomorrow — your most urgent item.
+          Spice Mills needs 1 more doc before Friday. <b className="text-foreground font-semibold">3 audits are ready to finalize.</b>
         </div>
-        <button className="shrink-0 border border-border bg-white text-slate-700 font-semibold text-[13px] rounded-xl px-4 py-2 hover:bg-slate-50 transition-colors whitespace-nowrap w-full md:w-auto">
+        <button className="shrink-0 border border-border bg-card text-foreground/80 font-semibold text-[13px] rounded-xl px-4 py-2 hover:bg-muted transition-colors whitespace-nowrap w-full md:w-auto">
           Ask the assistant
         </button>
       </div>
@@ -155,36 +155,36 @@ export function AuditorDashboardPanel({ buyerId, onNavigateToTab }: AuditorDashb
       {/* Counts / Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         
-        <div className="bg-white border border-border rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-[1px] transition-all cursor-pointer">
+        <div className="bg-card border border-border rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-[1px] transition-all cursor-pointer">
           <div className="text-[12.5px] text-muted-foreground font-medium flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-blue-600" /> Audits this week
           </div>
           <div className="text-[30px] font-extrabold text-foreground mt-2 leading-none tracking-tight">2</div>
-          <div className="text-[12px] text-slate-400 mt-1.5">Himalaya · Spice Mills</div>
+          <div className="text-[12px] text-muted-foreground/70 mt-1.5">Himalaya · Spice Mills</div>
         </div>
 
-        <div className="bg-white border border-border rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-[1px] transition-all cursor-pointer">
+        <div className="bg-card border border-border rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-[1px] transition-all cursor-pointer">
           <div className="text-[12.5px] text-muted-foreground font-medium flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-amber-500" /> Documents pending
           </div>
           <div className="text-[30px] font-extrabold text-foreground mt-2 leading-none tracking-tight">6</div>
-          <div className="text-[12px] text-slate-400 mt-1.5">across 3 clients</div>
+          <div className="text-[12px] text-muted-foreground/70 mt-1.5">across 3 clients</div>
         </div>
 
-        <div className="bg-white border border-border rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-[1px] transition-all cursor-pointer">
+        <div className="bg-card border border-border rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-[1px] transition-all cursor-pointer">
           <div className="text-[12.5px] text-muted-foreground font-medium flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-green-600" /> Ready to finalize
           </div>
           <div className="text-[30px] font-extrabold text-green-600 mt-2 leading-none tracking-tight">3</div>
-          <div className="text-[12px] text-slate-400 mt-1.5">all docs received</div>
+          <div className="text-[12px] text-muted-foreground/70 mt-1.5">all docs received</div>
         </div>
 
-        <div className="bg-gradient-to-b from-white to-[#fffafa] border border-[#F6D5D5] rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-[1px] transition-all cursor-pointer">
+        <div className="bg-gradient-to-b from-card to-[#fffafa] border border-[#F6D5D5] rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-[1px] transition-all cursor-pointer">
           <div className="text-[12.5px] text-muted-foreground font-medium flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-red-600" /> Needs attention
           </div>
           <div className="text-[30px] font-extrabold text-foreground mt-2 leading-none tracking-tight">2</div>
-          <div className="text-[12px] text-slate-400 mt-1.5">overdue or blocked</div>
+          <div className="text-[12px] text-muted-foreground/70 mt-1.5">overdue or blocked</div>
         </div>
 
       </div>
@@ -195,7 +195,7 @@ export function AuditorDashboardPanel({ buyerId, onNavigateToTab }: AuditorDashb
           <ListTodo className="w-5 h-5 text-muted-foreground" />
           Needs your attention
         </h2>
-        <div className="md:ml-auto flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto">
+        <div className="md:ml-auto flex gap-1 bg-muted p-1 rounded-xl overflow-x-auto">
           {[
             { id: 'all', label: 'All' },
             { id: 'week', label: 'This week' },
@@ -207,8 +207,8 @@ export function AuditorDashboardPanel({ buyerId, onNavigateToTab }: AuditorDashb
               onClick={() => setActiveTab(tab.id as TabFilter)}
               className={`text-[13px] font-semibold px-3.5 py-1.5 rounded-lg whitespace-nowrap transition-all ${
                 activeTab === tab.id 
-                  ? 'bg-white text-slate-900 shadow-sm' 
-                  : 'text-slate-500 hover:text-slate-700'
+                  ? 'bg-card text-foreground shadow-sm' 
+                  : 'text-muted-foreground hover:text-foreground/80'
               }`}
             >
               {tab.label}
@@ -218,7 +218,7 @@ export function AuditorDashboardPanel({ buyerId, onNavigateToTab }: AuditorDashb
       </div>
 
       {/* Worklist Rows */}
-      <div className="bg-white border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
+      <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
         <AnimatePresence initial={false}>
           {filteredRows.map((row, index) => (
             <motion.div
@@ -227,7 +227,7 @@ export function AuditorDashboardPanel({ buyerId, onNavigateToTab }: AuditorDashb
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
-              className={`border-b border-slate-100 last:border-0 hover:bg-[#FBFCFE] transition-colors`}
+              className={`border-b border-border last:border-0 hover:bg-card transition-colors`}
             >
               <div className="grid grid-cols-1 md:grid-cols-[18px_1fr_150px_188px_132px] items-center gap-4 md:gap-[18px] p-4 md:px-5 md:py-[17px]">
                 
@@ -242,8 +242,8 @@ export function AuditorDashboardPanel({ buyerId, onNavigateToTab }: AuditorDashb
                     <div className={`w-[11px] h-[11px] rounded-full ${row.dot}`} />
                     <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Status</span>
                   </div>
-                  <div className="text-[15px] font-bold text-slate-900">{row.clientName}</div>
-                  <div className="text-[12.5px] text-slate-500 mt-1 flex flex-wrap items-center gap-1.5">
+                  <div className="text-[15px] font-bold text-foreground">{row.clientName}</div>
+                  <div className="text-[12.5px] text-muted-foreground mt-1 flex flex-wrap items-center gap-1.5">
                     <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${row.tag.color}`}>
                       {row.tag.text}
                     </span>
@@ -254,19 +254,19 @@ export function AuditorDashboardPanel({ buyerId, onNavigateToTab }: AuditorDashb
 
                 {/* 3. Due Date */}
                 <div className="flex flex-col">
-                  <span className="text-[11.5px] text-slate-400 font-medium">{row.dueLab}</span>
-                  <span className={`font-semibold mt-0.5 ${row.dueUrgent ? 'text-red-600' : 'text-slate-700'}`}>
+                  <span className="text-[11.5px] text-muted-foreground/70 font-medium">{row.dueLab}</span>
+                  <span className={`font-semibold mt-0.5 ${row.dueUrgent ? 'text-red-600' : 'text-foreground/80'}`}>
                     {row.dueVal}
                   </span>
                 </div>
 
                 {/* 4. Docs Progress */}
                 <div className="flex flex-col gap-1.5">
-                  <div className="flex justify-between text-[12px] text-slate-500 font-medium">
+                  <div className="flex justify-between text-[12px] text-muted-foreground font-medium">
                     <span>Documents</span>
-                    <b className="text-slate-700 font-semibold">{row.docsCount}</b>
+                    <b className="text-foreground/80 font-semibold">{row.docsCount}</b>
                   </div>
-                  <div className="h-[7px] bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-[7px] bg-muted rounded-full overflow-hidden">
                     <div className={`h-full rounded-full ${row.docsColor}`} style={{ width: row.docsPct }} />
                   </div>
                 </div>
@@ -277,13 +277,13 @@ export function AuditorDashboardPanel({ buyerId, onNavigateToTab }: AuditorDashb
                     className={`w-full border rounded-xl font-semibold text-[13px] px-3 py-2 text-center transition-colors ${
                       row.actionType === 'primary' 
                         ? 'bg-blue-600 text-white border-transparent hover:bg-blue-700'
-                        : 'bg-white text-slate-700 border-border hover:bg-slate-50'
+                        : 'bg-card text-foreground/80 border-border hover:bg-muted'
                     }`}
                   >
                     {row.actionText}
                   </button>
-                  <div className="text-[11.5px] text-slate-500 font-medium flex items-center gap-1">
-                    AI pre-check <b className="text-slate-700 font-bold">{row.preCheck}</b>
+                  <div className="text-[11.5px] text-muted-foreground font-medium flex items-center gap-1">
+                    AI pre-check <b className="text-foreground/80 font-bold">{row.preCheck}</b>
                   </div>
                 </div>
 
@@ -300,7 +300,7 @@ export function AuditorDashboardPanel({ buyerId, onNavigateToTab }: AuditorDashb
                       <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[12.5px] rounded-lg px-3 py-1.5 transition-colors">
                         {row.nudge.yesText}
                       </button>
-                      <button className="bg-white border border-blue-200 text-blue-700 font-semibold text-[12.5px] rounded-lg px-3 py-1.5 hover:bg-blue-50 transition-colors">
+                      <button className="bg-card border border-blue-200 text-blue-700 font-semibold text-[12.5px] rounded-lg px-3 py-1.5 hover:bg-blue-50 transition-colors">
                         Dismiss
                       </button>
                     </div>

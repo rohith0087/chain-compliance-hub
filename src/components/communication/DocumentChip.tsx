@@ -29,7 +29,7 @@ export function DocumentChip({
   const getStatusColor = (status: string) => {
     // For own messages (blue bubble), use high-contrast white styling
     if (isOwnMessage) {
-      return 'bg-white/20 text-white border-white/40 hover:bg-white/30';
+      return 'bg-card/20 text-white border-white/40 hover:bg-card/30';
     }
     
     switch (status?.toLowerCase()) {
@@ -75,7 +75,7 @@ export function DocumentChip({
     return (
       <Badge 
         variant="outline" 
-        className={`flex items-center gap-1.5 cursor-pointer ${isOwnMessage ? 'hover:bg-white/30' : 'hover:bg-muted/50'} ${getStatusColor(document.status)}`}
+        className={`flex items-center gap-1.5 cursor-pointer ${isOwnMessage ? 'hover:bg-card/30' : 'hover:bg-muted/50'} ${getStatusColor(document.status)}`}
         onClick={onClick}
       >
         <FileText className="h-3 w-3" />
@@ -89,7 +89,7 @@ export function DocumentChip({
       <HoverCardTrigger asChild>
         <Badge 
           variant="outline" 
-          className={`flex items-center gap-1.5 cursor-pointer ${isOwnMessage ? 'hover:bg-white/30' : 'hover:bg-muted/80'} hover:scale-[1.02] active:scale-[0.98] transition-all ${getStatusColor(document.status)}`}
+          className={`flex items-center gap-1.5 cursor-pointer ${isOwnMessage ? 'hover:bg-card/30' : 'hover:bg-muted/80'} hover:scale-[1.02] active:scale-[0.98] transition-all ${getStatusColor(document.status)}`}
           onClick={onClick}
         >
           <FileText className="h-3.5 w-3.5" />

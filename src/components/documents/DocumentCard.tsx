@@ -109,8 +109,8 @@ const DocumentCard = ({
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'submitted': return 'bg-blue-100 text-blue-800';
       case 'rejected': return 'bg-red-100 text-red-800';
-      case 'expired': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'expired': return 'bg-muted text-foreground';
+      default: return 'bg-muted text-foreground';
     }
   };
 
@@ -344,10 +344,10 @@ const DocumentCard = ({
             {/* File Information */}
             {document.file_name && (
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">File: {document.file_name}</span>
+                <span className="text-muted-foreground">File: {document.file_name}</span>
                 <div className="flex items-center gap-2">
                   {document.file_size && (
-                    <span className="text-gray-500">{formatFileSize(document.file_size)}</span>
+                    <span className="text-muted-foreground">{formatFileSize(document.file_size)}</span>
                   )}
                   {/* Version History Button */}
                   {document.document_uploads && document.document_uploads.length > 1 && (
@@ -363,13 +363,13 @@ const DocumentCard = ({
             {/* Dates */}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-gray-500">Created</p>
-                <p className="text-gray-900">{formatDate(document.created_at)}</p>
+                <p className="text-muted-foreground">Created</p>
+                <p className="text-foreground">{formatDate(document.created_at)}</p>
               </div>
               {document.due_date && (
                 <div>
-                  <p className="text-gray-500">Due Date</p>
-                  <p className="text-gray-900">{formatDate(document.due_date)}</p>
+                  <p className="text-muted-foreground">Due Date</p>
+                  <p className="text-foreground">{formatDate(document.due_date)}</p>
                 </div>
               )}
             </div>
@@ -379,7 +379,7 @@ const DocumentCard = ({
               <div className="p-3 rounded-lg border">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <Calendar className="w-4 h-4 text-gray-500" />
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Expires:</span>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -404,7 +404,7 @@ const DocumentCard = ({
               <div className="p-3 rounded-lg border">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <Calendar className="w-4 h-4 text-gray-500" />
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Document Expires:</span>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -426,7 +426,7 @@ const DocumentCard = ({
 
             {/* Company Information */}
             <div className="pt-3 border-t">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-muted-foreground">
                 {userRole === 'buyer' && document.supplier && (
                   <span>Supplier: {document.supplier.company_name}</span>
                 )}

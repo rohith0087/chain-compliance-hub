@@ -46,10 +46,17 @@ import { Users, Clock, AlertTriangle } from 'lucide-react';
 import { useCommunicationThreads } from '@/hooks/useCommunicationThreads';
 import { useRequirementEngineFeature } from '@/hooks/useRequirementEngineFeature';
 import RequirementEngineView from '@/components/buyer/RequirementEngineView';
+import FrameworkLibraryView from '@/components/buyer/FrameworkLibraryView';
+import EvidenceMappingReviewQueue from '@/components/buyer/EvidenceMappingReviewQueue';
+import CommandCenterView from '@/components/buyer/CommandCenterView';
+import RequirementExtractorView from '@/components/buyer/RequirementExtractorView';
+import ComplianceQAView from '@/components/buyer/ComplianceQAView';
 import { useComplianceDecisionsFeature } from '@/hooks/useComplianceDecisionsFeature';
 import ComplianceDecisionsView from '@/components/buyer/ComplianceDecisionsView';
 import { useDossiersFeature } from '@/hooks/useDossiersFeature';
 import DossierGeneratorView from '@/components/buyer/DossierGeneratorView';
+import SupplierComplianceWorkspace from '@/components/buyer/SupplierComplianceWorkspace';
+import SupplierDetailPage from '@/components/buyer/SupplierDetailPage';
 import { InboundEmailReviewQueue } from '@/components/buyer/InboundEmailReviewQueue';
 import { useOrganizationFeature } from '@/hooks/useOrganizationFeature';
 
@@ -87,6 +94,18 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
   const [companyId, setCompanyId] = useState<string | undefined>(impersonatedBuyerId);
   const [documentsKey, setDocumentsKey] = useState(0); // Force remount when navigating from dashboard
+  // Per-supplier consolidated compliance workspace (opened from Frameworks coverage or Suppliers)
+  const [complianceSupplier, setComplianceSupplier] = useState<{ id: string; name: string } | null>(null);
+  const openSupplierCompliance = (supplierId: string, supplierName: string) => {
+    setComplianceSupplier({ id: supplierId, name: supplierName });
+    setActiveTab('supplier-compliance');
+  };
+  // Full-page supplier detail (redesigned modal) opened from Suppliers → View details
+  const [detailSupplier, setDetailSupplier] = useState<{ id: string; name: string } | null>(null);
+  const openSupplierDetail = (supplierId: string, supplierName: string) => {
+    setDetailSupplier({ id: supplierId, name: supplierName });
+    setActiveTab('supplier-detail');
+  };
   const [dashboardStats, setDashboardStats] = useState({
     connectedSuppliers: 0,
     activeRequests: 0,
@@ -122,10 +141,21 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
   }, [activeTab, requirementEngineEnabled, requirementEngineLoading]);
 
   useEffect(() => {
-    if (!complianceDecisionsLoading && !complianceDecisionsEnabled && activeTab === 'compliance-decisions') {
+    if (!complianceDecisionsLoading && !complianceDecisionsEnabled && (activeTab === 'compliance-decisions' || activeTab === 'supplier-compliance')) {
       setActiveTab('compliance');
     }
   }, [activeTab, complianceDecisionsEnabled, complianceDecisionsLoading]);
+
+  // Guard the consolidated workspace: if we land on it without a chosen supplier
+  // (e.g. restored from localStorage), send the user back to Frameworks.
+  useEffect(() => {
+    if (activeTab === 'supplier-compliance' && !complianceSupplier) {
+      setActiveTab(requirementEngineEnabled ? 'frameworks' : 'compliance');
+    }
+    if (activeTab === 'supplier-detail' && !detailSupplier) {
+      setActiveTab('suppliers');
+    }
+  }, [activeTab, complianceSupplier, detailSupplier, requirementEngineEnabled]);
   
   // Get permissions to check if user is company owner
   const { isOwner, loading: permissionsLoading } = useCompanyPermissions(companyId, 'buyer');
@@ -531,9 +561,13 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
           )
         )}
 
-        {/* Compliance Content */}
+        {/* Compliance home — a single page. Command Center (action-first, computed
+            chain) is the home for orgs on the decisions engine; the legacy Workbench
+            remains only as an ungated fallback so nothing breaks without it. */}
         {activeTab === 'compliance' && (
-          <BuyerComplianceDashboard onNavigateToComplianceDecisions={() => setActiveTab('compliance-decisions')} />
+          companyId && complianceDecisionsEnabled
+            ? <CommandCenterView buyerId={companyId} onNavigate={setActiveTab} />
+            : <BuyerComplianceDashboard onNavigateToComplianceDecisions={() => setActiveTab('compliance-decisions')} />
         )}
 
         {activeTab === 'requirements' && companyId && requirementEngineEnabled && (
@@ -547,8 +581,38 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
           />
         )}
 
+        {activeTab === 'frameworks' && companyId && requirementEngineEnabled && (
+          <FrameworkLibraryView buyerId={companyId} onOpenSupplier={openSupplierCompliance} />
+        )}
+
+        {activeTab === 'supplier-compliance' && companyId && complianceDecisionsEnabled && complianceSupplier && (
+          <SupplierComplianceWorkspace
+            buyerId={companyId}
+            supplierId={complianceSupplier.id}
+            supplierName={complianceSupplier.name}
+            dossiersEnabled={dossiersEnabled}
+            onBack={() => setActiveTab(requirementEngineEnabled ? 'frameworks' : 'compliance')}
+          />
+        )}
+
         {activeTab === 'compliance-decisions' && companyId && complianceDecisionsEnabled && (
           <ComplianceDecisionsView buyerId={companyId} />
+        )}
+
+        {activeTab === 'mapping-review' && companyId && complianceDecisionsEnabled && (
+          <EvidenceMappingReviewQueue buyerId={companyId} />
+        )}
+
+        {activeTab === 'command-center' && companyId && complianceDecisionsEnabled && (
+          <CommandCenterView buyerId={companyId} onNavigate={setActiveTab} />
+        )}
+
+        {activeTab === 'requirement-extractor' && companyId && requirementEngineEnabled && (
+          <RequirementExtractorView buyerId={companyId} />
+        )}
+
+        {activeTab === 'compliance-qa' && companyId && complianceDecisionsEnabled && (
+          <ComplianceQAView buyerId={companyId} />
         )}
 
         {activeTab === 'dossiers' && companyId && dossiersEnabled && (
@@ -647,8 +711,22 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
         {/* Suppliers Content */}
         {activeTab === 'suppliers' && (
           <div className="space-y-6">
-            <SupplierDiscovery />
+            <SupplierDiscovery
+              onOpenCompliance={complianceDecisionsEnabled ? openSupplierCompliance : undefined}
+              onViewSupplier={openSupplierDetail}
+            />
           </div>
+        )}
+
+        {/* Full-page supplier detail + report */}
+        {activeTab === 'supplier-detail' && companyId && detailSupplier && (
+          <SupplierDetailPage
+            buyerId={companyId}
+            supplierId={detailSupplier.id}
+            supplierName={detailSupplier.name}
+            onBack={() => setActiveTab('suppliers')}
+            onOpenCompliance={complianceDecisionsEnabled ? openSupplierCompliance : undefined}
+          />
         )}
 
         {/* Supplier Map */}

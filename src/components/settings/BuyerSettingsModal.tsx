@@ -218,13 +218,13 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[860px] h-[88vh] p-0 gap-0 overflow-hidden rounded-[20px] border border-[#E5E7EB] shadow-2xl flex flex-col">
+      <DialogContent className="max-w-[860px] h-[88vh] p-0 gap-0 overflow-hidden rounded-[20px] border border-border shadow-2xl flex flex-col">
         {/* Header bar */}
-        <div className="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4 flex-shrink-0">
-          <h1 className="text-[15px] font-bold text-[#111827]">Settings</h1>
+        <div className="flex items-center justify-between border-b border-border px-5 py-4 flex-shrink-0">
+          <h1 className="text-[15px] font-bold text-foreground">Settings</h1>
           <button
             onClick={() => onOpenChange(false)}
-            className="flex h-7 w-7 items-center justify-center rounded-full text-[#6B7280] hover:bg-[#F3F4F6] transition-colors"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -233,11 +233,11 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
         {/* Body: sidebar + content */}
         <div className="flex flex-1 overflow-hidden">
           {/* Sidebar */}
-          <aside className="w-[176px] flex-shrink-0 border-r border-[#E5E7EB] bg-[#F9FAFB] py-4 px-3">
+          <aside className="w-[176px] flex-shrink-0 border-r border-border bg-muted py-4 px-3">
             {/* Workspace group */}
             {visibleNav.some((n) => n.ownerOnly || n.adminAndOwner) && (
               <>
-                <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-[#9CA3AF]">Workspace</p>
+                <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Workspace</p>
                 {visibleNav
                   .filter((n) => n.ownerOnly || n.adminAndOwner)
                   .map((item) => (
@@ -248,12 +248,12 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
                       onClick={() => setActiveSection(item.id)}
                     />
                   ))}
-                <div className="my-3 border-t border-[#E5E7EB]" />
+                <div className="my-3 border-t border-border" />
               </>
             )}
 
             {/* Personal group */}
-            <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-[#9CA3AF]">Personal</p>
+            <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Personal</p>
             {visibleNav
               .filter((n) => !n.ownerOnly && !n.adminAndOwner && n.id !== 'integrations')
               .map((item) => (
@@ -265,10 +265,10 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
                 />
               ))}
 
-            <div className="my-3 border-t border-[#E5E7EB]" />
+            <div className="my-3 border-t border-border" />
 
             {/* Platform group */}
-            <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-[#9CA3AF]">Platform</p>
+            <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Platform</p>
             <NavBtn
               item={{ id: 'integrations', label: 'Integrations', icon: Plug }}
               active={resolvedSection === 'integrations'}
@@ -326,11 +326,11 @@ function NavBtn({ item, active, onClick }: NavBtnProps) {
       className={[
         'flex w-full items-center gap-2.5 rounded-[9px] px-2.5 py-2 text-[13px] font-medium transition-colors mb-0.5',
         active
-          ? 'bg-white text-[#111827] shadow-sm border border-[#E5E7EB]'
-          : 'text-[#6B7280] hover:bg-white/60 hover:text-[#374151]',
+          ? 'bg-card text-foreground shadow-sm border border-border'
+          : 'text-muted-foreground hover:bg-card/60 hover:text-foreground/80',
       ].join(' ')}
     >
-      <Icon className={['h-4 w-4 flex-shrink-0', active ? 'text-[#2563EB]' : 'text-[#9CA3AF]'].join(' ')} />
+      <Icon className={['h-4 w-4 flex-shrink-0', active ? 'text-[#2563EB]' : 'text-muted-foreground/70'].join(' ')} />
       {item.label}
     </button>
   );
@@ -356,13 +356,13 @@ function CompanyPanel({
   return (
     <div className="space-y-6 max-w-[560px]">
       <div>
-        <h2 className="text-[16px] font-bold text-[#111827]">Company</h2>
-        <p className="text-[13px] text-[#6B7280] mt-0.5">Manage your organization's profile and address.</p>
+        <h2 className="text-[16px] font-bold text-foreground">Company</h2>
+        <p className="text-[13px] text-muted-foreground mt-0.5">Manage your organization's profile and address.</p>
       </div>
 
-      <div className="rounded-[14px] border border-[#E5E7EB] bg-white p-5 space-y-5">
+      <div className="rounded-[14px] border border-border bg-card p-5 space-y-5">
         <div>
-          <Label className="text-[13px] font-semibold text-[#374151]">Company Logo</Label>
+          <Label className="text-[13px] font-semibold text-foreground/80">Company Logo</Label>
           <div className="mt-2">
             <LogoUploadWidget
               currentLogoUrl={buyerData.company_logo_url}
@@ -372,12 +372,12 @@ function CompanyPanel({
           </div>
         </div>
 
-        <div className="border-t border-[#F3F4F6]" />
+        <div className="border-t border-border" />
 
         <form onSubmit={handleCompanySubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-[13px] font-medium text-[#374151]">Company Name</Label>
+              <Label className="text-[13px] font-medium text-foreground/80">Company Name</Label>
               <Input
                 className="mt-1 h-9 text-[13px]"
                 value={buyerData.company_name}
@@ -386,7 +386,7 @@ function CompanyPanel({
               />
             </div>
             <div>
-              <Label className="text-[13px] font-medium text-[#374151]">Industry</Label>
+              <Label className="text-[13px] font-medium text-foreground/80">Industry</Label>
               <SafeSelect
                 value={buyerData.industry}
                 onValueChange={(v) => setBuyerData((p: any) => ({ ...p, industry: v }))}
@@ -406,7 +406,7 @@ function CompanyPanel({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-[13px] font-medium text-[#374151]">Contact Email</Label>
+              <Label className="text-[13px] font-medium text-foreground/80">Contact Email</Label>
               <Input
                 className="mt-1 h-9 text-[13px]"
                 type="email"
@@ -416,7 +416,7 @@ function CompanyPanel({
               />
             </div>
             <div>
-              <Label className="text-[13px] font-medium text-[#374151]">Phone</Label>
+              <Label className="text-[13px] font-medium text-foreground/80">Phone</Label>
               <Input
                 className="mt-1 h-9 text-[13px]"
                 value={buyerData.phone}
@@ -426,7 +426,7 @@ function CompanyPanel({
           </div>
 
           <div>
-            <Label className="text-[13px] font-semibold text-[#374151] mb-1 block">Address</Label>
+            <Label className="text-[13px] font-semibold text-foreground/80 mb-1 block">Address</Label>
             <AddressFields
               data={{
                 address_line1: buyerData.address_line1,
@@ -443,7 +443,7 @@ function CompanyPanel({
           <Button
             type="submit"
             disabled={loading}
-            className="h-9 w-full rounded-[10px] bg-[#111827] text-[13px] font-semibold text-white hover:bg-[#374151]"
+            className="h-9 w-full rounded-[10px] bg-primary text-[13px] font-semibold text-white hover:bg-primary-hover"
           >
             {loading ? 'Saving…' : 'Save Company Information'}
           </Button>

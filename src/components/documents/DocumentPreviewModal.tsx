@@ -125,7 +125,7 @@ function ZoomableImage({ src, alt }: { src: string; alt: string }) {
   const endDrag = () => { dragging.current = false; };
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-[#F1F5F9]">
+    <div className="relative h-full w-full overflow-hidden bg-muted">
       <div
         ref={containerRef}
         className="flex h-full w-full items-center justify-center"
@@ -145,16 +145,16 @@ function ZoomableImage({ src, alt }: { src: string; alt: string }) {
         />
       </div>
       {/* Zoom controls */}
-      <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-[12px] border border-[#E5E7EB] bg-white/95 px-1.5 py-1 shadow-[0_8px_24px_rgba(16,24,40,0.16)] backdrop-blur">
-        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-[8px] text-[#374151] hover:bg-gray-100" onClick={() => applyZoom(zoom - 0.25)} disabled={zoom <= 1} title="Zoom out">
+      <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-[12px] border border-border bg-card/95 px-1.5 py-1 shadow-[0_8px_24px_rgba(16,24,40,0.16)] backdrop-blur">
+        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-[8px] text-foreground/80 hover:bg-muted" onClick={() => applyZoom(zoom - 0.25)} disabled={zoom <= 1} title="Zoom out">
           <Minus className="h-4 w-4" />
         </Button>
-        <span className="w-12 text-center text-[12px] font-semibold tabular-nums text-[#374151]">{Math.round(zoom * 100)}%</span>
-        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-[8px] text-[#374151] hover:bg-gray-100" onClick={() => applyZoom(zoom + 0.25)} disabled={zoom >= 6} title="Zoom in">
+        <span className="w-12 text-center text-[12px] font-semibold tabular-nums text-foreground/80">{Math.round(zoom * 100)}%</span>
+        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-[8px] text-foreground/80 hover:bg-muted" onClick={() => applyZoom(zoom + 0.25)} disabled={zoom >= 6} title="Zoom in">
           <Plus className="h-4 w-4" />
         </Button>
-        <div className="mx-0.5 h-5 w-px bg-[#E5E7EB]" />
-        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-[8px] text-[#374151] hover:bg-gray-100" onClick={() => applyZoom(1)} disabled={zoom === 1} title="Reset">
+        <div className="mx-0.5 h-5 w-px bg-muted" />
+        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-[8px] text-foreground/80 hover:bg-muted" onClick={() => applyZoom(1)} disabled={zoom === 1} title="Reset">
           <Maximize2 className="h-4 w-4" />
         </Button>
       </div>
@@ -259,7 +259,7 @@ export default function DocumentPreviewModal({
   const renderBody = () => {
     if (loading) {
       return (
-        <div className="flex h-full flex-col items-center justify-center gap-3 text-[#6B7280]">
+        <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin text-[#2563EB]" />
           <p className="text-sm">Preparing preview…</p>
         </div>
@@ -267,13 +267,13 @@ export default function DocumentPreviewModal({
     }
     if (error || !signedUrl) {
       return (
-        <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-[#6B7280]">
+        <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-muted-foreground">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
             <AlertTriangle className="h-6 w-6 text-red-600" />
           </div>
-          <p className="text-sm font-medium text-[#111827]">{error || 'No file available to preview'}</p>
+          <p className="text-sm font-medium text-foreground">{error || 'No file available to preview'}</p>
           {upload?.file_path && (
-            <Button variant="outline" className="rounded-[10px] border-[#E5E7EB]" onClick={() => void handleDownload()}>
+            <Button variant="outline" className="rounded-[10px] border-border" onClick={() => void handleDownload()}>
               <Download className="mr-2 h-4 w-4" />Download instead
             </Button>
           )}
@@ -284,13 +284,13 @@ export default function DocumentPreviewModal({
       return <ZoomableImage src={signedUrl} alt={fileName || 'Document preview'} />;
     }
     if (previewKind === 'pdf') {
-      return <iframe title={fileName || 'Document preview'} src={signedUrl} className="h-full w-full border-0 bg-[#F1F5F9]" />;
+      return <iframe title={fileName || 'Document preview'} src={signedUrl} className="h-full w-full border-0 bg-muted" />;
     }
     if (previewKind === 'office' && officeEmbedUrl) {
       return (
-        <div className="relative h-full w-full bg-[#F1F5F9]">
+        <div className="relative h-full w-full bg-muted">
           {!officeLoaded && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-[#6B7280]">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground">
               <Loader2 className="h-6 w-6 animate-spin text-[#2563EB]" />
               <p className="text-sm">Loading document preview…</p>
             </div>
@@ -302,7 +302,7 @@ export default function DocumentPreviewModal({
             className="h-full w-full border-0"
             onLoad={() => setOfficeLoaded(true)}
           />
-          <div className="pointer-events-none absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-[#E5E7EB] bg-white/95 px-3 py-1 text-[11px] text-[#6B7280] shadow-sm">
+          <div className="pointer-events-none absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/95 px-3 py-1 text-[11px] text-muted-foreground shadow-sm">
             Not rendering?
             {officeFullUrl && (
               <a href={officeFullUrl} target="_blank" rel="noreferrer" className="pointer-events-auto font-semibold text-[#2563EB] hover:underline">Open in new tab</a>
@@ -314,15 +314,15 @@ export default function DocumentPreviewModal({
       );
     }
     if (previewKind === 'text') {
-      return <iframe title={fileName || 'Document preview'} src={signedUrl} className="h-full w-full border-0 bg-white" />;
+      return <iframe title={fileName || 'Document preview'} src={signedUrl} className="h-full w-full border-0 bg-card" />;
     }
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-[#6B7280]">
-        <div className="flex h-14 w-14 items-center justify-center rounded-[14px] bg-[#EEF2F7]">
-          <FileText className="h-7 w-7 text-[#6B7280]" />
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-muted-foreground">
+        <div className="flex h-14 w-14 items-center justify-center rounded-[14px] bg-muted">
+          <FileText className="h-7 w-7 text-muted-foreground" />
         </div>
-        <p className="text-sm font-medium text-[#111827]">This file type can't be previewed inline.</p>
-        <p className="text-xs text-[#6B7280]">{fileName}</p>
+        <p className="text-sm font-medium text-foreground">This file type can't be previewed inline.</p>
+        <p className="text-xs text-muted-foreground">{fileName}</p>
         <Button className="rounded-[10px] bg-[#2563EB] text-white hover:bg-[#1D4ED8]" onClick={() => void handleDownload()}>
           <Download className="mr-2 h-4 w-4" />Download to view
         </Button>
@@ -335,16 +335,16 @@ export default function DocumentPreviewModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`${(showEvidencePanel && !notesOpen) || notesOpen ? 'max-w-6xl' : 'max-w-5xl'} gap-0 overflow-hidden rounded-[16px] border border-[#E5E7EB] p-0 shadow-[0_20px_60px_rgba(16,24,40,0.18)] [&>button]:hidden`}>
+      <DialogContent className={`${(showEvidencePanel && !notesOpen) || notesOpen ? 'max-w-6xl' : 'max-w-5xl'} gap-0 overflow-hidden rounded-[16px] border border-border p-0 shadow-[0_20px_60px_rgba(16,24,40,0.18)] [&>button]:hidden`}>
         {/* Header */}
-        <div className="flex items-center justify-between gap-3 border-b border-[#E5E7EB] bg-white px-5 py-4">
+        <div className="flex items-center justify-between gap-3 border-b border-border bg-card px-5 py-4">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[12px] bg-[#EEF2F7]">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[12px] bg-muted">
               <HeaderIcon className="h-5 w-5 text-[#2563EB]" />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-[15px] font-bold text-[#111827]">{title || fileName || 'Document'}</p>
-              <p className="truncate text-[13px] text-[#6B7280]">
+              <p className="truncate text-[15px] font-bold text-foreground">{title || fileName || 'Document'}</p>
+              <p className="truncate text-[13px] text-muted-foreground">
                 {[supplierName, fileName, formatBytes(upload?.file_size)].filter(Boolean).join(' · ') || 'Preview'}
               </p>
             </div>
@@ -356,7 +356,7 @@ export default function DocumentPreviewModal({
               </Badge>
             )}
             {canOpenInTab && (
-              <Button asChild variant="outline" size="sm" className="h-[36px] rounded-[10px] border-[#E5E7EB] px-3 font-semibold text-[#374151] hover:bg-gray-50">
+              <Button asChild variant="outline" size="sm" className="h-[36px] rounded-[10px] border-border px-3 font-semibold text-foreground/80 hover:bg-muted">
                 <a href={signedUrl!} target="_blank" rel="noreferrer"><ExternalLink className="mr-1.5 h-4 w-4" />Open</a>
               </Button>
             )}
@@ -365,7 +365,7 @@ export default function DocumentPreviewModal({
                 <Button
                   size="icon"
                   variant="outline"
-                  className="h-[36px] w-[36px] flex-shrink-0 rounded-[10px] border-[#FCA5A5] bg-white text-[#DC2626] hover:bg-[#FEF2F2]"
+                  className="h-[36px] w-[36px] flex-shrink-0 rounded-[10px] border-[#FCA5A5] bg-card text-[#DC2626] hover:bg-[#FEF2F2]"
                   onClick={handleDecline}
                   title="Reject"
                 >
@@ -383,7 +383,7 @@ export default function DocumentPreviewModal({
                 <Button
                   size="icon"
                   variant="outline"
-                  className="h-[36px] w-[36px] flex-shrink-0 rounded-[10px] border-[#E5E7EB] text-[#374151] hover:bg-gray-50"
+                  className="h-[36px] w-[36px] flex-shrink-0 rounded-[10px] border-border text-foreground/80 hover:bg-muted"
                   disabled={downloading || !upload?.file_path}
                   onClick={() => void handleDownload()}
                   title="Download"
@@ -405,7 +405,7 @@ export default function DocumentPreviewModal({
               <Button
                 size="icon"
                 variant="ghost"
-                className={`h-[36px] w-[36px] rounded-[10px] transition-colors ${notesOpen ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' : 'text-[#6B7280] hover:bg-gray-100'}`}
+                className={`h-[36px] w-[36px] rounded-[10px] transition-colors ${notesOpen ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' : 'text-muted-foreground hover:bg-muted'}`}
                 onClick={() => setNotesOpen((v) => !v)}
                 title="Notes"
               >
@@ -415,7 +415,7 @@ export default function DocumentPreviewModal({
             <Button
               size="icon"
               variant="ghost"
-              className="h-[36px] w-[36px] rounded-[10px] text-[#6B7280] hover:bg-gray-100"
+              className="h-[36px] w-[36px] rounded-[10px] text-muted-foreground hover:bg-muted"
               onClick={() => onOpenChange(false)}
             >
               <X className="h-4 w-4" />
@@ -424,7 +424,7 @@ export default function DocumentPreviewModal({
         </div>
 
         {/* Body */}
-        <div className="flex h-[72vh] bg-[#F1F5F9]">
+        <div className="flex h-[72vh] bg-muted">
           <div className="min-w-0 flex-1">{renderBody()}</div>
           {open && documentId && notesOpen && (
             <DocumentNotesPanel documentId={documentId} />

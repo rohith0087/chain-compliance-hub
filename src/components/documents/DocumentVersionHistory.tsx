@@ -117,8 +117,8 @@ const DocumentVersionHistory = ({
       default:
         return { 
           icon: FileText, 
-          color: 'text-gray-600', 
-          bgColor: 'bg-gray-100',
+          color: 'text-muted-foreground', 
+          bgColor: 'bg-muted',
           label: status
         };
     }

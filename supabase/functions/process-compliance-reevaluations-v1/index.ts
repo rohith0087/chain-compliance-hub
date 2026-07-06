@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
 import { handleCorsPreflightRequest } from '../_shared/corsHeaders.ts';
 import { getSupabasePublishableKey, getSupabaseSecretKey, requireEnv } from '../_shared/env.ts';
 import { createRequestContext, jsonResponse, logEvent } from '../_shared/requestContext.ts';
-import { isAuthorizedCronRequest } from '../_shared/systemAuth.ts';
+import { internalInvokeHeaders, isAuthorizedCronRequest } from '../_shared/systemAuth.ts';
 
 // Cron calls are authenticated with the Vault-backed SYSTEM_INVOCATION_SECRET
 // through isAuthorizedCronRequest; direct service-role recovery remains valid.
@@ -25,10 +25,9 @@ Deno.serve(async (req) => {
       if(!latest?.input_snapshot){await admin.from('compliance_reevaluation_queue').update({status:'completed',completed_at:new Date().toISOString(),last_error:null}).eq('id',row.id);summary.skipped+=1;continue;}
       const snapshot=latest.input_snapshot as Record<string,unknown>;
       const body={buyer_id:row.buyer_id,subject_type:row.subject_type,subject_id:row.subject_id,effective_at:new Date().toISOString().slice(0,10),facts:snapshot.facts||{}};
-      const response=await fetch(`${url}/functions/v1/evaluate-compliance-v1`,{method:'POST',headers:{
-        Authorization:`Bearer ${getSupabasePublishableKey()}`,'Content-Type':'application/json','X-System-Secret':requireEnv('SYSTEM_INVOCATION_SECRET'),
+      const response=await fetch(`${url}/functions/v1/evaluate-compliance-v1`,{method:'POST',headers:internalInvokeHeaders(getSupabasePublishableKey(),{
         'x-idempotency-key':`reevaluation:${row.id}:${row.attempts}`,'x-correlation-id':context.correlationId,
-      },body:JSON.stringify(body)});
+      }),body:JSON.stringify(body)});
       if(!response.ok)throw new Error(`evaluate-compliance-v1 returned ${response.status}: ${await response.text()}`);
       await admin.from('compliance_reevaluation_queue').update({status:'completed',completed_at:new Date().toISOString(),last_error:null}).eq('id',row.id);summary.completed+=1;
     }catch(error){const message=error instanceof Error?error.message:String(error);const dead=row.attempts>=row.max_attempts;

@@ -354,8 +354,8 @@ export function SupplierMap() {
       {/* Filter Panel - Desktop */}
       <div className={`${reviewCardContainerClass} absolute top-4 left-4 z-10 w-80 max-h-[calc(100vh-160px)] overflow-y-auto hidden lg:block`}>
         <div className="px-4 pt-4 pb-2 flex items-center gap-2">
-          <Filter className="w-4 h-4 text-[#6B7280]" />
-          <h3 className="text-[15px] font-bold text-[#111827]">Filters</h3>
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <h3 className="text-[15px] font-bold text-foreground">Filters</h3>
         </div>
         <div className="px-4 pb-4 space-y-4">
           <FilterControls />
@@ -382,7 +382,7 @@ export function SupplierMap() {
       {/* Results Count */}
       <div className={`${reviewCardContainerClass} absolute top-4 right-4 z-10`}>
         <div className="p-3">
-          <p className="text-[13px] font-medium text-[#111827]">
+          <p className="text-[13px] font-medium text-foreground">
             Showing {filteredMarkers.length} of {allMarkers.length} locations
           </p>
         </div>
@@ -490,8 +490,8 @@ export function SupplierMap() {
       {/* Legend */}
       <div className={`${reviewCardContainerClass} absolute bottom-4 left-4 z-10`}>
         <div className="p-3">
-          <div className="text-[12px] font-bold text-[#111827] mb-2">Map Legend</div>
-          <div className="space-y-1.5 text-[12px] text-[#374151]">
+          <div className="text-[12px] font-bold text-foreground mb-2">Map Legend</div>
+          <div className="space-y-1.5 text-[12px] text-foreground/80">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded-full bg-blue-700"></div>
               <span>Supplier HQ</span>

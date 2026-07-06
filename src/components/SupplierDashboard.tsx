@@ -549,7 +549,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch, impersonatedSupplierI
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'submitted': return 'bg-blue-100 text-blue-800';
       case 'rejected': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      default: return 'bg-muted text-foreground';
     }
   };
 
@@ -558,7 +558,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch, impersonatedSupplierI
       case 'high': return 'bg-red-100 text-red-800';
       case 'medium': return 'bg-yellow-100 text-yellow-800';
       case 'low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      default: return 'bg-muted text-foreground';
     }
   };
 
@@ -577,7 +577,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch, impersonatedSupplierI
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">{t('supplier:loading')}</p>
+          <p className="text-muted-foreground">{t('supplier:loading')}</p>
         </div>
       </div>
     );
@@ -994,8 +994,8 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch, impersonatedSupplierI
               {filteredRequests.length === 0 ? (
                 <Card>
                   <CardContent className="text-center py-8">
-                    <FileCheck className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">{t('supplier:sections.noRecentRequests')}</p>
+                    <FileCheck className="w-12 h-12 text-muted-foreground/70 mx-auto mb-4" />
+                    <p className="text-muted-foreground">{t('supplier:sections.noRecentRequests')}</p>
                   </CardContent>
                 </Card>
               ) : (

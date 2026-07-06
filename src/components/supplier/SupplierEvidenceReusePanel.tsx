@@ -24,6 +24,8 @@ interface EvidenceOption {
   jurisdiction?:string|null;standards?:string[];covered_product_ids?:string[];covered_facility_ids?:string[];
   evidence_attestations?: Array<{attestation_type:string;outcome:string;organization_id:string;created_at:string}>;
   evidence_validation_runs?: Array<{status:string;created_at:string}>;
+  eligible?: boolean;
+  mismatchNote?: string | null;
 }
 
 export default function SupplierEvidenceReusePanel({ request, onResolved, onUploadNew }: Props) {
@@ -44,13 +46,39 @@ export default function SupplierEvidenceReusePanel({ request, onResolved, onUplo
         .eq('lifecycle_status', 'current').eq('record.supplier_id', request.supplier_id)
         .order('expiry_date', { ascending: false });
       if (error) toast.error('Could not load reusable evidence');
-      else {const threshold=new Date();threshold.setHours(0,0,0,0);threshold.setDate(threshold.getDate()+(request.minimum_remaining_validity_days??90));const compact=String(request.document_type||'').toLowerCase().replace(/[^a-z0-9]+/g,'');const aliases:Record<string,string>={sds:'sds',safetydatasheet:'sds',safetydatasheetssds:'sds',materialsafetydatasheet:'sds',msds:'sds',isocertificate:'iso_certificate',iso9001certificate:'iso_certificate',iso9001certification:'iso_certificate',insurancecertificate:'insurance_certificate',certificateofinsurance:'insurance_certificate',coa:'coa',certificateofanalysis:'coa',businesslicense:'business_license',businesslicence:'business_license',testreport:'test_report',laboratorytestreport:'test_report'};const expectedType=aliases[compact]||String(request.document_type||'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');setOptions((data||[]).filter((version:any)=>{
-        const latestValidation=[...(version.evidence_validation_runs||[])].sort((a:any,b:any)=>String(b.created_at).localeCompare(String(a.created_at)))[0];
-        const supplierVerified=[...(version.evidence_attestations||[])].sort((a:any,b:any)=>String(b.created_at).localeCompare(String(a.created_at))).find((row:any)=>row.organization_id===request.supplier_id&&['supplier_verification','rejection'].includes(row.attestation_type));
-        const scopeMatches=request.evidence_subject_type==='product'?(version.covered_product_ids||[]).includes(request.evidence_subject_id):request.evidence_subject_type==='facility'?(version.covered_facility_ids||[]).includes(request.evidence_subject_id):true;
-        const jurisdictionMatches=!request.evidence_jurisdiction||String(version.jurisdiction||'').toLowerCase()===String(request.evidence_jurisdiction).toLowerCase();const standardsMatch=(JSON.parse(requestStandardsKey) as string[]).every((standard:string)=>(version.standards||[]).includes(standard));
-        return version.record?.canonical_document_type===expectedType&&scopeMatches&&jurisdictionMatches&&standardsMatch&&latestValidation?.status==='passed'&&supplierVerified?.attestation_type==='supplier_verification'&&supplierVerified?.outcome==='accepted'&&(!version.expiry_date||new Date(version.expiry_date)>=threshold);
-      }));}
+      else {const threshold=new Date();threshold.setHours(0,0,0,0);threshold.setDate(threshold.getDate()+(request.minimum_remaining_validity_days??90));const compact=String(request.document_type||'').toLowerCase().replace(/[^a-z0-9]+/g,'');const aliases:Record<string,string>={sds:'sds',safetydatasheet:'sds',safetydatasheetssds:'sds',materialsafetydatasheet:'sds',msds:'sds',isocertificate:'iso_certificate',iso9001certificate:'iso_certificate',iso9001certification:'iso_certificate',insurancecertificate:'insurance_certificate',certificateofinsurance:'insurance_certificate',coa:'coa',certificateofanalysis:'coa',businesslicense:'business_license',businesslicence:'business_license',testreport:'test_report',laboratorytestreport:'test_report'};const expectedType=aliases[compact]||String(request.document_type||'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+        // Annotate rather than hard-filter: show any verified, validation-passed,
+        // unexpired version so the dropdown is never mysteriously empty when the
+        // banner says a match is available. Type/scope/standards differences are
+        // surfaced as a note; the buyer still reviews whatever is submitted.
+        const annotated=(data||[]).map((version:any):EvidenceOption=>{
+          const latestValidation=[...(version.evidence_validation_runs||[])].sort((a:any,b:any)=>String(b.created_at).localeCompare(String(a.created_at)))[0];
+          const supplierVerified=[...(version.evidence_attestations||[])].sort((a:any,b:any)=>String(b.created_at).localeCompare(String(a.created_at))).find((row:any)=>row.organization_id===request.supplier_id&&['supplier_verification','rejection'].includes(row.attestation_type));
+          const scopeMatches=request.evidence_subject_type==='product'?(version.covered_product_ids||[]).includes(request.evidence_subject_id):request.evidence_subject_type==='facility'?(version.covered_facility_ids||[]).includes(request.evidence_subject_id):true;
+          const jurisdictionMatches=!request.evidence_jurisdiction||String(version.jurisdiction||'').toLowerCase()===String(request.evidence_jurisdiction).toLowerCase();
+          const standardsMatch=(JSON.parse(requestStandardsKey) as string[]).every((standard:string)=>(version.standards||[]).includes(standard));
+          const verified=supplierVerified?.attestation_type==='supplier_verification'&&supplierVerified?.outcome==='accepted';
+          const validated=latestValidation?.status==='passed';
+          const unexpired=!version.expiry_date||new Date(version.expiry_date)>=threshold;
+          const typeMatches=version.record?.canonical_document_type===expectedType;
+          const notes:string[]=[];
+          if(!typeMatches)notes.push(`type is ${version.record?.canonical_document_type||'unknown'}, request wants ${expectedType}`);
+          if(!scopeMatches)notes.push('scope differs');
+          if(!jurisdictionMatches)notes.push('jurisdiction differs');
+          if(!standardsMatch)notes.push('missing required standard');
+          const eligible=verified&&validated&&unexpired&&typeMatches&&scopeMatches&&jurisdictionMatches&&standardsMatch;
+          return {...version,eligible,mismatchNote:notes.length?notes.join('; '):null};
+        })
+        // Only surface verified, validated, unexpired evidence at all; the rest
+        // are not shareable no matter the type.
+        .filter((v:EvidenceOption)=>{
+          const latestValidation=[...(v.evidence_validation_runs||[])].sort((a:any,b:any)=>String(b.created_at).localeCompare(String(a.created_at)))[0];
+          const supplierVerified=[...(v.evidence_attestations||[])].sort((a:any,b:any)=>String(b.created_at).localeCompare(String(a.created_at))).find((row:any)=>row.organization_id===request.supplier_id);
+          const unexpired=!v.expiry_date||new Date(v.expiry_date)>=threshold;
+          return supplierVerified?.attestation_type==='supplier_verification'&&supplierVerified?.outcome==='accepted'&&latestValidation?.status==='passed'&&unexpired;
+        })
+        .sort((a:EvidenceOption,b:EvidenceOption)=>Number(b.eligible)-Number(a.eligible));
+        setOptions(annotated);}
     };
     void load();
   }, [open,enabled,request.supplier_id,request.document_type,request.minimum_remaining_validity_days,request.evidence_subject_type,request.evidence_subject_id,request.evidence_jurisdiction,requestStandardsKey]);
@@ -82,7 +110,7 @@ export default function SupplierEvidenceReusePanel({ request, onResolved, onUplo
         <AlertDescription className="mt-2 space-y-3">
           <p>The buyer cannot see your evidence until you choose to share it. You can reuse a valid version, upload a newer version, or ask why it was requested again.</p>
           {request.request_reason_code && (
-            <p className="rounded bg-white/70 p-2"><strong>Buyer’s reason:</strong> {request.request_reason_code.replace(/_/g, ' ')}{request.request_reason_notes ? ` — ${request.request_reason_notes}` : ''}</p>
+            <p className="rounded bg-card/70 p-2"><strong>Buyer’s reason:</strong> {request.request_reason_code.replace(/_/g, ' ')}{request.request_reason_notes ? ` — ${request.request_reason_notes}` : ''}</p>
           )}
           <div className="flex flex-wrap gap-2">
             <Button size="sm" onClick={() => setOpen(true)}><FileCheck2 className="mr-2 h-4 w-4" />Submit existing evidence</Button>
@@ -107,9 +135,22 @@ export default function SupplierEvidenceReusePanel({ request, onResolved, onUplo
                 <SelectContent>
                   {options.map((option) => (
                     <SelectItem key={option.id} value={option.id}>
-                      {option.record?.display_name || 'Evidence'}{option.expiry_date ? ` · expires ${new Date(option.expiry_date).toLocaleDateString()}` : ''}
+                      <span className="flex flex-col">
+                        <span>
+                          {option.eligible ? '✓ ' : '⚠ '}
+                          {option.record?.display_name || 'Evidence'}{option.expiry_date ? ` · expires ${new Date(option.expiry_date).toLocaleDateString()}` : ''}
+                        </span>
+                        {!option.eligible && option.mismatchNote && (
+                          <span className="text-xs text-muted-foreground">Not an exact match: {option.mismatchNote}</span>
+                        )}
+                      </span>
                     </SelectItem>
                   ))}
+                  {options.length === 0 && (
+                    <div className="px-2 py-3 text-xs text-muted-foreground">
+                      No verified evidence available to reuse yet. Upload a new version instead.
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
             </div>

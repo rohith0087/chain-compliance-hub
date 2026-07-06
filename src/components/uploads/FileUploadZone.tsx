@@ -157,18 +157,18 @@ const FileUploadZone = ({ requestId, onUploadComplete }: FileUploadZoneProps) =>
           <div
             {...getRootProps()}
             className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-              isDragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+              isDragActive ? 'border-blue-400 bg-blue-50' : 'border-border hover:border-gray-400'
             }`}
           >
             <input {...getInputProps()} />
-            <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <p className="text-lg font-medium text-gray-900 mb-2">
+            <Upload className="mx-auto h-12 w-12 text-muted-foreground/70 mb-4" />
+            <p className="text-lg font-medium text-foreground mb-2">
               {isDragActive ? 'Drop files here' : 'Upload documents'}
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Drag and drop files here, or click to select files
             </p>
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs text-muted-foreground/70 mt-2">
               Supported formats: PDF, DOC, DOCX, PNG, JPG, TXT (Max 10MB each)
             </p>
           </div>
@@ -181,11 +181,11 @@ const FileUploadZone = ({ requestId, onUploadComplete }: FileUploadZoneProps) =>
             <h4 className="font-medium mb-3">Selected Files ({selectedFiles.length})</h4>
             <div className="space-y-2 mb-4">
               {selectedFiles.map((file, index) => (
-                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
                   <div className="flex items-center space-x-2">
-                    <FileText className="w-4 h-4 text-gray-500" />
+                    <FileText className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm">{file.name}</span>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-muted-foreground/70">
                       ({(file.size / 1024 / 1024).toFixed(2)} MB)
                     </span>
                   </div>

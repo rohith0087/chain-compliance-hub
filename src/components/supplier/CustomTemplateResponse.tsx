@@ -327,7 +327,7 @@ export const CustomTemplateResponse = ({ isOpen, onClose, request, onSubmissionC
       case 'revision_requested':
         return 'bg-yellow-100 text-yellow-800';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-foreground';
     }
   };
 
@@ -488,15 +488,15 @@ export const CustomTemplateResponse = ({ isOpen, onClose, request, onSubmissionC
                   <div
                     {...getRootProps()}
                     className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-                      isDragActive ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-primary'
+                      isDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary'
                     }`}
                   >
                     <input {...getInputProps()} />
-                    <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                    <p className="text-sm font-medium text-gray-900 mb-1">
+                    <Upload className="mx-auto h-8 w-8 text-muted-foreground/70 mb-2" />
+                    <p className="text-sm font-medium text-foreground mb-1">
                       {isDragActive ? 'Drop your file here' : 'Upload completed document'}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       PDF, DOC, DOCX, XLS, XLSX, or image files
                     </p>
                   </div>
@@ -505,8 +505,8 @@ export const CustomTemplateResponse = ({ isOpen, onClose, request, onSubmissionC
                     <div className="flex items-center space-x-3">
                       <FileText className="h-6 w-6 text-blue-500" />
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-sm font-medium text-foreground">{selectedFile.name}</p>
+                        <p className="text-xs text-muted-foreground">
                           {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                         </p>
                       </div>

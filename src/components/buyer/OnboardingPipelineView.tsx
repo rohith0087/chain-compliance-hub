@@ -35,7 +35,7 @@ import { useBranchContext } from '@/contexts/BranchContext';
 const PIPELINE_STAGES = [
   { id: 'requested', name: 'Requested', color: 'bg-purple-100 dark:bg-purple-900/30' },
   { id: 'invited', name: 'Invited', color: 'bg-indigo-100 dark:bg-indigo-900/30' },
-  { id: 'pending', name: 'Pending', color: 'bg-slate-100 dark:bg-slate-800/50' },
+  { id: 'pending', name: 'Pending', color: 'bg-muted dark:bg-slate-800/50' },
   { id: 'onboarding_initiated', name: 'Started', color: 'bg-blue-100 dark:bg-blue-900/30' },
   { id: 'under_review', name: 'Review', color: 'bg-yellow-100 dark:bg-yellow-900/30' },
   { id: 'approved', name: 'Approved', color: 'bg-green-100 dark:bg-green-900/30' },

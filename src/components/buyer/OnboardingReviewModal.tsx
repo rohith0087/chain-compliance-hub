@@ -266,7 +266,7 @@ export const OnboardingReviewModal: React.FC<OnboardingReviewModalProps> = ({
                       <div key={submission.id} className={`p-3 border rounded-lg ${
                         submission.is_document_available === false 
                           ? 'border-orange-200 bg-orange-50' 
-                          : 'border-gray-200'
+                          : 'border-border'
                       }`}>
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
@@ -349,7 +349,7 @@ export const OnboardingReviewModal: React.FC<OnboardingReviewModalProps> = ({
                             {response.onboarding_form_fields.field_description}
                           </div>
                         )}
-                        <div className="text-sm bg-gray-50 p-2 rounded">
+                        <div className="text-sm bg-muted p-2 rounded">
                           {response.response_value || 'No response provided'}
                         </div>
                       </div>

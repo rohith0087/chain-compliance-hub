@@ -210,8 +210,8 @@ export const PermissionManagementInterface: React.FC<PermissionManagementInterfa
       case 'branch_manager': return 'bg-blue-100 text-blue-800';
       case 'document_manager': return 'bg-green-100 text-green-800';
       case 'approver': return 'bg-orange-100 text-orange-800';
-      case 'viewer': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'viewer': return 'bg-muted text-foreground';
+      default: return 'bg-muted text-foreground';
     }
   };
 

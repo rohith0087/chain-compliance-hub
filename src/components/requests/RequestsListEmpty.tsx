@@ -62,7 +62,7 @@ const RequestsListEmpty = () => {
           <CardTitle>Connect with Suppliers First</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-gray-600 max-w-md mx-auto">
+          <p className="text-muted-foreground max-w-md mx-auto">
             Before you can request documents, you need to connect with suppliers. 
             Browse and connect with suppliers to start requesting compliance documents.
           </p>
@@ -79,15 +79,15 @@ const RequestsListEmpty = () => {
   return (
     <Card className="text-center py-12">
       <CardHeader>
-        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <FileText className="w-8 h-8 text-gray-400" />
+        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+          <FileText className="w-8 h-8 text-muted-foreground/70" />
         </div>
         <CardTitle>
           {isBuyer ? 'No Document Requests Yet' : 'No Requests Received'}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-gray-600 mb-6">
+        <p className="text-muted-foreground mb-6">
           {isBuyer 
             ? "You haven't created any document requests yet. Start by requesting compliance documents from your connected suppliers."
             : "You haven't received any document requests yet. Buyers will send you requests for compliance documents."

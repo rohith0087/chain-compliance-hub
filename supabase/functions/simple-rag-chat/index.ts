@@ -47,6 +47,10 @@ const tools = [
             items: { type: "string" },
             description: "Filter by supplier company names"
           },
+          supplier_id: {
+            type: "string",
+            description: "Filter to a specific supplier by id (used automatically when the chat is scoped to one supplier)."
+          },
           expired: {
             type: "boolean",
             description: "If true, only show expired documents. If false, show non-expired documents."
@@ -474,8 +478,8 @@ const tools = [
         properties: {
           action_type: {
             type: "string",
-            enum: ["expired_documents", "expiring_documents", "pending_review", "general_followup"],
-            description: "Type of compliance action triggering the email. Default to 'expired_documents' if user mentions expired docs, 'expiring_documents' for expiring soon, 'pending_review' for pending/submitted, 'general_followup' for generic follow-up."
+            enum: ["expired_documents", "expiring_documents", "pending_review", "general_followup", "missing_documents"],
+            description: "Type of compliance action triggering the email. Use 'missing_documents' when the user wants to ask a supplier to SUBMIT missing/outstanding documents — this pulls the real unmet requirements from the compliance decision engine (not already-submitted uploads). 'expired_documents' for expired, 'expiring_documents' for expiring soon, 'pending_review' for pending/submitted, 'general_followup' for generic follow-up."
           },
           supplier_names: {
             type: "array",
@@ -1502,10 +1506,35 @@ CRITICAL RULES:
   }
 }
 
-async function queryDocuments(filters: any, buyerId: string) {
+async function queryDocuments(filters: any, buyerId: string, scopedSupplierId?: string | null) {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-  
+
   try {
+    // Resolve a supplier scope to concrete ids so we can filter at the DB level
+    // BEFORE pagination — filtering a 20-row page in memory could otherwise drop
+    // a supplier's documents entirely for buyers with many suppliers.
+    let targetSupplierIds: string[] = [];
+    if (scopedSupplierId) {
+      targetSupplierIds = [scopedSupplierId];
+    } else if (filters.supplier_id) {
+      targetSupplierIds = [filters.supplier_id];
+    } else if (filters.supplier_names && filters.supplier_names.length > 0) {
+      const { data: connections } = await supabase
+        .from('buyer_supplier_connections')
+        .select('supplier_id, suppliers(id, company_name)')
+        .eq('buyer_id', buyerId)
+        .eq('status', 'approved');
+      for (const searchName of filters.supplier_names) {
+        for (const conn of connections || []) {
+          const nm = (conn.suppliers as any)?.company_name || '';
+          if (fuzzyMatch(nm, searchName)) {
+            const id = (conn.suppliers as any)?.id || conn.supplier_id;
+            if (id && !targetSupplierIds.includes(id)) targetSupplierIds.push(id);
+          }
+        }
+      }
+    }
+
     let query = supabase
       .from('document_uploads')
       .select(`
@@ -1520,6 +1549,7 @@ async function queryDocuments(filters: any, buyerId: string) {
           document_type,
           category,
           buyer_id,
+          supplier_id,
           status,
           suppliers(
             id,
@@ -1529,6 +1559,11 @@ async function queryDocuments(filters: any, buyerId: string) {
         )
       `)
       .eq('document_requests.buyer_id', buyerId);
+
+    // DB-level supplier scope (correct + complete, unlike post-page filtering)
+    if (targetSupplierIds.length > 0) {
+      query = query.in('document_requests.supplier_id', targetSupplierIds);
+    }
 
     // Apply dynamic filters
     if (filters.status && filters.status.length > 0) {
@@ -1587,9 +1622,10 @@ async function queryDocuments(filters: any, buyerId: string) {
     
     if (error) throw error;
 
-    // If supplier_names filter is provided, filter in-memory with fuzzy matching
+    // If supplier_names filter is provided but we couldn't resolve it to ids
+    // above (so no DB-level scope was applied), fall back to in-memory fuzzy.
     let results = data || [];
-    if (filters.supplier_names && filters.supplier_names.length > 0) {
+    if (targetSupplierIds.length === 0 && filters.supplier_names && filters.supplier_names.length > 0) {
       results = results.filter((doc: any) => {
         const supplierName = doc.document_requests?.suppliers?.company_name || '';
         return filters.supplier_names.some((queryName: string) => 
@@ -3445,15 +3481,19 @@ async function confirmSendEmail(params: any, authHeader: string) {
 
 // ============= DRAFT COMPLIANCE EMAIL =============
 // Drafts context-aware follow-up emails grouped by supplier
-async function draftComplianceEmail(params: any, buyerId: string) {
+async function draftComplianceEmail(params: any, buyerId: string, scopedSupplierId?: string | null) {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-  
+
   try {
     const actionType = params.action_type || 'general_followup';
     const supplierNames = params.supplier_names || [];
     let supplierIds = params.supplier_ids || [];
     const documentIds = params.document_ids || [];
     const customMessage = params.custom_message || '';
+    // A chat scoped to one supplier auto-targets that supplier.
+    if (supplierIds.length === 0 && supplierNames.length === 0 && scopedSupplierId) {
+      supplierIds = [scopedSupplierId];
+    }
     
     console.log('📧 Draft email params:', { actionType, supplierCount: supplierNames.length, documentCount: documentIds.length });
     
@@ -3487,97 +3527,123 @@ async function draftComplianceEmail(params: any, buyerId: string) {
       }
     }
     
-    // 1. Fetch relevant documents based on action type
-    let documentsQuery = supabase
-      .from('document_uploads')
-      .select(`
-        id,
-        document_name,
-        file_name,
-        status,
-        expiration_date,
-        created_at,
-        document_requests!inner(
-          id,
-          title,
-          document_type,
-          supplier_id,
-          buyer_id,
-          suppliers(id, company_name, contact_email, profile_id)
-        )
-      `)
-      .eq('document_requests.buyer_id', buyerId);
-    
-    // Filter by specific suppliers if resolved from names
-    if (supplierIds.length > 0) {
-      documentsQuery = documentsQuery.in('document_requests.supplier_id', supplierIds);
-    }
-    
-    // Filter by action type
-    const now = new Date();
-    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-    
-    if (actionType === 'expired_documents') {
-      documentsQuery = documentsQuery.lt('expiration_date', now.toISOString());
-    } else if (actionType === 'expiring_documents') {
-      documentsQuery = documentsQuery
-        .gte('expiration_date', now.toISOString())
-        .lte('expiration_date', thirtyDaysFromNow.toISOString());
-    } else if (actionType === 'pending_review') {
-      documentsQuery = documentsQuery.in('status', ['pending_review', 'submitted']);
-    }
-    
-    // Filter by specific document IDs if provided
-    if (documentIds.length > 0) {
-      documentsQuery = documentsQuery.in('id', documentIds);
-    }
-    
-    const { data: documents, error: docsError } = await documentsQuery;
-    
-    if (docsError) throw docsError;
-    
-    // If no documents found for the specific action type, provide helpful message
-    if (!documents || documents.length === 0) {
-      const supplierNameList = supplierNames.length > 0 ? ` for ${supplierNames.join(', ')}` : '';
-      return {
-        success: false,
-        error: `No ${actionType.replace(/_/g, ' ')}${supplierNameList}. The supplier may not have any documents matching this criteria.`,
-        drafts: []
-      };
-    }
-    
-    // 2. Group documents by supplier (CRITICAL for data isolation)
-    const supplierGroups = new Map<string, {
-      supplier: any;
-      documents: any[];
-    }>();
-    
-    for (const doc of documents) {
-      const supplier = (doc.document_requests as any)?.suppliers;
-      if (!supplier) continue;
-      
-      const supplierId = supplier.id;
-      
-      if (!supplierGroups.has(supplierId)) {
-        supplierGroups.set(supplierId, {
-          supplier,
-          documents: []
+    // 1. Assemble the items to reference, grouped by supplier.
+    const supplierGroups = new Map<string, { supplier: any; documents: any[] }>();
+
+    if (actionType === 'missing_documents') {
+      // Source of truth = the compliance decision engine. "Missing" means an
+      // applicable requirement with no accepted evidence (missing/requested/
+      // expired/noncompliant) — NOT already-submitted uploads. This is what makes
+      // a "please submit your outstanding documents" email actually correct.
+      let statusQuery = supabase
+        .from('compliance_current_status')
+        .select('subject_id, framework_code, requirement_key, title, outcome, effective_to')
+        .eq('buyer_id', buyerId)
+        .eq('subject_type', 'supplier')
+        .in('outcome', ['missing', 'requested', 'expired', 'noncompliant']);
+      if (supplierIds.length > 0) statusQuery = statusQuery.in('subject_id', supplierIds);
+      const { data: unmet, error: unmetError } = await statusQuery;
+      if (unmetError) throw unmetError;
+
+      const involvedIds = [...new Set((unmet || []).map((r: any) => r.subject_id))];
+      if (involvedIds.length === 0) {
+        return {
+          success: false,
+          error: 'No outstanding or missing requirements were found — everything applicable for this supplier is already compliant or under review.',
+          drafts: []
+        };
+      }
+      const { data: sups } = await supabase
+        .from('suppliers')
+        .select('id, company_name, contact_email, profile_id')
+        .in('id', involvedIds);
+      const supById = new Map((sups || []).map((s: any) => [s.id, s]));
+      for (const r of unmet || []) {
+        const supplier = supById.get((r as any).subject_id);
+        if (!supplier) continue;
+        if (!supplierGroups.has(supplier.id)) supplierGroups.set(supplier.id, { supplier, documents: [] });
+        supplierGroups.get(supplier.id)!.documents.push({
+          id: (r as any).requirement_key,
+          name: (r as any).title || (r as any).requirement_key,
+          type: (r as any).framework_code,
+          expiration_date: (r as any).effective_to,
+          status: (r as any).outcome,
         });
       }
-      
-      supplierGroups.get(supplierId)!.documents.push({
-        id: doc.id,
-        name: doc.document_name || doc.file_name || (doc.document_requests as any)?.title || 'Untitled',
-        type: (doc.document_requests as any)?.document_type || 'Document',
-        expiration_date: doc.expiration_date,
-        status: doc.status
-      });
+    } else {
+      // Existing behavior for expired/expiring/pending/general — from uploads.
+      let documentsQuery = supabase
+        .from('document_uploads')
+        .select(`
+          id,
+          document_name,
+          file_name,
+          status,
+          expiration_date,
+          created_at,
+          document_requests!inner(
+            id,
+            title,
+            document_type,
+            supplier_id,
+            buyer_id,
+            suppliers(id, company_name, contact_email, profile_id)
+          )
+        `)
+        .eq('document_requests.buyer_id', buyerId);
+
+      if (supplierIds.length > 0) {
+        documentsQuery = documentsQuery.in('document_requests.supplier_id', supplierIds);
+      }
+
+      const now = new Date();
+      const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      if (actionType === 'expired_documents') {
+        documentsQuery = documentsQuery.lt('expiration_date', now.toISOString());
+      } else if (actionType === 'expiring_documents') {
+        documentsQuery = documentsQuery
+          .gte('expiration_date', now.toISOString())
+          .lte('expiration_date', thirtyDaysFromNow.toISOString());
+      } else if (actionType === 'pending_review') {
+        documentsQuery = documentsQuery.in('status', ['pending_review', 'submitted']);
+      }
+
+      if (documentIds.length > 0) {
+        documentsQuery = documentsQuery.in('id', documentIds);
+      }
+
+      const { data: documents, error: docsError } = await documentsQuery;
+      if (docsError) throw docsError;
+
+      if (!documents || documents.length === 0) {
+        const supplierNameList = supplierNames.length > 0 ? ` for ${supplierNames.join(', ')}` : '';
+        return {
+          success: false,
+          error: `No ${actionType.replace(/_/g, ' ')}${supplierNameList}. The supplier may not have any documents matching this criteria.`,
+          drafts: []
+        };
+      }
+
+      for (const doc of documents) {
+        const supplier = (doc.document_requests as any)?.suppliers;
+        if (!supplier) continue;
+        const supplierId = supplier.id;
+        if (!supplierGroups.has(supplierId)) supplierGroups.set(supplierId, { supplier, documents: [] });
+        supplierGroups.get(supplierId)!.documents.push({
+          id: doc.id,
+          name: doc.document_name || doc.file_name || (doc.document_requests as any)?.title || 'Untitled',
+          type: (doc.document_requests as any)?.document_type || 'Document',
+          expiration_date: doc.expiration_date,
+          status: doc.status
+        });
+      }
     }
-    
+
     if (supplierGroups.size === 0) {
       return {
         success: false,
-        error: 'No suppliers found with matching documents.',
+        error: 'No suppliers found with matching items.',
         drafts: []
       };
     }
@@ -3683,10 +3749,15 @@ async function draftComplianceEmail(params: any, buyerId: string) {
       let body = '';
       
       const docList = supplierDocs.map(d => {
-        const expInfo = d.expiration_date 
-          ? ` - ${d.status === 'expired' ? 'Expired' : 'Expires'} ${new Date(d.expiration_date).toLocaleDateString()}`
-          : '';
-        return `• ${d.name}${expInfo}`;
+        let info = '';
+        if (d.expiration_date) {
+          info = ` - ${d.status === 'expired' ? 'Expired' : 'Expires'} ${new Date(d.expiration_date).toLocaleDateString()}`;
+        } else if (d.status === 'missing') {
+          info = ' - not yet provided';
+        } else if (d.status === 'requested') {
+          info = ' - requested, awaiting upload';
+        }
+        return `• ${d.name}${info}`;
       }).join('\n');
       
       if (OPENAI_API_KEY) {
@@ -3754,11 +3825,12 @@ Format your response as JSON:
           expired_documents: 'Expired',
           expiring_documents: 'Expiring Soon',
           pending_review: 'Pending Review',
-          general_followup: 'Follow-up Required'
+          general_followup: 'Follow-up Required',
+          missing_documents: 'Outstanding'
         }[actionType] || 'Action Required';
-        
+
         subject = `Action Required: ${supplierDocs.length} ${actionLabel} Compliance Document${supplierDocs.length > 1 ? 's' : ''}`;
-        
+
         body = `Dear ${supplier.company_name} Team,
 
 I hope this message finds you well.
@@ -3767,7 +3839,7 @@ I wanted to follow up regarding the following compliance documents that require 
 
 ${docList}
 
-Please submit the ${actionType === 'expired_documents' ? 'renewed' : 'updated'} documents through the compliance portal at your earliest convenience.
+Please submit the ${actionType === 'expired_documents' ? 'renewed' : actionType === 'missing_documents' ? 'outstanding' : 'updated'} documents through the compliance portal at your earliest convenience.
 
 If you have any questions or need assistance, please don't hesitate to reach out.
 
@@ -4177,7 +4249,7 @@ async function executeToolCall(
   
   switch (toolName) {
     case "query_documents":
-      return await queryDocuments(args, buyerId);
+      return await queryDocuments(args, buyerId, context?.supplierId || null);
     case "query_suppliers":
       return await querySuppliers(args, buyerId);
     case "get_compliance_metrics":
@@ -4212,7 +4284,7 @@ async function executeToolCall(
       return await getComplianceInsightsDashboard(args, buyerId);
     case "draft_compliance_email":
       console.log('📧 Drafting compliance follow-up email');
-      return await draftComplianceEmail(args, buyerId);
+      return await draftComplianceEmail(args, buyerId, context?.supplierId || null);
     case "draft_generic_email":
       console.log('📧 Creating generic email draft');
       return await draftGenericEmail(args, context?.authHeader || '');
@@ -4516,7 +4588,7 @@ serve(async (req) => {
     console.log('✓ User authenticated');
 
     // Parse request body
-    const { buyer_id: requested_buyer_id, question, session_id: incoming_session_id, user_context, stream: wantsStream } = await req.json();
+    const { buyer_id: requested_buyer_id, question, session_id: incoming_session_id, user_context, stream: wantsStream, supplier_id: scoped_supplier_id_raw } = await req.json();
 
     // ============= RESOLVE USER'S ACTUAL BUYER ID =============
     let actualBuyerId: string | null = null;
@@ -4937,6 +5009,86 @@ serve(async (req) => {
       }
     }
 
+    // ============= SUPPLIER SCOPE (from @mention in the unified chat) =============
+    // When the user scopes the conversation to one supplier, we (a) verify the
+    // supplier is actually connected to this buyer (no cross-tenant leakage), and
+    // (b) inject that supplier's computed compliance snapshot as grounding + a hard
+    // directive so every tool call and answer stays about that supplier.
+    let scopePreamble: { role: string; content: string } | null = null;
+    let scopedSupplierId: string | null = null;   // validated; threaded into tool calls
+    if (scoped_supplier_id_raw && typeof scoped_supplier_id_raw === 'string') {
+      const { data: conn } = await supabase
+        .from('buyer_supplier_connections')
+        .select('supplier_id, suppliers(company_name)')
+        .eq('buyer_id', buyer_id)
+        .eq('supplier_id', scoped_supplier_id_raw)
+        .eq('status', 'approved')
+        .maybeSingle();
+      if (conn) {
+        scopedSupplierId = scoped_supplier_id_raw;
+        const supplierName = (conn as { suppliers?: { company_name?: string } }).suppliers?.company_name || 'this supplier';
+
+        // (1) Per-framework coverage rollup (same SSOT the Frameworks page uses).
+        let coverageLines = 'No frameworks are active for this supplier yet.';
+        try {
+          const { data: cov } = await supabase.rpc('framework_coverage_v1', { p_buyer_id: buyer_id });
+          const rows = ((cov?.coverage ?? []) as Array<{ framework_code: string; supplier_id: string; total: number; compliant: number; gaps: number; pending: number }>)
+            .filter((r) => r.supplier_id === scoped_supplier_id_raw);
+          if (rows.length) {
+            coverageLines = rows.map((r) => `- ${r.framework_code}: ${r.compliant}/${r.total} requirements met${r.gaps > 0 ? `, ${r.gaps} open gap(s)` : ''}${r.pending > 0 ? `, ${r.pending} pending evidence` : ''}`).join('\n');
+          }
+        } catch (_e) { /* grounding is best-effort */ }
+
+        // (2) Per-requirement computed status — the real ground truth (outcome,
+        // the chain explanation sentence, and expiry). Answering directly from
+        // this is both more accurate than a tool guess AND lets the reply stream.
+        let requirementLines = '';
+        try {
+          const { data: statusRows } = await supabase
+            .from('compliance_current_status')
+            .select('framework_code, requirement_key, title, outcome, explanation, effective_to')
+            .eq('buyer_id', buyer_id)
+            .eq('subject_type', 'supplier')
+            .eq('subject_id', scoped_supplier_id_raw)
+            .order('framework_code', { ascending: true })
+            .limit(80);
+          const rows = (statusRows || []) as Array<{ framework_code: string; requirement_key: string; title: string | null; outcome: string; explanation: string | null; effective_to: string | null }>;
+          if (rows.length) {
+            requirementLines = rows.map((r) => {
+              const exp = r.effective_to ? ` [valid until ${r.effective_to}]` : '';
+              const why = r.explanation ? ` — ${r.explanation}` : '';
+              return `- [${r.framework_code}] ${r.title ?? r.requirement_key}: ${r.outcome.toUpperCase()}${exp}${why}`;
+            }).join('\n');
+          }
+        } catch (_e) { /* best-effort */ }
+
+        const snapshotBody = requirementLines
+          ? `### ${supplierName} — per-requirement computed status (AUTHORITATIVE ground truth):\n${requirementLines}\n\n### Framework rollup:\n${coverageLines}`
+          : `### ${supplierName} — current computed compliance:\n${coverageLines}\n\n(No per-requirement decisions computed yet — evidence may still be pending review.)`;
+
+        scopePreamble = {
+          role: 'system',
+          content: `## SCOPED CONVERSATION — SUPPLIER: ${supplierName} (id ${scoped_supplier_id_raw})
+
+The user has scoped this chat to ${supplierName}. Treat EVERY question as being about this supplier unless they explicitly name a different one.
+
+${snapshotBody}
+
+HOW TO ANSWER WHEN SCOPED:
+- For questions about status, what's compliant, what's missing/expired, gaps, evidence, or renewal dates: ANSWER DIRECTLY from the authoritative snapshot above. Do NOT call a tool for these — you already have the computed truth. This keeps answers fast and accurate.
+- COMPLIANCE STATUS questions ("is it compliant?", "what's missing?", "what are the gaps?", "when does X expire?") → answer from the snapshot above. The snapshot is per-REQUIREMENT status, not a file list.
+- DOCUMENT questions ("what documents do we have?", "list their documents/files", "show uploads") → these are a different thing from requirement status. CALL query_documents (it is already scoped to this supplier) to list their actual uploaded documents. Do NOT answer "no documents" from the snapshot — a supplier can have many uploaded files even while framework requirements are still unmet.
+- EMAILS: always draft via the draft_compliance_email tool (never write the email inline) so the user gets an editable draft with a Send button. To ask the supplier to submit missing/outstanding documents, call it with action_type='missing_documents' — that pulls the REAL unmet requirements from the decision engine (do not hand-list documents yourself). Use 'expired_documents'/'expiring_documents'/'pending_review' for those cases. The tool is auto-scoped to this supplier.
+- Only call a tool when the user asks to DO something (create a document request, draft an email, create a task) or to open/inspect a specific document file. When you do, filter to this supplier (id ${scoped_supplier_id_raw}).
+- Never invent a status, date, or document that is not in the snapshot. If it's not there, say it isn't tracked yet.
+- Format multi-item answers (several requirements/documents) as a markdown table with clear columns; use short bullets otherwise.`
+        };
+        console.log(`✓ Scoped to supplier ${scoped_supplier_id_raw} (${supplierName}); ${requirementLines ? 'per-requirement snapshot injected' : 'rollup-only'}`);
+      } else {
+        console.warn('⚠️ Requested supplier scope not an approved connection; ignoring scope.');
+      }
+    }
+
     // Build memory preamble from session summary and state
     const memoryPreamble = (sessionSummary || Object.keys(sessionState).length > 0) ? {
       role: "system",
@@ -4967,6 +5119,11 @@ Use the available tools to answer questions about:
 - Suppliers and their connection status
 - Compliance metrics and statistics
 - Creating document requests for suppliers
+
+RESPONSE FORMATTING (for plain text answers, not the tagged compliance cards):
+- Use GitHub-flavored markdown. When you list more than ~3 items that share fields (documents, suppliers, requirements, dates), render a markdown TABLE with a header row instead of a long run-on sentence or nested bullets.
+- Bold the key term in each point. Keep paragraphs short. Use bullets for non-tabular lists.
+- Put dates in an explicit format (e.g. "Mar 14, 2027"). Never dump raw JSON or IDs at the user.
 
 CUSTOM VISUALIZATIONS - CRITICAL REQUIREMENTS:
 
@@ -5204,6 +5361,7 @@ Trigger phrases (IMMEDIATELY call draft_compliance_email):
 - "Follow up with [supplier]" → draft_compliance_email({ action_type: "general_followup", supplier_names: ["supplier"] })
 - "Draft email to [supplier] about expiring documents" → draft_compliance_email({ action_type: "expiring_documents", supplier_names: ["supplier"] })
 - "Send reminder to [supplier] about pending documents" → draft_compliance_email({ action_type: "pending_review", supplier_names: ["supplier"] })
+- "Ask [supplier] to submit missing/outstanding documents" → draft_compliance_email({ action_type: "missing_documents", supplier_names: ["supplier"] })
 
 Action type mapping:
 - "expired", "overdue" → action_type: "expired_documents"
@@ -5725,6 +5883,8 @@ EXAMPLE - Compliance Status Query:
 </QUICK_ACTIONS>
 </COMPLIANCE_SUMMARY>`
       },
+      // Inject supplier scope (from @mention) first, then memory preamble
+      ...(scopePreamble ? [scopePreamble] : []),
       // Inject memory preamble (summary + state) BEFORE conversation history
       ...(memoryPreamble ? [memoryPreamble] : []),
       // Add recent conversation history for context (with metadata preserved)
@@ -5813,7 +5973,7 @@ EXAMPLE - Compliance Status Query:
         const toolArgs = JSON.parse(toolCall.function.arguments);
         
         const toolResult = await executeToolCall(toolName, toolArgs, buyer_id, {
-          supplierId: null, // TODO: Pass supplier ID if in supplier context
+          supplierId: scopedSupplierId, // scoped supplier (from @mention) auto-filters supplier-aware tools
           sessionId: session_id,
           userId: user.id,
           authHeader: authHeader

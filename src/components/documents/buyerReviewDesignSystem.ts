@@ -65,9 +65,12 @@ export const reviewSurfaceTokens = {
 };
 
 export const reviewCardContainerClass =
-  'rounded-[16px] border border-border bg-card overflow-hidden shadow-[0_1px_2px_rgba(16,24,40,0.04)]';
+  'rounded-[16px] border border-border bg-card overflow-hidden shadow-[0_1px_2px_rgba(16,24,40,0.06),0_1px_3px_rgba(16,24,40,0.04)]';
 export const reviewPageTitleClass = 'text-[26px] font-bold text-foreground leading-none';
-export const reviewPageSubtitleClass = 'text-[15px] text-muted-foreground';
+// Page descriptions are hidden app-wide (they read as filler and eat vertical
+// space). Kept as a class so any page can opt back in, and so the copy stays in
+// source for reference. Flip back to 'text-[15px] text-muted-foreground' to restore.
+export const reviewPageSubtitleClass = 'hidden';
 export const reviewSectionHeaderClass = 'text-[12px] font-bold tracking-[0.04em] uppercase text-muted-foreground';
 export const reviewRowClass = 'border-b border-border hover:bg-muted/50';
 export const reviewBadgePillClass =

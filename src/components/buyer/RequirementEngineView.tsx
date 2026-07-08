@@ -227,13 +227,7 @@ export default function RequirementEngineView({ buyerId, onNavigateToDocuments }
   return (
     <div className="h-[calc(100vh-80px)] overflow-y-auto p-6">
       <div className="mx-auto max-w-6xl space-y-5">
-        <div>
-          <div className="flex items-center gap-2"><ShieldCheck className="h-6 w-6 text-primary" /><h1 className="text-2xl font-semibold">Requirement Engine</h1></div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            See which framework requirements apply to a supplier, facility, or product — deterministic and versioned.
-            <span className="text-muted-foreground/70"> Read-only: this evaluates applicability, it doesn’t create requests.</span>
-          </p>
-        </div>
+        <div className="flex items-center gap-2"><ShieldCheck className="h-6 w-6 text-primary" /><h1 className="text-2xl font-semibold">Requirement Engine</h1></div>
 
         {/* Compact evaluation bar — the primary action, not a wall of inputs */}
         <div className={reviewCardContainerClass}>

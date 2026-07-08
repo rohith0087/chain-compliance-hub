@@ -8,11 +8,7 @@ import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  reviewCardContainerClass,
-  reviewPageSubtitleClass,
-  reviewPageTitleClass,
-} from '@/components/documents/buyerReviewDesignSystem';
+import { reviewCardContainerClass } from '@/components/documents/buyerReviewDesignSystem';
 
 interface CommandCenterViewProps {
   buyerId: string;
@@ -112,17 +108,11 @@ export default function CommandCenterView({ buyerId, onNavigate }: CommandCenter
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className={reviewPageTitleClass}>
-            <Gauge className="mr-2 inline h-7 w-7 text-primary" />
-            Compliance Command Center
-          </h1>
-          <p className={reviewPageSubtitleClass}>
-            Every number below is computed from the compliance chain and clicks through to the
-            evidence behind it. Gaps become signals; signals become tasks; nothing lapses silently.
-          </p>
-        </div>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="flex items-center gap-2 text-2xl font-semibold text-foreground">
+          <Gauge className="h-6 w-6 text-primary" />
+          Command Center
+        </h1>
         <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
           <RefreshCw className={`mr-1 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
         </Button>
@@ -164,75 +154,71 @@ export default function CommandCenterView({ buyerId, onNavigate }: CommandCenter
       </div>
 
       <div>
-        <h2 className="mb-2 text-lg font-semibold">Do these next</h2>
-        <div className="space-y-2">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Priority queue</h2>
+          {(summary?.top_signals ?? []).length > 0 && (
+            <span className="text-xs text-muted-foreground">{(summary?.top_signals ?? []).length} to action</span>
+          )}
+        </div>
+        <div className={`${reviewCardContainerClass} divide-y divide-border overflow-hidden`}>
           {(summary?.top_signals ?? []).map((signal) => {
             const meta = SIGNAL_META[signal.signal_type] ?? SIGNAL_META.missing_evidence;
             const Icon = meta.icon;
+            const risk = Math.round(Number(signal.weight) * 100);
+            const riskTone = risk >= 70 ? 'bg-red-500/15 text-red-500' : risk >= 40 ? 'bg-amber-500/15 text-amber-600' : 'bg-muted text-muted-foreground';
             return (
-              <div key={signal.id} className={`${reviewCardContainerClass} flex flex-wrap items-center justify-between gap-3 p-3`}>
-                <div className="flex min-w-0 items-start gap-3">
-                  <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${meta.tone}`} />
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium">{signal.requirement_title ?? signal.requirement_key}</span>
-                      <Badge variant="secondary" className="font-mono text-xs">{signal.framework_code}</Badge>
-                      {signal.supplier_name && <Badge variant="outline" className="text-xs">{signal.supplier_name}</Badge>}
-                      <Badge variant="outline" className="text-xs">{meta.label}</Badge>
-                    </div>
-                    {signal.explanation && (
-                      <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{signal.explanation}</p>
-                    )}
-                  </div>
+              <div key={signal.id} className="flex items-center gap-3 p-3 hover:bg-muted/40">
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums ${riskTone}`}>{risk}</span>
+                <Icon className={`h-4 w-4 shrink-0 ${meta.tone}`} />
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="truncate font-medium">{signal.requirement_title ?? signal.requirement_key}</span>
+                  <Badge variant="secondary" className="font-mono text-[10px]">{signal.framework_code}</Badge>
+                  {signal.supplier_name && <Badge variant="outline" className="text-[10px]">{signal.supplier_name}</Badge>}
+                  <span className={`text-[10px] font-medium ${meta.tone}`}>{meta.label}</span>
                 </div>
-                <div className="flex shrink-0 items-center gap-3">
-                  <span className="text-xs text-muted-foreground">risk {(Number(signal.weight) * 100).toFixed(0)}</span>
-                  {onNavigate && (
-                    <Button size="sm" variant="outline" onClick={() => onNavigate(meta.cta.tab)}>{meta.cta.label}</Button>
-                  )}
-                </div>
+                {onNavigate && (
+                  <Button size="sm" variant="outline" className="shrink-0" onClick={() => onNavigate(meta.cta.tab)}>{meta.cta.label}</Button>
+                )}
               </div>
             );
           })}
           {(summary?.top_signals ?? []).length === 0 && (
-            <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+            <div className="p-8 text-center text-muted-foreground">
               <CheckCircle2 className="mx-auto mb-2 h-6 w-6 text-emerald-500" />
-              No open risk signals — nothing needs attention right now.
+              All clear — no open risk signals right now.
             </div>
           )}
         </div>
       </div>
 
       <div>
-        <h2 className="mb-2 text-lg font-semibold"><ClipboardList className="mr-1 inline h-5 w-5" /> Open tasks</h2>
-        <div className="space-y-2">
+        <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          <ClipboardList className="h-4 w-4" /> Open tasks
+        </h2>
+        <div className={`${reviewCardContainerClass} divide-y divide-border overflow-hidden`}>
           {(summary?.open_tasks ?? []).map((task) => (
-            <div key={task.id} className={`${reviewCardContainerClass} flex flex-wrap items-center justify-between gap-2 p-3`}>
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <Badge variant="secondary" className="text-xs">{task.task_type.replaceAll('_', ' ')}</Badge>
-                {task.status === 'in_progress' && <Badge className="bg-sky-600/15 text-sky-500 text-xs">in progress</Badge>}
+            <div key={task.id} className="flex items-center gap-2 p-3 hover:bg-muted/40">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                <Badge variant="secondary" className="text-[10px]">{task.task_type.replaceAll('_', ' ')}</Badge>
+                {task.status === 'in_progress' && <Badge className="bg-sky-600/15 text-sky-500 text-[10px]">in progress</Badge>}
                 <span className="truncate text-sm">{task.title}</span>
-                {task.supplier_name && <Badge variant="outline" className="text-xs">{task.supplier_name}</Badge>}
+                {task.supplier_name && <Badge variant="outline" className="text-[10px]">{task.supplier_name}</Badge>}
               </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <span className="text-xs text-muted-foreground">
-                  {task.due_date ? `due ${task.due_date}` : new Date(task.created_at).toLocaleDateString()}
-                </span>
-                {task.status === 'open' && (
-                  <Button size="sm" variant="ghost" disabled={actingTaskId === task.id} onClick={() => void taskAction(task.id, 'start')}>
-                    <PlayCircle className="mr-1 h-4 w-4" /> Start
-                  </Button>
-                )}
-                <Button size="sm" variant="outline" disabled={actingTaskId === task.id} onClick={() => void taskAction(task.id, 'complete')}>
-                  {actingTaskId === task.id ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-1 h-4 w-4" />} Done
+              <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
+                {task.due_date ? `due ${task.due_date}` : new Date(task.created_at).toLocaleDateString()}
+              </span>
+              {task.status === 'open' && (
+                <Button size="sm" variant="ghost" className="shrink-0" disabled={actingTaskId === task.id} onClick={() => void taskAction(task.id, 'start')}>
+                  <PlayCircle className="mr-1 h-4 w-4" /> Start
                 </Button>
-              </div>
+              )}
+              <Button size="sm" variant="outline" className="shrink-0" disabled={actingTaskId === task.id} onClick={() => void taskAction(task.id, 'complete')}>
+                {actingTaskId === task.id ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-1 h-4 w-4" />} Done
+              </Button>
             </div>
           ))}
           {(summary?.open_tasks ?? []).length === 0 && (
-            <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-              No open tasks.
-            </div>
+            <div className="p-6 text-center text-sm text-muted-foreground">No open tasks.</div>
           )}
         </div>
       </div>

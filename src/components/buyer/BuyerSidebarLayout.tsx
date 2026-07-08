@@ -32,6 +32,7 @@ import {
   HelpCircle,
   ArrowLeftRight,
   FlaskConical,
+  GitCompare,
   ListTree,
   BookOpenCheck,
   ClipboardCheck,
@@ -334,6 +335,7 @@ export function BuyerSidebarLayout({
 
   const requestsSubmenu = [
     { title: t('common:navigation.documents'), value: 'documents', icon: FileCheck },
+    wsProfile.id === 'auditor' && { title: 'AI Document Comparison', value: 'document-comparison', icon: GitCompare },
     emailReplyIngestionEnabled && { title: 'Email Intake', value: 'email-intake', icon: Inbox },
     { title: 'Activity', value: 'document-activity', icon: Activity },
     { title: 'Templates', value: 'templates', icon: FileText },
@@ -1000,7 +1002,7 @@ export function BuyerSidebarLayout({
               {children}
             </div>
           ) : (
-            <div className="container mx-auto py-[28px] px-[32px] max-w-[1440px]">
+            <div className="w-full px-6 py-5">
               {children}
             </div>
           )}

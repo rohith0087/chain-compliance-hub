@@ -222,12 +222,7 @@ export default function DossierGeneratorView({ buyerId, lockSupplierId }: Dossie
   return (
     <div className="h-[calc(100vh-80px)] overflow-y-auto p-6">
       <div className="mx-auto max-w-6xl space-y-6">
-        <div>
-          <div className="flex items-center gap-2"><ShieldCheck className="h-6 w-6 text-primary" /><h1 className="text-2xl font-semibold">Compliance Dossiers</h1></div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Audit-ready, signed exports built directly from your requirement, evidence, and decision data -- nothing manually assembled.
-          </p>
-        </div>
+        <div className="flex items-center gap-2"><ShieldCheck className="h-6 w-6 text-primary" /><h1 className="text-2xl font-semibold">Compliance Dossiers</h1></div>
 
         {!lockSupplierId && (
           <Tabs value={subjectType} onValueChange={(value) => setSubjectType(value as SubjectType)}>

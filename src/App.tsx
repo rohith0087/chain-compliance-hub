@@ -37,6 +37,7 @@ import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import MessagesPage from "./pages/MessagesPage";
 import WhitePaperPage from "./pages/WhitePaperPage";
 import SupplierRiskPolicyPage from "./pages/SupplierRiskPolicyPage";
+import SupplierRiskDashboardPage from "./pages/SupplierRiskDashboardPage";
 import "./i18n";
 import { BranchProvider } from "@/contexts/BranchContext";
 import RequirementEngineView from "@/components/buyer/RequirementEngineView";
@@ -426,6 +427,11 @@ const AppRoutes = () => {
                   <Route path="/supplier/requests/:requestId" element={
                     <ProtectedRoute>
                       <SupplierRequestRoute />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/supplier-risk" element={
+                    <ProtectedRoute>
+                      <SupplierRiskDashboardPage />
                     </ProtectedRoute>
                   } />
                   <Route path="/supplier-risk/policy" element={

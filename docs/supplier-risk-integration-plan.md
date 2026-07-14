@@ -102,8 +102,8 @@ New feature module `src/features/supplier-risk/` (following the emerging `src/fe
 - **Slice 0 ✅ DONE (applied to prod)** — 7 tables + RLS (12 policies) + `supplier_risk` flag (enabled, canary). Migration `20260714222014_supplier_risk_slice0_schema.sql`.
 - **Slice 1 ✅ built (live behind flag)** — `buyer_risk_policies` + industry templates + policy config UI at `/supplier-risk/policy`. tsc/lint clean.
 - **Slice 2 ✅ DONE (deployed to prod)** — `ingest-ofac-sanctions` edge fn deployed + test-run (19,210 SDN entries, 42 suppliers, 0 false positives); write path proven; weekly `pg_cron` scheduled (`20260714231845_supplier_risk_ofac_cron.sql`). Confidence-gated: ≥0.90 active, 0.75–0.90 under_review.
-- **Slice 3 — NEXT** — deterministic `calculate-supplier-risk` engine + `supplier_risk_scores` snapshots + golden tests.
-- **Slice 4** — risk panel UI + combined headline + explainability drill-down.
+- **Slice 3 ✅ DONE (applied to prod)** — deterministic `calculate_supplier_risk_score` Postgres fn + append-only snapshots. Golden-tested (overall 33). Migration `20260714233412_supplier_risk_scoring_engine_v1.sql`.
+- **Slice 4 ✅ built** — `SupplierRiskPanel` (external score + dimensions + contributing events) shown side-by-side with existing compliance risk, on-demand recompute (RPC), at `/supplier-risk`. tsc/lint clean. *(Live UI test pending a logged-in buyer session.)*
 - **Slice 5** — ownership graph (`risk_entities`/edges) + network viz.
 - **Slice 6** — recalls + enforcement connectors + AI adverse-media extraction.
 - **Slice 7** — feedback loop; (later) predictive weight suggestions with human approval.

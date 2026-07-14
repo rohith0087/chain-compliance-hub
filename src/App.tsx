@@ -36,6 +36,7 @@ import SupplierSimulation from "./pages/SupplierSimulation";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import MessagesPage from "./pages/MessagesPage";
 import WhitePaperPage from "./pages/WhitePaperPage";
+import SupplierRiskPolicyPage from "./pages/SupplierRiskPolicyPage";
 import "./i18n";
 import { BranchProvider } from "@/contexts/BranchContext";
 import RequirementEngineView from "@/components/buyer/RequirementEngineView";
@@ -425,6 +426,11 @@ const AppRoutes = () => {
                   <Route path="/supplier/requests/:requestId" element={
                     <ProtectedRoute>
                       <SupplierRequestRoute />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/supplier-risk/policy" element={
+                    <ProtectedRoute>
+                      <SupplierRiskPolicyPage />
                     </ProtectedRoute>
                   } />
                   <Route path="/chat" element={

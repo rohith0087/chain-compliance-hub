@@ -215,6 +215,10 @@ verify_jwt = false
 [functions.check-document-expiry]
 verify_jwt = false
 
+# Supplier-risk connector (cron/system-invoked; guarded by X-System-Secret)
+[functions.ingest-ofac-sanctions]
+verify_jwt = false
+
 # Support ticket notifications - public (called after ticket creation by anyone)
 [functions.send-ticket-notification]
 verify_jwt = false

@@ -59,6 +59,35 @@ export async function fetchRiskEvents(supplierId: string): Promise<RiskEvent[]> 
   return (data ?? []) as RiskEvent[];
 }
 
+export interface GraphNode {
+  id: string;
+  label: string;
+  type: 'supplier' | 'event' | 'source' | 'entity';
+  dimension?: string;
+  severity?: number;
+  status?: string;
+}
+export interface GraphEdge {
+  source: string;
+  target: string;
+  type: string;
+  verified: boolean;
+}
+export interface RiskGraph {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
+
+export async function fetchSupplierRiskGraph(supplierId: string): Promise<RiskGraph> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const client = supabase as any;
+  const { data, error } = await client.rpc('get_supplier_risk_graph', {
+    p_supplier_id: supplierId,
+  });
+  if (error) throw error;
+  return (data ?? { nodes: [], edges: [] }) as RiskGraph;
+}
+
 // Runs the deterministic engine (Postgres RPC) and returns the new snapshot.
 export async function recomputeRiskScore(
   buyerId: string,

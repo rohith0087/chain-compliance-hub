@@ -19,6 +19,7 @@ import {
   SupplierRiskPanel,
   type ComplianceRisk,
 } from '@/features/supplier-risk/SupplierRiskPanel';
+import { SupplierRiskGraph } from '@/features/supplier-risk/SupplierRiskGraph';
 
 export default function SupplierRiskDashboardPage() {
   const { user } = useAuth();
@@ -88,11 +89,14 @@ export default function SupplierRiskDashboardPage() {
             </div>
 
             {selected ? (
-              <SupplierRiskPanel
-                buyerId={buyerId}
-                supplierId={selected}
-                compliance={compliance}
-              />
+              <div className="space-y-4">
+                <SupplierRiskPanel
+                  buyerId={buyerId}
+                  supplierId={selected}
+                  compliance={compliance}
+                />
+                <SupplierRiskGraph supplierId={selected} />
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground">Select a supplier to view its risk.</p>
             )}

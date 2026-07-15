@@ -225,6 +225,9 @@ verify_jwt = false
 [functions.ingest-openfda-enforcement]
 verify_jwt = false
 
+[functions.ingest-adverse-media]
+verify_jwt = false
+
 # Support ticket notifications - public (called after ticket creation by anyone)
 [functions.send-ticket-notification]
 verify_jwt = false

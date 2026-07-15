@@ -12,6 +12,7 @@ import AgentManagementDashboard from '@/components/agents/AgentManagementDashboa
 import BuyerDocumentsDashboard from '@/components/documents/BuyerDocumentsDashboard';
 import BuyerConnectionRequests from '@/components/buyer/BuyerConnectionRequests';
 import { UnifiedSettingsModal } from '@/components/settings/UnifiedSettingsModal';
+import { SettingsWorkspace } from '@/components/settings/SettingsWorkspace';
 import { CompanyManagementDashboard } from '@/components/company/CompanyManagementDashboard';
 import CustomTemplateManager from '@/components/buyer/CustomTemplateManager';
 import { BulkInviteModal } from '@/components/buyer/BulkInviteModal';
@@ -168,6 +169,8 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
   
   // Reset activeTab if non-owner tries to access owner-only tabs
   useEffect(() => {
+    // 'settings' is already owner-gated by the sidebar nav filter; guarding it
+    // here too caused a redirect race on direct load.
     const ownerOnlyTabs = ['company', 'subscription'];
     if (!permissionsLoading && ownerOnlyTabs.includes(activeTab) && !isOwner) {
       setActiveTab('dashboard');
@@ -678,7 +681,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
 
         {/* Supplier Risk Assessment */}
         {activeTab === 'supplier-risk' && (
-          <SupplierRiskAssessment />
+          <SupplierRiskAssessment buyerId={companyId} />
         )}
 
         {/* Onboarding Content - Use Pipeline View */}
@@ -770,6 +773,15 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
         {/* Subscription & Billing */}
         {activeTab === 'subscription' && (
           <SubscriptionPage />
+        )}
+
+        {/* Settings — full page (Settings-04 style), replaces the old modal on the buyer side */}
+        {activeTab === 'settings' && (
+          <SettingsWorkspace
+            companyId={companyId}
+            companyType="buyer"
+            companyName={buyerProfile?.company_name || 'Your Company'}
+          />
         )}
 
         {/* Modals */}

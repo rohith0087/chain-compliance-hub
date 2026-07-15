@@ -36,8 +36,6 @@ import SupplierSimulation from "./pages/SupplierSimulation";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import MessagesPage from "./pages/MessagesPage";
 import WhitePaperPage from "./pages/WhitePaperPage";
-import SupplierRiskPolicyPage from "./pages/SupplierRiskPolicyPage";
-import SupplierRiskDashboardPage from "./pages/SupplierRiskDashboardPage";
 import "./i18n";
 import { BranchProvider } from "@/contexts/BranchContext";
 import RequirementEngineView from "@/components/buyer/RequirementEngineView";
@@ -304,6 +302,12 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// Old standalone supplier-risk pages → the dashboard's Supplier Risk tab.
+const SupplierRiskTabRedirect = () => {
+  localStorage.setItem('buyerDashboard_activeTab', 'supplier-risk');
+  return <Navigate to="/dashboard" replace />;
+};
+
 const SupplierRequestRoute = () => {
   const { requestId } = useParams<{ requestId: string }>();
   if (!requestId) return <Navigate to="/dashboard?tab=documents" replace />;
@@ -429,16 +433,11 @@ const AppRoutes = () => {
                       <SupplierRequestRoute />
                     </ProtectedRoute>
                   } />
-                  <Route path="/supplier-risk" element={
-                    <ProtectedRoute>
-                      <SupplierRiskDashboardPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/supplier-risk/policy" element={
-                    <ProtectedRoute>
-                      <SupplierRiskPolicyPage />
-                    </ProtectedRoute>
-                  } />
+                  {/* Supplier risk now lives inside the dashboard (Compliance →
+                      Supplier Risk) on the templated page; old standalone routes
+                      redirect there. Policy editing is embedded on that page. */}
+                  <Route path="/supplier-risk" element={<SupplierRiskTabRedirect />} />
+                  <Route path="/supplier-risk/policy" element={<SupplierRiskTabRedirect />} />
                   <Route path="/chat" element={
                     <ProtectedRoute>
                       <ChatPage />

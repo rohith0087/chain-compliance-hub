@@ -5,9 +5,10 @@ import { SuperAdminUserManagement } from '@/components/super-admin/SuperAdminUse
 import { SuperAdminAnalytics } from '@/components/super-admin/SuperAdminAnalytics';
 import { SuperAdminSystemSettings } from '@/components/super-admin/SuperAdminSystemSettings';
 import { SuperAdminClientSupport } from '@/components/super-admin/SuperAdminClientSupport';
+import { SuperAdminSupplierRisk } from '@/components/super-admin/SuperAdminSupplierRisk';
 import { PlatformAdminAuditLogs } from '@/components/platform-admin/PlatformAdminAuditLogs';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Users, BarChart, Settings, HeadphonesIcon, Database, Activity } from 'lucide-react';
+import { Shield, Users, BarChart, Settings, HeadphonesIcon, Database, Activity, ShieldAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect } from 'react';
@@ -137,10 +138,14 @@ const SuperAdminDashboard = () => {
 
         {/* Main Content */}
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
               User Management
+            </TabsTrigger>
+            <TabsTrigger value="supplier-risk" className="flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4" />
+              Supplier Risk
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <BarChart className="w-4 h-4" />
@@ -162,6 +167,10 @@ const SuperAdminDashboard = () => {
 
           <TabsContent value="users">
             <SuperAdminUserManagement />
+          </TabsContent>
+
+          <TabsContent value="supplier-risk">
+            <SuperAdminSupplierRisk />
           </TabsContent>
 
           <TabsContent value="analytics">

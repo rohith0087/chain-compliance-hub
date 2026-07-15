@@ -59,6 +59,27 @@ export async function fetchRiskEvents(supplierId: string): Promise<RiskEvent[]> 
   return (data ?? []) as RiskEvent[];
 }
 
+export interface SupplierRiskOverview {
+  supplier_id: string;
+  company_name: string;
+  country: string | null;
+  industry: string | null;
+  active_events: number;
+  review_events: number;
+  max_severity: number;
+  dimensions: string[];
+  latest_event_at: string | null;
+}
+
+// Platform-wide overview (super-admin): ALL suppliers, regardless of connection.
+export async function fetchAllSuppliersRiskOverview(): Promise<SupplierRiskOverview[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const client = supabase as any;
+  const { data, error } = await client.rpc('get_all_suppliers_risk_overview');
+  if (error) throw error;
+  return (data ?? []) as SupplierRiskOverview[];
+}
+
 export interface GraphNode {
   id: string;
   label: string;

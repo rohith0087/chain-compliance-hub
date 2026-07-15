@@ -59,6 +59,34 @@ export async function fetchRiskEvents(supplierId: string): Promise<RiskEvent[]> 
   return (data ?? []) as RiskEvent[];
 }
 
+export type FeedbackType =
+  | 'relevant'
+  | 'not_relevant'
+  | 'false_entity_match'
+  | 'escalated'
+  | 'remediated'
+  | 'disruption_occurred';
+
+// Buyer-scoped label on an event. RLS enforces buyer_id ∈ get_user_buyer_ids().
+// The scoring engine (v2) excludes events this buyer marked not_relevant /
+// false_entity_match — so a label only ever affects THIS buyer's score.
+export async function submitRiskFeedback(
+  buyerId: string,
+  riskEventId: string,
+  feedbackType: FeedbackType,
+  note?: string,
+): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const client = supabase as any;
+  const { error } = await client.from('supplier_risk_feedback').insert({
+    buyer_id: buyerId,
+    risk_event_id: riskEventId,
+    feedback_type: feedbackType,
+    note: note ?? null,
+  });
+  if (error) throw error;
+}
+
 export interface SupplierRiskOverview {
   supplier_id: string;
   company_name: string;

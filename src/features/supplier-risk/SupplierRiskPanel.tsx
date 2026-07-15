@@ -1,10 +1,13 @@
+import { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
 import { useSupplierRisk } from './useSupplierRisk';
+import { submitRiskFeedback, type FeedbackType } from './scoreApi';
 import { RISK_DIMENSION_LABELS, RISK_DIMENSIONS, type RiskDimension } from './templates';
 
 export interface ComplianceRisk {
@@ -36,9 +39,35 @@ export function SupplierRiskPanel({
   compliance?: ComplianceRisk | null;
 }) {
   const { score, events, loading, recomputing, recompute } = useSupplierRisk(buyerId, supplierId);
+  const { toast } = useToast();
+  const [labeling, setLabeling] = useState<string | null>(null);
 
   const delta =
     score && score.previous_score != null ? score.overall_score - score.previous_score : null;
+
+  // Labels are buyer-scoped; not_relevant / false_entity_match drop the event
+  // out of THIS buyer's score (engine v2), so recompute to reflect it.
+  const onFeedback = async (eventId: string, type: FeedbackType) => {
+    if (!buyerId) return;
+    setLabeling(eventId);
+    try {
+      await submitRiskFeedback(buyerId, eventId, type);
+      toast({
+        title: 'Feedback saved',
+        description:
+          type === 'relevant' ? 'Marked relevant.' : 'Excluded from your score — recomputing…',
+      });
+      if (type !== 'relevant') await recompute();
+    } catch (e) {
+      toast({
+        title: 'Error',
+        description: e instanceof Error ? e.message : 'Failed to save feedback',
+        variant: 'destructive',
+      });
+    } finally {
+      setLabeling(null);
+    }
+  };
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -107,14 +136,43 @@ export function SupplierRiskPanel({
               <div className="space-y-1">
                 <p className="text-xs font-medium text-muted-foreground">Contributing events</p>
                 {events.slice(0, 5).map((e) => (
-                  <div key={e.id} className="flex items-center justify-between text-xs">
-                    <span>
+                  <div key={e.id} className="flex items-center justify-between gap-2 text-xs">
+                    <span className="truncate">
                       {e.event_type.replace(/_/g, ' ')}{' '}
                       <span className="text-muted-foreground">({e.dimension})</span>
                     </span>
-                    <Badge variant={e.status === 'under_review' ? 'outline' : 'secondary'}>
-                      {e.status}
-                    </Badge>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Badge variant={e.status === 'under_review' ? 'outline' : 'secondary'}>
+                        {e.status}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-1.5 text-xs"
+                        disabled={labeling === e.id}
+                        onClick={() => onFeedback(e.id, 'relevant')}
+                      >
+                        Relevant
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-1.5 text-xs"
+                        disabled={labeling === e.id}
+                        onClick={() => onFeedback(e.id, 'not_relevant')}
+                      >
+                        Not relevant
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-1.5 text-xs"
+                        disabled={labeling === e.id}
+                        onClick={() => onFeedback(e.id, 'false_entity_match')}
+                      >
+                        False match
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>

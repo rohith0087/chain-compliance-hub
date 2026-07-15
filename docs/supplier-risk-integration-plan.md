@@ -104,8 +104,8 @@ New feature module `src/features/supplier-risk/` (following the emerging `src/fe
 - **Slice 2 ✅ DONE (deployed to prod)** — `ingest-ofac-sanctions` edge fn deployed + test-run (19,210 SDN entries, 42 suppliers, 0 false positives); write path proven; weekly `pg_cron` scheduled (`20260714231845_supplier_risk_ofac_cron.sql`). Confidence-gated: ≥0.90 active, 0.75–0.90 under_review.
 - **Slice 3 ✅ DONE (applied to prod)** — deterministic `calculate_supplier_risk_score` Postgres fn + append-only snapshots. Golden-tested (overall 33). Migration `20260714233412_supplier_risk_scoring_engine_v1.sql`.
 - **Slice 4 ✅ built** — `SupplierRiskPanel` (external score + dimensions + contributing events) shown side-by-side with existing compliance risk, on-demand recompute (RPC), at `/supplier-risk`. tsc/lint clean. *(Live UI test pending a logged-in buyer session.)*
-- **Slice 5** — ownership graph (`risk_entities`/edges) + network viz.
-- **Slice 6** — recalls + enforcement connectors + AI adverse-media extraction.
+- **Slice 5 — NEXT** — ownership graph (`risk_entities`/edges) + network viz.
+- **Slice 6 ✅ mostly DONE (deployed to prod)** — shared ingest helper (`_shared/supplierRiskIngest.ts`) + CPSC recalls + openFDA food enforcement (targeted per-supplier search) connectors; OFAC refactored onto the helper. All 3 scheduled weekly. Fixed a real bug (partial index → `ON CONFLICT` 42P10). Produced real events (Deb El Food Products → 2 Class I FDA egg recalls → score 14, correctly time-decayed). **AI adverse-media extraction deferred to a focused follow-up (Slice 6b).**
 - **Slice 7** — feedback loop; (later) predictive weight suggestions with human approval.
 
 ## 12. Decisions locked (2026-07-13)

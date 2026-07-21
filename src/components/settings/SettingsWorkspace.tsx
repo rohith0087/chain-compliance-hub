@@ -39,7 +39,7 @@ export function SettingsWorkspace({
     { id: 'notifications', label: 'Notifications', title: 'Notifications', description: 'Choose what updates you receive and how.' },
     { id: 'users', label: 'Team', title: 'Team members', description: 'Manage your team and their account permissions here.' },
     { id: 'branches', label: 'Branches', title: 'Branches', description: 'Manage your locations and per-branch access.' },
-    { id: 'integrations', label: 'Integrations', title: 'Integrations', description: 'Connect AI providers and tools your team already uses.' },
+    { id: 'integrations', label: 'Integrations', title: 'Integrations', description: 'Connect the tools your assistant can act through. Your connections are personal; the AI provider is shared by your organization.' },
     { id: 'billing', label: 'Plan & Billing', title: 'Plan & billing', description: 'Manage your subscription, invoices and payment method.' },
   ];
 

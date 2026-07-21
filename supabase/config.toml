@@ -374,3 +374,24 @@ verify_jwt = true
 # Phase 5+: reports which AI providers have a platform key (booleans, no secrets).
 [functions.ai-platform-keys-v1]
 verify_jwt = true
+
+# Buyer AI briefing. verify_jwt=false because the 2-hourly cron invokes it with
+# the vault secret rather than a JWT; user-initiated refreshes are authorized
+# inside the function against get_user_buyer_ids().
+[functions.buyer-ai-summary]
+verify_jwt = false
+
+# Composio: starts an OAuth connection for the signed-in user. JWT required --
+# the Composio user_id is derived from it, never from the request body.
+[functions.composio-connect]
+verify_jwt = true
+
+# Composio OAuth return. verify_jwt=false because it is a browser redirect with
+# no token; it trusts nothing from the query string and re-verifies the
+# connection state against Composio server-side.
+[functions.composio-callback]
+verify_jwt = false
+
+# Composio: revoke a user's own connection (at Composio, then locally).
+[functions.composio-disconnect]
+verify_jwt = true

@@ -370,7 +370,7 @@ export const CustomTemplateManager = () => {
                     <TableCell className="px-3 py-3">
                       <div className="flex items-start gap-3">
                         <div className="w-[40px] h-[40px] rounded-[10px] bg-[#EFF6FF] flex items-center justify-center flex-shrink-0">
-                          <FileText className="w-5 h-5 text-[#2563EB]" />
+                          <FileText className="w-5 h-5 text-primary" />
                         </div>
                         <div className="min-w-0">
                           <p className="text-[14px] font-semibold text-foreground truncate" title={template.template_name}>{template.template_name}</p>

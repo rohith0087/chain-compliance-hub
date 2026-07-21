@@ -283,7 +283,7 @@ function LegacyEvidenceVerificationView({ buyerId }: EvidenceVerificationViewPro
                     key={claim.id}
                     type="button"
                     onClick={() => setSelectedClaimId(claim.id)}
-                    className={`w-full rounded-[12px] border p-3 text-left text-sm transition-colors ${selectedClaim?.id === claim.id ? 'border-[#2563EB] bg-[#EAF1FF]' : 'border-border bg-card hover:bg-muted/50'}`}
+                    className={`w-full rounded-[12px] border p-3 text-left text-sm transition-colors ${selectedClaim?.id === claim.id ? 'border-primary bg-[#EAF1FF]' : 'border-border bg-card hover:bg-muted/50'}`}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium text-foreground">{claim.document_type || claim.issuer || 'Unknown evidence'}</span>

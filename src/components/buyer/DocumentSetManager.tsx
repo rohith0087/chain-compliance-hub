@@ -392,7 +392,7 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
         {documentSets.length === 0 ? (
           <div className={`${reviewEmptyStateContainerClass} border-dashed border-2 py-16`}>
             <div className="rounded-full bg-[#EFF6FF] p-4 mb-4 inline-flex">
-              <Package className="h-10 w-10 text-[#2563EB]" />
+              <Package className="h-10 w-10 text-primary" />
             </div>
             <h3 className="text-lg font-semibold text-foreground mb-2">Create Your First Document Set</h3>
             <p className="text-muted-foreground text-center max-w-md mb-6 mx-auto">

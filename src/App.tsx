@@ -31,7 +31,6 @@ import SharedDocumentViewer from "./components/shared/SharedDocumentViewer";
 import NotFound from "./pages/NotFound";
 import HelpCenterPage from "./pages/HelpCenterPage";
 import SubscriptionPage from "./pages/SubscriptionPage";
-import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import SupplierSimulation from "./pages/SupplierSimulation";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import MessagesPage from "./pages/MessagesPage";
@@ -337,40 +336,39 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const SuperAdminRoute = ({ children }: { children: React.ReactNode }) => {
+// Guards the platform-admin portal. Authoritative source of truth is the
+// platform_administrators table (any active platform role), matching
+// usePlatformAdmin + the SECURITY DEFINER RPCs. Unauthenticated users go to the
+// dedicated admin login; authenticated non-admins are sent to the app dashboard.
+const PlatformAdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
-  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean | null>(null);
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState<boolean | null>(null);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
 
   useEffect(() => {
-    const checkSuperAdmin = async () => {
+    const checkPlatformAdmin = async () => {
       if (!user) {
-        setIsSuperAdmin(false);
+        setIsPlatformAdmin(false);
         setCheckingAdmin(false);
         return;
       }
 
       try {
-        // Check platform_administrators table for super_admin role
         const { data, error } = await supabase
           .from('platform_administrators')
           .select('platform_roles, is_active')
           .eq('auth_user_id', user.id)
           .eq('is_active', true)
-          .single();
+          .maybeSingle();
 
-        if (error || !data) {
-          setIsSuperAdmin(false);
-        } else {
-          setIsSuperAdmin(data.platform_roles?.includes('super_admin') ?? false);
-        }
+        setIsPlatformAdmin(!error && !!data && (data.platform_roles ?? []).length > 0);
       } catch (error) {
-        setIsSuperAdmin(false);
+        setIsPlatformAdmin(false);
       }
       setCheckingAdmin(false);
     };
 
-    checkSuperAdmin();
+    checkPlatformAdmin();
   }, [user]);
 
   if (authLoading || checkingAdmin) {
@@ -382,10 +380,10 @@ const SuperAdminRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/platform-admin/login" replace />;
   }
 
-  if (!isSuperAdmin) {
+  if (!isPlatformAdmin) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -473,13 +471,14 @@ const AppRoutes = () => {
                       <AdminDashboard />
                     </AdminRoute>
                   } />
-                  <Route path="/super-admin" element={
-                    <SuperAdminRoute>
-                      <SuperAdminDashboard />
-                    </SuperAdminRoute>
-                  } />
+                  {/* Legacy /super-admin retired — the platform-admin portal is now the sole super-admin surface. */}
+                  <Route path="/super-admin" element={<Navigate to="/platform-admin/login" replace />} />
                   <Route path="/platform-admin/login" element={<PlatformAdminLogin />} />
-                  <Route path="/platform-admin/dashboard" element={<PlatformAdminDashboard />} />
+                  <Route path="/platform-admin/dashboard" element={
+                    <PlatformAdminRoute>
+                      <PlatformAdminDashboard />
+                    </PlatformAdminRoute>
+                  } />
                   
                   <Route path="/shared-document/:token" element={<SharedDocumentViewer />} />
                   <Route path="/supplier-simulation" element={<SupplierSimulation />} />
@@ -497,8 +496,10 @@ const AppRoutes = () => {
 };
 
 const App = () => {
+  // Dark is the default surface (the brand's "ledger" palette); the toggle
+  // still switches to light and the choice persists under storageKey.
   return (
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="tracer2c-theme" disableTransitionOnChange>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} storageKey="tracer2c-theme" disableTransitionOnChange>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />

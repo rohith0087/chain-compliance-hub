@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { SearchInput } from '@/components/ui/search-input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -36,12 +36,15 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import {
   getIndustryBadgeClass,
+  cardActionIconClass,
+  reviewActionButtonDangerClass,
+  reviewActionButtonPrimaryClass,
   reviewActionButtonSecondaryClass,
   reviewCardContainerClass,
   reviewEmptyStateContainerClass,
   reviewPageSubtitleClass,
   reviewPageTitleClass,
-  reviewToolbarSelectTriggerClass,
+  reviewSearchAdjacentSelectClass,
 } from '@/components/documents/buyerReviewDesignSystem';
 import ReviewPagination from '@/components/documents/ReviewPagination';
 
@@ -540,20 +543,17 @@ const SupplierDiscovery = ({ onOpenCompliance, onViewSupplier }: { onOpenComplia
 
       {/* Integrated Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
-          <Input
-            placeholder={`Search ${terms.suppliers.toLowerCase()}...`}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className={`pl-10 ${reviewToolbarSelectTriggerClass}`}
-          />
-        </div>
+        <SearchInput
+          className="flex-1"
+          placeholder={`Search ${terms.suppliers.toLowerCase()} by name, industry, or location...`}
+          value={searchTerm}
+          onValueChange={setSearchTerm}
+        />
         <SafeSelect
           value={selectedIndustry}
           onValueChange={handleIndustryChange}
           placeholder="All Industries"
-          className={reviewToolbarSelectTriggerClass}
+          className={reviewSearchAdjacentSelectClass}
         >
           <SafeSelectItem value="all">All Industries</SafeSelectItem>
           {VALID_INDUSTRIES.map((industry) => (
@@ -567,9 +567,9 @@ const SupplierDiscovery = ({ onOpenCompliance, onViewSupplier }: { onOpenComplia
       {/* Status tabs */}
       <div className="h-[56px] border-b border-border flex items-center gap-9">
         {[
-          { value: 'connected' as const, label: `My ${terms.suppliers}`, count: suppliers.length, badgeClass: 'bg-[#EAF1FF] text-[#2563EB]' },
+          { value: 'connected' as const, label: `My ${terms.suppliers}`, count: suppliers.length, badgeClass: 'bg-primary/10 text-primary' },
           { value: 'discover' as const, label: 'Discover', count: availableSuppliers.length, badgeClass: 'bg-muted text-foreground/80' },
-          { value: 'pending' as const, label: 'Pending', count: totalPendingCount, badgeClass: 'bg-[#FEF2F2] text-[#DC2626]' },
+          { value: 'pending' as const, label: 'Pending', count: totalPendingCount, badgeClass: 'bg-danger/10 text-danger' },
         ].map((tab) => {
           const isActive = activeTab === tab.value;
           return (
@@ -577,14 +577,14 @@ const SupplierDiscovery = ({ onOpenCompliance, onViewSupplier }: { onOpenComplia
               key={tab.value}
               onClick={() => setActiveTab(tab.value)}
               className={`relative h-full flex items-center gap-2 text-[14px] font-semibold transition-colors ${
-                isActive ? 'text-[#2563EB]' : 'text-muted-foreground hover:text-foreground'
+                isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               {tab.label}
               <span className={`h-[24px] min-w-[24px] rounded-full px-2 text-[13px] font-bold flex items-center justify-center ${tab.badgeClass}`}>
                 {tab.count}
               </span>
-              {isActive && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#2563EB] rounded-full" />}
+              {isActive && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-primary rounded-full" />}
             </button>
           );
         })}
@@ -715,7 +715,7 @@ const SupplierDiscovery = ({ onOpenCompliance, onViewSupplier }: { onOpenComplia
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         <Button
                           size="icon"
-                          className="h-[36px] w-[36px] bg-[#10B981] hover:bg-[#059669] text-white rounded-[10px] shadow-sm"
+                          className={reviewActionButtonPrimaryClass}
                           onClick={() => handleApproveClick(request)}
                           disabled={processingIds.has(request.id)}
                           title="Approve"
@@ -725,7 +725,7 @@ const SupplierDiscovery = ({ onOpenCompliance, onViewSupplier }: { onOpenComplia
                         <Button
                           size="icon"
                           variant="outline"
-                          className="h-[36px] w-[36px] bg-card text-[#DC2626] border-[#FCA5A5] hover:bg-[#FEF2F2] rounded-[10px] shadow-sm"
+                          className={reviewActionButtonDangerClass}
                           onClick={() => handleRejectConnection(request.id)}
                           disabled={processingIds.has(request.id)}
                           title="Reject"
@@ -847,7 +847,7 @@ const CompactSupplierCard = ({ supplier, onView, onMessage, onCompliance }: { su
         size="sm"
       />
       <div className="flex-1 min-w-0 cursor-pointer" onClick={onView}>
-        <h4 className="text-[14px] font-semibold text-foreground truncate group-hover:text-[#2563EB] transition-colors">
+        <h4 className="text-[14px] font-semibold text-foreground truncate group-hover:text-primary transition-colors">
           {supplier.company_name}
         </h4>
         {supplier.industry && (
@@ -858,13 +858,13 @@ const CompactSupplierCard = ({ supplier, onView, onMessage, onCompliance }: { su
         <div className="mt-2 space-y-1 text-[13px] text-muted-foreground">
           {supplier.contact_email && (
             <div className="flex items-center gap-1.5 truncate">
-              <Mail className="h-3 w-3 flex-shrink-0" />
+              <Mail className="h-3.5 w-3.5 flex-shrink-0" />
               <span className="truncate">{supplier.contact_email}</span>
             </div>
           )}
           {supplier.phone && (
             <div className="flex items-center gap-1.5">
-              <Phone className="h-3 w-3 flex-shrink-0" />
+              <Phone className="h-3.5 w-3.5 flex-shrink-0" />
               <span>{supplier.phone}</span>
             </div>
           )}
@@ -875,36 +875,36 @@ const CompactSupplierCard = ({ supplier, onView, onMessage, onCompliance }: { su
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
             onClick={(e) => {
               e.stopPropagation();
               onCompliance();
             }}
             title="Compliance workspace"
           >
-            <ShieldCheck className="h-4 w-4 text-muted-foreground hover:text-[#2563EB]" />
+            <ShieldCheck className={cardActionIconClass} />
           </Button>
         )}
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
           onClick={(e) => {
             e.stopPropagation();
             onMessage();
           }}
           title="Send Message"
         >
-          <MessageSquare className="h-4 w-4 text-muted-foreground hover:text-[#2563EB]" />
+          <MessageSquare className={cardActionIconClass} />
         </Button>
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
           onClick={onView}
           title="View Details"
         >
-          <Eye className="h-4 w-4 text-muted-foreground" />
+          <Eye className={cardActionIconClass} />
         </Button>
       </div>
     </div>
@@ -953,7 +953,7 @@ const DiscoverSupplierCard = ({
       ) : (
         <Button
           size="sm"
-          className="rounded-[10px] bg-[#2563EB] hover:bg-[#1D4ED8] text-white flex-shrink-0"
+          className="rounded-[10px] bg-primary hover:bg-primary-hover text-primary-foreground flex-shrink-0"
           onClick={(e) => { e.stopPropagation(); onSendRequest(); }}
         >
           <Send className="h-3.5 w-3.5 mr-1.5" />

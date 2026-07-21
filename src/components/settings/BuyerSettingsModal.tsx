@@ -330,7 +330,7 @@ function NavBtn({ item, active, onClick }: NavBtnProps) {
           : 'text-muted-foreground hover:bg-card/60 hover:text-foreground/80',
       ].join(' ')}
     >
-      <Icon className={['h-4 w-4 flex-shrink-0', active ? 'text-[#2563EB]' : 'text-muted-foreground/70'].join(' ')} />
+      <Icon className={['h-4 w-4 flex-shrink-0', active ? 'text-primary' : 'text-muted-foreground/70'].join(' ')} />
       {item.label}
     </button>
   );

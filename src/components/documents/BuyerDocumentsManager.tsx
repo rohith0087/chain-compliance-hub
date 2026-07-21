@@ -759,7 +759,7 @@ const BuyerDocumentsManager = ({
           const badgeColors = tab.pinned
             ? (isActive ? 'bg-amber-100 text-amber-700' : 'bg-amber-50 text-amber-600')
             : ({
-                all: 'bg-[#EAF1FF] text-[#2563EB]',
+                all: 'bg-[#EAF1FF] text-primary',
                 pending_approval: 'bg-muted text-foreground/80',
                 approved: 'bg-[#ECFDF5] text-[#047857]',
                 declined: 'bg-[#FEF2F2] text-[#DC2626]',
@@ -780,7 +780,7 @@ const BuyerDocumentsManager = ({
                 onClick={() => setStatusTab(tab.value)}
                 className={`relative h-full flex items-center gap-2 text-[14px] font-semibold transition-colors ${
                   isActive
-                    ? tab.pinned ? 'text-amber-600' : 'text-[#2563EB]'
+                    ? tab.pinned ? 'text-amber-600' : 'text-primary'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -790,7 +790,7 @@ const BuyerDocumentsManager = ({
                   {count}
                 </span>
                 {isActive && (
-                  <div className={`absolute bottom-0 left-0 right-0 h-[3px] rounded-full ${tab.pinned ? 'bg-amber-500' : 'bg-[#2563EB]'}`} />
+                  <div className={`absolute bottom-0 left-0 right-0 h-[3px] rounded-full ${tab.pinned ? 'bg-amber-500' : 'bg-primary'}`} />
                 )}
               </button>
             </div>
@@ -1047,11 +1047,11 @@ const BuyerDocumentsManager = ({
                         title={hasFile ? 'Preview document' : undefined}
                       >
                         <div className="w-[40px] h-[40px] rounded-[10px] bg-[#EFF6FF] flex items-center justify-center flex-shrink-0">
-                          <FileText className="w-5 h-5 text-[#2563EB]" />
+                          <FileText className="w-5 h-5 text-primary" />
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 min-w-0">
-                            <p className={`text-[14px] font-semibold text-foreground truncate ${hasFile ? 'hover:text-[#2563EB]' : ''}`} title={doc.title || doc.document_type}>{doc.title || doc.document_type}</p>
+                            <p className={`text-[14px] font-semibold text-foreground truncate ${hasFile ? 'hover:text-primary' : ''}`} title={doc.title || doc.document_type}>{doc.title || doc.document_type}</p>
                             {pinnedIds.has(doc.id) && (
                               <Pin className="h-3 w-3 flex-shrink-0 text-amber-500 fill-amber-400" />
                             )}

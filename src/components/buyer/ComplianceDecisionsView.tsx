@@ -305,7 +305,7 @@ export default function ComplianceDecisionsView({ buyerId, lockSupplierId }: Com
     <div className="h-[calc(100vh-80px)] overflow-y-auto bg-card p-6">
       <div className="mx-auto max-w-6xl space-y-6">
         <div>
-          <div className="flex items-center gap-2"><ShieldCheck className="h-6 w-6 text-[#2563EB]" /><h1 className={reviewPageTitleClass}>Compliance Decisions</h1></div>
+          <div className="flex items-center gap-2"><ShieldCheck className="h-6 w-6 text-primary" /><h1 className={reviewPageTitleClass}>Compliance Decisions</h1></div>
           <p className={`mt-1 ${reviewPageSubtitleClass}`}>Computed compliance status, derived from verified evidence and requirement applicability - not a manually selected document status.</p>
         </div>
 

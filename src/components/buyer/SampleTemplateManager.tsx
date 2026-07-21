@@ -391,7 +391,7 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
   const pageDocTypes = filteredDocTypes.slice(pageStart, pageStart + rowsPerPage);
 
   const uploadStatusTabs: Array<{ value: 'all' | 'uploaded' | 'not-uploaded'; label: string; count: number; badgeClass: string }> = [
-    { value: 'all', label: 'All', count: stats.total, badgeClass: 'bg-[#EAF1FF] text-[#2563EB]' },
+    { value: 'all', label: 'All', count: stats.total, badgeClass: 'bg-[#EAF1FF] text-primary' },
     { value: 'uploaded', label: 'Uploaded', count: stats.configured, badgeClass: 'bg-[#ECFDF5] text-[#047857]' },
     { value: 'not-uploaded', label: 'Needs Template', count: stats.remaining, badgeClass: 'bg-muted text-foreground/80' },
   ];
@@ -416,7 +416,7 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className={reviewMetricCardClass}>
           <div className={`${reviewMetricIconCircleClass} bg-[#EFF6FF]`}>
-            <FileText className="h-5 w-5 text-[#2563EB]" />
+            <FileText className="h-5 w-5 text-primary" />
           </div>
           <div>
             <p className="text-[20px] font-bold text-foreground leading-none">{stats.total}</p>
@@ -452,14 +452,14 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
               key={tab.value}
               onClick={() => setUploadStatus(tab.value)}
               className={`relative h-full flex items-center gap-2 text-[14px] font-semibold transition-colors ${
-                isActive ? 'text-[#2563EB]' : 'text-muted-foreground hover:text-foreground'
+                isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               {tab.label}
               <span className={`h-[24px] min-w-[24px] rounded-full px-2 text-[13px] font-bold flex items-center justify-center ${tab.badgeClass}`}>
                 {tab.count}
               </span>
-              {isActive && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#2563EB] rounded-full" />}
+              {isActive && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-primary rounded-full" />}
             </button>
           );
         })}
@@ -562,7 +562,7 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className={`w-[40px] h-[40px] rounded-[10px] flex items-center justify-center flex-shrink-0 ${hasTemplate ? 'bg-[#F0FDF4]' : 'bg-[#EFF6FF]'}`}>
-                    <Icon className={`h-5 w-5 ${hasTemplate ? 'text-emerald-600' : 'text-[#2563EB]'}`} />
+                    <Icon className={`h-5 w-5 ${hasTemplate ? 'text-emerald-600' : 'text-primary'}`} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -646,7 +646,7 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
           {viewingTemplate && (
             <div className="space-y-4">
               <div className="flex items-center gap-3 p-3 border border-border rounded-[12px] bg-muted/50">
-                <FileText className="h-8 w-8 text-[#2563EB]" />
+                <FileText className="h-8 w-8 text-primary" />
                 <div>
                   <p className="font-medium">{viewingTemplate.sample_file_name}</p>
                   <p className="text-sm text-muted-foreground">

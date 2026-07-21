@@ -260,7 +260,7 @@ export default function DocumentPreviewModal({
     if (loading) {
       return (
         <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
-          <Loader2 className="h-6 w-6 animate-spin text-[#2563EB]" />
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
           <p className="text-sm">Preparing preview…</p>
         </div>
       );
@@ -291,7 +291,7 @@ export default function DocumentPreviewModal({
         <div className="relative h-full w-full bg-muted">
           {!officeLoaded && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground">
-              <Loader2 className="h-6 w-6 animate-spin text-[#2563EB]" />
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
               <p className="text-sm">Loading document preview…</p>
             </div>
           )}
@@ -305,10 +305,10 @@ export default function DocumentPreviewModal({
           <div className="pointer-events-none absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/95 px-3 py-1 text-[11px] text-muted-foreground shadow-sm">
             Not rendering?
             {officeFullUrl && (
-              <a href={officeFullUrl} target="_blank" rel="noreferrer" className="pointer-events-auto font-semibold text-[#2563EB] hover:underline">Open in new tab</a>
+              <a href={officeFullUrl} target="_blank" rel="noreferrer" className="pointer-events-auto font-semibold text-primary hover:underline">Open in new tab</a>
             )}
             <span>·</span>
-            <button className="pointer-events-auto font-semibold text-[#2563EB] hover:underline" onClick={() => void handleDownload()}>Download</button>
+            <button className="pointer-events-auto font-semibold text-primary hover:underline" onClick={() => void handleDownload()}>Download</button>
           </div>
         </div>
       );
@@ -323,7 +323,7 @@ export default function DocumentPreviewModal({
         </div>
         <p className="text-sm font-medium text-foreground">This file type can't be previewed inline.</p>
         <p className="text-xs text-muted-foreground">{fileName}</p>
-        <Button className="rounded-[10px] bg-[#2563EB] text-white hover:bg-[#1D4ED8]" onClick={() => void handleDownload()}>
+        <Button className="rounded-[10px] bg-primary text-white hover:bg-[#1D4ED8]" onClick={() => void handleDownload()}>
           <Download className="mr-2 h-4 w-4" />Download to view
         </Button>
       </div>
@@ -340,7 +340,7 @@ export default function DocumentPreviewModal({
         <div className="flex items-center justify-between gap-3 border-b border-border bg-card px-5 py-4">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[12px] bg-muted">
-              <HeaderIcon className="h-5 w-5 text-[#2563EB]" />
+              <HeaderIcon className="h-5 w-5 text-primary" />
             </div>
             <div className="min-w-0">
               <p className="truncate text-[15px] font-bold text-foreground">{title || fileName || 'Document'}</p>

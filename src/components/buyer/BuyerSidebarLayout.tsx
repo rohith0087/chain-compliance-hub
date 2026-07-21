@@ -91,6 +91,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { WhatsNewDialog } from '@/components/shared/WhatsNewDialog';
 import { APP_VERSION } from '@/config/version';
 import { getWorkspaceProfileForIndustry } from '@/config/workspaceProfiles';
+import { navIconClass, navSubIconClass } from '@/components/documents/buyerReviewDesignSystem';
 
 // Version button component for sidebar footer
 function VersionButton() {
@@ -840,12 +841,12 @@ export function BuyerSidebarLayout({
         const items = section.submenu ?? [];
         const activeIdx = items.findIndex((s) => isActiveRoute(s.value));
         return (
-          <div className="flex h-full w-[232px] flex-col bg-gradient-to-b from-primary/[0.06] via-sidebar to-sidebar">
+          <div className="flex h-full w-[232px] flex-col bg-sidebar">
             {/* Section identity — icon coin + title + progress-ish context */}
             <div className="px-3 pt-4 pb-3">
               <div className="flex items-center gap-2.5">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
-                  <SectionIcon className="h-4.5 w-4.5" />
+                  <SectionIcon className={navIconClass} />
                 </span>
                 <div className="min-w-0">
                   <p className="truncate text-[14px] font-semibold leading-tight text-foreground">{section.title}</p>
@@ -873,7 +874,7 @@ export function BuyerSidebarLayout({
                   >
                     {subActive && <span className="absolute -left-2 top-1.5 bottom-1.5 w-[3px] rounded-full bg-primary" />}
                     {sub.icon && (
-                      <sub.icon className={`h-4 w-4 shrink-0 transition-transform duration-150 group-hover:scale-110 ${subActive ? '' : 'text-muted-foreground group-hover:text-foreground'}`} />
+                      <sub.icon className={`${navSubIconClass} shrink-0 transition-transform duration-150 group-hover:scale-110 ${subActive ? '' : 'text-muted-foreground group-hover:text-foreground'}`} />
                     )}
                     <span className="truncate text-left">{sub.title}</span>
                     {sub.badge ? <Badge variant="secondary" className="ml-auto">{sub.badge}</Badge> : null}

@@ -349,7 +349,7 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
         {selectedSupplier && (
           <div className="flex items-center gap-3 p-3 rounded-[16px] bg-muted/50 border border-border">
             <div className="flex items-center justify-center h-9 w-9 rounded-[10px] bg-[#EFF6FF]">
-              <Building2 className="h-4 w-4 text-[#2563EB]" />
+              <Building2 className="h-4 w-4 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground truncate">
@@ -373,8 +373,8 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
           className={cn(
             "relative rounded-[16px] border bg-muted/30 p-6 text-center cursor-pointer transition-all duration-200",
             isDragActive
-              ? "border-[#2563EB] bg-blue-50/40 ring-2 ring-[#2563EB]/20"
-              : "border-border hover:border-[#2563EB]/40 hover:bg-muted/60"
+              ? "border-primary bg-blue-50/40 ring-2 ring-primary/20"
+              : "border-border hover:border-primary/40 hover:bg-muted/60"
           )}
         >
           <input {...getInputProps()} />
@@ -385,7 +385,7 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
             )}>
               <Upload className={cn(
                 "h-5 w-5 transition-colors",
-                isDragActive ? "text-[#2563EB]" : "text-[#2563EB]/70"
+                isDragActive ? "text-primary" : "text-primary/70"
               )} />
             </div>
             <div className="space-y-1">
@@ -393,7 +393,7 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
                 {isDragActive ? "Drop files here" : "Drag & drop documents"}
               </p>
               <p className="text-xs text-muted-foreground">
-                or <span className="text-[#2563EB] hover:underline">browse files</span>
+                or <span className="text-primary hover:underline">browse files</span>
               </p>
             </div>
             <p className="text-xs text-muted-foreground/70 mt-1">
@@ -428,7 +428,7 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
                     {/* File Info Row */}
                     <div className="flex items-center gap-3">
                       <div className="flex items-center justify-center h-8 w-8 rounded-[10px] bg-[#EFF6FF] flex-shrink-0">
-                        <FileText className="h-4 w-4 text-[#2563EB]" />
+                        <FileText className="h-4 w-4 text-primary" />
                       </div>
 
                       <div className="flex-1 min-w-0">

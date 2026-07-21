@@ -51,9 +51,18 @@ export function SupplierRiskAssessment({ buyerId }: Props) {
     }
   }, [realMode, realSuppliers, selectedId]);
 
+  // `selectedId` starts as a demo id (non-UUID) and only becomes a real supplier
+  // UUID after the default-selection effect runs. Never hand a demo id to the
+  // engine queries — the supplier_id column is a uuid, so a value like
+  // 'blueriver' triggers a PostgREST 400 ("invalid input syntax for type uuid")
+  // and surfaces as a spurious "Failed to load risk" toast on first render.
+  const realSelectedId = realMode
+    ? (realSuppliers.some((s) => s.id === selectedId) ? selectedId : realSuppliers[0]?.id ?? null)
+    : null;
+
   const { score, events, recomputing, recompute, reload } = useSupplierRisk(
     realMode ? buyerId ?? null : null,
-    realMode ? selectedId : null,
+    realSelectedId,
   );
 
   // Per-supplier extras: recent documents, connection date, facility count.
@@ -61,7 +70,7 @@ export function SupplierRiskAssessment({ buyerId }: Props) {
   const [connectedDate, setConnectedDate] = useState<string | null>(null);
   const [facilities, setFacilities] = useState(0);
   useEffect(() => {
-    if (!realMode || !buyerId || !selectedId) return;
+    if (!realMode || !buyerId || !realSelectedId) return;
     let active = true;
     (async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -70,12 +79,12 @@ export function SupplierRiskAssessment({ buyerId }: Props) {
       const [up, conn, fac] = await Promise.all([
         client.from('document_uploads')
           .select('status, expiration_date, created_at, document_requests!inner(title, document_type, buyer_id, supplier_id)')
-          .eq('document_requests.buyer_id', buyerId).eq('document_requests.supplier_id', selectedId)
+          .eq('document_requests.buyer_id', buyerId).eq('document_requests.supplier_id', realSelectedId)
           .order('created_at', { ascending: false }).limit(8),
         client.from('buyer_supplier_connections')
-          .select('responded_at, requested_at').eq('buyer_id', buyerId).eq('supplier_id', selectedId).maybeSingle(),
+          .select('responded_at, requested_at').eq('buyer_id', buyerId).eq('supplier_id', realSelectedId).maybeSingle(),
         client.from('company_branches')
-          .select('id', { count: 'exact', head: true }).eq('company_id', selectedId).eq('company_type', 'supplier'),
+          .select('id', { count: 'exact', head: true }).eq('company_id', realSelectedId).eq('company_type', 'supplier'),
       ]);
       if (!active) return;
       setDocs(((up.data ?? []) as Array<{ status: string; expiration_date: string | null; document_requests: { title: string | null; document_type: string | null } }>).map((d) => ({
@@ -88,7 +97,7 @@ export function SupplierRiskAssessment({ buyerId }: Props) {
       setFacilities(fac.count ?? 0);
     })();
     return () => { active = false; };
-  }, [realMode, buyerId, selectedId]);
+  }, [realMode, buyerId, realSelectedId]);
 
   // ---- profile: real adapter or demo dataset ----
   const supplier: SupplierRiskProfile = useMemo(() => {
@@ -193,7 +202,7 @@ export function SupplierRiskAssessment({ buyerId }: Props) {
           <RiskScoreHero supplier={supplier} animatedScore={animatedScore} />
           <KeyDrivers drivers={supplier.drivers} />
           <SignalsSection supplier={supplier} />
-          {realMode && <SupplierRiskGraph supplierId={selectedId} />}
+          {realMode && realSelectedId && <SupplierRiskGraph supplierId={realSelectedId} />}
           <DocumentRiskSection documents={supplier.documents} subscore={supplier.documentSubscore} />
           {flags.showAuditFindings && (
             <AuditFindingsTab supplierId={supplier.id} supplierName={supplier.name} />

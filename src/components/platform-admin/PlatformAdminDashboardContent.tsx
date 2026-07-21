@@ -1,17 +1,18 @@
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Users, Database, MessageSquare, FileText, TrendingUp, Ticket, Clock, AlertTriangle } from 'lucide-react';
+import { Users, Database, MessageSquare, FileText, Ticket, Clock, AlertTriangle } from 'lucide-react';
 import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';
 import { useSupportTickets } from '@/hooks/useSupportTickets';
 import { PlatformAdminUserManagement } from './PlatformAdminUserManagement';
 import { PlatformAdminAnalytics } from './PlatformAdminAnalytics';
-import { PlatformAdminSystemSettings } from './PlatformAdminSystemSettings';
 import { PlatformAdminInvitations } from './PlatformAdminInvitations';
 import { PlatformAdminAuditLogs } from './PlatformAdminAuditLogs';
 import { SuperAdminClientSupport } from '@/components/super-admin/SuperAdminClientSupport';
 import { DocumentBackfillManager } from './DocumentBackfillManager';
 import { PlatformEmailIntakeOperations } from './PlatformEmailIntakeOperations';
+import { PlatformAdminSupplierRisk } from './PlatformAdminSupplierRisk';
+import { PlatformAdminFeatureFlags } from './PlatformAdminFeatureFlags';
+import { PlatformAdminDataExplorer } from './PlatformAdminDataExplorer';
+import { AdminPageHeader, AdminCard, AdminStatCard, AdminBadge, type AdminTone } from './ui';
 import { formatDistanceToNow } from 'date-fns';
 
 export function PlatformAdminDashboardContent() {
@@ -21,298 +22,115 @@ export function PlatformAdminDashboardContent() {
   const { tickets } = useSupportTickets();
   const activeTab = searchParams.get('tab') || 'dashboard';
 
-  // Get recent tickets (latest 5)
   const recentTickets = tickets.slice(0, 5);
 
+  if (activeTab === 'users') return <PlatformAdminUserManagement />;
+  if (activeTab === 'invitations') return <PlatformAdminInvitations />;
+  if (activeTab === 'tickets') return <SuperAdminClientSupport />;
+  if (activeTab === 'analytics') return <PlatformAdminAnalytics />;
+  if (activeTab === 'logs') return <PlatformAdminAuditLogs />;
+  if (activeTab === 'backfill') return <DocumentBackfillManager />;
+  if (activeTab === 'email-intake') return <PlatformEmailIntakeOperations />;
+  if (activeTab === 'supplier-risk') return <PlatformAdminSupplierRisk />;
+  if (activeTab === 'feature-flags') return <PlatformAdminFeatureFlags />;
+  if (activeTab === 'data-explorer') return <PlatformAdminDataExplorer />;
+
   const statsCards = [
-    {
-      title: 'Total Users',
-      value: stats?.total_users || 0,
-      icon: Users,
-      description: `+${stats?.recent_signups || 0} this week`,
-      color: 'hsl(var(--admin-accent-blue))',
-      trend: '+12%'
-    },
-    {
-      title: 'Active Connections',
-      value: stats?.active_connections || 0,
-      icon: Database,
-      description: 'Buyer-Supplier pairs',
-      color: 'hsl(var(--admin-accent-purple))',
-      trend: '+8%'
-    },
-    {
-      title: 'Total Documents',
-      value: stats?.total_documents || 0,
-      icon: FileText,
-      description: `${stats?.pending_requests || 0} pending`,
-      color: 'hsl(var(--admin-accent-green))',
-      trend: '+23%'
-    },
-    {
-      title: 'Chat Sessions',
-      value: stats?.total_chat_sessions || 0,
-      icon: MessageSquare,
-      description: 'Total conversations',
-      color: 'hsl(var(--admin-accent-blue))',
-      trend: '+15%'
-    }
+    { title: 'Total Users', value: stats?.total_users ?? 0, icon: Users, hint: `${stats?.recent_signups ?? 0} new this week` },
+    { title: 'Active Connections', value: stats?.active_connections ?? 0, icon: Database, hint: 'Buyer–supplier pairs' },
+    { title: 'Total Documents', value: stats?.total_documents ?? 0, icon: FileText, hint: `${stats?.pending_requests ?? 0} pending` },
+    { title: 'Chat Sessions', value: stats?.total_chat_sessions ?? 0, icon: MessageSquare, hint: 'Total conversations' },
   ];
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent': return 'hsl(var(--destructive))';
-      case 'high': return 'hsl(217 91% 60%)';
-      case 'medium': return 'hsl(45 93% 47%)';
-      default: return 'hsl(var(--admin-text-muted))';
-    }
-  };
+  const priorityTone = (p: string): AdminTone => (p === 'urgent' ? 'danger' : p === 'high' ? 'warning' : p === 'medium' ? 'info' : 'neutral');
+  const statusTone = (s: string): AdminTone => (s === 'open' ? 'info' : s === 'in_progress' ? 'warning' : s === 'resolved' ? 'positive' : 'neutral');
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'open': return 'hsl(var(--admin-accent-blue))';
-      case 'in_progress': return 'hsl(45 93% 47%)';
-      case 'resolved': return 'hsl(var(--admin-accent-green))';
-      case 'closed': return 'hsl(var(--admin-text-muted))';
-      default: return 'hsl(var(--admin-text-muted))';
-    }
-  };
-
-  if (activeTab === 'users') {
-    return <PlatformAdminUserManagement />;
-  }
-
-  if (activeTab === 'invitations') {
-    return <PlatformAdminInvitations />;
-  }
-
-  if (activeTab === 'tickets') {
-    return <SuperAdminClientSupport />;
-  }
-
-  if (activeTab === 'analytics') {
-    return <PlatformAdminAnalytics />;
-  }
-
-  if (activeTab === 'settings') {
-    return <PlatformAdminSystemSettings />;
-  }
-
-  if (activeTab === 'logs') {
-    return <PlatformAdminAuditLogs />;
-  }
-
-  if (activeTab === 'backfill') {
-    return <DocumentBackfillManager />;
-  }
-
-  if (activeTab === 'email-intake') {
-    return <PlatformEmailIntakeOperations />;
-  }
+  const health = [
+    { label: 'Database', status: 'Operational' },
+    { label: 'API Services', status: 'Operational' },
+    { label: 'File Storage', status: 'Operational' },
+  ];
 
   return (
-    <div className="space-y-4 md:space-y-8">
+    <div>
+      <AdminPageHeader title="Platform Overview" description="Monitor platform activity and key metrics at a glance." />
+
       {error && (
-        <div 
-          className="p-3 md:p-4 rounded-lg border"
-          style={{
-            backgroundColor: 'hsl(var(--destructive) / 0.1)',
-            borderColor: 'hsl(var(--destructive) / 0.3)',
-            color: 'hsl(var(--destructive))'
-          }}
-        >
-          <p className="font-medium text-sm md:text-base">Error loading dashboard data: {error}</p>
-          <button 
-            onClick={fetchStats}
-            className="mt-2 text-sm hover:underline font-medium"
-          >
-            Retry
-          </button>
+        <div className="mb-5 rounded-lg border px-4 py-3"
+          style={{ background: 'hsl(var(--admin-danger) / 0.08)', borderColor: 'hsl(var(--admin-danger) / 0.3)', color: 'hsl(var(--admin-danger))' }}>
+          <p className="text-sm font-medium">Error loading dashboard data: {error}</p>
+          <button onClick={fetchStats} className="mt-1 text-sm font-medium hover:underline">Retry</button>
         </div>
       )}
 
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold mb-1 md:mb-2" style={{ color: 'hsl(var(--admin-text))' }}>
-          Platform Overview
-        </h1>
-        <p className="text-sm md:text-base" style={{ color: 'hsl(var(--admin-text-muted))' }}>
-          Monitor your platform's performance and key metrics
-        </p>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-        {statsCards.map((stat, index) => (
-          <Card 
-            key={index}
-            className="relative overflow-hidden transition-all duration-300 hover:shadow-lg"
-            style={{ 
-              backgroundColor: 'hsl(var(--admin-card))', 
-              borderColor: 'hsl(var(--admin-border))',
-              boxShadow: 'var(--admin-shadow)'
-            }}
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-6 pb-1 md:pb-2">
-              <CardTitle 
-                className="text-xs md:text-sm font-medium"
-                style={{ color: 'hsl(var(--admin-text-muted))' }}
-              >
-                {stat.title}
-              </CardTitle>
-              <div 
-                className="p-1.5 md:p-2 rounded-lg hidden sm:block"
-                style={{ backgroundColor: `${stat.color}20` }}
-              >
-                <stat.icon className="h-3 w-3 md:h-4 md:w-4" style={{ color: stat.color }} />
-              </div>
-            </CardHeader>
-            <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
-              <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: 'hsl(var(--admin-text))' }}>
-                {stat.value.toLocaleString()}
-              </div>
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] md:text-xs truncate" style={{ color: 'hsl(var(--admin-text-muted))' }}>
-                  {stat.description}
-                </p>
-                <div className="hidden md:flex items-center space-x-1">
-                  <TrendingUp className="h-3 w-3" style={{ color: 'hsl(var(--admin-accent-green))' }} />
-                  <span 
-                    className="text-xs font-medium"
-                    style={{ color: 'hsl(var(--admin-accent-green))' }}
-                  >
-                    {stat.trend}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {statsCards.map((s) => (
+          <AdminStatCard key={s.title} label={s.title} value={s.value.toLocaleString()} hint={s.hint} icon={<s.icon className="h-4 w-4" />} />
         ))}
       </div>
 
-      {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        <Card style={{
-          backgroundColor: 'hsl(var(--admin-card))', 
-          borderColor: 'hsl(var(--admin-border))' 
-        }}>
-          <CardHeader>
-            <CardTitle style={{ color: 'hsl(var(--admin-text))' }}>System Health</CardTitle>
-            <CardDescription style={{ color: 'hsl(var(--admin-text-muted))' }}>
-              Current system status and performance
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span style={{ color: 'hsl(var(--admin-text-muted))' }}>Database</span>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'hsl(var(--admin-accent-green))' }}></div>
-                  <span className="text-sm" style={{ color: 'hsl(var(--admin-text))' }}>Operational</span>
-                </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <AdminCard>
+          <h2 className="mb-1 text-base font-semibold" style={{ color: 'hsl(var(--admin-text))' }}>System Health</h2>
+          <p className="mb-4 text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>Current system status.</p>
+          <div className="space-y-3">
+            {health.map((h) => (
+              <div key={h.label} className="flex items-center justify-between">
+                <span className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>{h.label}</span>
+                <span className="inline-flex items-center gap-2 text-sm" style={{ color: 'hsl(var(--admin-text))' }}>
+                  <span className="h-2 w-2 rounded-full" style={{ background: 'hsl(var(--admin-positive))' }} />
+                  {h.status}
+                </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span style={{ color: 'hsl(var(--admin-text-muted))' }}>API Services</span>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'hsl(var(--admin-accent-green))' }}></div>
-                  <span className="text-sm" style={{ color: 'hsl(var(--admin-text))' }}>Operational</span>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <span style={{ color: 'hsl(var(--admin-text-muted))' }}>File Storage</span>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'hsl(var(--admin-accent-green))' }}></div>
-                  <span className="text-sm" style={{ color: 'hsl(var(--admin-text))' }}>Operational</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            ))}
+          </div>
+        </AdminCard>
 
-        {/* Recent Tickets Card */}
-        <Card style={{ 
-          backgroundColor: 'hsl(var(--admin-card))', 
-          borderColor: 'hsl(var(--admin-border))' 
-        }}>
-          <CardHeader className="flex flex-row items-center justify-between">
+        <AdminCard>
+          <div className="mb-4 flex items-center justify-between">
             <div>
-              <CardTitle style={{ color: 'hsl(var(--admin-text))' }}>Recent Tickets</CardTitle>
-              <CardDescription style={{ color: 'hsl(var(--admin-text-muted))' }}>
-                Latest support requests
-              </CardDescription>
+              <h2 className="text-base font-semibold" style={{ color: 'hsl(var(--admin-text))' }}>Recent Tickets</h2>
+              <p className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>Latest support requests.</p>
             </div>
-            <button
-              onClick={() => navigate('/platform-admin/dashboard?tab=tickets')}
-              className="text-sm font-medium hover:underline"
-              style={{ color: 'hsl(var(--admin-accent-blue))' }}
-            >
-              View All
+            <button onClick={() => navigate('/platform-admin/dashboard?tab=tickets')}
+              className="text-sm font-medium hover:underline" style={{ color: 'hsl(var(--admin-accent-blue))' }}>
+              View all
             </button>
-          </CardHeader>
-          <CardContent>
-            {recentTickets.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Ticket className="h-10 w-10 mb-2" style={{ color: 'hsl(var(--admin-text-muted))' }} />
-                <p className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
-                  No support tickets yet
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {recentTickets.map((ticket) => (
-                  <button
-                    key={ticket.id}
-                    onClick={() => navigate('/platform-admin/dashboard?tab=tickets')}
-                    className="w-full p-3 rounded-lg border transition-colors hover:bg-opacity-80 text-left"
-                    style={{
-                      backgroundColor: 'hsl(var(--admin-sidebar-accent))',
-                      borderColor: 'hsl(var(--admin-border))'
-                    }}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p 
-                          className="text-sm font-medium truncate"
-                          style={{ color: 'hsl(var(--admin-text))' }}
-                        >
-                          {ticket.subject}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Clock className="h-3 w-3" style={{ color: 'hsl(var(--admin-text-muted))' }} />
-                          <span className="text-xs" style={{ color: 'hsl(var(--admin-text-muted))' }}>
-                            {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true })}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <Badge 
-                          variant="outline"
-                          className="text-[10px] px-1.5 py-0"
-                          style={{ 
-                            borderColor: getPriorityColor(ticket.priority),
-                            color: getPriorityColor(ticket.priority)
-                          }}
-                        >
-                          {ticket.priority === 'urgent' && <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />}
-                          {ticket.priority}
-                        </Badge>
-                        <Badge 
-                          className="text-[10px] px-1.5 py-0"
-                          style={{ 
-                            backgroundColor: getStatusColor(ticket.status),
-                            color: 'white'
-                          }}
-                        >
-                          {ticket.status.replace('_', ' ')}
-                        </Badge>
+          </div>
+          {recentTickets.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <Ticket className="mb-2 h-9 w-9" style={{ color: 'hsl(var(--admin-text-muted))' }} />
+              <p className="text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>No support tickets yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {recentTickets.map((ticket) => (
+                <button key={ticket.id} onClick={() => navigate('/platform-admin/dashboard?tab=tickets')}
+                  className="w-full rounded-lg border p-3 text-left transition-colors"
+                  style={{ background: 'hsl(var(--admin-surface))', borderColor: 'hsl(var(--admin-border))' }}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium" style={{ color: 'hsl(var(--admin-text))' }}>{ticket.subject}</p>
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <Clock className="h-3 w-3" style={{ color: 'hsl(var(--admin-text-muted))' }} />
+                        <span className="text-xs" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                          {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true })}
+                        </span>
                       </div>
                     </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    <div className="flex flex-col items-end gap-1">
+                      <AdminBadge tone={priorityTone(ticket.priority)}>
+                        {ticket.priority === 'urgent' && <AlertTriangle className="mr-0.5 h-2.5 w-2.5" />}
+                        {ticket.priority}
+                      </AdminBadge>
+                      <AdminBadge tone={statusTone(ticket.status)}>{ticket.status.replace('_', ' ')}</AdminBadge>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </AdminCard>
       </div>
     </div>
   );

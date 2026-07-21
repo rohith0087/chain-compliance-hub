@@ -27,6 +27,15 @@ export interface RiskEvent {
   status: string;
   evidence_status: string;
   detected_at: string;
+  // Source citation (from risk_source_records via the *_with_sources RPC).
+  // Null for synthetic/internal signals that have no external record.
+  source_record_id?: string | null;
+  source_url?: string | null;
+  source_type?: string | null;
+  connector?: string | null;
+  source_title?: string | null;
+  source_published?: string | null;
+  source_summary?: string | null;
 }
 
 export async function fetchLatestRiskScore(
@@ -50,13 +59,13 @@ export async function fetchLatestRiskScore(
 export async function fetchRiskEvents(supplierId: string): Promise<RiskEvent[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const client = supabase as any;
-  const { data, error } = await client
-    .from('supplier_risk_events')
-    .select('id, supplier_id, event_type, dimension, severity, entity_match_confidence, status, evidence_status, detected_at')
-    .eq('supplier_id', supplierId)
-    .order('detected_at', { ascending: false });
+  // Uses the *_with_sources RPC so each event carries its source citation
+  // (source_url + normalized title/date/summary) from risk_source_records.
+  const { data, error } = await client.rpc('get_supplier_risk_events_with_sources', {
+    p_supplier_id: supplierId,
+  });
   if (error) throw error;
-  return (data ?? []) as RiskEvent[];
+  return (data ?? []).map((e: RiskEvent) => ({ ...e, supplier_id: e.supplier_id ?? supplierId })) as RiskEvent[];
 }
 
 export type FeedbackType =

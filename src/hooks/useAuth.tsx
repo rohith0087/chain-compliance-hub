@@ -197,16 +197,40 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signIn = async (email: string, password: string, captchaToken?: string) => {
+    const ACCOUNT_DISABLED_MESSAGE =
+      "There's a problem with your account and you can't sign in right now. Please contact support@tracer2c.com for help.";
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
       options: captchaToken ? { captchaToken } : undefined,
     });
-    
-    if (!error && data.user) {
+
+    // A GoTrue-banned account errors on sign-in — surface the friendly message.
+    if (error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const e = error as any;
+      if (e?.code === 'user_banned' || /banned/i.test(error.message ?? '')) {
+        return { error: { message: ACCOUNT_DISABLED_MESSAGE, code: 'account_disabled' } };
+      }
+      return { error };
+    }
+
+    if (data.user) {
+      // Disabled-account gate: block login and sign out immediately.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: prof } = await (supabase as any)
+        .from('profiles')
+        .select('account_disabled')
+        .eq('id', data.user.id)
+        .maybeSingle();
+      if (prof?.account_disabled) {
+        await supabase.auth.signOut();
+        return { error: { message: ACCOUNT_DISABLED_MESSAGE, code: 'account_disabled' } };
+      }
       logAuthEvent('login', data.user.id, data.user.email || email, data.user.user_metadata?.full_name);
     }
-    
+
     return { error };
   };
 

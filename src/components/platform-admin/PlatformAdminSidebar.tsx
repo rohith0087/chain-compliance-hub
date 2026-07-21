@@ -1,17 +1,18 @@
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Users, 
-  UserPlus, 
-  BarChart3, 
-  Settings, 
-  Shield, 
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  LayoutDashboard,
+  Users,
+  UserPlus,
+  BarChart3,
   LogOut,
   FileText,
   Ticket,
   X,
-  Sparkles
-  ,MailWarning
+  Sparkles,
+  MailWarning,
+  ShieldAlert,
+  Flag,
+  Database,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -33,78 +34,65 @@ import { supabase } from '@/integrations/supabase/client';
 import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';
 import { useSupportTickets } from '@/hooks/useSupportTickets';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { AdminBrand } from './AdminBrand';
 
 interface PlatformAdminSidebarProps {
   activeSection: string;
   onSectionChange: (section: string) => void;
 }
 
-const navigationItems = [
+interface NavItem {
+  title: string;
+  section: string;
+  url: string;
+  icon: typeof LayoutDashboard;
+}
+
+// Grouped navigation. Sections map to ?tab= values read by PlatformAdminDashboardContent.
+const navGroups: { label: string; items: NavItem[] }[] = [
   {
-    title: 'Dashboard',
-    url: '/platform-admin/dashboard',
-    icon: LayoutDashboard,
-    section: 'dashboard'
+    label: 'Overview',
+    items: [
+      { title: 'Dashboard', section: 'dashboard', url: '/platform-admin/dashboard', icon: LayoutDashboard },
+    ],
   },
   {
-    title: 'User Management',
-    url: '/platform-admin/dashboard?tab=users',
-    icon: Users,
-    section: 'users'
+    label: 'People',
+    items: [
+      { title: 'User Management', section: 'users', url: '/platform-admin/dashboard?tab=users', icon: Users },
+      { title: 'Invitations', section: 'invitations', url: '/platform-admin/dashboard?tab=invitations', icon: UserPlus },
+      { title: 'Support Tickets', section: 'tickets', url: '/platform-admin/dashboard?tab=tickets', icon: Ticket },
+    ],
   },
   {
-    title: 'Invitations',
-    url: '/platform-admin/dashboard?tab=invitations',
-    icon: UserPlus,
-    section: 'invitations'
+    label: 'Risk & Operations',
+    items: [
+      { title: 'Supplier Risk', section: 'supplier-risk', url: '/platform-admin/dashboard?tab=supplier-risk', icon: ShieldAlert },
+      { title: 'Analytics', section: 'analytics', url: '/platform-admin/dashboard?tab=analytics', icon: BarChart3 },
+      { title: 'Email Intake', section: 'email-intake', url: '/platform-admin/dashboard?tab=email-intake', icon: MailWarning },
+      { title: 'AI Backfill', section: 'backfill', url: '/platform-admin/dashboard?tab=backfill', icon: Sparkles },
+    ],
   },
   {
-    title: 'Support Tickets',
-    url: '/platform-admin/dashboard?tab=tickets',
-    icon: Ticket,
-    section: 'tickets'
+    label: 'Platform',
+    items: [
+      { title: 'Feature Flags', section: 'feature-flags', url: '/platform-admin/dashboard?tab=feature-flags', icon: Flag },
+      { title: 'Data Explorer', section: 'data-explorer', url: '/platform-admin/dashboard?tab=data-explorer', icon: Database },
+      { title: 'Audit Logs', section: 'logs', url: '/platform-admin/dashboard?tab=logs', icon: FileText },
+    ],
   },
-  {
-    title: 'Analytics',
-    url: '/platform-admin/dashboard?tab=analytics',
-    icon: BarChart3,
-    section: 'analytics'
-  },
-  {
-    title: 'System Settings',
-    url: '/platform-admin/dashboard?tab=settings',
-    icon: Settings,
-    section: 'settings'
-  },
-  {
-    title: 'Audit Logs',
-    url: '/platform-admin/dashboard?tab=logs',
-    icon: FileText,
-    section: 'logs'
-  },
-  {
-    title: 'Email Intake',
-    url: '/platform-admin/dashboard?tab=email-intake',
-    icon: MailWarning,
-    section: 'email-intake'
-  },
-  {
-    title: 'AI Backfill',
-    url: '/platform-admin/dashboard?tab=backfill',
-    icon: Sparkles,
-    section: 'backfill'
-  }
 ];
 
-export function PlatformAdminSidebar({ activeSection, onSectionChange }: PlatformAdminSidebarProps) {
+export function PlatformAdminSidebar({ onSectionChange }: PlatformAdminSidebarProps) {
   const { state, setOpenMobile, openMobile } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
   const { platformAdmin } = usePlatformAdmin();
   const { stats } = useSupportTickets();
   const isMobile = useIsMobile();
-  
+
   const collapsed = state === 'collapsed';
+  const showLabels = !collapsed || isMobile;
   const openTicketCount = (stats.open || 0) + (stats.urgent || 0);
 
   const handleSignOut = async () => {
@@ -113,205 +101,135 @@ export function PlatformAdminSidebar({ activeSection, onSectionChange }: Platfor
   };
 
   const isActive = (section: string) => {
-    const urlParams = new URLSearchParams(location.search);
-    const currentTab = urlParams.get('tab') || 'dashboard';
-    return currentTab === section || (section === 'dashboard' && !urlParams.get('tab'));
+    const currentTab = new URLSearchParams(location.search).get('tab') || 'dashboard';
+    return currentTab === section || (section === 'dashboard' && !new URLSearchParams(location.search).get('tab'));
   };
 
   const handleNavClick = (url: string, section: string) => {
     onSectionChange(section);
     navigate(url);
-    // Close mobile sidebar after navigation
-    if (isMobile) {
-      setOpenMobile(false);
-    }
+    if (isMobile) setOpenMobile(false);
   };
 
-  // Mobile sidebar content
   const sidebarContent = (
     <>
-      <SidebarHeader className="border-b p-4 md:p-6" style={{ 
-        borderColor: 'hsl(var(--admin-border))',
-        backgroundColor: 'hsl(var(--admin-sidebar))'
-      }}>
+      <SidebarHeader
+        className="border-b p-4"
+        style={{ borderColor: 'hsl(var(--admin-border))', backgroundColor: 'hsl(var(--admin-sidebar))' }}
+      >
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="relative">
-              <div 
-                className="absolute inset-0 rounded-lg blur-md opacity-50"
-                style={{ backgroundColor: 'hsl(var(--admin-accent-blue))' }}
-              ></div>
-              <Shield 
-                className="relative h-8 w-8 md:h-10 md:w-10" 
-                style={{ color: 'hsl(var(--admin-accent-blue))' }}
-              />
-            </div>
-            {(!collapsed || isMobile) && (
-              <div>
-                <h2 className="text-base md:text-lg font-bold" style={{ color: 'hsl(var(--admin-text))' }}>
-                  Platform Admin
-                </h2>
-                <p className="text-xs md:text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
-                  Control Center
-                </p>
-              </div>
-            )}
-          </div>
-          {/* Close button for mobile */}
+          {showLabels ? <AdminBrand size="sm" /> : (
+            <img src="/logo.png" alt="TraceR2C" className="h-8 w-8 rounded-lg object-contain"
+              style={{ background: 'hsl(var(--admin-accent-weak))', padding: 2 }} />
+          )}
           {isMobile && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0"
-              onClick={() => setOpenMobile(false)}
-              style={{ color: 'hsl(var(--admin-text-muted))' }}
-            >
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0"
+              onClick={() => setOpenMobile(false)} style={{ color: 'hsl(var(--admin-text-muted))' }}>
               <X className="h-5 w-5" />
             </Button>
           )}
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-3 md:px-4 py-4 md:py-6" style={{ backgroundColor: 'hsl(var(--admin-sidebar))' }}>
-        <SidebarGroup>
-          <SidebarGroupLabel 
-            className={`text-xs font-semibold uppercase tracking-wider mb-3 md:mb-4 ${
-              collapsed && !isMobile ? 'text-center' : ''
-            }`}
-            style={{ color: 'hsl(var(--admin-text-muted))' }}
-          >
-            {collapsed && !isMobile ? '•••' : 'Navigation'}
-          </SidebarGroupLabel>
-          
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-1 md:space-y-2">
-              {navigationItems.map((item) => (
-                <SidebarMenuItem key={item.section}>
-                  <SidebarMenuButton 
-                    className={`group relative rounded-lg transition-all duration-200 ${
-                      isActive(item.section)
-                        ? 'shadow-lg'
-                        : 'hover:shadow-md'
-                    }`}
-                    style={{
-                      backgroundColor: isActive(item.section) 
-                        ? 'hsl(var(--admin-sidebar-accent))' 
-                        : 'transparent'
-                    }}
-                    onClick={() => handleNavClick(item.url, item.section)}
-                  >
-                    <div
-                      className={`flex items-center w-full p-3 rounded-lg transition-colors hover:bg-[hsl(var(--admin-sidebar-accent))] ${
-                        collapsed && !isMobile ? 'justify-center' : 'justify-start'
-                      }`}
-                    >
-                      <div className="relative">
-                        <item.icon 
-                          className={`h-5 w-5 ${collapsed && !isMobile ? '' : 'mr-3'} transition-colors`}
-                          style={{
-                            color: isActive(item.section) 
-                              ? 'hsl(var(--admin-accent-blue))' 
-                              : 'hsl(var(--admin-text-muted))'
-                          }}
-                        />
-                        {/* Badge for tickets in collapsed mode */}
-                        {item.section === 'tickets' && collapsed && !isMobile && openTicketCount > 0 && (
-                          <Badge 
-                            className="absolute -top-2 -right-2 h-4 min-w-4 p-0 text-[10px] flex items-center justify-center"
-                            style={{
-                              backgroundColor: 'hsl(var(--admin-accent-blue))',
-                              color: 'white'
-                            }}
-                          >
-                            {openTicketCount > 9 ? '9+' : openTicketCount}
-                          </Badge>
-                        )}
-                      </div>
-                      {(!collapsed || isMobile) && (
-                        <div className="flex items-center justify-between flex-1">
-                          <span 
-                            className="font-medium text-sm md:text-base"
-                            style={{
-                              color: isActive(item.section) 
-                                ? 'hsl(var(--admin-text))' 
-                                : 'hsl(var(--admin-text-muted))'
-                            }}
-                          >
-                            {item.title}
-                          </span>
-                          {/* Badge for tickets in expanded mode */}
-                          {item.section === 'tickets' && openTicketCount > 0 && (
-                            <Badge 
-                              className="h-5 min-w-5 p-0 text-xs flex items-center justify-center"
-                              style={{
-                                backgroundColor: 'hsl(var(--admin-accent-blue))',
-                                color: 'white'
-                              }}
-                            >
-                              {openTicketCount > 99 ? '99+' : openTicketCount}
-                            </Badge>
+      <SidebarContent className="px-2.5 py-3" style={{ backgroundColor: 'hsl(var(--admin-sidebar))' }}>
+        {navGroups.map((group) => (
+          <SidebarGroup key={group.label} className="mb-1">
+            {showLabels && (
+              <SidebarGroupLabel
+                className="px-2 text-[11px] font-semibold uppercase tracking-wider"
+                style={{ color: 'hsl(var(--admin-text-muted))' }}
+              >
+                {group.label}
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent>
+              <SidebarMenu className="space-y-0.5">
+                {group.items.map((item) => {
+                  const active = isActive(item.section);
+                  return (
+                    <SidebarMenuItem key={item.section}>
+                      <SidebarMenuButton
+                        className="group relative h-auto rounded-lg p-0 transition-colors"
+                        style={{ backgroundColor: active ? 'hsl(var(--admin-accent-weak))' : 'transparent' }}
+                        onClick={() => handleNavClick(item.url, item.section)}
+                      >
+                        <div
+                          className={`flex w-full items-center rounded-lg px-2.5 py-2 ${collapsed && !isMobile ? 'justify-center' : ''}`}
+                        >
+                          {active && (
+                            <span
+                              className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full"
+                              style={{ background: 'hsl(var(--admin-accent-blue))' }}
+                            />
+                          )}
+                          <div className="relative">
+                            <item.icon
+                              className={`h-[18px] w-[18px] ${showLabels ? 'mr-2.5' : ''}`}
+                              style={{ color: active ? 'hsl(var(--admin-accent-blue))' : 'hsl(var(--admin-text-muted))' }}
+                            />
+                            {item.section === 'tickets' && collapsed && !isMobile && openTicketCount > 0 && (
+                              <Badge className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center p-0 text-[10px]"
+                                style={{ backgroundColor: 'hsl(var(--admin-accent-blue))', color: 'white' }}>
+                                {openTicketCount > 9 ? '9+' : openTicketCount}
+                              </Badge>
+                            )}
+                          </div>
+                          {showLabels && (
+                            <div className="flex flex-1 items-center justify-between">
+                              <span className="text-sm font-medium"
+                                style={{ color: active ? 'hsl(var(--admin-text))' : 'hsl(var(--admin-text-muted))' }}>
+                                {item.title}
+                              </span>
+                              {item.section === 'tickets' && openTicketCount > 0 && (
+                                <Badge className="flex h-5 min-w-5 items-center justify-center p-0 text-xs"
+                                  style={{ backgroundColor: 'hsl(var(--admin-accent-blue))', color: 'white' }}>
+                                  {openTicketCount > 99 ? '99+' : openTicketCount}
+                                </Badge>
+                              )}
+                            </div>
                           )}
                         </div>
-                      )}
-                    </div>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
 
-      <SidebarFooter className="border-t p-3 md:p-4" style={{ 
-        borderColor: 'hsl(var(--admin-border))',
-        backgroundColor: 'hsl(var(--admin-sidebar))'
-      }}>
+      <SidebarFooter className="border-t p-3"
+        style={{ borderColor: 'hsl(var(--admin-border))', backgroundColor: 'hsl(var(--admin-sidebar))' }}>
         <div className={`flex items-center ${collapsed && !isMobile ? 'justify-center' : 'justify-between'}`}>
-          <div className={`flex items-center ${collapsed && !isMobile ? '' : 'space-x-3'}`}>
+          <div className={`flex items-center ${collapsed && !isMobile ? '' : 'space-x-2.5'}`}>
             <Avatar className="h-8 w-8">
-              <AvatarFallback 
-                className="text-sm font-semibold"
-                style={{ 
-                  backgroundColor: 'hsl(var(--admin-accent-blue))',
-                  color: 'white'
-                }}
-              >
+              <AvatarFallback className="text-sm font-semibold"
+                style={{ backgroundColor: 'hsl(var(--admin-accent-blue))', color: 'white' }}>
                 {platformAdmin?.full_name?.charAt(0) || 'A'}
               </AvatarFallback>
             </Avatar>
-            {(!collapsed || isMobile) && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate" style={{ color: 'hsl(var(--admin-text))' }}>
+            {showLabels && (
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium" style={{ color: 'hsl(var(--admin-text))' }}>
                   {platformAdmin?.full_name || 'Admin'}
                 </p>
-                <p className="text-xs truncate" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                <p className="truncate text-xs" style={{ color: 'hsl(var(--admin-text-muted))' }}>
                   {platformAdmin?.email}
                 </p>
               </div>
             )}
           </div>
-          
-          {(!collapsed || isMobile) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleSignOut}
-              className="h-8 w-8 p-0 hover:bg-red-500/10"
-              style={{ color: 'hsl(var(--admin-text-muted))' }}
-            >
+          {showLabels && (
+            <Button variant="ghost" size="sm" onClick={handleSignOut}
+              className="h-8 w-8 p-0" style={{ color: 'hsl(var(--admin-text-muted))' }}>
               <LogOut className="h-4 w-4" />
             </Button>
           )}
         </div>
-        
         {collapsed && !isMobile && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleSignOut}
-            className="h-8 w-8 p-0 mt-2 hover:bg-red-500/10"
-            style={{ color: 'hsl(var(--admin-text-muted))' }}
-          >
+          <Button variant="ghost" size="sm" onClick={handleSignOut}
+            className="mt-2 h-8 w-8 p-0" style={{ color: 'hsl(var(--admin-text-muted))' }}>
             <LogOut className="h-4 w-4" />
           </Button>
         )}
@@ -319,27 +237,17 @@ export function PlatformAdminSidebar({ activeSection, onSectionChange }: Platfor
     </>
   );
 
-  // Mobile: Use sheet-like overlay
   if (isMobile) {
     return (
       <>
-        {/* Backdrop */}
         {openMobile && (
-          <div 
-            className="fixed inset-0 bg-black/60 z-40 md:hidden"
-            onClick={() => setOpenMobile(false)}
-          />
+          <div className="fixed inset-0 z-40 bg-black/40 md:hidden" onClick={() => setOpenMobile(false)} />
         )}
-        
-        {/* Mobile Sidebar Drawer */}
-        <div 
+        <div
           className={`fixed inset-y-0 left-0 z-50 w-[280px] transform transition-transform duration-300 ease-in-out md:hidden ${
             openMobile ? 'translate-x-0' : '-translate-x-full'
           }`}
-          style={{
-            backgroundColor: 'hsl(var(--admin-sidebar))',
-            borderRight: '1px solid hsl(var(--admin-border))'
-          }}
+          style={{ backgroundColor: 'hsl(var(--admin-sidebar))', borderRight: '1px solid hsl(var(--admin-border))' }}
         >
           {sidebarContent}
         </div>
@@ -347,16 +255,13 @@ export function PlatformAdminSidebar({ activeSection, onSectionChange }: Platfor
     );
   }
 
-  // Desktop: Regular collapsible sidebar
   return (
     <Sidebar
-      className={`border-r transition-all duration-300 hidden md:flex ${
-        collapsed ? 'w-[60px]' : 'w-[240px]'
-      }`}
+      className={`hidden border-r transition-all duration-300 md:flex ${collapsed ? 'w-[60px]' : 'w-[248px]'}`}
       style={{
         backgroundColor: 'hsl(var(--admin-sidebar))',
         borderColor: 'hsl(var(--admin-border))',
-        color: 'hsl(var(--admin-text))'
+        color: 'hsl(var(--admin-text))',
       }}
       collapsible="icon"
     >

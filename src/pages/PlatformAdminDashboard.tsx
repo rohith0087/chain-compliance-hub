@@ -83,7 +83,7 @@ export default function PlatformAdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'hsl(var(--admin-background))', color: 'hsl(var(--admin-text))' }}>
+    <div className="admin-portal min-h-screen" style={{ backgroundColor: 'hsl(var(--admin-background))', color: 'hsl(var(--admin-text))' }}>
       <SidebarProvider>
         <div className="flex min-h-screen w-full">
           <PlatformAdminSidebar activeSection="dashboard" onSectionChange={() => {}} />

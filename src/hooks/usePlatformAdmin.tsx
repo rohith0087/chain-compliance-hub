@@ -226,8 +226,10 @@ export const usePlatformAdmin = () => {
 
   const resetUserPassword = useCallback(async (userId: string) => {
     try {
-      const { data, error } = await supabase.rpc('platform_admin_reset_password', {
-        user_id: userId
+      // Real reset: the admin-reset-password edge function (service role) verifies
+      // the caller is a platform admin and sends the standard recovery email.
+      const { data, error } = await supabase.functions.invoke('admin-reset-password', {
+        body: { user_id: userId },
       });
 
       if (error) {
@@ -235,17 +237,34 @@ export const usePlatformAdmin = () => {
         return { success: false, error: error.message };
       }
 
-      const result = data as any; // Type assertion for the JSON response
+      const result = data as { success: boolean; message?: string; error?: string };
       if (result?.success) {
         return { success: true, message: result.message };
-      } else {
-        return { success: false, error: result?.error || 'Unknown error occurred' };
       }
+      return { success: false, error: result?.error || 'Unknown error occurred' };
     } catch (err) {
       console.error('Error in resetUserPassword:', err);
       return { success: false, error: 'Failed to reset password' };
     }
   }, []);
+
+  const setUserStatus = useCallback(async (userId: string, disabled: boolean) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-set-user-status', {
+        body: { user_id: userId, disabled },
+      });
+      if (error) return { success: false, error: error.message };
+      const result = data as { success: boolean; message?: string; error?: string };
+      if (result?.success) {
+        await fetchAllUsers();
+        return { success: true, message: result.message };
+      }
+      return { success: false, error: result?.error || 'Failed to update account status' };
+    } catch (err) {
+      console.error('Error in setUserStatus:', err);
+      return { success: false, error: 'Failed to update account status' };
+    }
+  }, [fetchAllUsers]);
 
   const signInPlatformAdmin = useCallback(async (email: string, password: string, captchaToken?: string) => {
     try {
@@ -493,6 +512,7 @@ export const usePlatformAdmin = () => {
     fetchAllUsers,
     updateUserRole,
     resetUserPassword,
+    setUserStatus,
     signInPlatformAdmin,
     fetchInvitations,
     createInvitation,

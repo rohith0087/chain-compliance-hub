@@ -7,13 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Loader2, MoreHorizontal, Search, Settings, RotateCcw, Users, Database, Shield, CreditCard, DollarSign } from 'lucide-react';
+import { Loader2, MoreHorizontal, Search, Settings, RotateCcw, Users, Database, Shield, CreditCard, DollarSign, Ban, ShieldCheck } from 'lucide-react';
 import { usePlatformAdmin, type DetailedUser } from '@/hooks/usePlatformAdmin';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
 export function PlatformAdminUserManagement() {
-  const { users, loading, error, updateUserRole, resetUserPassword, fetchAllUsers } = usePlatformAdmin();
+  const { users, loading, error, updateUserRole, resetUserPassword, setUserStatus, fetchAllUsers } = usePlatformAdmin();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
@@ -46,13 +46,27 @@ export function PlatformAdminUserManagement() {
     setSelectedUser(null);
   };
 
-  const handlePasswordReset = async (userId: string) => {
-    const result = await resetUserPassword(userId);
-    
+  const handleSetStatus = async (userId: string, disabled: boolean) => {
+    const result = await setUserStatus(userId, disabled);
     if (result?.success) {
       toast({
-        title: "Password Reset Successful",
-        description: "Temporary password sent to user's email address",
+        title: disabled ? 'User disabled' : 'User re-enabled',
+        description: disabled
+          ? "The user is blocked from signing in and will see a contact-support message."
+          : "The user can sign in again.",
+      });
+    } else {
+      toast({ title: 'Action failed', description: result?.error || 'Could not update account status', variant: 'destructive' });
+    }
+  };
+
+  const handlePasswordReset = async (userId: string) => {
+    const result = await resetUserPassword(userId);
+
+    if (result?.success) {
+      toast({
+        title: "Password Reset Email Sent",
+        description: "A password reset link was emailed to the user.",
       });
     } else {
       toast({
@@ -379,6 +393,23 @@ export function PlatformAdminUserManagement() {
                             >
                               <RotateCcw className="h-4 w-4 mr-3" style={{ color: 'hsl(var(--admin-accent-blue))' }} />
                               Reset Password
+                            </DropdownMenuItem>
+                            <div className="my-1 h-px" style={{ background: 'hsl(var(--admin-border))' }} />
+                            <DropdownMenuItem
+                              onClick={() => handleSetStatus(user.id, true)}
+                              className="transition-colors hover:bg-[hsl(var(--admin-sidebar-accent))]"
+                              style={{ color: 'hsl(var(--admin-danger))' }}
+                            >
+                              <Ban className="h-4 w-4 mr-3" />
+                              Disable login
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleSetStatus(user.id, false)}
+                              className="transition-colors hover:bg-[hsl(var(--admin-sidebar-accent))]"
+                              style={{ color: 'hsl(var(--admin-text))' }}
+                            >
+                              <ShieldCheck className="h-4 w-4 mr-3" style={{ color: 'hsl(var(--admin-positive))' }} />
+                              Re-enable login
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

@@ -2,6 +2,18 @@
 // (see docs/supplier-risk-integration-plan.md, product.md §4). Weights are over
 // the eight scored dimensions and should sum to ~1.0.
 
+export type RiskLevel = 'High' | 'Medium' | 'Low';
+
+/**
+ * Canonical score -> band mapping. Higher score = higher risk (0-100).
+ * This lived in three places (adapters.ts, SupplierRiskPanel.tsx, and the
+ * dashboard was about to add a fourth); every surface must band identically or
+ * the same supplier reads "High" on one screen and "Medium" on another.
+ */
+export function riskLevelOf(score: number): RiskLevel {
+  return score >= 67 ? 'High' : score >= 34 ? 'Medium' : 'Low';
+}
+
 export const RISK_DIMENSIONS = [
   'regulatory',
   'product_safety',

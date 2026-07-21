@@ -1,9 +1,10 @@
 import type { RiskEvent, RiskScore } from '@/features/supplier-risk/scoreApi';
-import { RISK_DIMENSION_LABELS, RISK_DIMENSIONS, type RiskDimension } from '@/features/supplier-risk/templates';
+import { RISK_DIMENSION_LABELS, RISK_DIMENSIONS, riskLevelOf, type RiskDimension } from '@/features/supplier-risk/templates';
 import type { Supplier } from '@/hooks/useSuppliers';
 import type { SupplierPerformance } from '@/hooks/useSupplierPerformance';
 import type {
   DocumentItem,
+  NewsSignal,
   RecallItem,
   RiskDriver,
   SupplierRiskProfile,
@@ -19,8 +20,7 @@ const fmtDate = (iso: string | null | undefined): string => {
   try { return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); } catch { return '—'; }
 };
 
-const levelOf = (score: number): 'High' | 'Medium' | 'Low' =>
-  score >= 67 ? 'High' : score >= 34 ? 'Medium' : 'Low';
+const levelOf = riskLevelOf;
 
 const confidenceBand = (c: number): 'High' | 'Medium' | 'Low' =>
   c >= 0.8 ? 'High' : c >= 0.5 ? 'Medium' : 'Low';
@@ -85,25 +85,52 @@ export function buildRealProfile({
     });
   }
 
-  // Recalls tab = product-safety events; web tab = everything else.
+  // Human-readable label for the origin feed of a cited signal.
+  const sourceLabel = (e: RiskEvent): string => {
+    switch (e.source_type) {
+      case 'adverse_media': return 'Adverse media';
+      case 'openfda_enforcement': return 'FDA enforcement';
+      case 'cpsc_recall': return 'CPSC recall';
+      case 'sanctions':
+      case 'ofac_sanctions': return 'OFAC sanctions';
+      default: return e.connector ? e.connector.replace(/^ingest-/, '').replace(/-/g, ' ') : 'Monitored feed';
+    }
+  };
+
+  // Recalls tab = product-safety events; News tab = real adverse-media records;
+  // Web Presence = the remaining (internal / engine) signals.
   const recalls: RecallItem[] = events
     .filter((e) => e.dimension === 'product_safety')
     .map((e) => ({
-      eventType: e.event_type.replace(/_/g, ' '),
-      date: fmtDate(e.detected_at),
-      product: `Entity match ${Math.round((e.entity_match_confidence ?? 0) * 100)}%`,
+      eventType: e.source_title || e.event_type.replace(/_/g, ' '),
+      date: e.source_published ? fmtDate(e.source_published) : fmtDate(e.detected_at),
+      product: e.source_summary || `Entity match ${Math.round((e.entity_match_confidence ?? 0) * 100)}%`,
       severity: severityBand(e.severity),
       status: OPEN_STATUSES.has(e.status) ? 'Open' : 'Resolved',
-      agency: RISK_DIMENSION_LABELS.product_safety,
+      agency: sourceLabel(e),
+      url: e.source_url ?? undefined,
+    }));
+
+  const news: NewsSignal[] = events
+    .filter((e) => e.source_type === 'adverse_media')
+    .map((e) => ({
+      headline: e.source_title || e.event_type.replace(/_/g, ' '),
+      source: sourceLabel(e),
+      timestamp: e.source_published ? fmtDate(e.source_published) : fmtDate(e.detected_at),
+      tags: [RISK_DIMENSION_LABELS[e.dimension] ?? e.dimension],
+      riskImpact: Math.max(0, Math.round((e.severity ?? 0) * 10)),
+      reason: e.source_summary || '',
+      url: e.source_url ?? undefined,
     }));
 
   const webSignals: WebSignal[] = events
-    .filter((e) => e.dimension !== 'product_safety')
+    .filter((e) => e.dimension !== 'product_safety' && e.source_type !== 'adverse_media')
     .map((e) => ({
-      title: e.event_type.replace(/_/g, ' '),
+      title: e.source_title || e.event_type.replace(/_/g, ' '),
       type: RISK_DIMENSION_LABELS[e.dimension] ?? e.dimension,
       confidence: confidenceBand(e.entity_match_confidence ?? 0),
       detail: `Severity ${e.severity} · detected ${fmtDate(e.detected_at)} · ${e.status.replace(/_/g, ' ')}`,
+      url: e.source_url ?? undefined,
     }));
 
   return {
@@ -123,7 +150,7 @@ export function buildRealProfile({
       ? scoreExplanation
       : ['No external risk score yet — use Recompute to generate one from current monitored events.'],
     drivers,
-    news: [], // news/trade connector not live yet — section shows its empty state
+    news, // real adverse-media records (with source URLs) from the risk engine
     recalls,
     webSignals,
     documents,

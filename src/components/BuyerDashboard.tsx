@@ -80,8 +80,30 @@ interface BuyerDashboardProps {
 const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: BuyerDashboardProps) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(() => {
+    // Composio OAuth returns to /?open=integrations; open Settings on that tab.
+    if (typeof window !== 'undefined' &&
+        new URLSearchParams(window.location.search).get('open') === 'integrations') {
+      return 'settings';
+    }
     return localStorage.getItem('buyerDashboard_activeTab') || 'dashboard';
   });
+  // Captured once at mount: did we arrive from the Composio OAuth return? Used
+  // to open Settings on the integrations sub-tab. Stable across the URL cleanup
+  // below and the panel stripping its own composio_* params.
+  const [openIntegrationsOnMount] = useState(
+    () => typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('open') === 'integrations',
+  );
+  // Strip only `open` so we don't re-trigger the tab switch; the composio_*
+  // params ride along to the integrations panel for its toast.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('open') === 'integrations') {
+      params.delete('open');
+      const qs = params.toString();
+      window.history.replaceState({}, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`);
+    }
+  }, []);
   const [dashboardView, setDashboardView] = useState<'overview' | 'detailed'>(() => {
     return (localStorage.getItem('buyerDashboard_view') as 'overview' | 'detailed') || 'overview';
   });
@@ -405,7 +427,8 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
             </div>
           ) : dashboardView === 'overview' ? (
             <BuyerOverviewDashboard
-              stats={dashboardStats}
+              buyerId={companyId}
+              branchId={!allBranchesView && currentBranch?.id ? currentBranch.id : null}
               onTabChange={setActiveTab}
               onNewRequest={() => setShowRequestForm(true)}
               onAddSupplier={() => setShowBulkInvite(true)}
@@ -781,6 +804,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
             companyId={companyId}
             companyType="buyer"
             companyName={buyerProfile?.company_name || 'Your Company'}
+            defaultTab={openIntegrationsOnMount ? 'integrations' : undefined}
           />
         )}
 

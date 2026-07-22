@@ -10977,6 +10977,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_preferences: {
+        Row: {
+          buyer_dashboard_view: string
+          created_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          buyer_dashboard_view?: string
+          created_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          buyer_dashboard_view?: string
+          created_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

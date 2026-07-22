@@ -45,7 +45,7 @@ export const gridProps = {
 
 /** Spread onto <Tooltip>. */
 export const tooltipProps = {
-  cursor: { fill: 'hsl(var(--muted) / 0.6)' },
+  cursor: { stroke: 'hsl(var(--border))', fill: 'hsl(var(--muted) / 0.6)' },
   contentStyle: {
     background: 'hsl(var(--card))',
     border: '1px solid hsl(var(--border))',
@@ -59,6 +59,13 @@ export const tooltipProps = {
     color: 'hsl(var(--muted-foreground))',
     fontSize: 11,
     marginBottom: 4,
+  },
+  // Recharts defaults each tooltip entry's text to its series fill -- dark
+  // series (chart-5 neutral, accentSoft) become unreadable on the dark card.
+  // Pin entry text to the foreground token so hover readouts stay legible.
+  itemStyle: {
+    color: 'hsl(var(--foreground))',
+    fontSize: 12,
   },
 } as const;
 

@@ -24,7 +24,7 @@ export const markdownComponents = {
 
 export default function MarkdownMessage({ children, className }: { children: string; className?: string }) {
   return (
-    <div className={`prose prose-sm dark:prose-invert max-w-none leading-relaxed text-muted-foreground prose-headings:text-foreground prose-strong:text-foreground ${className ?? ""}`}>
+    <div className={`prose prose-sm dark:prose-invert max-w-none leading-relaxed text-foreground/90 prose-headings:text-foreground prose-strong:text-foreground prose-li:marker:text-muted-foreground ${className ?? ""}`}>
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{children}</ReactMarkdown>
     </div>
   );

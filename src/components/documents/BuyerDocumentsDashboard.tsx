@@ -311,6 +311,7 @@ const BuyerDocumentsDashboard = ({ view = 'documents' }: BuyerDocumentsDashboard
             mime_type,
             status,
             version,
+            source_channel,
             created_at,
             expiration_date,
             reviewer_notes,

@@ -38,6 +38,7 @@ import {
   X,
   Pin,
   PinOff,
+  Mail,
 } from 'lucide-react';
 import DocumentCardWithSelection from './DocumentCardWithSelection';
 import { supabase } from '@/integrations/supabase/client';
@@ -1056,7 +1057,14 @@ const BuyerDocumentsManager = ({
                               <Pin className="h-3 w-3 flex-shrink-0 text-amber-500 fill-amber-400" />
                             )}
                           </div>
-                          <p className="text-[13px] text-muted-foreground">ID: {doc.id.slice(0, 8).toUpperCase()}</p>
+                          <p className="text-[13px] text-muted-foreground flex items-center gap-1.5">
+                            ID: {doc.id.slice(0, 8).toUpperCase()}
+                            {getLatestUpload(doc.document_uploads)?.source_channel === 'email_reply' && (
+                              <span title="Received by email reply" className="inline-flex items-center text-primary" aria-label="Received by email reply">
+                                <Mail className="h-3 w-3" />
+                              </span>
+                            )}
+                          </p>
                         </div>
                       </button>
                     </TableCell>

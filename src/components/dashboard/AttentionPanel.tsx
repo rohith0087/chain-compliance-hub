@@ -160,10 +160,10 @@ export function AttentionPanel({ buyerId, onNavigateToDocuments }: AttentionPane
   };
 
   return (
-    <Card className="h-full flex flex-col border-0 bg-gradient-to-br from-card via-card to-amber-500/5">
+    <Card className="h-full flex flex-col border-0 bg-gradient-to-br from-card via-card to-warning/5">
       <CardHeader className="flex-shrink-0 pb-3">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-500" />
+          <AlertTriangle className="w-4 h-4 text-warning" />
           Needs Your Attention
         </CardTitle>
         <div className="flex gap-2 mt-2">
@@ -171,7 +171,7 @@ export function AttentionPanel({ buyerId, onNavigateToDocuments }: AttentionPane
             variant="secondary" 
             className={cn(
               "text-xs cursor-pointer transition-colors",
-              counts.submitted > 0 && "bg-teal-500/15 text-teal-600 hover:bg-teal-500/25"
+              counts.submitted > 0 && "bg-primary/15 text-primary hover:bg-primary/25"
             )}
             onClick={() => onNavigateToDocuments('submitted')}
           >
@@ -182,7 +182,7 @@ export function AttentionPanel({ buyerId, onNavigateToDocuments }: AttentionPane
             variant="secondary" 
             className={cn(
               "text-xs cursor-pointer transition-colors",
-              counts.overdue > 0 && "bg-red-500/15 text-red-600 hover:bg-red-500/25"
+              counts.overdue > 0 && "bg-danger/15 text-danger hover:bg-danger/25"
             )}
             onClick={() => onNavigateToDocuments('pending')}
           >
@@ -222,7 +222,7 @@ export function AttentionPanel({ buyerId, onNavigateToDocuments }: AttentionPane
                       <div className="flex items-center gap-2">
                         <div className={cn(
                           "w-2 h-2 rounded-full flex-shrink-0",
-                          item.is_overdue ? "bg-red-500 animate-pulse" : "bg-teal-500"
+                          item.is_overdue ? "bg-danger animate-pulse" : "bg-primary"
                         )} />
                         <p className="text-sm font-medium truncate">{item.title}</p>
                       </div>
@@ -232,7 +232,7 @@ export function AttentionPanel({ buyerId, onNavigateToDocuments }: AttentionPane
                       <div className="flex items-center gap-2 mt-1 pl-4">
                         <span className={cn(
                           "text-xs",
-                          item.is_overdue ? "text-red-500" : "text-teal-600"
+                          item.is_overdue ? "text-danger" : "text-primary"
                         )}>
                           {item.is_overdue 
                             ? `Overdue ${item.due_date ? formatTimeAgo(item.due_date) : ''}` 
@@ -249,7 +249,7 @@ export function AttentionPanel({ buyerId, onNavigateToDocuments }: AttentionPane
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full py-8">
-              <CheckCircle className="w-10 h-10 text-green-500 mb-3" />
+              <CheckCircle className="w-10 h-10 text-success mb-3" />
               <p className="text-sm font-medium text-foreground">All caught up!</p>
               <p className="text-xs text-muted-foreground mt-1">No items need your attention</p>
             </div>

@@ -12,21 +12,21 @@ interface MetricChipProps {
 }
 
 const colorMap = {
-  blue: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-  amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  teal: 'bg-teal-500/10 text-teal-600 dark:text-teal-400',
-  red: 'bg-red-500/10 text-red-600 dark:text-red-400',
-  green: 'bg-green-500/10 text-green-600 dark:text-green-400',
-  purple: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
+  blue: 'bg-primary/10 text-primary',
+  amber: 'bg-warning/10 text-warning',
+  teal: 'bg-primary/10 text-primary',
+  red: 'bg-danger/10 text-danger',
+  green: 'bg-success/10 text-success',
+  purple: 'bg-primary/10 text-primary',
 };
 
 const dotColorMap = {
-  blue: 'bg-blue-500',
-  amber: 'bg-amber-500',
-  teal: 'bg-teal-500',
-  red: 'bg-red-500',
-  green: 'bg-green-500',
-  purple: 'bg-purple-500',
+  blue: 'bg-primary',
+  amber: 'bg-warning',
+  teal: 'bg-primary',
+  red: 'bg-danger',
+  green: 'bg-success',
+  purple: 'bg-primary',
 };
 
 export function MetricChip({ label, value, subtitle, trend, color = 'blue', pulse, onClick }: MetricChipProps) {
@@ -57,14 +57,14 @@ export function MetricChip({ label, value, subtitle, trend, color = 'blue', puls
           {trend !== undefined && trend !== 0 && (
             <span className={cn(
               'text-sm font-medium',
-              trend > 0 ? 'text-green-500' : 'text-red-500'
+              trend > 0 ? 'text-success' : 'text-danger'
             )}>
               {trend > 0 ? '+' : ''}{trend}
             </span>
           )}
         </div>
         {subtitle && (
-          <span className="text-[11px] text-muted-foreground/70 mt-0.5">{subtitle}</span>
+          <span className="text-micro text-muted-foreground/70 mt-0.5">{subtitle}</span>
         )}
       </div>
     </motion.div>

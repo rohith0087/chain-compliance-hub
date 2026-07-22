@@ -136,18 +136,18 @@ export function ExpiryPanel({ buyerId, onNavigateToDocuments }: ExpiryPanelProps
 
   const getTierBadgeColor = (tier: Exclude<ExpiryTier, 'all'>) => {
     switch (tier) {
-      case 'expired': return 'text-red-600 bg-red-500/15';
-      case 'critical': return 'text-red-500 bg-red-500/10';
-      case 'soon': return 'text-amber-600 bg-amber-500/15';
-      case 'upcoming': return 'text-yellow-600 bg-yellow-500/15';
+      case 'expired': return 'text-danger bg-danger/15';
+      case 'critical': return 'text-danger bg-danger/10';
+      case 'soon': return 'text-warning bg-warning/15';
+      case 'upcoming': return 'text-warning bg-warning/15';
     }
   };
 
   const getDocBadgeColor = (daysUntil: number) => {
-    if (daysUntil < 0) return 'text-red-600 bg-red-500/15';
-    if (daysUntil <= 7) return 'text-red-500 bg-red-500/10';
-    if (daysUntil <= 30) return 'text-amber-600 bg-amber-500/15';
-    return 'text-yellow-600 bg-yellow-500/15';
+    if (daysUntil < 0) return 'text-danger bg-danger/15';
+    if (daysUntil <= 7) return 'text-danger bg-danger/10';
+    if (daysUntil <= 30) return 'text-warning bg-warning/15';
+    return 'text-warning bg-warning/15';
   };
 
   // White card background with colored left border — no more full-red tint
@@ -283,31 +283,31 @@ export function ExpiryPanel({ buyerId, onNavigateToDocuments }: ExpiryPanelProps
             <TabsTrigger value="all" className="text-xs px-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
               All
               {totalExpiring > 0 && (
-                <Badge className="ml-1 h-4 px-1 text-[10px] bg-primary">{totalExpiring}</Badge>
+                <Badge className="ml-1 h-4 px-1 text-micro bg-primary">{totalExpiring}</Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="expired" className="text-xs px-2 data-[state=active]:bg-red-500/10 data-[state=active]:text-red-600">
+            <TabsTrigger value="expired" className="text-xs px-2 data-[state=active]:bg-danger/10 data-[state=active]:text-danger">
               Expired
               {documents.expired.length > 0 && (
-                <Badge className="ml-1 h-4 px-1 text-[10px] bg-red-500">{documents.expired.length}</Badge>
+                <Badge className="ml-1 h-4 px-1 text-micro bg-danger">{documents.expired.length}</Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="critical" className="text-xs px-2 data-[state=active]:bg-red-500/10 data-[state=active]:text-red-500">
+            <TabsTrigger value="critical" className="text-xs px-2 data-[state=active]:bg-danger/10 data-[state=active]:text-danger">
               7d
               {documents.critical.length > 0 && (
-                <Badge className="ml-1 h-4 px-1 text-[10px] bg-red-400">{documents.critical.length}</Badge>
+                <Badge className="ml-1 h-4 px-1 text-micro bg-danger">{documents.critical.length}</Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="soon" className="text-xs px-2 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-600">
+            <TabsTrigger value="soon" className="text-xs px-2 data-[state=active]:bg-warning/10 data-[state=active]:text-warning">
               30d
               {documents.soon.length > 0 && (
-                <Badge className="ml-1 h-4 px-1 text-[10px] bg-amber-500">{documents.soon.length}</Badge>
+                <Badge className="ml-1 h-4 px-1 text-micro bg-warning">{documents.soon.length}</Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="upcoming" className="text-xs px-2 data-[state=active]:bg-yellow-500/10 data-[state=active]:text-yellow-600">
+            <TabsTrigger value="upcoming" className="text-xs px-2 data-[state=active]:bg-warning/10 data-[state=active]:text-warning">
               60d
               {documents.upcoming.length > 0 && (
-                <Badge className="ml-1 h-4 px-1 text-[10px] bg-yellow-500">{documents.upcoming.length}</Badge>
+                <Badge className="ml-1 h-4 px-1 text-micro bg-warning">{documents.upcoming.length}</Badge>
               )}
             </TabsTrigger>
           </TabsList>

@@ -82,9 +82,9 @@ interface RequirementVersionRow { id: string; framework_version_id: string }
 interface ValidationResultRow { rule_code: string; message: string }
 
 const PRIORITY_KIND_BADGE: Record<PriorityItem['kind'], string> = {
-  task: 'bg-blue-50 text-blue-700 border-blue-200',
-  finding: 'bg-red-50 text-red-700 border-red-200',
-  approval: 'bg-amber-50 text-amber-700 border-amber-200',
+  task: 'bg-primary/10 text-primary border-primary/20',
+  finding: 'bg-danger/10 text-danger border-danger/20',
+  approval: 'bg-warning/10 text-warning border-warning/20',
 };
 
 interface BuyerComplianceDashboardProps {
@@ -741,9 +741,9 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
           {/* Priority Review Queue */}
           <div className={reviewCardContainerClass}>
             <div className="flex items-center justify-between px-4 pt-4 pb-1">
-              <h3 className="text-[15px] font-bold text-foreground">Priority Review Queue</h3>
+              <h3 className="text-body font-bold text-foreground">Priority Review Queue</h3>
               {onNavigateToComplianceDecisions && (
-                <Button variant="ghost" size="sm" className="text-xs text-primary hover:text-[#1D4ED8]" onClick={onNavigateToComplianceDecisions}>
+                <Button variant="ghost" size="sm" className="text-xs text-primary hover:text-primary-hover" onClick={onNavigateToComplianceDecisions}>
                   View all in Compliance Decisions <ChevronRight className="w-3 h-3 ml-1" />
                 </Button>
               )}
@@ -763,7 +763,7 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
                   {priorityItems.map((item) => (
                     <TableRow key={item.id} className="h-[48px] border-b border-border hover:bg-muted/50">
                       <TableCell className="px-3">
-                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[12px] font-medium capitalize ${PRIORITY_KIND_BADGE[item.kind]}`}>
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-caption font-medium capitalize ${PRIORITY_KIND_BADGE[item.kind]}`}>
                           {item.kind}
                         </span>
                       </TableCell>
@@ -780,7 +780,7 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
           {attentionItems.length > 0 && (
             <div className={reviewCardContainerClass}>
               <div className="flex items-center justify-between px-4 pt-4 pb-1">
-                <h3 className="text-[15px] font-bold text-foreground">Attention Required (Next 7 Days)</h3>
+                <h3 className="text-body font-bold text-foreground">Attention Required (Next 7 Days)</h3>
               </div>
               <Table>
                 <TableHeader>
@@ -798,11 +798,11 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
                       <TableCell className="px-3 text-sm text-foreground/80 truncate max-w-xs">{item.title}</TableCell>
                       <TableCell className="px-3 text-sm">
                         {item.daysUntil < 0 ? (
-                          <span className="text-red-600">Overdue {Math.abs(item.daysUntil)}d</span>
+                          <span className="text-danger">Overdue {Math.abs(item.daysUntil)}d</span>
                         ) : item.daysUntil === 0 ? (
-                          <span className="text-red-600">Today</span>
+                          <span className="text-danger">Today</span>
                         ) : (
-                          <span className={item.daysUntil <= 3 ? 'text-amber-600' : 'text-foreground/80'}>
+                          <span className={item.daysUntil <= 3 ? 'text-warning' : 'text-foreground/80'}>
                             {item.daysUntil}d
                           </span>
                         )}
@@ -811,7 +811,7 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-xs text-primary hover:text-[#1D4ED8]"
+                          className="text-xs text-primary hover:text-primary-hover"
                           onClick={() => handleViewDocument(item)}
                         >
                           Review
@@ -832,15 +832,15 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
           <div className="sticky top-6 space-y-4">
             <div className={reviewCardContainerClass}>
               <div className="px-4 pt-4 pb-2">
-                <h3 className="text-[15px] font-bold text-foreground">Overview</h3>
+                <h3 className="text-body font-bold text-foreground">Overview</h3>
               </div>
-              <div className="px-4 pb-4 divide-y divide-[#EEF2F7]">
+              <div className="px-4 pb-4 divide-y divide-border">
                 {[
                   { icon: Building2, color: 'text-primary', label: 'Suppliers', value: overallStats.totalSuppliers },
-                  { icon: ClipboardList, color: 'text-purple-600', label: 'Documents', value: overallStats.totalRequests },
-                  { icon: Clock, color: 'text-amber-600', label: 'Open Items', value: overallStats.pendingRequests },
-                  { icon: AlertCircle, color: 'text-red-600', label: 'Risk: High', value: overallStats.highRiskSuppliers },
-                  { icon: TrendingUp, color: 'text-emerald-600', label: 'Compliance Coverage', value: `${overallStats.avgComplianceScore}%` },
+                  { icon: ClipboardList, color: 'text-primary', label: 'Documents', value: overallStats.totalRequests },
+                  { icon: Clock, color: 'text-warning', label: 'Open Items', value: overallStats.pendingRequests },
+                  { icon: AlertCircle, color: 'text-danger', label: 'Risk: High', value: overallStats.highRiskSuppliers },
+                  { icon: TrendingUp, color: 'text-success', label: 'Compliance Coverage', value: `${overallStats.avgComplianceScore}%` },
                 ].map((row) => (
                   <div key={row.label} className="flex items-center justify-between py-2 first:pt-0 last:pb-0">
                     <span className="flex items-center gap-2 text-sm text-foreground/80">
@@ -854,9 +854,9 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
                   <>
                     {[
                       { icon: ListChecks, color: 'text-primary', label: 'Open Tasks', value: decisionSummary.openTasks },
-                      { icon: AlertTriangle, color: 'text-red-600', label: 'Critical/High Findings', value: decisionSummary.criticalHighFindings },
-                      { icon: Clock, color: 'text-amber-600', label: 'Pending Approvals', value: decisionSummary.pendingApprovals },
-                      { icon: ShieldCheck, color: 'text-emerald-600', label: 'Requirement Compliance', value: decisionSummary.complianceRate !== null ? `${decisionSummary.complianceRate}%` : '—' },
+                      { icon: AlertTriangle, color: 'text-danger', label: 'Critical/High Findings', value: decisionSummary.criticalHighFindings },
+                      { icon: Clock, color: 'text-warning', label: 'Pending Approvals', value: decisionSummary.pendingApprovals },
+                      { icon: ShieldCheck, color: 'text-success', label: 'Requirement Compliance', value: decisionSummary.complianceRate !== null ? `${decisionSummary.complianceRate}%` : '—' },
                     ].map((row) => (
                       <div key={row.label} className="flex items-center justify-between py-2 first:pt-0 last:pb-0">
                         <span className="flex items-center gap-2 text-sm text-foreground/80">
@@ -875,8 +875,8 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
             {!workbenchLoading && aiFlags !== null && (
               <div className={reviewCardContainerClass}>
                 <div className="px-4 pt-4 pb-2 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-violet-600" />
-                  <h3 className="text-[15px] font-bold text-foreground">AI Verification Flags</h3>
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <h3 className="text-body font-bold text-foreground">AI Verification Flags</h3>
                 </div>
                 <div className="px-4 pb-4">
                   {aiFlags.length === 0 ? (
@@ -886,10 +886,10 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
                       {aiFlags.map((flag) => (
                         <li key={flag.type} className="flex items-center justify-between text-sm gap-2">
                           <span className="flex items-center gap-2 text-foreground/80 min-w-0">
-                            <AlertTriangle className="h-3.5 w-3.5 text-amber-600 flex-shrink-0" />
+                            <AlertTriangle className="h-3.5 w-3.5 text-warning flex-shrink-0" />
                             <span className="truncate">{flag.label}</span>
                           </span>
-                          <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground border border-border px-2 py-0.5 text-[12px] font-medium flex-shrink-0">{flag.count}</span>
+                          <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground border border-border px-2 py-0.5 text-caption font-medium flex-shrink-0">{flag.count}</span>
                         </li>
                       ))}
                     </ul>
@@ -902,7 +902,7 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
             {!workbenchLoading && coverageGaps.length > 0 && (
               <div className={reviewCardContainerClass}>
                 <div className="px-4 pt-4 pb-2">
-                  <h3 className="text-[15px] font-bold text-foreground">Requirement Coverage Gaps</h3>
+                  <h3 className="text-body font-bold text-foreground">Requirement Coverage Gaps</h3>
                 </div>
                 <div className="px-4 pb-4 space-y-3">
                   {coverageGaps.map((gap) => (

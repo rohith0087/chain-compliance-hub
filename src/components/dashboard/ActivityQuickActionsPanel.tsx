@@ -51,13 +51,13 @@ const actionIcons: Record<string, any> = {
 };
 
 const actionColors: Record<string, string> = {
-  approved: 'text-green-500 bg-green-500/10',
-  uploaded: 'text-blue-500 bg-blue-500/10',
+  approved: 'text-success bg-success/10',
+  uploaded: 'text-primary bg-primary/10',
   requested: 'text-primary bg-primary/10',
-  link_created: 'text-purple-500 bg-purple-500/10',
-  submitted: 'text-teal-500 bg-teal-500/10',
-  rejected: 'text-red-500 bg-red-500/10',
-  downloaded: 'text-amber-500 bg-amber-500/10',
+  link_created: 'text-primary bg-primary/10',
+  submitted: 'text-primary bg-primary/10',
+  rejected: 'text-danger bg-danger/10',
+  downloaded: 'text-warning bg-warning/10',
 };
 
 export function ActivityQuickActionsPanel({
@@ -186,7 +186,7 @@ export function ActivityQuickActionsPanel({
 
   const quickActions = [
     { label: 'New Request', icon: Plus, onClick: onNewRequest, color: 'bg-primary hover:bg-primary/90 text-primary-foreground' },
-    !wsFlags.hideCOAAnalysis && { label: 'COA Analysis', icon: FlaskConical, onClick: () => onNavigateToTab('coa-analysis'), color: 'bg-teal-500 hover:bg-teal-600 text-white' },
+    !wsFlags.hideCOAAnalysis && { label: 'COA Analysis', icon: FlaskConical, onClick: () => onNavigateToTab('coa-analysis'), color: 'bg-primary hover:bg-primary text-white' },
     { label: wsTerms.supplier_risk, icon: ShieldAlert, onClick: () => onNavigateToTab('supplier-risk'), color: 'bg-secondary hover:bg-secondary/90 text-secondary-foreground' },
     { label: wsTerms.suppliers, icon: Users, onClick: () => onNavigateToTab('suppliers'), color: 'bg-muted hover:bg-muted/80 text-foreground' },
   ].filter(Boolean) as { label: string; icon: any; onClick: () => void; color: string }[];
@@ -198,7 +198,7 @@ export function ActivityQuickActionsPanel({
       <Card className="flex-shrink-0 border-0 bg-gradient-to-br from-card via-card to-muted/30">
         <CardHeader className="pb-3 pt-4">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Zap className="w-4 h-4 text-amber-500" />
+            <Zap className="w-4 h-4 text-warning" />
             Quick Actions
           </CardTitle>
         </CardHeader>
@@ -267,12 +267,12 @@ export function ActivityQuickActionsPanel({
                           {activity.description.title}
                         </p>
                         {activity.description.subtitle && (
-                          <p className="text-[10px] text-muted-foreground/70 mt-0.5 truncate">
+                          <p className="text-micro text-muted-foreground/70 mt-0.5 truncate">
                             {activity.description.subtitle}
                           </p>
                         )}
                       </div>
-                      <span className="text-[10px] text-muted-foreground/70 flex-shrink-0 mt-0.5">
+                      <span className="text-micro text-muted-foreground/70 flex-shrink-0 mt-0.5">
                         {formatTimeAgo(activity.created_at)}
                       </span>
                     </motion.div>

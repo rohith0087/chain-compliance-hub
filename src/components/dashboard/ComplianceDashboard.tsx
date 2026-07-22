@@ -27,13 +27,13 @@ const ComplianceDashboard = ({ userRole, data }: ComplianceDashboardProps) => {
   const [timeframe, setTimeframe] = useState('30d');
 
   const chartConfig = {
-    pending: { label: 'Pending', color: '#f59e0b' },
-    approved: { label: 'Approved', color: '#10b981' },
-    rejected: { label: 'Rejected', color: '#ef4444' },
-    submitted: { label: 'Submitted', color: '#3b82f6' }
+    pending: { label: 'Pending', color: 'hsl(var(--warning))' },
+    approved: { label: 'Approved', color: 'hsl(var(--success))' },
+    rejected: { label: 'Rejected', color: 'hsl(var(--danger))' },
+    submitted: { label: 'Submitted', color: 'hsl(var(--primary))' }
   };
 
-  const COLORS = ['#10b981', '#f59e0b', '#ef4444', '#3b82f6'];
+  const COLORS = ['hsl(var(--success))', 'hsl(var(--warning))', 'hsl(var(--danger))', 'hsl(var(--primary))'];
 
   // Extract document requests from data
   const documentRequests = data?.documentRequests || [];
@@ -87,10 +87,10 @@ const ComplianceDashboard = ({ userRole, data }: ComplianceDashboardProps) => {
 
     // Status distribution for pie chart
     const statusDistribution = [
-      { name: 'Approved', value: approvedCount, color: '#10b981' },
-      { name: 'Pending', value: pendingCount, color: '#f59e0b' },
-      { name: 'Rejected', value: rejectedCount, color: '#ef4444' },
-      { name: 'Submitted', value: submittedCount, color: '#3b82f6' }
+      { name: 'Approved', value: approvedCount, color: 'hsl(var(--success))' },
+      { name: 'Pending', value: pendingCount, color: 'hsl(var(--warning))' },
+      { name: 'Rejected', value: rejectedCount, color: 'hsl(var(--danger))' },
+      { name: 'Submitted', value: submittedCount, color: 'hsl(var(--primary))' }
     ].filter(item => item.value > 0);
 
     // Monthly trend data
@@ -181,11 +181,11 @@ const ComplianceDashboard = ({ userRole, data }: ComplianceDashboardProps) => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Compliance Score</CardTitle>
-            <Shield className="h-4 w-4 text-green-600" />
+            <Shield className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{complianceData.overallScore}%</div>
-            <div className="flex items-center text-xs text-green-600 mt-1">
+            <div className="text-2xl font-bold text-success">{complianceData.overallScore}%</div>
+            <div className="flex items-center text-xs text-success mt-1">
               <TrendingUp className="h-3 w-3 mr-1" />
               +{complianceData.trend}% from last month
             </div>
@@ -196,10 +196,10 @@ const ComplianceDashboard = ({ userRole, data }: ComplianceDashboardProps) => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Critical Issues</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-500" />
+            <AlertTriangle className="h-4 w-4 text-danger" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-500">{complianceData.criticalIssues}</div>
+            <div className="text-2xl font-bold text-danger">{complianceData.criticalIssues}</div>
             <p className="text-xs text-muted-foreground">Require immediate attention</p>
           </CardContent>
         </Card>
@@ -207,7 +207,7 @@ const ComplianceDashboard = ({ userRole, data }: ComplianceDashboardProps) => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
-            <CheckCircle className="h-4 w-4 text-blue-500" />
+            <CheckCircle className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{complianceData.completionRate}%</div>
@@ -219,7 +219,7 @@ const ComplianceDashboard = ({ userRole, data }: ComplianceDashboardProps) => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
-            <Clock className="h-4 w-4 text-orange-500" />
+            <Clock className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{complianceData.avgResponseTime}</div>
@@ -284,14 +284,14 @@ const ComplianceDashboard = ({ userRole, data }: ComplianceDashboardProps) => {
                   <Line 
                     type="monotone" 
                     dataKey="requests" 
-                    stroke="#3b82f6" 
+                    stroke="hsl(var(--primary))" 
                     strokeWidth={2}
                     name="Requests"
                   />
                   <Line 
                     type="monotone" 
                     dataKey="completed" 
-                    stroke="#10b981" 
+                    stroke="hsl(var(--success))" 
                     strokeWidth={2}
                     name="Completed"
                   />
@@ -314,7 +314,7 @@ const ComplianceDashboard = ({ userRole, data }: ComplianceDashboardProps) => {
               {categoryBreakdown.map((category, index) => (
                 <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center space-x-3">
-                    <FileCheck className="w-5 h-5 text-blue-500" />
+                    <FileCheck className="w-5 h-5 text-primary" />
                     <div>
                       <p className="font-medium">{category.category}</p>
                       <p className="text-sm text-muted-foreground">{category.count} documents</p>
@@ -322,8 +322,8 @@ const ComplianceDashboard = ({ userRole, data }: ComplianceDashboardProps) => {
                   </div>
                   <div className="text-right">
                     <div className={`text-sm font-medium ${
-                      category.compliance >= 90 ? 'text-green-600' :
-                      category.compliance >= 80 ? 'text-yellow-600' : 'text-red-600'
+                      category.compliance >= 90 ? 'text-success' :
+                      category.compliance >= 80 ? 'text-warning' : 'text-danger'
                     }`}>
                       {category.compliance}%
                     </div>
@@ -360,19 +360,19 @@ const ComplianceDashboard = ({ userRole, data }: ComplianceDashboardProps) => {
                       key={index} 
                       className={`flex items-center justify-between p-3 border rounded-lg ${
                         isOverdue 
-                          ? 'border-red-200 bg-red-50' 
+                          ? 'border-danger/20 bg-danger/10' 
                           : isUrgent 
-                          ? 'border-yellow-200 bg-yellow-50'
+                          ? 'border-warning/20 bg-warning/10'
                           : 'border-border'
                       }`}
                     >
                       <div className="flex items-center space-x-3">
                         {isOverdue ? (
-                          <AlertCircle className="w-5 h-5 text-red-500" />
+                          <AlertCircle className="w-5 h-5 text-danger" />
                         ) : isUrgent ? (
-                          <Calendar className="w-5 h-5 text-yellow-500" />
+                          <Calendar className="w-5 h-5 text-warning" />
                         ) : (
-                          <Clock className="w-5 h-5 text-blue-500" />
+                          <Clock className="w-5 h-5 text-primary" />
                         )}
                         <div>
                           <p className="font-medium">{deadline.title}</p>
@@ -389,7 +389,7 @@ const ComplianceDashboard = ({ userRole, data }: ComplianceDashboardProps) => {
                         }
                         className={
                           isUrgent && !isOverdue
-                            ? "bg-yellow-100 text-yellow-800"
+                            ? "bg-warning/15 text-warning"
                             : ""
                         }
                       >
@@ -411,28 +411,28 @@ const ComplianceDashboard = ({ userRole, data }: ComplianceDashboardProps) => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 border rounded-lg border-red-200 bg-red-50">
+            <div className="p-4 border rounded-lg border-danger/20 bg-danger/10">
               <div className="flex items-center space-x-2 mb-2">
-                <AlertTriangle className="w-5 h-5 text-red-500" />
-                <h3 className="font-medium text-red-800">Critical</h3>
+                <AlertTriangle className="w-5 h-5 text-danger" />
+                <h3 className="font-medium text-danger">Critical</h3>
               </div>
-               <p className="text-sm text-red-700">{actionItems.critical} documents require immediate attention</p>
+               <p className="text-sm text-danger">{actionItems.critical} documents require immediate attention</p>
              </div>
              
-             <div className="p-4 border rounded-lg border-yellow-200 bg-yellow-50">
+             <div className="p-4 border rounded-lg border-warning/20 bg-warning/10">
                <div className="flex items-center space-x-2 mb-2">
-                 <Clock className="w-5 h-5 text-yellow-500" />
-                 <h3 className="font-medium text-yellow-800">Upcoming</h3>
+                 <Clock className="w-5 h-5 text-warning" />
+                 <h3 className="font-medium text-warning">Upcoming</h3>
                </div>
-               <p className="text-sm text-yellow-700">{actionItems.upcoming} documents due within 7 days</p>
+               <p className="text-sm text-warning">{actionItems.upcoming} documents due within 7 days</p>
              </div>
              
-             <div className="p-4 border rounded-lg border-green-200 bg-green-50">
+             <div className="p-4 border rounded-lg border-success/20 bg-success/10">
                <div className="flex items-center space-x-2 mb-2">
-                 <CheckCircle className="w-5 h-5 text-green-500" />
-                 <h3 className="font-medium text-green-800">On Track</h3>
+                 <CheckCircle className="w-5 h-5 text-success" />
+                 <h3 className="font-medium text-success">On Track</h3>
                </div>
-               <p className="text-sm text-green-700">{actionItems.completed} documents completed this month</p>
+               <p className="text-sm text-success">{actionItems.completed} documents completed this month</p>
             </div>
           </div>
         </CardContent>

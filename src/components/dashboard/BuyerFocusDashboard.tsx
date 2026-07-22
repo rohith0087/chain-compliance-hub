@@ -63,7 +63,7 @@ const TriageRow = ({ rank, item }: { rank: number; item: TriageItem }) => {
   const Icon = KIND_ICON[item.kind];
   return (
     <div className="group flex w-full items-center gap-3 rounded-[10px] px-2 py-2 transition-colors hover:bg-muted">
-      <span className="w-5 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted-foreground/70">
+      <span className="w-5 shrink-0 text-right font-mono text-micro tabular-nums text-muted-foreground/70">
         {rank}
       </span>
       <span
@@ -71,14 +71,14 @@ const TriageRow = ({ rank, item }: { rank: number; item: TriageItem }) => {
       />
       <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13px] font-medium text-foreground">{item.title}</span>
-        <span className="block truncate font-mono text-[11px] text-muted-foreground">
+        <span className="block truncate text-small font-medium text-foreground">{item.title}</span>
+        <span className="block truncate font-mono text-micro text-muted-foreground">
           {item.supplierName}
         </span>
       </span>
       {item.meta && (
         <span
-          className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold uppercase ${
+          className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-micro font-semibold uppercase ${
             item.kind === 'overdue'
               ? 'bg-danger/10 text-danger'
               : 'bg-muted font-medium normal-case text-muted-foreground'
@@ -90,7 +90,7 @@ const TriageRow = ({ rank, item }: { rank: number; item: TriageItem }) => {
       <Button
         size="sm"
         variant="outline"
-        className="h-7 shrink-0 gap-1 px-2.5 text-[11px]"
+        className="h-7 shrink-0 gap-1 px-2.5 text-micro"
         onClick={item.go}
       >
         {item.actionLabel}
@@ -172,11 +172,11 @@ export const BuyerFocusDashboard = ({
     return (
       <div className={`${dashboardCardClass} p-8 text-center`}>
         <AlertTriangle className="mx-auto mb-2 h-6 w-6 text-danger" />
-        <p className="text-[13px] font-medium text-foreground">Couldn’t load your dashboard</p>
-        <p className="mt-1 font-mono text-[11px] text-muted-foreground">{d.error}</p>
+        <p className="text-small font-medium text-foreground">Couldn’t load your dashboard</p>
+        <p className="mt-1 font-mono text-micro text-muted-foreground">{d.error}</p>
         <button
           onClick={d.refresh}
-          className="mt-4 rounded-[10px] bg-primary px-4 py-2 text-[13px] font-semibold text-primary-foreground hover:bg-primary-hover"
+          className="mt-4 rounded-[10px] bg-primary px-4 py-2 text-small font-semibold text-primary-foreground hover:bg-primary-hover"
         >
           Retry
         </button>
@@ -201,7 +201,7 @@ export const BuyerFocusDashboard = ({
         action={
           <div className="flex items-center gap-3">
             {!d.loading && urgent.length > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-danger/10 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase text-danger">
+              <span className="inline-flex items-center gap-1 rounded-full bg-danger/10 px-2 py-0.5 font-mono text-micro font-semibold uppercase text-danger">
                 <AlertTriangle className="h-3 w-3" />
                 {urgent.length} urgent
               </span>
@@ -221,7 +221,7 @@ export const BuyerFocusDashboard = ({
               {urgent.length > 0 && upNext.length > 0 && (
                 <div className="mx-2 flex items-center gap-2 py-1.5" aria-hidden>
                   <span className="h-px flex-1 bg-border/70" />
-                  <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+                  <span className="font-mono text-micro uppercase tracking-[0.08em] text-muted-foreground">
                     Up next
                   </span>
                   <span className="h-px flex-1 bg-border/70" />
@@ -238,18 +238,18 @@ export const BuyerFocusDashboard = ({
       {/* Bottom strip: cleared this month | score ring | AI summary */}
       <div className="grid shrink-0 grid-cols-1 gap-3.5 sm:grid-cols-3">
         <section className={`${dashboardCardClass} p-4`}>
-          <p className="text-[12px] font-medium text-muted-foreground">Cleared this month</p>
-          <p className="mt-1 font-mono text-[24px] font-medium leading-none tabular-nums text-foreground">
+          <p className="text-caption font-medium text-muted-foreground">Cleared this month</p>
+          <p className="mt-1 font-mono text-h1 font-medium leading-none tabular-nums text-foreground">
             {d.loading ? '—' : d.approvedThisMonth}
           </p>
-          <p className="mt-1.5 text-[12px] text-muted-foreground">approved</p>
+          <p className="mt-1.5 text-caption text-muted-foreground">approved</p>
           {!d.loading && (
             <div className="mt-1">
               <Delta value={d.approvedDelta} />
             </div>
           )}
           <div className="mt-2 border-t border-border/60 pt-2">
-            <p className="text-[12px] text-muted-foreground">
+            <p className="text-caption text-muted-foreground">
               <span className="font-medium text-foreground">{d.approvedTotal}</span> of{' '}
               <span className="font-medium text-foreground">{d.requestTotal}</span> requests approved
             </p>
@@ -258,8 +258,8 @@ export const BuyerFocusDashboard = ({
 
         <section className={`${dashboardCardClass} flex items-center justify-between gap-3 p-4`}>
           <div className="min-w-0 space-y-1">
-            <p className="text-[12px] font-medium text-muted-foreground">Compliance score</p>
-            <p className="font-mono text-[24px] font-medium leading-none tabular-nums text-foreground">
+            <p className="text-caption font-medium text-muted-foreground">Compliance score</p>
+            <p className="font-mono text-h1 font-medium leading-none tabular-nums text-foreground">
               {d.loading ? '—' : `${d.complianceScore}%`}
             </p>
             {!d.loading && <Delta value={d.scoreDelta} suffix="pt" />}
@@ -270,9 +270,9 @@ export const BuyerFocusDashboard = ({
         <section className="ai-card flex flex-col p-4">
           <header className="mb-2 flex items-center gap-2">
             <Sparkles className="h-4 w-4 shrink-0 text-primary" />
-            <h3 className="text-[13px] font-semibold text-foreground">AI summary</h3>
+            <h3 className="text-small font-semibold text-foreground">AI summary</h3>
           </header>
-          <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto text-[12px] leading-relaxed text-muted-foreground">
+          <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto text-caption leading-relaxed text-muted-foreground">
             {(ai.loading ? [] : ai.bullets.slice(0, 3)).map((b, i) => (
               <li key={i} className="flex gap-2">
                 <span
@@ -288,7 +288,7 @@ export const BuyerFocusDashboard = ({
               </li>
             ))}
             {!ai.loading && ai.bullets.length === 0 && (
-              <li className="text-[12px] text-muted-foreground">
+              <li className="text-caption text-muted-foreground">
                 No briefing yet — it generates in the background.
               </li>
             )}
@@ -298,10 +298,10 @@ export const BuyerFocusDashboard = ({
 
       {/* Quick actions, inline and quiet */}
       <div className="flex shrink-0 flex-wrap items-center gap-2">
-        <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={onNewRequest}>
+        <Button size="sm" variant="outline" className="h-7 text-micro" onClick={onNewRequest}>
           New compliance request
         </Button>
-        <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={onAddSupplier}>
+        <Button size="sm" variant="ghost" className="h-7 text-micro" onClick={onAddSupplier}>
           Add new supplier
         </Button>
       </div>

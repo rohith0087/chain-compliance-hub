@@ -230,10 +230,10 @@ const SupplierComplianceDashboard = () => {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Compliance Score</CardTitle>
-                <Shield className="h-4 w-4 text-green-500" />
+                <Shield className="h-4 w-4 text-success" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">{stats.overallCompliance}%</div>
+                <div className="text-2xl font-bold text-success">{stats.overallCompliance}%</div>
                 <Progress value={stats.overallCompliance} className="mt-2" />
               </CardContent>
             </Card>
@@ -241,10 +241,10 @@ const SupplierComplianceDashboard = () => {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
-                <Clock className="h-4 w-4 text-yellow-500" />
+                <Clock className="h-4 w-4 text-warning" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-yellow-600">{stats.pendingRequests}</div>
+                <div className="text-2xl font-bold text-warning">{stats.pendingRequests}</div>
                 <p className="text-xs text-muted-foreground">Need attention</p>
               </CardContent>
             </Card>
@@ -252,10 +252,10 @@ const SupplierComplianceDashboard = () => {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Approved Docs</CardTitle>
-                <CheckCircle className="h-4 w-4 text-green-500" />
+                <CheckCircle className="h-4 w-4 text-success" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">{stats.approvedRequests}</div>
+                <div className="text-2xl font-bold text-success">{stats.approvedRequests}</div>
                 <p className="text-xs text-muted-foreground">Successfully approved</p>
               </CardContent>
             </Card>
@@ -263,7 +263,7 @@ const SupplierComplianceDashboard = () => {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Uploads</CardTitle>
-                <Upload className="h-4 w-4 text-blue-500" />
+                <Upload className="h-4 w-4 text-primary" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats.totalUploads}</div>
@@ -274,7 +274,7 @@ const SupplierComplianceDashboard = () => {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Connected Buyers</CardTitle>
-                <Users className="h-4 w-4 text-blue-500" />
+                <Users className="h-4 w-4 text-primary" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats.connectedBuyers}</div>
@@ -288,7 +288,7 @@ const SupplierComplianceDashboard = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-red-500" />
+                  <AlertTriangle className="w-5 h-5 text-danger" />
                   Urgent Actions Required
                 </CardTitle>
               </CardHeader>
@@ -300,7 +300,7 @@ const SupplierComplianceDashboard = () => {
                         (new Date(request.due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
                       );
                       return (
-                        <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg border-red-200 bg-red-50">
+                        <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg border-danger/20 bg-danger/10">
                           <div>
                             <p className="font-medium">{request.title}</p>
                             <p className="text-sm text-muted-foreground">{request.buyers?.company_name}</p>
@@ -327,7 +327,7 @@ const SupplierComplianceDashboard = () => {
                   {documentRequests.slice(0, 5).map((request) => (
                     <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center space-x-3">
-                        <FileCheck className="w-5 h-5 text-blue-500" />
+                        <FileCheck className="w-5 h-5 text-primary" />
                         <div>
                           <p className="font-medium">{request.title}</p>
                           <p className="text-sm text-muted-foreground">{request.buyers?.company_name}</p>
@@ -339,9 +339,9 @@ const SupplierComplianceDashboard = () => {
                           request.status === 'pending' ? 'secondary' : 'destructive'
                         }
                         className={
-                          request.status === 'approved' ? 'bg-green-100 text-green-800' :
-                          request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          request.status === 'rejected' ? 'bg-red-100 text-red-800' : ''
+                          request.status === 'approved' ? 'bg-success/15 text-success' :
+                          request.status === 'pending' ? 'bg-warning/15 text-warning' :
+                          request.status === 'rejected' ? 'bg-danger/15 text-danger' : ''
                         }
                       >
                         {request.status}
@@ -364,8 +364,8 @@ const SupplierComplianceDashboard = () => {
                 {buyerPerformance.map((buyer) => (
                   <div key={buyer.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Building2 className="w-6 h-6 text-blue-600" />
+                      <div className="w-12 h-12 bg-primary/15 rounded-lg flex items-center justify-center">
+                        <Building2 className="w-6 h-6 text-primary" />
                       </div>
                       <div>
                         <h3 className="font-medium">{buyer.company_name}</h3>
@@ -377,8 +377,8 @@ const SupplierComplianceDashboard = () => {
                     </div>
                     <div className="text-right">
                       <div className={`text-lg font-bold ${
-                        buyer.complianceRate >= 90 ? 'text-green-600' :
-                        buyer.complianceRate >= 70 ? 'text-yellow-600' : 'text-red-600'
+                        buyer.complianceRate >= 90 ? 'text-success' :
+                        buyer.complianceRate >= 70 ? 'text-warning' : 'text-danger'
                       }`}>
                         {buyer.complianceRate}%
                       </div>

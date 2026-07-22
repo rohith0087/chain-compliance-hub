@@ -86,7 +86,7 @@ export function ComplianceRing({ score, size = 140, strokeWidth = 10, label, sub
         <div className="flex flex-col text-right">
           <span className="text-sm font-semibold text-foreground">{label}</span>
           {subtitle && (
-            <span className="text-[11px] text-muted-foreground/70 mt-0.5">{subtitle}</span>
+            <span className="text-micro text-muted-foreground/70 mt-0.5">{subtitle}</span>
           )}
         </div>
         {ring}

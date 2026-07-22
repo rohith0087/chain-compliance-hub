@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Shield, AlertCircle, Building2, ShoppingCart, Mail, Eye, EyeOff, Check, X, Lock, Sparkles, KeyRound, Timer } from 'lucide-react';
+import { Shield, AlertCircle, Building2, ShoppingCart, Mail, Eye, EyeOff, Check, X, Lock, Sparkles, KeyRound, Timer, Fingerprint } from 'lucide-react';
+import { startAuthentication } from '@simplewebauthn/browser';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
 import { HelpButton } from '@/components/support/HelpButton';
@@ -262,6 +263,52 @@ const AuthPage = () => {
     // If no MFA, the auth state change will redirect to dashboard
     setLoading(false);
   };
+
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const passkeySupported = typeof window !== 'undefined' && !!window.PublicKeyCredential;
+
+  const handlePasskeySignIn = async () => {
+    setPasskeyLoading(true);
+    try {
+      const beginRes = await supabase.functions.invoke('passkey-auth-begin', {
+        body: email.trim() ? { email: email.trim() } : {},
+      });
+      if (beginRes.error || !beginRes.data) {
+        throw new Error(beginRes.error?.message || 'Failed to start passkey sign-in');
+      }
+
+      const assertion = await startAuthentication({ optionsJSON: beginRes.data });
+
+      const finishRes = await supabase.functions.invoke('passkey-auth-finish', {
+        body: { response: assertion },
+      });
+      if (finishRes.error || !finishRes.data?.verified || !finishRes.data?.token_hash) {
+        throw new Error(finishRes.error?.message || 'Passkey verification failed');
+      }
+
+      const { error: verifyErr } = await supabase.auth.verifyOtp({
+        token_hash: finishRes.data.token_hash,
+        type: 'magiclink',
+      });
+      if (verifyErr) throw verifyErr;
+
+      toast({ title: 'Signed in', description: 'Welcome back.' });
+      // Auth state change handles navigation
+    } catch (err: any) {
+      if (err?.name === 'NotAllowedError') {
+        // User cancelled; stay quiet
+      } else {
+        toast({
+          title: 'Passkey sign-in failed',
+          description: err?.message || 'Please try again or use your password.',
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setPasskeyLoading(false);
+    }
+  };
+
 
   const handleMFAVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -687,6 +734,19 @@ const AuthPage = () => {
                         <p className="text-xs text-destructive flex items-center gap-1 justify-center">
                           <Timer className="w-3 h-3" /> Too many failed attempts. Please wait.
                         </p>
+                      )}
+                      
+                      {passkeySupported && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handlePasskeySignIn}
+                          disabled={passkeyLoading || loading}
+                          className="w-full h-11 border-[var(--r2c-line)] bg-[var(--r2c-surface-2)]/50 hover:bg-[var(--r2c-surface-2)] text-[var(--r2c-ink)] gap-2"
+                        >
+                          <Fingerprint className="w-4 h-4" />
+                          {passkeyLoading ? 'Waiting for passkey…' : 'Sign in with a passkey'}
+                        </Button>
                       )}
                       
                       <div className="text-center">

@@ -494,7 +494,7 @@ export function SupplierSidebarLayout({
         <SidebarMenuButton
           isActive={showActive}
           onClick={() => (item.submenu ? toggleSubmenu(item.value) : handleMenuClick(item.value))}
-          className={`group h-11 px-3 rounded-xl gap-3 text-[15px] font-medium transition-colors ${
+          className={`group h-11 px-3 rounded-xl gap-3 text-body font-medium transition-colors ${
             showActive
               ? 'bg-primary/10 text-primary hover:bg-primary/15 font-semibold'
               : 'text-foreground/80 hover:bg-sidebar-accent hover:text-foreground'
@@ -510,7 +510,7 @@ export function SupplierSidebarLayout({
             />
           )}
           {item.badge && (
-            <Badge className="ml-auto bg-primary text-white">{item.badge}</Badge>
+            <Badge className="ml-auto bg-primary text-primary-foreground">{item.badge}</Badge>
           )}
         </SidebarMenuButton>
         {item.submenu && (
@@ -532,7 +532,7 @@ export function SupplierSidebarLayout({
                       <SidebarMenuSubButton asChild isActive={subActive}>
                         <button
                           onClick={() => handleMenuClick(subItem.value)}
-                          className={`w-full group h-8 px-3 rounded-lg text-[14px] transition-colors ${
+                          className={`w-full group h-8 px-3 rounded-lg text-body transition-colors ${
                             subActive
                               ? 'bg-primary/5 text-primary font-medium'
                               : 'text-muted-foreground hover:text-foreground hover:bg-sidebar-accent'
@@ -592,10 +592,10 @@ export function SupplierSidebarLayout({
           <SupplierLogo />
           {!collapsed && (
             <div className="flex flex-col min-w-0">
-              <span className="text-[15px] font-semibold text-foreground truncate leading-tight">
+              <span className="text-body font-semibold text-foreground truncate leading-tight">
                 {supplierProfile?.company_name || t('supplier:title')}
               </span>
-              <span className="text-[13px] text-muted-foreground truncate leading-tight mt-0.5">
+              <span className="text-small text-muted-foreground truncate leading-tight mt-0.5">
                 {user.name}
               </span>
             </div>
@@ -609,14 +609,14 @@ export function SupplierSidebarLayout({
           <SidebarGroupContent>
             <button
               onClick={() => handleSpecialAction('upload-document')}
-              className="w-full h-12 rounded-[14px] cta-texture text-primary-foreground font-semibold text-[15px] shadow-sm flex items-center justify-center gap-2.5 transition-colors"
+              className="w-full h-12 rounded-[14px] cta-texture text-primary-foreground font-semibold text-body shadow-sm flex items-center justify-center gap-2.5 transition-colors"
             >
               <span className="h-7 w-7 rounded-full bg-card/15 flex items-center justify-center shrink-0">
                 <Upload className="h-4 w-4" />
               </span>
               {!collapsed && <span>Upload Document</span>}
               {currentBranch && !collapsed && (
-                <Badge className="ml-1 text-[11px] bg-card/20 text-white border-white/30 font-medium">
+                <Badge className="ml-1 text-micro bg-card/20 text-white border-white/30 font-medium">
                   {currentBranch.branch_name}
                 </Badge>
               )}
@@ -626,7 +626,7 @@ export function SupplierSidebarLayout({
 
         {workspaceItems.length > 0 && (
           <SidebarGroup className="pt-3">
-            <SidebarGroupLabel className="px-4 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
+            <SidebarGroupLabel className="px-4 pb-1.5 text-micro font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
               Workspace
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -638,7 +638,7 @@ export function SupplierSidebarLayout({
         )}
         {adminItems.length > 0 && (
           <SidebarGroup className="pt-2">
-            <SidebarGroupLabel className="px-4 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
+            <SidebarGroupLabel className="px-4 pb-1.5 text-micro font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
               Admin
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -660,8 +660,8 @@ export function SupplierSidebarLayout({
               <HelpCircle className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <div className="text-[14px] font-semibold text-foreground leading-tight">Need help?</div>
-              <div className="text-[12px] text-muted-foreground truncate leading-tight mt-0.5">Docs & guides</div>
+              <div className="text-body font-semibold text-foreground leading-tight">Need help?</div>
+              <div className="text-caption text-muted-foreground truncate leading-tight mt-0.5">Docs & guides</div>
             </div>
           </button>
         )}
@@ -703,7 +703,7 @@ export function SupplierSidebarLayout({
                   {active && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-primary" />}
                   <item.icon className="h-5 w-5" />
                   {item.badge ? (
-                    <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-primary text-white text-[10px] font-semibold flex items-center justify-center">
+                    <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-micro font-semibold flex items-center justify-center">
                       {item.badge}
                     </span>
                   ) : null}
@@ -732,7 +732,7 @@ export function SupplierSidebarLayout({
 
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className="text-[10px] text-muted-foreground/70 font-medium select-none" aria-label={`TraceR2C v${APP_VERSION}`}>
+          <span className="text-micro text-muted-foreground/70 font-medium select-none" aria-label={`TraceR2C v${APP_VERSION}`}>
             v{APP_VERSION}
           </span>
         </TooltipTrigger>
@@ -865,7 +865,7 @@ export function SupplierSidebarLayout({
                       variant="ghost"
                       size="icon"
                       onClick={() => onRoleSwitch('buyer')}
-                      className="h-9 w-9 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                      className="h-9 w-9 hover:bg-primary/10 hover:text-primary transition-colors"
                     >
                       <ArrowLeftRight className="h-4 w-4" />
                     </Button>

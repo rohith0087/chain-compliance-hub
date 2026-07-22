@@ -91,7 +91,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { WhatsNewDialog } from '@/components/shared/WhatsNewDialog';
 import { APP_VERSION } from '@/config/version';
 import { getWorkspaceProfileForIndustry } from '@/config/workspaceProfiles';
-import { navIconClass, navSubIconClass } from '@/components/documents/buyerReviewDesignSystem';
+import { navIconClass, navSubIconClass } from '@/design/system';
 
 // Version button component for sidebar footer
 function VersionButton() {
@@ -101,7 +101,7 @@ function VersionButton() {
     <>
       <button
         onClick={() => setShowWhatsNew(true)}
-        className="w-full px-1 py-1 text-[12px] text-muted-foreground/70 hover:text-foreground/80 transition-colors text-left"
+        className="w-full px-1 py-1 text-caption text-muted-foreground/70 hover:text-foreground/80 transition-colors text-left"
       >
         TraceR2C v{APP_VERSION}
       </button>
@@ -545,10 +545,10 @@ export function BuyerSidebarLayout({
             </div>
             {!collapsed && (
               <div className="flex flex-col min-w-0">
-                <span className="text-[15px] font-semibold text-foreground truncate leading-tight">
+                <span className="text-body font-semibold text-foreground truncate leading-tight">
                   {buyerProfile?.company_name || 'Buyer Portal'}
                 </span>
-                <span className="text-[13px] text-muted-foreground truncate leading-tight mt-0.5">
+                <span className="text-small text-muted-foreground truncate leading-tight mt-0.5">
                   {user.name}
                 </span>
               </div>
@@ -563,14 +563,14 @@ export function BuyerSidebarLayout({
               <button
                 data-guide-id="quick-new-request"
                 onClick={() => handleSpecialAction('new-request')}
-                className="w-full h-12 rounded-[14px] cta-texture text-primary-foreground font-semibold text-[15px] shadow-sm flex items-center justify-center gap-2.5 transition-colors"
+                className="w-full h-12 rounded-[14px] cta-texture text-primary-foreground font-semibold text-body shadow-sm flex items-center justify-center gap-2.5 transition-colors"
               >
                 <span className="h-7 w-7 rounded-full bg-card/15 flex items-center justify-center shrink-0">
                   <Plus className="h-4 w-4" />
                 </span>
                 {!collapsed && <span>New Request</span>}
                 {currentBranch && !collapsed && (
-                  <Badge className="ml-1 text-[11px] bg-card/20 text-white border-white/30 font-medium">
+                  <Badge className="ml-1 text-micro bg-card/20 text-white border-white/30 font-medium">
                     {currentBranch.branch_name}
                   </Badge>
                 )}
@@ -604,7 +604,7 @@ export function BuyerSidebarLayout({
                   <SidebarMenuButton
                     isActive={showActive}
                     onClick={() => (item.submenu ? toggleSubmenu(item.value) : handleMenuClick(item.value))}
-                    className={`group h-11 px-3 rounded-xl gap-3 text-[15px] font-medium transition-colors ${
+                    className={`group h-11 px-3 rounded-xl gap-3 text-body font-medium transition-colors ${
                       showActive
                         ? 'bg-primary/10 text-primary hover:bg-primary/15 font-semibold'
                         : 'text-foreground/80 hover:bg-sidebar-accent hover:text-foreground'
@@ -620,7 +620,7 @@ export function BuyerSidebarLayout({
                       />
                     )}
                     {item.badge && (
-                      <Badge className="ml-auto bg-primary text-white">{item.badge}</Badge>
+                      <Badge className="ml-auto bg-primary text-primary-foreground">{item.badge}</Badge>
                     )}
                   </SidebarMenuButton>
                   {item.submenu && (
@@ -642,7 +642,7 @@ export function BuyerSidebarLayout({
                                 <SidebarMenuSubButton asChild isActive={subActive}>
                                   <button
                                     onClick={() => handleMenuClick(subItem.value)}
-                                    className={`w-full group h-8 px-3 rounded-lg text-[14px] transition-colors ${
+                                    className={`w-full group h-8 px-3 rounded-lg text-body transition-colors ${
                                       subActive
                                         ? 'bg-primary/5 text-primary font-medium'
                                         : 'text-muted-foreground hover:text-foreground hover:bg-sidebar-accent'
@@ -674,7 +674,7 @@ export function BuyerSidebarLayout({
               <>
                 {workspaceItems.length > 0 && (
                   <SidebarGroup className="pt-3">
-                    <SidebarGroupLabel className="px-4 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
+                    <SidebarGroupLabel className="px-4 pb-1.5 text-micro font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
                       Workspace
                     </SidebarGroupLabel>
                     <SidebarGroupContent>
@@ -686,7 +686,7 @@ export function BuyerSidebarLayout({
                 )}
                 {adminItems.length > 0 && (
                   <SidebarGroup className="pt-2">
-                    <SidebarGroupLabel className="px-4 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
+                    <SidebarGroupLabel className="px-4 pb-1.5 text-micro font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
                       Admin
                     </SidebarGroupLabel>
                     <SidebarGroupContent>
@@ -711,8 +711,8 @@ export function BuyerSidebarLayout({
                 <HelpCircle className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <div className="text-[14px] font-semibold text-foreground leading-tight">Need help?</div>
-                <div className="text-[12px] text-muted-foreground truncate leading-tight mt-0.5">Docs & guides</div>
+                <div className="text-body font-semibold text-foreground leading-tight">Need help?</div>
+                <div className="text-caption text-muted-foreground truncate leading-tight mt-0.5">Docs & guides</div>
               </div>
             </button>
           )}
@@ -771,7 +771,7 @@ export function BuyerSidebarLayout({
                       {active && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-primary" />}
                       <item.icon className="h-5 w-5" />
                       {item.badge ? (
-                        <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-primary text-white text-[10px] font-semibold flex items-center justify-center">
+                        <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-micro font-semibold flex items-center justify-center">
                           {item.badge}
                         </span>
                       ) : null}
@@ -803,7 +803,7 @@ export function BuyerSidebarLayout({
           {/* Version dot */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="text-[10px] text-muted-foreground/70 font-medium select-none" aria-label={`TraceR2C v${APP_VERSION}`}>
+              <span className="text-micro text-muted-foreground/70 font-medium select-none" aria-label={`TraceR2C v${APP_VERSION}`}>
                 v{APP_VERSION}
               </span>
             </TooltipTrigger>
@@ -849,8 +849,8 @@ export function BuyerSidebarLayout({
                   <SectionIcon className={navIconClass} />
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-[14px] font-semibold leading-tight text-foreground">{section.title}</p>
-                  <p className="text-[11px] leading-tight text-muted-foreground">
+                  <p className="truncate text-body font-semibold leading-tight text-foreground">{section.title}</p>
+                  <p className="text-micro leading-tight text-muted-foreground">
                     {activeIdx >= 0 ? `${activeIdx + 1} of ${items.length}` : `${items.length} pages`}
                   </p>
                 </div>
@@ -866,7 +866,7 @@ export function BuyerSidebarLayout({
                   <button
                     key={sub.value}
                     onClick={() => { setPreviewValue(null); if (overlay) setMode('pinned'); handleMenuClick(sub.value); }}
-                    className={`group relative w-full flex items-center gap-2.5 h-9 pl-3 pr-2 rounded-lg text-[13.5px] transition-all duration-150 ${
+                    className={`group relative w-full flex items-center gap-2.5 h-9 pl-3 pr-2 rounded-lg text-small transition-all duration-150 ${
                       subActive
                         ? 'bg-primary/10 text-primary font-semibold'
                         : 'text-foreground/75 hover:bg-sidebar-accent hover:text-foreground hover:translate-x-0.5'
@@ -886,10 +886,10 @@ export function BuyerSidebarLayout({
             {/* Footer accent — keeps the panel from feeling empty */}
             <div className="px-3 pb-3">
               <div className="rounded-xl border border-sidebar-border bg-card/60 px-3 py-2.5">
-                <p className="truncate text-[11px] font-semibold text-foreground/80">
+                <p className="truncate text-micro font-semibold text-foreground/80">
                   {buyerProfile?.company_name || 'Workspace'}
                 </p>
-                <p className="mt-0.5 truncate text-[10.5px] leading-snug text-muted-foreground">
+                <p className="mt-0.5 truncate text-micro leading-snug text-muted-foreground">
                   {buyerProfile?.industry || 'Compliance workspace'}
                 </p>
               </div>
@@ -1007,7 +1007,7 @@ export function BuyerSidebarLayout({
                       variant="ghost"
                       size="icon"
                       onClick={() => onRoleSwitch('supplier')}
-                      className="h-9 w-9 hover:bg-green-50 hover:text-green-600 transition-colors"
+                      className="h-9 w-9 hover:bg-primary/10 hover:text-primary transition-colors"
                     >
                       <ArrowLeftRight className="h-4 w-4" />
                     </Button>

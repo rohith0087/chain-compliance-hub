@@ -35,6 +35,7 @@ import SupplierSimulation from "./pages/SupplierSimulation";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import MessagesPage from "./pages/MessagesPage";
 import WhitePaperPage from "./pages/WhitePaperPage";
+import StyleguidePage from "./pages/StyleguidePage";
 import "./i18n";
 import { BranchProvider } from "@/contexts/BranchContext";
 import RequirementEngineView from "@/components/buyer/RequirementEngineView";
@@ -407,6 +408,9 @@ const AppRoutes = () => {
                   } />
                   <Route path="/auth" element={<Navigate to="/" replace />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
+                  {import.meta.env.MODE !== 'production' && (
+                    <Route path="/__test/styleguide" element={<StyleguidePage />} />
+                  )}
                   {import.meta.env.MODE === 'test' && (
                     <>
                       <Route path="/__test/requirements" element={<RequirementEngineTestRoute />} />

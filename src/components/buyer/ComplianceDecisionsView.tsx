@@ -101,11 +101,11 @@ function DecisionCard({ result }: { result: DecisionResult }) {
           </div>
           <div className="flex items-center gap-2">
             {includesSharedEvidence && (
-              <span className="inline-flex items-center gap-1 rounded-full border-0 bg-violet-50 px-2 py-0.5 text-[12px] font-medium text-violet-800">
+              <span className="inline-flex items-center gap-1 rounded-full border-0 bg-primary/10 px-2 py-0.5 text-caption font-medium text-primary">
                 <Share2 className="h-3.5 w-3.5" />Shared by supplier
               </span>
             )}
-            <span className={`inline-flex items-center gap-1 rounded-full border-0 px-2 py-0.5 text-[12px] font-medium ${config.className}`}>
+            <span className={`inline-flex items-center gap-1 rounded-full border-0 px-2 py-0.5 text-caption font-medium ${config.className}`}>
               <Icon className="h-3.5 w-3.5" />{config.label}
             </span>
           </div>
@@ -185,7 +185,7 @@ function ActionItemsPanel({ buyerId }: { buyerId: string }) {
             <ul className="space-y-2">
               {findings.map((finding) => (
                 <li key={finding.id} className="flex items-center justify-between gap-2 rounded-[12px] border border-border p-3 text-sm">
-                  <span className="text-foreground">{finding.description} <span className="ml-1 inline-flex items-center rounded-full border-0 bg-muted px-2 py-0.5 text-[12px] font-medium text-muted-foreground">{finding.severity}</span></span>
+                  <span className="text-foreground">{finding.description} <span className="ml-1 inline-flex items-center rounded-full border-0 bg-muted px-2 py-0.5 text-caption font-medium text-muted-foreground">{finding.severity}</span></span>
                   <Button size="sm" variant="outline" className="rounded-[10px] border-border" disabled={busyId === finding.id}
                     onClick={() => runAction(finding.id, () => db.rpc('resolve_compliance_finding_v1', { p_finding_id: finding.id }))}>
                     Resolve
@@ -204,11 +204,11 @@ function ActionItemsPanel({ buyerId }: { buyerId: string }) {
                 <li key={approval.id} className="flex items-center justify-between gap-2 rounded-[12px] border border-border p-3 text-sm">
                   <span className="text-foreground">{approval.approval_type.replace(/_/g, ' ')} requested {new Date(approval.requested_at).toLocaleDateString()}</span>
                   <div className="flex gap-1.5">
-                    <Button size="sm" className="rounded-[10px] bg-[#10B981] text-white hover:bg-[#059669]" disabled={busyId === approval.id}
+                    <Button size="sm" className="rounded-[10px] bg-success text-success-foreground hover:bg-success/90" disabled={busyId === approval.id}
                       onClick={() => runAction(approval.id, () => db.rpc('decide_compliance_approval_v1', { p_approval_id: approval.id, p_decision: 'approved', p_notes: null }))}>
                       Approve
                     </Button>
-                    <Button size="sm" variant="outline" className="rounded-[10px] border-[#FCA5A5] bg-card text-[#DC2626] hover:bg-[#FEF2F2]" disabled={busyId === approval.id}
+                    <Button size="sm" variant="outline" className="rounded-[10px] border-danger/40 bg-card text-danger hover:bg-danger/10" disabled={busyId === approval.id}
                       onClick={() => runAction(approval.id, () => db.rpc('decide_compliance_approval_v1', { p_approval_id: approval.id, p_decision: 'rejected', p_notes: null }))}>
                       Reject
                     </Button>
@@ -334,7 +334,7 @@ export default function ComplianceDecisionsView({ buyerId, lockSupplierId }: Com
               </div>
             )}
             <Input className="rounded-[10px] border-border" type="date" value={effectiveAt} onChange={(event) => setEffectiveAt(event.target.value)} />
-            <Button className="rounded-[10px] bg-[#10B981] text-white hover:bg-[#059669]" onClick={evaluate} disabled={evaluating || loadingSubjects}>
+            <Button className="rounded-[10px] bg-success text-success-foreground hover:bg-success/90" onClick={evaluate} disabled={evaluating || loadingSubjects}>
               {evaluating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Evaluate compliance
             </Button>
           </div>

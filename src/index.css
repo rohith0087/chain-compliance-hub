@@ -863,3 +863,10 @@ input[type='search']::-webkit-search-results-decoration {
 svg.lucide[stroke-width='2'] {
   stroke-width: 1.5;
 }
+
+/* Light theme: the same 1.5px stroke reads wispy on a pale surface (dark ink
+   on light carries less visual weight than light ink on dark). Bump default-
+   weight icons to 1.75px outside .dark; dark mode keeps the spec's 1.5. */
+:root:not(.dark) svg.lucide[stroke-width='2'] {
+  stroke-width: 1.75;
+}

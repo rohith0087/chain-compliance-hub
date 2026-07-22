@@ -19,10 +19,13 @@ select ok(
     select 1 from pg_policies
     where schemaname = 'public'
       and cmd in ('INSERT', 'UPDATE', 'DELETE', 'ALL')
-      and coalesce(with_check, '') = 'true'
+      and (
+        coalesce(with_check, '') = 'true'
+        or coalesce(qual, '') = 'true'
+      )
       and 'public' = any(roles)
   ),
-  'public role has no unrestricted mutation policies'
+  'public role has no unrestricted mutation policies (WITH CHECK or USING true)'
 );
 
 select ok(

@@ -95,23 +95,23 @@ const DocumentVersionHistory = ({
       case 'approved':
         return { 
           icon: CheckCircle, 
-          color: 'text-green-600', 
-          bgColor: 'bg-green-100',
+          color: 'text-success', 
+          bgColor: 'bg-success/15',
           label: 'Approved'
         };
       case 'rejected':
         return { 
           icon: XCircle, 
-          color: 'text-red-600', 
-          bgColor: 'bg-red-100',
+          color: 'text-danger', 
+          bgColor: 'bg-danger/15',
           label: 'Rejected'
         };
       case 'pending_review':
       case 'submitted':
         return { 
           icon: Clock, 
-          color: 'text-blue-600', 
-          bgColor: 'bg-blue-100',
+          color: 'text-primary', 
+          bgColor: 'bg-primary/15',
           label: 'Pending Review'
         };
       default:
@@ -308,14 +308,14 @@ const DocumentVersionHistory = ({
 
                               {/* Rejection reason */}
                               {upload.status === 'rejected' && upload.reviewer_notes && (
-                                <div className="mt-2 p-2 rounded bg-red-50 border border-red-200 dark:bg-red-950/30 dark:border-red-900">
+                                <div className="mt-2 p-2 rounded bg-danger/10 border border-danger/20">
                                   <div className="flex items-start gap-2">
-                                    <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                                    <AlertTriangle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
                                     <div>
-                                      <p className="text-xs font-medium text-red-800 dark:text-red-400">
+                                      <p className="text-xs font-medium text-danger">
                                         Rejection Reason:
                                       </p>
-                                      <p className="text-xs text-red-700 dark:text-red-300 mt-0.5">
+                                      <p className="text-xs text-danger mt-0.5">
                                         {upload.reviewer_notes}
                                       </p>
                                     </div>

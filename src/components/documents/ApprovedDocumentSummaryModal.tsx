@@ -307,9 +307,9 @@ const ApprovedDocumentSummaryModal = ({
     switch (status) {
       case 'completed':
         return {
-          icon: <Sparkles className="h-4 w-4 text-[#003f88]" />,
+          icon: <Sparkles className="h-4 w-4 text-primary" />,
           label: 'AI Analyzed',
-          className: 'bg-[#003f88]/10 text-[#003f88] border-[#003f88]/30',
+          className: 'bg-primary/10 text-primary border-primary/30',
         };
       case 'processing':
         return {
@@ -437,8 +437,8 @@ const ApprovedDocumentSummaryModal = ({
         {/* Header */}
         <DialogHeader className="space-y-3">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-[#003f88]/15 to-[hsl(var(--blue-accent))]/15 rounded-xl flex items-center justify-center">
-              <FileText className="h-6 w-6 text-[#003f88]" />
+            <div className="w-12 h-12 bg-primary/15 rounded-xl flex items-center justify-center">
+              <FileText className="h-6 w-6 text-primary" />
             </div>
             <div className="flex-1">
               <DialogTitle className="text-xl">
@@ -450,7 +450,7 @@ const ApprovedDocumentSummaryModal = ({
                     {document.supplier.company_name}
                   </span>
                 )}
-                <Badge className="bg-[#003f88]/10 text-[#003f88] border-[#003f88]/30 border">
+                <Badge className="bg-primary/10 text-primary border-primary/30 border">
                   <CheckCircle className="h-3 w-3 mr-1" />
                   Approved
                 </Badge>
@@ -477,7 +477,7 @@ const ApprovedDocumentSummaryModal = ({
             <ScrollArea className="h-[400px] pr-4">
               <div className="space-y-4">
                 {/* Current Version Summary */}
-                <Card className="border-[#003f88]/30 bg-gradient-to-br from-[#003f88]/5 to-transparent">
+                <Card className="border-primary/30 bg-primary/5">
                   <CardContent className="pt-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
@@ -498,7 +498,7 @@ const ApprovedDocumentSummaryModal = ({
                                <Button
                                  variant="ghost"
                                  size="icon"
-                                 className="h-8 w-8 text-muted-foreground hover:text-[#003f88]"
+                                 className="h-8 w-8 text-muted-foreground hover:text-primary"
                                  onClick={handleRefreshSummary}
                                  disabled={refreshing}
                                >

@@ -130,13 +130,13 @@ const DocumentActivityChain = ({
 
   const getActionColor = (actionType: string) => {
     switch (actionType) {
-      case 'requested': return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'uploaded': return 'bg-purple-100 text-purple-700 border-purple-200';
-      case 'approved': return 'bg-green-100 text-green-700 border-green-200';
-      case 'rejected': return 'bg-red-100 text-red-700 border-red-200';
-      case 'downloaded': return 'bg-orange-100 text-orange-700 border-orange-200';
-      case 'link_created': return 'bg-cyan-100 text-cyan-700 border-cyan-200';
-      case 'link_accessed': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      case 'requested': return 'bg-primary/15 text-primary border-primary/20';
+      case 'uploaded': return 'bg-primary/15 text-primary border-primary/20';
+      case 'approved': return 'bg-success/15 text-success border-success/20';
+      case 'rejected': return 'bg-danger/15 text-danger border-danger/20';
+      case 'downloaded': return 'bg-warning/15 text-warning border-warning/20';
+      case 'link_created': return 'bg-primary/15 text-primary border-primary/20';
+      case 'link_accessed': return 'bg-warning/15 text-warning border-warning/20';
       default: return 'bg-muted text-foreground/80 border-border';
     }
   };

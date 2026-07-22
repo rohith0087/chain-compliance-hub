@@ -29,27 +29,27 @@ interface DocumentRoadmapProps {
 const DocumentRoadmap = ({ items, title = "Document Compliance Roadmap", showProgress = true }: DocumentRoadmapProps) => {
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed': return <CheckCircle className="w-4 h-4 text-green-600" />;
-      case 'in_progress': return <Clock className="w-4 h-4 text-blue-600" />;
-      case 'overdue': return <AlertTriangle className="w-4 h-4 text-red-600" />;
+      case 'completed': return <CheckCircle className="w-4 h-4 text-success" />;
+      case 'in_progress': return <Clock className="w-4 h-4 text-primary" />;
+      case 'overdue': return <AlertTriangle className="w-4 h-4 text-danger" />;
       default: return <Target className="w-4 h-4 text-muted-foreground/70" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'in_progress': return 'bg-blue-100 text-blue-800';
-      case 'overdue': return 'bg-red-100 text-red-800';
+      case 'completed': return 'bg-success/15 text-success';
+      case 'in_progress': return 'bg-primary/15 text-primary';
+      case 'overdue': return 'bg-danger/15 text-danger';
       default: return 'bg-muted text-foreground';
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'low': return 'bg-green-100 text-green-800';
+      case 'high': return 'bg-danger/15 text-danger';
+      case 'medium': return 'bg-warning/15 text-warning';
+      case 'low': return 'bg-success/15 text-success';
       default: return 'bg-muted text-foreground';
     }
   };

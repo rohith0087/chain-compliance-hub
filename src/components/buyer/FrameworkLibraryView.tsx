@@ -334,13 +334,13 @@ export default function FrameworkLibraryView({ buyerId, onOpenSupplier }: Framew
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-sm font-semibold text-primary">{item.code}</span>
                       {item.ready
-                        ? <Badge className="bg-emerald-600/15 text-emerald-600 hover:bg-emerald-600/15 text-xs">ready</Badge>
+                        ? <Badge className="bg-success text-success hover:bg-success text-xs">ready</Badge>
                         : <Badge variant="outline" className="text-xs">available</Badge>}
                       {item.activation_rows > 0 && (
                         <Badge className="bg-primary/10 text-primary hover:bg-primary/10 text-xs"><CheckCircle2 className="mr-1 h-3 w-3" />active</Badge>
                       )}
                     </div>
-                    <h3 className="mt-1 truncate text-[15px] font-semibold">{item.name}</h3>
+                    <h3 className="mt-1 truncate text-body font-semibold">{item.name}</h3>
                   </div>
                 </div>
                 {item.description && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{item.description}</p>}
@@ -427,9 +427,9 @@ export default function FrameworkLibraryView({ buyerId, onOpenSupplier }: Framew
                           const cell = row.cells.get(code);
                           if (!cell) return <td key={code} className="p-3 text-muted-foreground/40">—</td>;
                           const fullyCompliant = cell.gaps === 0 && cell.pending === 0 && cell.compliant === cell.total;
-                          const tone = fullyCompliant ? 'bg-emerald-600/15 text-emerald-600'
-                            : cell.gaps > 0 ? 'bg-red-600/15 text-red-600'
-                            : 'bg-amber-500/15 text-amber-600';
+                          const tone = fullyCompliant ? 'bg-success text-success'
+                            : cell.gaps > 0 ? 'bg-danger text-danger'
+                            : 'bg-warning text-warning';
                           return (
                             <td key={code} className="p-3">
                               <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs ${tone}`}>
@@ -563,17 +563,17 @@ export default function FrameworkLibraryView({ buyerId, onOpenSupplier }: Framew
               {detail.requirements.map((req, i) => (
                 <div key={req.stable_key} className="rounded-lg border border-border p-3">
                   <div className="flex items-start gap-2">
-                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">{i + 1}</span>
+                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-micro font-semibold text-primary">{i + 1}</span>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold">{req.title}</p>
                       <p className="mt-0.5 text-sm text-muted-foreground">{req.description}</p>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
-                        {req.subject_types.map((s) => <Badge key={s} variant="outline" className="text-[10px] capitalize">{s}</Badge>)}
-                        {req.citation && <span className="text-[11px] text-muted-foreground">{req.citation}</span>}
+                        {req.subject_types.map((s) => <Badge key={s} variant="outline" className="text-micro capitalize">{s}</Badge>)}
+                        {req.citation && <span className="text-micro text-muted-foreground">{req.citation}</span>}
                       </div>
                       {req.required_evidence?.length > 0 && (
                         <div className="mt-2 rounded-md bg-muted/40 p-2">
-                          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Evidence asked for</p>
+                          <p className="text-micro font-medium uppercase tracking-wide text-muted-foreground">Evidence asked for</p>
                           <ul className="mt-1 space-y-0.5">
                             {req.required_evidence.map((ev, j) => (
                               <li key={j} className="flex items-center gap-1.5 text-xs">

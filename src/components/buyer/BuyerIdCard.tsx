@@ -39,24 +39,24 @@ export const BuyerIdCard = ({ buyerId, buyerProfile, userProfile }: BuyerIdCardP
   const maskedId = buyerId.replace(/(.{4})(.*)(.{4})/, '$1****$3');
 
   return (
-    <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+    <Card className="bg-primary/5 border-primary/20">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
-            <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+            <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
               <span className="text-white text-xs font-bold">ID</span>
             </div>
             {t('dashboard:buyer.yourBuyerId')}
           </CardTitle>
-          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+          <Badge variant="secondary" className="bg-primary/15 text-primary">
             {t('dashboard:buyer.uniqueIdentifier')}
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center justify-between p-3 bg-card rounded-lg border border-blue-200">
+        <div className="flex items-center justify-between p-3 bg-card rounded-lg border border-primary/20">
           <div className="flex items-center gap-3">
-            <code className="font-mono text-lg font-semibold text-blue-900 tracking-wider">
+            <code className="font-mono text-lg font-semibold text-primary tracking-wider">
               {showId ? buyerId : maskedId}
             </code>
             <Button
@@ -92,12 +92,12 @@ export const BuyerIdCard = ({ buyerId, buyerProfile, userProfile }: BuyerIdCardP
           </Button>
         </div>
         
-        <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+        <div className="bg-primary/10 p-3 rounded-lg border border-primary/20">
           <div className="flex items-start gap-2">
-            <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-            <div className="text-sm text-blue-800">
+            <Info className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-primary">
               <p className="font-medium mb-1">{t('dashboard:buyer.shareWithSuppliers')}</p>
-              <p className="text-blue-700">
+              <p className="text-primary">
                 Suppliers can use this unique ID to send you connection requests directly. 
                 This makes it easier for trusted suppliers to connect with your company.
               </p>
@@ -108,7 +108,7 @@ export const BuyerIdCard = ({ buyerId, buyerProfile, userProfile }: BuyerIdCardP
         <Button 
           onClick={() => setShowInviteModal(true)} 
           size="sm"
-          className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+          className="w-full bg-primary hover:bg-primary/90"
         >
           <UserPlus className="h-4 w-4 mr-2" />
           {t('dashboard:buyer.inviteSuppliers')}

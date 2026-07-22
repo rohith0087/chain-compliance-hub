@@ -464,10 +464,10 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
               <div className="space-y-4">
                 {/* Sample Document Reference Section */}
                 {request.sample_file_path && (
-                  <div className="rounded-xl border border-blue-200/60 bg-blue-50/40 p-4 shadow-sm">
+                  <div className="rounded-xl border border-primary/20 bg-primary/10 p-4 shadow-sm">
                     <div className="flex items-center gap-2 mb-3">
-                      <Info className="h-4 w-4 text-blue-600" />
-                      <h3 className="text-sm font-semibold text-blue-900 uppercase tracking-wide">Reference Document</h3>
+                      <Info className="h-4 w-4 text-primary" />
+                      <h3 className="text-sm font-semibold text-primary uppercase tracking-wide">Reference Document</h3>
                     </div>
                     <SampleDocumentViewer
                       requestId={request.id}
@@ -484,14 +484,14 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
                 <div className={cn(
                   "rounded-xl border p-4 shadow-sm",
                   isResubmission 
-                    ? "border-orange-200/60 bg-orange-50/40" 
+                    ? "border-warning/20 bg-warning/10" 
                     : "border-border/60 bg-muted/40"
                 )}>
                   <div className="flex items-center gap-2 mb-3">
-                    <FileText className={cn("h-4 w-4", isResubmission ? "text-orange-600" : "text-muted-foreground")} />
+                    <FileText className={cn("h-4 w-4", isResubmission ? "text-warning" : "text-muted-foreground")} />
                     <h3 className={cn(
                       "text-sm font-semibold uppercase tracking-wide",
-                      isResubmission ? "text-orange-900" : "text-foreground/80"
+                      isResubmission ? "text-warning" : "text-foreground/80"
                     )}>Request Details</h3>
                   </div>
                   <div className="space-y-1.5">
@@ -505,7 +505,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
                       </span>
                     </div>
                     {isResubmission && (
-                      <p className="text-xs text-orange-700 mt-2 font-medium flex items-center gap-1.5">
+                      <p className="text-xs text-warning mt-2 font-medium flex items-center gap-1.5">
                         <AlertTriangle className="h-3.5 w-3.5" />
                         Document was rejected - please review feedback and resubmit
                       </p>
@@ -515,14 +515,14 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
 
                 {/* Rejection Feedback */}
                 {isResubmission && latestUpload?.reviewer_notes && (
-                  <div className="rounded-xl border border-red-200/60 bg-red-50/40 p-4 shadow-sm">
+                  <div className="rounded-xl border border-danger/20 bg-danger/10 p-4 shadow-sm">
                     <div className="flex items-start gap-3">
-                      <div className="h-8 w-8 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
-                        <AlertTriangle className="w-4 h-4 text-red-600" />
+                      <div className="h-8 w-8 rounded-lg bg-danger/15 flex items-center justify-center flex-shrink-0">
+                        <AlertTriangle className="w-4 h-4 text-danger" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-red-800 mb-1">Rejection Feedback</p>
-                        <p className="text-sm text-red-700">{latestUpload.reviewer_notes}</p>
+                        <p className="text-sm font-semibold text-danger mb-1">Rejection Feedback</p>
+                        <p className="text-sm text-danger">{latestUpload.reviewer_notes}</p>
                       </div>
                     </div>
                   </div>
@@ -530,10 +530,10 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
 
                 {/* Resubmission Options */}
                 {isResubmission && (
-                  <div className="rounded-xl border border-blue-200/60 bg-blue-50/40 p-4 shadow-sm">
-                    <p className="text-sm font-semibold text-blue-900 mb-3">Resubmission Options</p>
+                  <div className="rounded-xl border border-primary/20 bg-primary/10 p-4 shadow-sm">
+                    <p className="text-sm font-semibold text-primary mb-3">Resubmission Options</p>
                     <div className="space-y-2">
-                      <label className="flex items-center space-x-3 text-sm cursor-pointer p-2 rounded-lg hover:bg-blue-100/50 transition-colors">
+                      <label className="flex items-center space-x-3 text-sm cursor-pointer p-2 rounded-lg hover:bg-primary/15 transition-colors">
                         <input
                           type="radio"
                           name="resubmit-type"
@@ -541,11 +541,11 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
                           onChange={() => setUpdateMetadataOnly(false)}
                           className="text-primary h-4 w-4"
                         />
-                        <span className="text-blue-800">Upload new document file</span>
+                        <span className="text-primary">Upload new document file</span>
                       </label>
                       <label className={cn(
                         "flex items-center space-x-3 text-sm p-2 rounded-lg transition-colors",
-                        !latestUpload ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-blue-100/50'
+                        !latestUpload ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-primary/15'
                       )}>
                         <input
                           type="radio"
@@ -555,7 +555,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
                           disabled={!latestUpload}
                           className="text-primary h-4 w-4"
                         />
-                        <span className="text-blue-800">Update expiration date and notes only</span>
+                        <span className="text-primary">Update expiration date and notes only</span>
                         {!latestUpload && <span className="text-xs text-muted-foreground">(no existing file)</span>}
                       </label>
                     </div>
@@ -729,10 +729,10 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
                 )}
 
                 {/* Document Details Section */}
-                <div className="rounded-xl border border-amber-200/50 bg-amber-50/30 p-4 shadow-sm space-y-4">
+                <div className="rounded-xl border border-warning/20 bg-warning/10 p-4 shadow-sm space-y-4">
                   <div className="flex items-center gap-2 mb-1">
-                    <FileText className="h-4 w-4 text-amber-600" />
-                    <h3 className="text-sm font-semibold text-amber-900 uppercase tracking-wide">Document Details</h3>
+                    <FileText className="h-4 w-4 text-warning" />
+                    <h3 className="text-sm font-semibold text-warning uppercase tracking-wide">Document Details</h3>
                   </div>
 
                   {/* Document Display Name */}
@@ -755,7 +755,7 @@ const DocumentUploadDialog = ({ isOpen, onClose, request, onUploadSuccess }: Doc
                   {/* Expiration Date */}
                   <div className="space-y-1.5">
                     <Label className="flex items-center gap-2 text-xs font-medium text-foreground">
-                      <CalendarIcon className="w-3.5 h-3.5 text-amber-600" />
+                      <CalendarIcon className="w-3.5 h-3.5 text-warning" />
                       Expiration Date <span className="text-destructive">*</span>
                     </Label>
                     <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>

@@ -265,7 +265,7 @@ export const OnboardingReviewModal: React.FC<OnboardingReviewModalProps> = ({
                     {documentSubmissions.map((submission) => (
                       <div key={submission.id} className={`p-3 border rounded-lg ${
                         submission.is_document_available === false 
-                          ? 'border-orange-200 bg-orange-50' 
+                          ? 'border-warning/20 bg-warning/10' 
                           : 'border-border'
                       }`}>
                         <div className="flex items-center justify-between">
@@ -273,7 +273,7 @@ export const OnboardingReviewModal: React.FC<OnboardingReviewModalProps> = ({
                             <div className="flex items-center gap-2">
                               <div className="font-medium">{submission.document_name}</div>
                               {submission.is_document_available === false && (
-                                <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-200">
+                                <Badge variant="outline" className="bg-warning/15 text-warning border-warning/20">
                                   Doc not submitted by supplier
                                 </Badge>
                               )}
@@ -281,13 +281,13 @@ export const OnboardingReviewModal: React.FC<OnboardingReviewModalProps> = ({
                             
                             {submission.is_document_available === false ? (
                               <div className="mt-2 space-y-1">
-                                <div className="text-sm text-orange-700">
+                                <div className="text-sm text-warning">
                                   <span className="font-medium">Reason for unavailability:</span>
                                 </div>
-                                <div className="text-sm text-orange-600 bg-orange-100 p-2 rounded">
+                                <div className="text-sm text-warning bg-warning/15 p-2 rounded">
                                   {submission.unavailability_reason || 'No reason provided'}
                                 </div>
-                                <div className="text-xs text-orange-600">
+                                <div className="text-xs text-warning">
                                   Submitted: {new Date(submission.created_at).toLocaleString()}
                                 </div>
                               </div>

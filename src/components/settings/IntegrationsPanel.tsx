@@ -105,9 +105,9 @@ function ToolkitRow({
       {logo}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="text-[14px] font-semibold text-foreground">{name}</span>
+          <span className="text-body font-semibold text-foreground">{name}</span>
           {statusStyle && (
-            <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${statusStyle.className}`}>
+            <span className={`inline-flex items-center gap-1 text-micro font-medium ${statusStyle.className}`}>
               {isActive && <CheckCircle2 className="h-3 w-3" />}
               {statusStyle.label}
             </span>
@@ -115,13 +115,13 @@ function ToolkitRow({
         </div>
         <p className="mt-0.5 truncate text-[12.5px] text-muted-foreground">{capability}</p>
         {connection?.last_error && !isActive && (
-          <p className="mt-1 flex items-center gap-1 text-[11px] text-danger">
+          <p className="mt-1 flex items-center gap-1 text-micro text-danger">
             <AlertTriangle className="h-3 w-3 shrink-0" />
             {connection.last_error}
           </p>
         )}
         {isActive && connection?.connected_at && (
-          <p className="mt-0.5 font-mono text-[11px] text-muted-foreground/80">
+          <p className="mt-0.5 font-mono text-micro text-muted-foreground/80">
             Connected {relativeDate(connection.connected_at)}
           </p>
         )}
@@ -219,7 +219,7 @@ export function IntegrationsPanel({ organizationId }: IntegrationsPanelProps) {
       {organizationId && (
         <section className="space-y-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+            <p className="text-micro font-semibold uppercase tracking-[0.06em] text-muted-foreground">
               Assistant
             </p>
             <p className="mt-0.5 text-[12.5px] text-muted-foreground">
@@ -234,7 +234,7 @@ export function IntegrationsPanel({ organizationId }: IntegrationsPanelProps) {
       <section className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+            <p className="text-micro font-semibold uppercase tracking-[0.06em] text-muted-foreground">
               Your connections
             </p>
             <p className="mt-0.5 text-[12.5px] text-muted-foreground">
@@ -243,7 +243,7 @@ export function IntegrationsPanel({ organizationId }: IntegrationsPanelProps) {
             </p>
           </div>
           {!loading && activeCount > 0 && (
-            <span className="inline-flex shrink-0 items-center gap-1.5 text-[12px] font-medium text-success">
+            <span className="inline-flex shrink-0 items-center gap-1.5 text-caption font-medium text-success">
               <CheckCircle2 className="h-4 w-4" />
               {activeCount} connected
             </span>
@@ -258,7 +258,7 @@ export function IntegrationsPanel({ organizationId }: IntegrationsPanelProps) {
           <div className="space-y-5">
             {groups.map(([group, entries]) => (
               <div key={group} className="space-y-2">
-                <p className="text-[11px] font-medium text-muted-foreground/70">{group}</p>
+                <p className="text-micro font-medium text-muted-foreground/70">{group}</p>
                 {entries.map((entry) => (
                   <ToolkitRow
                     key={entry.slug}
@@ -296,7 +296,7 @@ export function IntegrationsPanel({ organizationId }: IntegrationsPanelProps) {
       {/* Coming soon — sets expectation without dead Connect buttons. */}
       {COMPOSIO_ROADMAP.length > 0 && (
         <section className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+          <p className="text-micro font-semibold uppercase tracking-[0.06em] text-muted-foreground">
             Coming soon
           </p>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -307,7 +307,7 @@ export function IntegrationsPanel({ organizationId }: IntegrationsPanelProps) {
               >
                 <div className="opacity-60">{r.logo}</div>
                 <div className="min-w-0">
-                  <p className="text-[13px] font-medium text-foreground/70">{r.name}</p>
+                  <p className="text-small font-medium text-foreground/70">{r.name}</p>
                   <p className="truncate text-[11.5px] text-muted-foreground">{r.capability}</p>
                 </div>
               </div>

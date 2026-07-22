@@ -225,9 +225,9 @@ const ChatDocumentViewer = ({ document, isOpen, onClose }: ChatDocumentViewerPro
                 <Badge 
                   variant="outline" 
                   className={`capitalize ${
-                    document.status === 'approved' ? 'border-emerald-500 text-emerald-700 dark:text-emerald-400' :
-                    document.status === 'pending_review' ? 'border-amber-500 text-amber-700 dark:text-amber-400' :
-                    'border-red-500 text-red-700 dark:text-red-400'
+                    document.status === 'approved' ? 'border-success text-success' :
+                    document.status === 'pending_review' ? 'border-warning text-warning' :
+                    'border-danger text-danger'
                   }`}
                 >
                   {document.status.replace('_', ' ')}

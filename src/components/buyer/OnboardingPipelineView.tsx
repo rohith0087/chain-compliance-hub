@@ -33,13 +33,13 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useBranchContext } from '@/contexts/BranchContext';
 
 const PIPELINE_STAGES = [
-  { id: 'requested', name: 'Requested', color: 'bg-purple-100 dark:bg-purple-900/30' },
-  { id: 'invited', name: 'Invited', color: 'bg-indigo-100 dark:bg-indigo-900/30' },
-  { id: 'pending', name: 'Pending', color: 'bg-muted dark:bg-slate-800/50' },
-  { id: 'onboarding_initiated', name: 'Started', color: 'bg-blue-100 dark:bg-blue-900/30' },
-  { id: 'under_review', name: 'Review', color: 'bg-yellow-100 dark:bg-yellow-900/30' },
-  { id: 'approved', name: 'Approved', color: 'bg-green-100 dark:bg-green-900/30' },
-  { id: 'rejected', name: 'Declined', color: 'bg-red-100 dark:bg-red-900/30' }
+  { id: 'requested', name: 'Requested', color: 'bg-primary/15' },
+  { id: 'invited', name: 'Invited', color: 'bg-primary/15' },
+  { id: 'pending', name: 'Pending', color: 'bg-muted' },
+  { id: 'onboarding_initiated', name: 'Started', color: 'bg-primary/15' },
+  { id: 'under_review', name: 'Review', color: 'bg-warning/15' },
+  { id: 'approved', name: 'Approved', color: 'bg-success/15' },
+  { id: 'rejected', name: 'Declined', color: 'bg-danger/15' }
 ];
 
 export const OnboardingPipelineView = () => {
@@ -575,7 +575,7 @@ export const OnboardingPipelineView = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Slab color="#3d31cc" size="medium" text="Loading..." textColor="#3d31cc" />
+        <Slab color="#0d9e8a" size="medium" text="Loading..." textColor="#0d9e8a" />
       </div>
     );
   }
@@ -729,10 +729,10 @@ export const OnboardingPipelineView = () => {
 
                           const getStatusDot = () => {
                             if (alert.level === 'critical') return 'bg-destructive';
-                            if (alert.level === 'warning') return 'bg-yellow-500';
-                            if (alert.level === 'success') return 'bg-green-500';
+                            if (alert.level === 'warning') return 'bg-warning';
+                            if (alert.level === 'success') return 'bg-success';
                             if (alert.level === 'ended') return 'bg-muted-foreground';
-                            return 'bg-green-500';
+                            return 'bg-success';
                           };
 
                           return (
@@ -776,7 +776,7 @@ export const OnboardingPipelineView = () => {
                                 </div>
 
                                 {/* Row 2: Time */}
-                                <div className="flex items-center text-[10px] text-muted-foreground">
+                                <div className="flex items-center text-micro text-muted-foreground">
                                   <Clock className="h-2.5 w-2.5 mr-1" />
                                   {getDaysInStage(request)}
                                 </div>
@@ -785,20 +785,20 @@ export const OnboardingPipelineView = () => {
                                 {stage.id !== 'approved' && stage.id !== 'rejected' && (
                                   <div className="flex items-center gap-1.5">
                                     <Progress value={calculateProgress(request)} className="h-1 flex-1" />
-                                    <span className="text-[10px] text-muted-foreground w-6">{calculateProgress(request)}%</span>
+                                    <span className="text-micro text-muted-foreground w-6">{calculateProgress(request)}%</span>
                                   </div>
                                 )}
 
                                 {/* Completed/Declined indicators */}
                                 {stage.id === 'approved' && (
-                                  <div className="flex items-center gap-1 text-[10px] text-green-600">
+                                  <div className="flex items-center gap-1 text-micro text-success">
                                     <CheckCircle className="h-2.5 w-2.5" />
                                     <span>Complete</span>
                                   </div>
                                 )}
 
                                 {stage.id === 'rejected' && (
-                                  <div className="flex items-center gap-1 text-[10px] text-destructive">
+                                  <div className="flex items-center gap-1 text-micro text-destructive">
                                     <XCircle className="h-2.5 w-2.5" />
                                     <span>Declined</span>
                                   </div>
@@ -837,7 +837,7 @@ export const OnboardingPipelineView = () => {
                                                 className="h-5 w-5 p-0"
                                                 onClick={(e) => handlePopulateRequirements(request.id, e)}
                                               >
-                                                <AlertCircle className="h-3 w-3 text-yellow-500" />
+                                                <AlertCircle className="h-3 w-3 text-warning" />
                                               </Button>
                                             </TooltipTrigger>
                                             <TooltipContent>Populate Requirements</TooltipContent>

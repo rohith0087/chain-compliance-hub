@@ -19,8 +19,8 @@ interface Props {
 }
 
 const OUTCOME_TONE: Record<string, string> = {
-  compliant: 'text-emerald-600', not_applicable: 'text-emerald-600',
-  missing: 'text-red-600', expired: 'text-red-600', noncompliant: 'text-red-600',
+  compliant: 'text-success', not_applicable: 'text-success',
+  missing: 'text-danger', expired: 'text-danger', noncompliant: 'text-danger',
 };
 
 function fmtDate(iso: string | null): string {
@@ -68,7 +68,7 @@ export default function SupplierDetailPage({ buyerId, supplierId, supplierName, 
 
   const name = data?.supplier.company_name ?? supplierName ?? 'Supplier';
   const score = data?.compliance_score ?? 0;
-  const scoreTone = score >= 85 ? 'text-emerald-600' : score >= 50 ? 'text-amber-600' : 'text-red-600';
+  const scoreTone = score >= 85 ? 'text-success' : score >= 50 ? 'text-warning' : 'text-danger';
 
   return (
     <div className="h-[calc(100vh-80px)] overflow-y-auto bg-muted/20 p-6">
@@ -90,7 +90,7 @@ export default function SupplierDetailPage({ buyerId, supplierId, supplierName, 
                 <h1 className="text-2xl font-semibold text-foreground">{name}</h1>
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                   {data?.supplier.industry && <Badge variant="outline">{data.supplier.industry}</Badge>}
-                  <Badge className="bg-emerald-600/15 text-emerald-600 hover:bg-emerald-600/15">{data?.supplier.connection_status ?? 'Connected'}</Badge>
+                  <Badge className="bg-success text-success hover:bg-success">{data?.supplier.connection_status ?? 'Connected'}</Badge>
                   {data?.supplier.contact_email && <span className="inline-flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{data.supplier.contact_email}</span>}
                 </div>
               </div>
@@ -110,7 +110,7 @@ export default function SupplierDetailPage({ buyerId, supplierId, supplierName, 
           {loading ? (
             <div className="flex items-center justify-center py-16 text-muted-foreground"><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Building report…</div>
           ) : error ? (
-            <div className="p-6 text-sm text-red-600">{error}</div>
+            <div className="p-6 text-sm text-danger">{error}</div>
           ) : data && (
             <div className="grid gap-4 p-6 sm:grid-cols-2 lg:grid-cols-4">
               <div className="flex items-center gap-3">
@@ -122,8 +122,8 @@ export default function SupplierDetailPage({ buyerId, supplierId, supplierName, 
               </div>
               {[
                 { v: `${data.totals.compliant}/${data.totals.framework_requirements}`, l: 'Requirements met', icon: ShieldCheck },
-                { v: String(data.totals.open_gaps), l: 'Open gaps', icon: Shield, tone: data.totals.open_gaps > 0 ? 'text-red-600' : 'text-emerald-600' },
-                { v: String(data.metrics.overdue), l: 'Overdue requests', icon: TrendingUp, tone: data.metrics.overdue > 0 ? 'text-red-600' : undefined },
+                { v: String(data.totals.open_gaps), l: 'Open gaps', icon: Shield, tone: data.totals.open_gaps > 0 ? 'text-danger' : 'text-success' },
+                { v: String(data.metrics.overdue), l: 'Overdue requests', icon: TrendingUp, tone: data.metrics.overdue > 0 ? 'text-danger' : undefined },
               ].map((k) => (
                 <div key={k.l} className="rounded-xl border border-border bg-card p-4">
                   <k.icon className="h-4 w-4 text-muted-foreground" />
@@ -143,12 +143,12 @@ export default function SupplierDetailPage({ buyerId, supplierId, supplierName, 
                 <div className="mb-2 flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-primary" />
                   <h2 className="text-sm font-semibold uppercase tracking-wide text-primary">Executive summary</h2>
-                  <span className="text-[10px] text-muted-foreground">· AI-generated, grounded in this supplier’s record</span>
+                  <span className="text-micro text-muted-foreground">· AI-generated, grounded in this supplier’s record</span>
                 </div>
                 <p className="font-medium text-foreground">{data.ai_summary.headline}</p>
                 <p className="mt-1 text-sm text-muted-foreground">{data.ai_summary.overall_assessment}</p>
                 <div className="mt-4 grid gap-4 md:grid-cols-3">
-                  {([['Strengths', data.ai_summary.strengths, 'text-emerald-600'], ['Risks', data.ai_summary.risks, 'text-red-600'], ['Recommended actions', data.ai_summary.recommendations, 'text-primary']] as const).map(([label, items, tone]) => (
+                  {([['Strengths', data.ai_summary.strengths, 'text-success'], ['Risks', data.ai_summary.risks, 'text-danger'], ['Recommended actions', data.ai_summary.recommendations, 'text-primary']] as const).map(([label, items, tone]) => (
                     items.length > 0 && (
                       <div key={label}>
                         <p className={`text-xs font-semibold ${tone}`}>{label}</p>
@@ -169,7 +169,7 @@ export default function SupplierDetailPage({ buyerId, supplierId, supplierName, 
                 <div className="space-y-3">
                   {data.framework_coverage.map((f) => {
                     const pct = f.total > 0 ? (f.compliant / f.total) * 100 : 0;
-                    const tone = f.gaps > 0 ? 'bg-red-500' : f.compliant === f.total ? 'bg-emerald-500' : 'bg-amber-500';
+                    const tone = f.gaps > 0 ? 'bg-danger' : f.compliant === f.total ? 'bg-success' : 'bg-warning';
                     return (
                       <div key={f.framework_code} className="flex items-center gap-3">
                         <span className="w-24 shrink-0 font-mono text-sm font-semibold text-primary">{f.framework_code}</span>
@@ -200,7 +200,7 @@ export default function SupplierDetailPage({ buyerId, supplierId, supplierName, 
                         <tr key={i} className="border-b last:border-0">
                           <td className="p-3 font-mono text-xs text-primary">{r.framework_code}</td>
                           <td className="p-3">{r.requirement}</td>
-                          <td className={`p-3 font-medium capitalize ${OUTCOME_TONE[r.outcome] ?? 'text-amber-600'}`}>{r.outcome.replace(/_/g, ' ')}</td>
+                          <td className={`p-3 font-medium capitalize ${OUTCOME_TONE[r.outcome] ?? 'text-warning'}`}>{r.outcome.replace(/_/g, ' ')}</td>
                           <td className="p-3 text-muted-foreground">{fmtDate(r.valid_until)}</td>
                         </tr>
                       ))}

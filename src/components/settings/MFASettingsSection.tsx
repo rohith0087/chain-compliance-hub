@@ -136,9 +136,9 @@ export const MFASettingsSection = () => {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${mfaEnrolled ? 'bg-green-500/10' : 'bg-muted'}`}>
+            <div className={`p-2 rounded-lg ${mfaEnrolled ? 'bg-success' : 'bg-muted'}`}>
               {mfaEnrolled ? (
-                <ShieldCheck className="w-5 h-5 text-green-500" />
+                <ShieldCheck className="w-5 h-5 text-success" />
               ) : (
                 <Shield className="w-5 h-5 text-muted-foreground" />
               )}
@@ -150,7 +150,7 @@ export const MFASettingsSection = () => {
               </CardDescription>
             </div>
           </div>
-          <Badge variant={mfaEnrolled ? "default" : "secondary"} className={mfaEnrolled ? "bg-green-500" : ""}>
+          <Badge variant={mfaEnrolled ? "default" : "secondary"} className={mfaEnrolled ? "bg-success" : ""}>
             {mfaEnrolled ? 'Enabled' : 'Disabled'}
           </Badge>
         </div>
@@ -158,9 +158,9 @@ export const MFASettingsSection = () => {
       <CardContent className="space-y-4">
         {mfaEnrolled ? (
           <>
-            <Alert className="border-green-500/50 bg-green-500/10">
-              <ShieldCheck className="h-4 w-4 text-green-500" />
-              <AlertDescription className="text-green-700 dark:text-green-400">
+            <Alert className="border-success bg-success">
+              <ShieldCheck className="h-4 w-4 text-success" />
+              <AlertDescription className="text-success">
                 Your account is protected with two-factor authentication using an authenticator app.
               </AlertDescription>
             </Alert>

@@ -46,11 +46,11 @@ interface Summary {
 }
 
 const SIGNAL_META: Record<string, { label: string; icon: typeof AlertTriangle; tone: string; cta: { label: string; tab: string } }> = {
-  expired_evidence: { label: 'Expired evidence', icon: ShieldX, tone: 'text-red-500', cta: { label: 'Open decisions', tab: 'compliance-decisions' } },
-  missing_evidence: { label: 'Missing evidence', icon: FileWarning, tone: 'text-red-400', cta: { label: 'Open decisions', tab: 'compliance-decisions' } },
-  rejected_evidence: { label: 'Rejected evidence', icon: AlertTriangle, tone: 'text-orange-400', cta: { label: 'Open decisions', tab: 'compliance-decisions' } },
-  awaiting_review: { label: 'Awaiting review', icon: Clock, tone: 'text-amber-400', cta: { label: 'Review mappings', tab: 'mapping-review' } },
-  requested_pending: { label: 'Requested, pending supplier', icon: Activity, tone: 'text-sky-400', cta: { label: 'View requests', tab: 'requests' } },
+  expired_evidence: { label: 'Expired evidence', icon: ShieldX, tone: 'text-danger', cta: { label: 'Open decisions', tab: 'compliance-decisions' } },
+  missing_evidence: { label: 'Missing evidence', icon: FileWarning, tone: 'text-danger', cta: { label: 'Open decisions', tab: 'compliance-decisions' } },
+  rejected_evidence: { label: 'Rejected evidence', icon: AlertTriangle, tone: 'text-warning', cta: { label: 'Open decisions', tab: 'compliance-decisions' } },
+  awaiting_review: { label: 'Awaiting review', icon: Clock, tone: 'text-warning', cta: { label: 'Review mappings', tab: 'mapping-review' } },
+  requested_pending: { label: 'Requested, pending supplier', icon: Activity, tone: 'text-primary', cta: { label: 'View requests', tab: 'requests' } },
 };
 
 export default function CommandCenterView({ buyerId, onNavigate }: CommandCenterViewProps) {
@@ -109,7 +109,7 @@ export default function CommandCenterView({ buyerId, onNavigate }: CommandCenter
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold text-foreground">
+        <h1 className="flex items-center gap-2 text-h1 font-semibold text-foreground">
           <Gauge className="h-6 w-6 text-primary" />
           Command Center
         </h1>
@@ -134,7 +134,7 @@ export default function CommandCenterView({ buyerId, onNavigate }: CommandCenter
         </div>
         <div className={`${reviewCardContainerClass} p-4`}>
           <p className="text-xs uppercase text-muted-foreground">Open risk signals</p>
-          <p className="mt-1 text-3xl font-semibold text-orange-400">{summary?.open_signal_count ?? 0}</p>
+          <p className="mt-1 text-3xl font-semibold text-warning">{summary?.open_signal_count ?? 0}</p>
           <p className="text-xs text-muted-foreground">gaps detected by the 15-minute scan</p>
         </div>
         <div className={`${reviewCardContainerClass} p-4`}>
@@ -165,16 +165,16 @@ export default function CommandCenterView({ buyerId, onNavigate }: CommandCenter
             const meta = SIGNAL_META[signal.signal_type] ?? SIGNAL_META.missing_evidence;
             const Icon = meta.icon;
             const risk = Math.round(Number(signal.weight) * 100);
-            const riskTone = risk >= 70 ? 'bg-red-500/15 text-red-500' : risk >= 40 ? 'bg-amber-500/15 text-amber-600' : 'bg-muted text-muted-foreground';
+            const riskTone = risk >= 70 ? 'bg-danger/15 text-danger' : risk >= 40 ? 'bg-warning/15 text-warning' : 'bg-muted text-muted-foreground';
             return (
               <div key={signal.id} className="flex items-center gap-3 p-3 hover:bg-muted/40">
                 <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums ${riskTone}`}>{risk}</span>
                 <Icon className={`h-4 w-4 shrink-0 ${meta.tone}`} />
                 <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
                   <span className="truncate font-medium">{signal.requirement_title ?? signal.requirement_key}</span>
-                  <Badge variant="secondary" className="font-mono text-[10px]">{signal.framework_code}</Badge>
-                  {signal.supplier_name && <Badge variant="outline" className="text-[10px]">{signal.supplier_name}</Badge>}
-                  <span className={`text-[10px] font-medium ${meta.tone}`}>{meta.label}</span>
+                  <Badge variant="secondary" className="font-mono text-micro">{signal.framework_code}</Badge>
+                  {signal.supplier_name && <Badge variant="outline" className="text-micro">{signal.supplier_name}</Badge>}
+                  <span className={`text-micro font-medium ${meta.tone}`}>{meta.label}</span>
                 </div>
                 {onNavigate && (
                   <Button size="sm" variant="outline" className="shrink-0" onClick={() => onNavigate(meta.cta.tab)}>{meta.cta.label}</Button>
@@ -184,7 +184,7 @@ export default function CommandCenterView({ buyerId, onNavigate }: CommandCenter
           })}
           {(summary?.top_signals ?? []).length === 0 && (
             <div className="p-8 text-center text-muted-foreground">
-              <CheckCircle2 className="mx-auto mb-2 h-6 w-6 text-emerald-500" />
+              <CheckCircle2 className="mx-auto mb-2 h-6 w-6 text-success" />
               All clear — no open risk signals right now.
             </div>
           )}
@@ -199,10 +199,10 @@ export default function CommandCenterView({ buyerId, onNavigate }: CommandCenter
           {(summary?.open_tasks ?? []).map((task) => (
             <div key={task.id} className={`${reviewCardContainerClass} flex flex-wrap items-center justify-between gap-2 p-3`}>
               <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <Badge variant="secondary" className="text-xs">{task.task_type.replace(/_/g, ' ')}</Badge>
-                {task.status === 'in_progress' && <Badge className="bg-sky-600/15 text-sky-500 text-xs">in progress</Badge>}
+                <Badge variant="secondary" className="text-micro">{task.task_type.replaceAll('_', ' ')}</Badge>
+                {task.status === 'in_progress' && <Badge className="bg-primary/15 text-primary text-micro">in progress</Badge>}
                 <span className="truncate text-sm">{task.title}</span>
-                {task.supplier_name && <Badge variant="outline" className="text-[10px]">{task.supplier_name}</Badge>}
+                {task.supplier_name && <Badge variant="outline" className="text-micro">{task.supplier_name}</Badge>}
               </div>
               <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
                 {task.due_date ? `due ${task.due_date}` : new Date(task.created_at).toLocaleDateString()}

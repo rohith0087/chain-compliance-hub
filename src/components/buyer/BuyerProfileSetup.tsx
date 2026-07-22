@@ -213,8 +213,8 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
     <div className="min-h-screen bg-muted flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader className="text-center">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Building2 className="w-8 h-8 text-blue-600" />
+          <div className="w-16 h-16 bg-primary/15 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Building2 className="w-8 h-8 text-primary" />
           </div>
           <CardTitle className="text-2xl">Complete Your Buyer Profile</CardTitle>
           <p className="text-muted-foreground">Let's set up your company information to get started.</p>

@@ -576,12 +576,12 @@ const SupplierDiscovery = ({ onOpenCompliance, onViewSupplier }: { onOpenComplia
             <button
               key={tab.value}
               onClick={() => setActiveTab(tab.value)}
-              className={`relative h-full flex items-center gap-2 text-[14px] font-semibold transition-colors ${
+              className={`relative h-full flex items-center gap-2 text-body font-semibold transition-colors ${
                 isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               {tab.label}
-              <span className={`h-[24px] min-w-[24px] rounded-full px-2 text-[13px] font-bold flex items-center justify-center ${tab.badgeClass}`}>
+              <span className={`h-[24px] min-w-[24px] rounded-full px-2 text-small font-bold flex items-center justify-center ${tab.badgeClass}`}>
                 {tab.count}
               </span>
               {isActive && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-primary rounded-full" />}
@@ -699,8 +699,8 @@ const SupplierDiscovery = ({ onOpenCompliance, onViewSupplier }: { onOpenComplia
                           size="sm"
                         />
                         <div className="min-w-0">
-                          <p className="text-[14px] font-semibold text-foreground truncate">{request.supplier.company_name}</p>
-                          <p className="text-[13px] text-muted-foreground flex items-center gap-1">
+                          <p className="text-body font-semibold text-foreground truncate">{request.supplier.company_name}</p>
+                          <p className="text-small text-muted-foreground flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
                             {format(new Date(request.requested_at), 'MMM d, yyyy')}
                             {request.supplier.industry && (
@@ -751,12 +751,12 @@ const SupplierDiscovery = ({ onOpenCompliance, onViewSupplier }: { onOpenComplia
                   <div key={request.id} className={`${reviewCardContainerClass} p-4`}>
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="h-10 w-10 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
-                          <Clock className="h-5 w-5 text-amber-600" />
+                        <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center flex-shrink-0">
+                          <Clock className="h-5 w-5 text-warning" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[14px] font-semibold text-foreground truncate">{request.supplier?.company_name}</p>
-                          <p className="text-[13px] text-muted-foreground flex items-center gap-1">
+                          <p className="text-body font-semibold text-foreground truncate">{request.supplier?.company_name}</p>
+                          <p className="text-small text-muted-foreground flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
                             Sent {format(new Date(request.requested_at), 'MMM d, yyyy')}
                           </p>
@@ -781,7 +781,7 @@ const SupplierDiscovery = ({ onOpenCompliance, onViewSupplier }: { onOpenComplia
           {/* Empty State */}
           {totalPendingCount === 0 && (
             <div className={reviewEmptyStateContainerClass}>
-              <Check className="w-12 h-12 mx-auto mb-4 text-emerald-500/60" />
+              <Check className="w-12 h-12 mx-auto mb-4 text-success/60" />
               <h3 className="font-medium text-foreground mb-1">All caught up!</h3>
               <p className="text-sm text-muted-foreground">
                 No pending connection requests at this time
@@ -847,15 +847,15 @@ const CompactSupplierCard = ({ supplier, onView, onMessage, onCompliance }: { su
         size="sm"
       />
       <div className="flex-1 min-w-0 cursor-pointer" onClick={onView}>
-        <h4 className="text-[14px] font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+        <h4 className="text-body font-semibold text-foreground truncate group-hover:text-primary transition-colors">
           {supplier.company_name}
         </h4>
         {supplier.industry && (
-          <Badge variant="outline" className={`mt-1 text-[12px] px-2 py-0.5 rounded-full font-medium ${getIndustryBadgeClass(supplier.industry, VALID_INDUSTRIES)}`}>
+          <Badge variant="outline" className={`mt-1 text-caption px-2 py-0.5 rounded-full font-medium ${getIndustryBadgeClass(supplier.industry, VALID_INDUSTRIES)}`}>
             {supplier.industry}
           </Badge>
         )}
-        <div className="mt-2 space-y-1 text-[13px] text-muted-foreground">
+        <div className="mt-2 space-y-1 text-small text-muted-foreground">
           {supplier.contact_email && (
             <div className="flex items-center gap-1.5 truncate">
               <Mail className="h-3.5 w-3.5 flex-shrink-0" />
@@ -932,9 +932,9 @@ const DiscoverSupplierCard = ({
           size="sm"
         />
         <div className="min-w-0">
-          <h4 className="text-[14px] font-semibold text-foreground truncate">{supplier.company_name}</h4>
+          <h4 className="text-body font-semibold text-foreground truncate">{supplier.company_name}</h4>
           {supplier.industry && (
-            <Badge variant="outline" className={`mt-1 text-[12px] px-2 py-0.5 rounded-full font-medium ${getIndustryBadgeClass(supplier.industry, VALID_INDUSTRIES)}`}>
+            <Badge variant="outline" className={`mt-1 text-caption px-2 py-0.5 rounded-full font-medium ${getIndustryBadgeClass(supplier.industry, VALID_INDUSTRIES)}`}>
               {supplier.industry}
             </Badge>
           )}

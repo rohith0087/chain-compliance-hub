@@ -29,9 +29,9 @@ const ATTESTATION_LABEL: Record<string, string> = {
 
 function confidenceClass(confidence: number | null): string {
   if (confidence == null) return 'bg-muted text-muted-foreground border-border';
-  if (confidence >= 0.9) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  if (confidence >= 0.7) return 'bg-amber-50 text-amber-700 border-amber-200';
-  return 'bg-red-50 text-red-700 border-red-200';
+  if (confidence >= 0.9) return 'bg-success/10 text-success border-success/20';
+  if (confidence >= 0.7) return 'bg-warning/10 text-warning border-warning/20';
+  return 'bg-danger/10 text-danger border-danger/20';
 }
 
 export default function EvidenceFieldsPanel({ documentId, onVisibilityChange }: EvidenceFieldsPanelProps) {
@@ -149,8 +149,8 @@ export default function EvidenceFieldsPanel({ documentId, onVisibilityChange }: 
   return (
     <div className="w-[360px] flex-shrink-0 overflow-y-auto border-l border-border bg-card">
       <div className="flex items-center gap-2 border-b border-border p-4">
-        <Sparkles className="h-4 w-4 text-violet-600" />
-        <p className="text-[15px] font-bold text-foreground">Extracted Evidence</p>
+        <Sparkles className="h-4 w-4 text-primary" />
+        <p className="text-body font-bold text-foreground">Extracted Evidence</p>
       </div>
       <div className="space-y-4 p-4">
         {latestAttestation ? (
@@ -170,7 +170,7 @@ export default function EvidenceFieldsPanel({ documentId, onVisibilityChange }: 
                 <div className="flex items-center justify-between gap-2">
                   <Label className={reviewSectionHeaderClass}>{field.field_name.replace(/_/g, ' ')}</Label>
                   {field.confidence != null && (
-                    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${confidenceClass(field.confidence)}`}>
+                    <span className={`rounded-full border px-2 py-0.5 text-micro font-medium ${confidenceClass(field.confidence)}`}>
                       {Math.round(field.confidence * 100)}%
                     </span>
                   )}
@@ -193,7 +193,7 @@ export default function EvidenceFieldsPanel({ documentId, onVisibilityChange }: 
         )}
 
         {!latestAttestation && missingFields.map((fieldName) => (
-          <div key={fieldName} className="space-y-1.5 rounded-[10px] border border-amber-200 bg-amber-50/50 p-3">
+          <div key={fieldName} className="space-y-1.5 rounded-[10px] border border-warning/20 bg-warning/10 p-3">
             <Label className="text-sm">{fieldName.replace(/_/g, ' ')} *</Label>
             <Input
               className="h-9 rounded-[10px] text-sm"
@@ -201,12 +201,12 @@ export default function EvidenceFieldsPanel({ documentId, onVisibilityChange }: 
               onChange={(event) => setEdits((current) => ({ ...current, [fieldName]: event.target.value }))}
               placeholder="Required before verification"
             />
-            <p className="text-xs text-amber-800">This required field was not extracted. Enter it only after checking the source document.</p>
+            <p className="text-xs text-warning">This required field was not extracted. Enter it only after checking the source document.</p>
           </div>
         ))}
 
         {!latestAttestation && hasValidationFailure && (
-          <div className="flex items-start gap-2 rounded-[10px] border border-red-200 bg-red-50/50 p-3 text-xs text-red-700">
+          <div className="flex items-start gap-2 rounded-[10px] border border-danger/20 bg-danger/10 p-3 text-xs text-danger">
             <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
             <span>{validationResults.find((row) => row.outcome === 'failed' || row.outcome === 'needs_review')?.message || 'Validation issues need correction before this can be verified.'}</span>
           </div>
@@ -214,7 +214,7 @@ export default function EvidenceFieldsPanel({ documentId, onVisibilityChange }: 
 
         {!latestAttestation && (
           <Button
-            className="w-full rounded-[10px] bg-[#10B981] text-white hover:bg-[#059669]"
+            className="w-full rounded-[10px] bg-success text-success-foreground hover:bg-success/90"
             onClick={() => void (approvalTask ? approveAsSecondReviewer() : submitReview())}
             disabled={busy}
           >

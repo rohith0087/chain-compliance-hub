@@ -234,8 +234,8 @@ export default function EvidenceMappingReviewQueue({ buyerId, supplierId }: Evid
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="secondary" className="font-mono">{row.framework_code} · {row.framework_version}</Badge>
                     <Badge variant="outline">{supplierNames.get(row.supplier_id) ?? row.subject_type}</Badge>
-                    {row.status === 'approved' && <Badge className="bg-emerald-600/15 text-emerald-600 hover:bg-emerald-600/15"><CheckCircle2 className="mr-1 h-3 w-3" />approved</Badge>}
-                    {row.status === 'rejected' && <Badge className="bg-red-600/15 text-red-600 hover:bg-red-600/15"><XCircle className="mr-1 h-3 w-3" />rejected</Badge>}
+                    {row.status === 'approved' && <Badge className="bg-success/15 text-success hover:bg-success/15"><CheckCircle2 className="mr-1 h-3 w-3" />approved</Badge>}
+                    {row.status === 'rejected' && <Badge className="bg-danger/15 text-danger hover:bg-danger/15"><XCircle className="mr-1 h-3 w-3" />rejected</Badge>}
                     {row.match_score !== null && (
                       <span className="text-xs text-muted-foreground">match {(Number(row.match_score) * 100).toFixed(0)}%</span>
                     )}
@@ -270,11 +270,11 @@ export default function EvidenceMappingReviewQueue({ buyerId, supplierId }: Evid
                     <Badge variant="outline" className="text-xs capitalize">{row.ai_verdict ?? 'reviewed'}</Badge>
                     <span className="text-xs text-muted-foreground">confidence {(Number(row.ai_confidence) * 100).toFixed(0)}%</span>
                     {row.ai_document_read === true ? (
-                      <Badge variant="outline" className="gap-1 text-[10px] text-emerald-600"><ScanLine className="h-3 w-3" />read the document</Badge>
+                      <Badge variant="outline" className="gap-1 text-micro text-success"><ScanLine className="h-3 w-3" />read the document</Badge>
                     ) : row.ai_document_read === false ? (
-                      <Badge variant="outline" className="gap-1 text-[10px] text-amber-600"><FileText className="h-3 w-3" />couldn’t read file — judged on metadata</Badge>
+                      <Badge variant="outline" className="gap-1 text-micro text-warning"><FileText className="h-3 w-3" />couldn’t read file — judged on metadata</Badge>
                     ) : null}
-                    <span className="text-[10px] text-muted-foreground">· advisory, not a decision</span>
+                    <span className="text-micro text-muted-foreground">· advisory, not a decision</span>
                   </div>
                   {row.ai_reasoning && <p className="mt-1 text-sm">{row.ai_reasoning}</p>}
 
@@ -293,7 +293,7 @@ export default function EvidenceMappingReviewQueue({ buyerId, supplierId }: Evid
                           <table className="w-full text-xs">
                             <tbody>
                               {row.ai_findings.map((f, i) => {
-                                const tone = f.supports === 'yes' ? 'text-emerald-600' : f.supports === 'no' ? 'text-red-600' : 'text-amber-600';
+                                const tone = f.supports === 'yes' ? 'text-success' : f.supports === 'no' ? 'text-danger' : 'text-warning';
                                 const mark = f.supports === 'yes' ? '✓' : f.supports === 'no' ? '✕' : '~';
                                 return (
                                   <tr key={i} className="border-b border-border/60 last:border-0">
@@ -307,8 +307,8 @@ export default function EvidenceMappingReviewQueue({ buyerId, supplierId }: Evid
                           </table>
                           {row.ai_document_excerpt && (
                             <div className="border-t border-border bg-muted/20 px-2 py-1.5">
-                              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Excerpt the AI read</p>
-                              <p className="mt-0.5 line-clamp-3 text-[11px] italic text-muted-foreground">{row.ai_document_excerpt}</p>
+                              <p className="text-micro font-medium uppercase tracking-wide text-muted-foreground">Excerpt the AI read</p>
+                              <p className="mt-0.5 line-clamp-3 text-micro italic text-muted-foreground">{row.ai_document_excerpt}</p>
                             </div>
                           )}
                         </div>
@@ -317,7 +317,7 @@ export default function EvidenceMappingReviewQueue({ buyerId, supplierId }: Evid
                   )}
 
                   {row.ai_concerns && row.ai_concerns.length > 0 && (
-                    <ul className="mt-2 list-inside list-disc text-xs text-amber-600">
+                    <ul className="mt-2 list-inside list-disc text-xs text-warning">
                       {row.ai_concerns.map((concern, i) => <li key={i}>{concern}</li>)}
                     </ul>
                   )}
@@ -336,10 +336,10 @@ export default function EvidenceMappingReviewQueue({ buyerId, supplierId }: Evid
 
               {/* Reject → ask the supplier to resubmit; the new version re-enters this queue. */}
               {row.status === 'rejected' && (
-                <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-2 text-xs">
-                  <span className="text-amber-700 dark:text-amber-500">This evidence was rejected.</span>
+                <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-warning/30 bg-warning/5 p-2 text-xs">
+                  <span className="text-warning">This evidence was rejected.</span>
                   {resubmitted.has(row.id) ? (
-                    <span className="inline-flex items-center gap-1 font-medium text-emerald-600"><CheckCircle2 className="h-3.5 w-3.5" />Resubmission requested</span>
+                    <span className="inline-flex items-center gap-1 font-medium text-success"><CheckCircle2 className="h-3.5 w-3.5" />Resubmission requested</span>
                   ) : (
                     <Button size="sm" variant="outline" className="h-7" disabled={resubmitting === row.id} onClick={() => void requestResubmit(row)}>
                       {resubmitting === row.id ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="mr-1 h-3.5 w-3.5" />}

@@ -19,31 +19,31 @@ export const SupplierConnectionStatus: React.FC<SupplierConnectionStatusProps> =
       case 'pending':
         return {
           label: t('connectionStatus.pending'),
-          color: 'bg-yellow-100 text-yellow-800',
+          color: 'bg-warning/15 text-warning',
           icon: <Clock className="w-3 h-3" />
         };
       case 'approved':
         return {
           label: t('connectionStatus.approved'),
-          color: 'bg-blue-100 text-blue-800',
+          color: 'bg-primary/15 text-primary',
           icon: <AlertTriangle className="w-3 h-3" />
         };
       case 'onboardingPending':
         return {
           label: t('connectionStatus.onboardingPending'),
-          color: 'bg-orange-100 text-orange-800',
+          color: 'bg-warning/15 text-warning',
           icon: <Clock className="w-3 h-3" />
         };
       case 'fullyConnected':
         return {
           label: t('connectionStatus.fullyConnected'),
-          color: 'bg-green-100 text-green-800',
+          color: 'bg-success/15 text-success',
           icon: <CheckCircle className="w-3 h-3" />
         };
       case 'rejected':
         return {
           label: t('connectionStatus.rejected'),
-          color: 'bg-red-100 text-red-800',
+          color: 'bg-danger/15 text-danger',
           icon: <AlertTriangle className="w-3 h-3" />
         };
       default:

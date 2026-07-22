@@ -66,13 +66,13 @@ export const OnboardingNotification: React.FC<OnboardingNotificationProps> = ({
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Clock className="w-5 h-5 text-amber-600" />;
+        return <Clock className="w-5 h-5 text-warning" />;
       case 'onboarding_initiated':
-        return <FileText className="w-5 h-5 text-blue-600" />;
+        return <FileText className="w-5 h-5 text-primary" />;
       case 'approved':
-        return <CheckCircle className="w-5 h-5 text-green-600" />;
+        return <CheckCircle className="w-5 h-5 text-success" />;
       case 'rejected':
-        return <XCircle className="w-5 h-5 text-red-600" />;
+        return <XCircle className="w-5 h-5 text-danger" />;
       default:
         return <Clock className="w-5 h-5 text-muted-foreground" />;
     }
@@ -81,13 +81,13 @@ export const OnboardingNotification: React.FC<OnboardingNotificationProps> = ({
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
-        return 'bg-amber-100 text-amber-800';
+        return 'bg-warning/15 text-warning';
       case 'onboarding_initiated':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-primary/15 text-primary';
       case 'approved':
-        return 'bg-green-100 text-green-800';
+        return 'bg-success/15 text-success';
       case 'rejected':
-        return 'bg-red-100 text-red-800';
+        return 'bg-danger/15 text-danger';
       default:
         return 'bg-muted text-foreground';
     }
@@ -164,24 +164,24 @@ export const OnboardingNotification: React.FC<OnboardingNotificationProps> = ({
         )}
 
         {request.status === 'onboarding_initiated' && (
-          <div className="p-3 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800">
+          <div className="p-3 bg-primary/10 rounded-lg">
+            <p className="text-sm text-primary">
               Onboarding in progress. Please complete all required steps to proceed.
             </p>
           </div>
         )}
 
         {request.status === 'approved' && (
-          <div className="p-3 bg-green-50 rounded-lg">
-            <p className="text-sm text-green-800">
+          <div className="p-3 bg-success/10 rounded-lg">
+            <p className="text-sm text-success">
               Congratulations! Your onboarding has been approved. You are now a linked supplier.
             </p>
           </div>
         )}
 
         {request.status === 'rejected' && (
-          <div className="p-3 bg-red-50 rounded-lg">
-            <p className="text-sm text-red-800">
+          <div className="p-3 bg-danger/10 rounded-lg">
+            <p className="text-sm text-danger">
               This onboarding request was declined. Please contact the buyer for more information.
             </p>
           </div>

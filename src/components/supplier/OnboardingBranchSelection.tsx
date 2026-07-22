@@ -208,7 +208,7 @@ export const OnboardingBranchSelection: React.FC<OnboardingBranchSelectionProps>
                   )}
                 </div>
                 {selectedBranches.includes(branch.id) && (
-                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <CheckCircle className="w-5 h-5 text-success" />
                 )}
               </div>
             </CardContent>
@@ -229,7 +229,7 @@ export const OnboardingBranchSelection: React.FC<OnboardingBranchSelectionProps>
             {saving ? 'Saving...' : 'Save Branch Selection'}
           </Button>
           {selectedBranches.length === 0 && (
-            <span className="text-sm text-red-600">
+            <span className="text-sm text-danger">
               Please select at least one branch
             </span>
           )}
@@ -237,7 +237,7 @@ export const OnboardingBranchSelection: React.FC<OnboardingBranchSelectionProps>
       )}
 
       {isCompleted && (
-        <div className="flex items-center gap-2 text-green-600 pt-4">
+        <div className="flex items-center gap-2 text-success pt-4">
           <CheckCircle className="w-4 h-4" />
           <span className="text-sm">Branch selection completed</span>
         </div>

@@ -320,11 +320,11 @@ const EnhancedDocumentsFilter = ({
 
       {/* Bulk Actions - Only show when documents are selected */}
       {selectedDocuments.size > 0 && (
-        <Card className="bg-gradient-to-br from-[hsl(var(--pink-accent))]/5 to-purple-500/5 border-[hsl(var(--pink-accent))]/20 animate-in slide-in-from-top-2 duration-200">
+        <Card className="bg-primary/5 border-primary/20 animate-in slide-in-from-top-2 duration-200">
           <CardContent className="py-3 px-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Badge className="bg-gradient-to-r from-[hsl(var(--pink-accent))] to-purple-500 text-white border-0">
+                <Badge className="bg-primary text-primary-foreground border-0">
                   {selectedDocuments.size} selected
                 </Badge>
                 <Button 

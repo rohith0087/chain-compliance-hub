@@ -406,12 +406,12 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
                       <div className="flex items-center gap-2">
                         <h4 className="font-medium">{requirement.document_name}</h4>
                         {requirement.is_required && (
-                          <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
+                          <span className="text-xs bg-danger/15 text-danger px-2 py-1 rounded">
                             Required
                           </span>
                         )}
                         {hasTemplate && (
-                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                          <span className="text-xs bg-primary/15 text-primary px-2 py-1 rounded">
                             Template
                           </span>
                         )}
@@ -451,18 +451,18 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
 
                   {/* Template Download Section */}
                   {hasTemplate && !submission && (
-                    <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <FileText className="h-5 w-5 text-blue-600" />
+                    <div className="flex items-center gap-3 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                      <FileText className="h-5 w-5 text-primary" />
                       <div className="flex-1">
-                        <div className="text-sm font-medium text-blue-800">
+                        <div className="text-sm font-medium text-primary">
                           Download template, fill it out, and upload
                         </div>
-                        <div className="text-xs text-blue-600">{requirement.template_file_name}</div>
+                        <div className="text-xs text-primary">{requirement.template_file_name}</div>
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="bg-card border-blue-300 text-blue-700 hover:bg-blue-100"
+                        className="bg-card border-primary/30 text-primary hover:bg-primary/15"
                         onClick={async () => {
                           try {
                             const { data, error } = await supabase.storage
@@ -497,19 +497,19 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
                   {submission ? (
                     submission.is_document_available ? (
                       <div className={`flex items-center justify-between p-3 rounded-lg ${
-                        submission.status === 'approved' ? 'bg-green-50' :
-                        submission.status === 'rejected' ? 'bg-red-50' : 'bg-amber-50'
+                        submission.status === 'approved' ? 'bg-success/10' :
+                        submission.status === 'rejected' ? 'bg-danger/10' : 'bg-warning/10'
                       }`}>
                         <div className="flex items-center gap-2">
                           <FileText className={`w-4 h-4 ${
-                            submission.status === 'approved' ? 'text-green-600' :
-                            submission.status === 'rejected' ? 'text-red-600' : 'text-amber-600'
+                            submission.status === 'approved' ? 'text-success' :
+                            submission.status === 'rejected' ? 'text-danger' : 'text-warning'
                           }`} />
                           <div>
                             <div className="text-sm font-medium">{submission.file_name}</div>
                             <div className="text-xs text-muted-foreground">
                               Uploaded on {new Date(submission.created_at).toLocaleDateString()}
-                              {submission.version > 1 && <span className="ml-2 text-blue-600">v{submission.version}</span>}
+                              {submission.version > 1 && <span className="ml-2 text-primary">v{submission.version}</span>}
                             </div>
                           </div>
                         </div>
@@ -566,24 +566,24 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
                         </div>
                       </div>
                     ) : (
-                      <div className={`p-3 border rounded-lg ${submission.status === 'rejected' ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200'}`}>
+                      <div className={`p-3 border rounded-lg ${submission.status === 'rejected' ? 'bg-danger/10 border-danger/20' : 'bg-warning/10 border-warning/20'}`}>
                         <div className="flex items-center gap-2 mb-2">
-                          <AlertCircle className={`w-4 h-4 ${submission.status === 'rejected' ? 'text-red-600' : 'text-orange-600'}`} />
-                          <span className={`text-sm font-medium ${submission.status === 'rejected' ? 'text-red-800' : 'text-orange-800'}`}>
+                          <AlertCircle className={`w-4 h-4 ${submission.status === 'rejected' ? 'text-danger' : 'text-warning'}`} />
+                          <span className={`text-sm font-medium ${submission.status === 'rejected' ? 'text-danger' : 'text-warning'}`}>
                             {submission.status === 'rejected' ? 'Document Rejected' : 'Document Not Available'}
                           </span>
                         </div>
                         {submission.status === 'rejected' && submission.rejection_reason && (
-                          <div className="text-sm text-red-700 mb-2">
+                          <div className="text-sm text-danger mb-2">
                             <span className="font-medium">Rejection Reason: </span>
                             {submission.rejection_reason}
                           </div>
                         )}
-                        <div className={`text-sm mb-2 ${submission.status === 'rejected' ? 'text-red-700' : 'text-orange-700'}`}>
+                        <div className={`text-sm mb-2 ${submission.status === 'rejected' ? 'text-danger' : 'text-warning'}`}>
                           <span className="font-medium">Unavailability Reason: </span>
                           {submission.unavailability_reason}
                         </div>
-                        <div className={`text-xs ${submission.status === 'rejected' ? 'text-red-600' : 'text-orange-600'}`}>
+                        <div className={`text-xs ${submission.status === 'rejected' ? 'text-danger' : 'text-warning'}`}>
                           Submitted on {new Date(submission.created_at).toLocaleDateString()}
                         </div>
                         {/* Resubmit button for rejected unavailable documents */}
@@ -658,10 +658,10 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
                               </div>
                             </div>
                           ) : (
-                            <div className="border border-orange-200 rounded-lg p-4 bg-orange-50">
+                            <div className="border border-warning/20 rounded-lg p-4 bg-warning/10">
                               <div className="flex items-center gap-2 mb-3">
-                                <AlertCircle className="w-4 h-4 text-orange-600" />
-                                <span className="text-sm font-medium text-orange-800">
+                                <AlertCircle className="w-4 h-4 text-warning" />
+                                <span className="text-sm font-medium text-warning">
                                   Document Not Available
                                 </span>
                               </div>
@@ -751,7 +751,7 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
 
       {allRequiredCompleted && !isCompleted && (
         <div className="space-y-4 pt-4">
-          <div className="flex items-center gap-2 text-green-600">
+          <div className="flex items-center gap-2 text-success">
             <CheckCircle className="w-4 h-4" />
             <span className="text-sm">All required documents uploaded</span>
           </div>
@@ -768,7 +768,7 @@ export const OnboardingDocumentUpload: React.FC<OnboardingDocumentUploadProps> =
       )}
 
       {isCompleted && (
-        <div className="flex items-center gap-2 text-green-600 pt-4">
+        <div className="flex items-center gap-2 text-success pt-4">
           <CheckCircle className="w-4 h-4" />
           <span className="text-sm">Document upload completed</span>
         </div>

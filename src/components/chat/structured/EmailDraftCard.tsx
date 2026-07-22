@@ -35,9 +35,9 @@ export const EmailDraftCard: React.FC<EmailDraftCardProps> = ({ subject, body })
   return (
     <Card className="p-4 border-l-4 border-l-blue-500 bg-card">
       <div className="flex items-center gap-2 mb-4">
-        <Mail className="w-5 h-5 text-blue-500" />
+        <Mail className="w-5 h-5 text-primary" />
         <h3 className="font-semibold text-lg text-foreground">Follow-Up Email Draft</h3>
-        <Badge variant="outline" className="ml-auto bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-400">
+        <Badge variant="outline" className="ml-auto bg-primary/15 text-primary">
           Draft
         </Badge>
       </div>

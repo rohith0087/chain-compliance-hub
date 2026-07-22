@@ -96,7 +96,7 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
               {branch.location && (
                 // Mono for location, per the brand system's "captions and record
                 // values are mono" rule -- reads more deliberate than a pin glyph.
-                <div className="mt-0.5 font-mono text-[11px] tracking-[0.02em] text-muted-foreground">
+                <div className="mt-0.5 font-mono text-micro tracking-[0.02em] text-muted-foreground">
                   {branch.location}
                 </div>
               )}

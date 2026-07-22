@@ -128,7 +128,7 @@ export default function AuditorDocumentComparisonView({ buyerId }: Props) {
                     <p className="truncate text-sm font-medium">{d.name}</p>
                     <p className="truncate text-xs text-muted-foreground">{[d.supplier, d.document_type].filter(Boolean).join(' · ')}</p>
                   </div>
-                  <Badge variant="outline" className="text-[10px] capitalize">{d.status.replace(/_/g, ' ')}</Badge>
+                  <Badge variant="outline" className="text-micro capitalize">{d.status.replace(/_/g, ' ')}</Badge>
                 </label>
               ))}
             </div>
@@ -167,7 +167,7 @@ export default function AuditorDocumentComparisonView({ buyerId }: Props) {
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     {result.documents.map((d, i) => (
                       <Badge key={d.id} variant="outline" className="gap-1 text-xs">
-                        {d.readable ? <ScanLine className="h-3 w-3 text-emerald-600" /> : <XCircle className="h-3 w-3 text-amber-600" />}
+                        {d.readable ? <ScanLine className="h-3 w-3 text-success" /> : <XCircle className="h-3 w-3 text-warning" />}
                         Doc {i + 1}: {d.name}
                       </Badge>
                     ))}
@@ -197,12 +197,12 @@ export default function AuditorDocumentComparisonView({ buyerId }: Props) {
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className={`${reviewCardContainerClass} p-4`}>
-                    <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-600"><CheckCircle2 className="h-4 w-4" />Similarities</p>
-                    {result.similarities.length ? <ul className="space-y-1.5 text-sm">{result.similarities.map((s, i) => <li key={i} className="flex gap-1.5"><span className="text-emerald-600">•</span>{s}</li>)}</ul> : <p className="text-sm text-muted-foreground">None identified.</p>}
+                    <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-success"><CheckCircle2 className="h-4 w-4" />Similarities</p>
+                    {result.similarities.length ? <ul className="space-y-1.5 text-sm">{result.similarities.map((s, i) => <li key={i} className="flex gap-1.5"><span className="text-success">•</span>{s}</li>)}</ul> : <p className="text-sm text-muted-foreground">None identified.</p>}
                   </div>
                   <div className={`${reviewCardContainerClass} p-4`}>
-                    <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-red-600"><ArrowLeftRight className="h-4 w-4" />Differences</p>
-                    {result.differences.length ? <ul className="space-y-1.5 text-sm">{result.differences.map((s, i) => <li key={i} className="flex gap-1.5"><span className="text-red-600">•</span>{s}</li>)}</ul> : <p className="text-sm text-muted-foreground">None identified.</p>}
+                    <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-danger"><ArrowLeftRight className="h-4 w-4" />Differences</p>
+                    {result.differences.length ? <ul className="space-y-1.5 text-sm">{result.differences.map((s, i) => <li key={i} className="flex gap-1.5"><span className="text-danger">•</span>{s}</li>)}</ul> : <p className="text-sm text-muted-foreground">None identified.</p>}
                   </div>
                 </div>
 

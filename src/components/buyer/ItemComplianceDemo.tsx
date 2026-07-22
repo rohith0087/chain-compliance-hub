@@ -26,14 +26,14 @@ const ITEMS: Item[] = [
 ];
 
 const STATUS = {
-  compliant: { tone: 'text-emerald-600', bg: 'bg-emerald-600/15 text-emerald-600', icon: CheckCircle2, label: 'Compliant' },
-  at_risk: { tone: 'text-amber-600', bg: 'bg-amber-500/15 text-amber-600', icon: AlertTriangle, label: 'At risk' },
-  noncompliant: { tone: 'text-red-600', bg: 'bg-red-600/15 text-red-600', icon: XCircle, label: 'Non-compliant' },
+  compliant: { tone: 'text-success', bg: 'bg-success text-success', icon: CheckCircle2, label: 'Compliant' },
+  at_risk: { tone: 'text-warning', bg: 'bg-warning text-warning', icon: AlertTriangle, label: 'At risk' },
+  noncompliant: { tone: 'text-danger', bg: 'bg-danger text-danger', icon: XCircle, label: 'Non-compliant' },
 } as const;
 const COA = {
-  current: { bg: 'bg-emerald-600/15 text-emerald-600', label: 'COA current', icon: FlaskConical },
-  expiring: { bg: 'bg-amber-500/15 text-amber-600', label: 'COA expiring', icon: Clock },
-  missing: { bg: 'bg-red-600/15 text-red-600', label: 'COA missing', icon: XCircle },
+  current: { bg: 'bg-success text-success', label: 'COA current', icon: FlaskConical },
+  expiring: { bg: 'bg-warning text-warning', label: 'COA expiring', icon: Clock },
+  missing: { bg: 'bg-danger text-danger', label: 'COA missing', icon: XCircle },
 } as const;
 
 function Kpi({ icon: Icon, value, label, tone }: { icon: typeof Package; value: string; label: string; tone?: string }) {
@@ -65,14 +65,14 @@ export default function ItemComplianceDemo() {
           <h1 className="flex items-center gap-2 text-2xl font-semibold text-foreground">
             <Package className="h-6 w-6 text-primary" /> Item &amp; Product Compliance
           </h1>
-          <Badge variant="outline" className="text-[10px] uppercase tracking-wide text-muted-foreground">Demo dataset</Badge>
+          <Badge variant="outline" className="text-micro uppercase tracking-wide text-muted-foreground">Demo dataset</Badge>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Kpi icon={Package} value={String(ITEMS.length)} label="Active SKUs" />
-          <Kpi icon={ShieldCheck} value={`${compliant}/${ITEMS.length}`} label="Fully compliant" tone="text-emerald-600" />
-          <Kpi icon={AlertTriangle} value={String(atRisk)} label="At risk" tone="text-amber-600" />
-          <Kpi icon={FlaskConical} value={String(coaIssues)} label="COA attention" tone="text-red-600" />
+          <Kpi icon={ShieldCheck} value={`${compliant}/${ITEMS.length}`} label="Fully compliant" tone="text-success" />
+          <Kpi icon={AlertTriangle} value={String(atRisk)} label="At risk" tone="text-warning" />
+          <Kpi icon={FlaskConical} value={String(coaIssues)} label="COA attention" tone="text-danger" />
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -103,7 +103,7 @@ export default function ItemComplianceDemo() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-xs text-muted-foreground">{it.sku}</span>
-                      <Badge variant="outline" className="text-[10px]">{it.category}</Badge>
+                      <Badge variant="outline" className="text-micro">{it.category}</Badge>
                     </div>
                     <p className="mt-0.5 truncate font-semibold text-foreground">{it.name}</p>
                     <p className="text-xs text-muted-foreground">{it.supplier}</p>
@@ -112,16 +112,16 @@ export default function ItemComplianceDemo() {
                 </div>
 
                 <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
-                  <div className={`h-full ${it.status === 'compliant' ? 'bg-emerald-500' : it.status === 'at_risk' ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${pct}%` }} />
+                  <div className={`h-full ${it.status === 'compliant' ? 'bg-success' : it.status === 'at_risk' ? 'bg-warning' : 'bg-danger'}`} style={{ width: `${pct}%` }} />
                 </div>
                 <p className="mt-1.5 text-xs text-muted-foreground">{it.met}/{it.total} specs met · {it.note}</p>
 
                 <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-border pt-3">
-                  {it.frameworks.map((f) => <Badge key={f} variant="secondary" className="text-[10px]">{f}</Badge>)}
-                  <Badge className={`gap-1 text-[10px] ${C.bg}`}><CIcon className="h-3 w-3" />{C.label}</Badge>
+                  {it.frameworks.map((f) => <Badge key={f} variant="secondary" className="text-micro">{f}</Badge>)}
+                  <Badge className={`gap-1 text-micro ${C.bg}`}><CIcon className="h-3 w-3" />{C.label}</Badge>
                   {it.allergens.length > 0
-                    ? it.allergens.map((a) => <Badge key={a} className="gap-1 bg-orange-500/15 text-[10px] text-orange-600"><Leaf className="h-3 w-3" />{a}</Badge>)
-                    : <Badge variant="outline" className="text-[10px] text-muted-foreground">Allergen-free</Badge>}
+                    ? it.allergens.map((a) => <Badge key={a} className="gap-1 bg-warning text-micro text-warning"><Leaf className="h-3 w-3" />{a}</Badge>)
+                    : <Badge variant="outline" className="text-micro text-muted-foreground">Allergen-free</Badge>}
                 </div>
               </div>
             );

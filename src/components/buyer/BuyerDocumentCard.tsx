@@ -164,7 +164,7 @@ const BuyerDocumentCard = ({ document, onDelete }: BuyerDocumentCardProps) => {
                       </Badge>
                     )}
                     {isExpiringSoon && !isExpired && (
-                      <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-600">
+                      <Badge variant="outline" className="text-xs border-warning text-warning">
                         <AlertCircle className="h-3 w-3 mr-1" />
                         Expiring Soon
                       </Badge>

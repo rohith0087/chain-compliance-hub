@@ -27,13 +27,13 @@ const getStatusIcon = (status: string) => {
   switch (status?.toLowerCase()) {
     case 'approved':
     case 'active':
-      return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
+      return <CheckCircle2 className="w-4 h-4 text-success" />;
     case 'pending':
     case 'pending_review':
-      return <Clock className="w-4 h-4 text-amber-500" />;
+      return <Clock className="w-4 h-4 text-warning" />;
     case 'rejected':
     case 'inactive':
-      return <XCircle className="w-4 h-4 text-red-500" />;
+      return <XCircle className="w-4 h-4 text-danger" />;
     default:
       return <Clock className="w-4 h-4 text-muted-foreground" />;
   }
@@ -43,13 +43,13 @@ const getStatusBadgeClass = (status: string) => {
   switch (status?.toLowerCase()) {
     case 'approved':
     case 'active':
-      return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800';
+      return 'bg-success/15 text-success border-success/20';
     case 'pending':
     case 'pending_review':
-      return 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400 border-amber-200 dark:border-amber-800';
+      return 'bg-warning/15 text-warning border-warning/20';
     case 'rejected':
     case 'inactive':
-      return 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-400 border-red-200 dark:border-red-800';
+      return 'bg-danger/15 text-danger border-danger/20';
     default:
       return 'bg-muted text-muted-foreground border-border';
   }

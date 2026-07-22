@@ -187,9 +187,9 @@ const SupplierInsightsModal = ({ isOpen, onClose, supplier, buyerId }: SupplierI
   const riskLevel = riskAssessment.level;
 
   const getRiskColor = () => {
-    if (riskLevel === 'Low') return 'text-green-600 bg-green-100';
-    if (riskLevel === 'Medium') return 'text-yellow-600 bg-yellow-100';
-    return 'text-red-600 bg-red-100';
+    if (riskLevel === 'Low') return 'text-success bg-success/15';
+    if (riskLevel === 'Medium') return 'text-warning bg-warning/15';
+    return 'text-danger bg-danger/15';
   };
 
   // Contact functionality
@@ -333,17 +333,17 @@ const SupplierInsightsModal = ({ isOpen, onClose, supplier, buyerId }: SupplierI
                               ))}
                             </div>
                             {riskLevel === 'High' && (
-                              <p className="text-xs text-red-600 font-medium">
+                              <p className="text-xs text-danger font-medium">
                                 ⚠️ Requires immediate attention and closer monitoring
                               </p>
                             )}
                             {riskLevel === 'Medium' && (
-                              <p className="text-xs text-yellow-600 font-medium">
+                              <p className="text-xs text-warning font-medium">
                                 ⚡ Monitor closely and provide additional support if needed
                               </p>
                             )}
                             {riskLevel === 'Low' && (
-                              <p className="text-xs text-green-600 font-medium">
+                              <p className="text-xs text-success font-medium">
                                 ✅ Performing well with minimal oversight required
                               </p>
                             )}
@@ -378,7 +378,7 @@ const SupplierInsightsModal = ({ isOpen, onClose, supplier, buyerId }: SupplierI
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-green-600">{overallMetrics.complianceScore}%</div>
+                      <div className="text-3xl font-bold text-success">{overallMetrics.complianceScore}%</div>
                       <Progress value={overallMetrics.complianceScore} className="mt-2" />
                       <p className="text-xs text-muted-foreground mt-1">
                         {overallMetrics.approvedRequests} of {overallMetrics.totalRequests} approved
@@ -420,7 +420,7 @@ const SupplierInsightsModal = ({ isOpen, onClose, supplier, buyerId }: SupplierI
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-red-600">{overallMetrics.overdueCount}</div>
+                      <div className="text-3xl font-bold text-danger">{overallMetrics.overdueCount}</div>
                       <p className="text-xs text-muted-foreground mt-1">Past due date</p>
                     </CardContent>
                   </Card>
@@ -432,48 +432,48 @@ const SupplierInsightsModal = ({ isOpen, onClose, supplier, buyerId }: SupplierI
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <CheckCircle className="h-4 w-4 text-success" />
                       Approved
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-green-600">{overallMetrics.approvedRequests}</div>
+                    <div className="text-2xl font-bold text-success">{overallMetrics.approvedRequests}</div>
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-yellow-500" />
+                      <Clock className="h-4 w-4 text-warning" />
                       Pending
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-yellow-600">{overallMetrics.pendingRequests}</div>
+                    <div className="text-2xl font-bold text-warning">{overallMetrics.pendingRequests}</div>
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <FileCheck className="h-4 w-4 text-blue-500" />
+                      <FileCheck className="h-4 w-4 text-primary" />
                       Submitted
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-blue-600">{overallMetrics.submittedRequests}</div>
+                    <div className="text-2xl font-bold text-primary">{overallMetrics.submittedRequests}</div>
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <XCircle className="h-4 w-4 text-red-500" />
+                      <XCircle className="h-4 w-4 text-danger" />
                       Rejected
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-red-600">{overallMetrics.rejectedRequests}</div>
+                    <div className="text-2xl font-bold text-danger">{overallMetrics.rejectedRequests}</div>
                   </CardContent>
                 </Card>
               </div>
@@ -489,7 +489,7 @@ const SupplierInsightsModal = ({ isOpen, onClose, supplier, buyerId }: SupplierI
                     {requests.map((request) => (
                       <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex items-center space-x-3">
-                          <FileCheck className="w-5 h-5 text-blue-500" />
+                          <FileCheck className="w-5 h-5 text-primary" />
                           <div>
                             <p className="font-medium">{request.title}</p>
                             <p className="text-sm text-muted-foreground">
@@ -510,18 +510,18 @@ const SupplierInsightsModal = ({ isOpen, onClose, supplier, buyerId }: SupplierI
                               request.status === 'submitted' ? 'outline' : 'destructive'
                             }
                             className={
-                              request.status === 'approved' ? 'bg-green-100 text-green-800' :
-                              request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                              request.status === 'submitted' ? 'bg-blue-100 text-blue-800' :
-                              'bg-red-100 text-red-800'
+                              request.status === 'approved' ? 'bg-success/15 text-success' :
+                              request.status === 'pending' ? 'bg-warning/15 text-warning' :
+                              request.status === 'submitted' ? 'bg-primary/15 text-primary' :
+                              'bg-danger/15 text-danger'
                             }
                           >
                             {request.status}
                           </Badge>
                           <Badge variant="outline" className={
-                            request.priority === 'high' ? 'border-red-500 text-red-500' :
-                            request.priority === 'medium' ? 'border-yellow-500 text-yellow-500' :
-                            'border-green-500 text-green-500'
+                            request.priority === 'high' ? 'border-danger text-danger' :
+                            request.priority === 'medium' ? 'border-warning text-warning' :
+                            'border-success text-success'
                           }>
                             {request.priority}
                           </Badge>
@@ -547,16 +547,16 @@ const SupplierInsightsModal = ({ isOpen, onClose, supplier, buyerId }: SupplierI
                           <span className="font-bold">{stats.total}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-green-600">Approved</span>
-                          <span className="font-bold text-green-600">{stats.approved}</span>
+                          <span className="text-sm text-success">Approved</span>
+                          <span className="font-bold text-success">{stats.approved}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-yellow-600">Pending</span>
-                          <span className="font-bold text-yellow-600">{stats.pending}</span>
+                          <span className="text-sm text-warning">Pending</span>
+                          <span className="font-bold text-warning">{stats.pending}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-red-600">Rejected</span>
-                          <span className="font-bold text-red-600">{stats.rejected}</span>
+                          <span className="text-sm text-danger">Rejected</span>
+                          <span className="font-bold text-danger">{stats.rejected}</span>
                         </div>
                         <Progress 
                           value={stats.total > 0 ? (stats.approved / stats.total) * 100 : 0} 
@@ -581,7 +581,7 @@ const SupplierInsightsModal = ({ isOpen, onClose, supplier, buyerId }: SupplierI
                   <div className="space-y-4">
                     {requests.slice(0, 10).map((request, index) => (
                       <div key={request.id} className="flex items-start space-x-3">
-                        <div className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                        <div className="flex-shrink-0 w-2 h-2 bg-primary rounded-full mt-2"></div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
                             <p className="text-sm font-medium">{request.title}</p>
@@ -621,13 +621,13 @@ const SupplierInsightsModal = ({ isOpen, onClose, supplier, buyerId }: SupplierI
                       <h4 className="font-medium mb-2">Recommendations</h4>
                       <div className="space-y-2 text-sm">
                         {overallMetrics.complianceScore < 70 && (
-                          <p className="text-red-600">• Consider additional support or training for this supplier</p>
+                          <p className="text-danger">• Consider additional support or training for this supplier</p>
                         )}
                         {overallMetrics.overdueCount > 0 && (
-                          <p className="text-yellow-600">• Follow up on {overallMetrics.overdueCount} overdue requests</p>
+                          <p className="text-warning">• Follow up on {overallMetrics.overdueCount} overdue requests</p>
                         )}
                         {overallMetrics.complianceScore >= 90 && (
-                          <p className="text-green-600">• Excellent performance - consider strategic partnership opportunities</p>
+                          <p className="text-success">• Excellent performance - consider strategic partnership opportunities</p>
                         )}
                       </div>
                     </div>

@@ -20,22 +20,22 @@ const getPriorityConfig = (priority?: string) => {
     case 'urgent':
       return {
         icon: ArrowUp,
-        color: 'text-red-500',
-        badgeClass: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-400',
+        color: 'text-danger',
+        badgeClass: 'bg-danger/15 text-danger',
         label: 'High',
       };
     case 'medium':
       return {
         icon: Minus,
-        color: 'text-amber-500',
-        badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400',
+        color: 'text-warning',
+        badgeClass: 'bg-warning/15 text-warning',
         label: 'Medium',
       };
     case 'low':
       return {
         icon: Minus,
-        color: 'text-blue-500',
-        badgeClass: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-400',
+        color: 'text-primary',
+        badgeClass: 'bg-primary/15 text-primary',
         label: 'Low',
       };
     default:

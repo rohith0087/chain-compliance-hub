@@ -266,7 +266,7 @@ export default function DossierGeneratorView({ buyerId, lockSupplierId }: Dossie
                 </Button>
                 {verifyResult && (
                   <Badge variant="outline" className={verifyResult.signature_valid && verifyResult.audit_chain.valid
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-red-200 bg-red-50 text-red-800'}>
+                    ? 'border-success/20 bg-success/10 text-success' : 'border-danger/20 bg-danger/10 text-danger'}>
                     {verifyResult.signature_valid && verifyResult.audit_chain.valid
                       ? <><CheckCircle2 className="mr-1 h-3.5 w-3.5" />Verified</>
                       : <><XCircle className="mr-1 h-3.5 w-3.5" />Verification failed</>}

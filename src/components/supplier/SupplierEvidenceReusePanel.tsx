@@ -104,8 +104,8 @@ export default function SupplierEvidenceReusePanel({ request, onResolved, onUplo
 
   return (
     <>
-      <Alert className="mx-6 mb-4 border-blue-200 bg-blue-50/60">
-        <LockKeyhole className="h-4 w-4 text-blue-700" />
+      <Alert className="mx-6 mb-4 border-primary/20 bg-primary/10">
+        <LockKeyhole className="h-4 w-4 text-primary" />
         <AlertTitle>Existing evidence may satisfy this request</AlertTitle>
         <AlertDescription className="mt-2 space-y-3">
           <p>The buyer cannot see your evidence until you choose to share it. You can reuse a valid version, upload a newer version, or ask why it was requested again.</p>

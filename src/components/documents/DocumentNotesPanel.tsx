@@ -28,12 +28,12 @@ function initials(name: string | null, email: string | null): string {
 
 function avatarColor(authorId: string): string {
   const palette = [
-    'bg-violet-100 text-violet-700',
-    'bg-blue-100 text-blue-700',
-    'bg-emerald-100 text-emerald-700',
-    'bg-amber-100 text-amber-700',
-    'bg-rose-100 text-rose-700',
-    'bg-cyan-100 text-cyan-700',
+    'bg-primary/15 text-primary',
+    'bg-primary/15 text-primary',
+    'bg-success/15 text-success',
+    'bg-warning/15 text-warning',
+    'bg-danger/15 text-danger',
+    'bg-primary/15 text-primary',
     'bg-fuchsia-100 text-fuchsia-700',
   ];
   let hash = 0;
@@ -119,10 +119,10 @@ export default function DocumentNotesPanel({ documentId }: DocumentNotesPanelPro
     <div className="flex w-[360px] flex-shrink-0 flex-col border-l border-border bg-card">
       {/* Panel header */}
       <div className="flex items-center gap-2 border-b border-border px-4 py-3.5">
-        <StickyNote className="h-4 w-4 text-amber-500" />
-        <p className="text-[15px] font-bold text-foreground">Notes</p>
+        <StickyNote className="h-4 w-4 text-warning" />
+        <p className="text-body font-bold text-foreground">Notes</p>
         {notes.length > 0 && (
-          <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+          <span className="ml-auto rounded-full bg-warning/15 px-2 py-0.5 text-micro font-semibold text-warning">
             {notes.length}
           </span>
         )}
@@ -136,14 +136,14 @@ export default function DocumentNotesPanel({ documentId }: DocumentNotesPanelPro
           </div>
         ) : notes.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-16 px-6 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-50">
-              <StickyNote className="h-5 w-5 text-amber-400" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-warning/10">
+              <StickyNote className="h-5 w-5 text-warning" />
             </div>
-            <p className="text-[13px] font-medium text-foreground/80">No notes yet</p>
-            <p className="text-[12px] text-muted-foreground/70">Add the first note to keep a record of observations or decisions.</p>
+            <p className="text-small font-medium text-foreground/80">No notes yet</p>
+            <p className="text-caption text-muted-foreground/70">Add the first note to keep a record of observations or decisions.</p>
           </div>
         ) : (
-          <div className="space-y-0 divide-y divide-[#F3F4F6] p-4 pb-2">
+          <div className="space-y-0 divide-y divide-border p-4 pb-2">
             {notes.map((note) => {
               const name = note.profiles?.full_name ?? null;
               const email = note.profiles?.email ?? null;
@@ -152,17 +152,17 @@ export default function DocumentNotesPanel({ documentId }: DocumentNotesPanelPro
               return (
                 <div key={note.id} className="group flex gap-3 py-4 first:pt-0">
                   {/* Avatar */}
-                  <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[12px] font-bold ${color}`}>
+                  <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-caption font-bold ${color}`}>
                     {ini}
                   </div>
                   <div className="min-w-0 flex-1">
                     {/* Name + time */}
                     <div className="flex items-baseline gap-2">
-                      <span className="text-[13px] font-semibold text-foreground truncate">{name || email || 'Unknown'}</span>
-                      <span className="flex-shrink-0 text-[11px] text-muted-foreground/70">{relativeTime(note.created_at)}</span>
+                      <span className="text-small font-semibold text-foreground truncate">{name || email || 'Unknown'}</span>
+                      <span className="flex-shrink-0 text-micro text-muted-foreground/70">{relativeTime(note.created_at)}</span>
                     </div>
                     {/* Body */}
-                    <p className="mt-1 text-[13px] leading-[1.5] text-foreground/80 whitespace-pre-wrap break-words">{note.body}</p>
+                    <p className="mt-1 text-small leading-[1.5] text-foreground/80 whitespace-pre-wrap break-words">{note.body}</p>
                   </div>
                 </div>
               );
@@ -174,7 +174,7 @@ export default function DocumentNotesPanel({ documentId }: DocumentNotesPanelPro
 
       {/* Compose area */}
       <div className="border-t border-border p-3">
-        <div className="relative rounded-[12px] border border-border bg-muted transition-colors focus-within:border-amber-400 focus-within:bg-card focus-within:shadow-[0_0_0_3px_rgba(251,191,36,0.12)]">
+        <div className="relative rounded-[12px] border border-border bg-muted transition-colors focus-within:border-warning focus-within:bg-card focus-within:shadow-[0_0_0_3px_rgba(251,191,36,0.12)]">
           <Textarea
             placeholder="Add a note… (⌘↵ to send)"
             value={draft}
@@ -182,15 +182,15 @@ export default function DocumentNotesPanel({ documentId }: DocumentNotesPanelPro
             onKeyDown={onKeyDown}
             rows={3}
             maxLength={2000}
-            className="resize-none rounded-[12px] border-0 bg-transparent px-3 pt-3 pb-10 text-[13px] text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-0 shadow-none"
+            className="resize-none rounded-[12px] border-0 bg-transparent px-3 pt-3 pb-10 text-small text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-0 shadow-none"
           />
           <div className="absolute bottom-2.5 right-2.5 flex items-center gap-2">
             {draft.length > 0 && (
-              <span className="text-[11px] text-muted-foreground/70 tabular-nums">{draft.length}/2000</span>
+              <span className="text-micro text-muted-foreground/70 tabular-nums">{draft.length}/2000</span>
             )}
             <Button
               size="icon"
-              className="h-7 w-7 rounded-[8px] bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-40"
+              className="h-7 w-7 rounded-[8px] bg-warning text-white hover:bg-warning disabled:opacity-40"
               disabled={!draft.trim() || submitting}
               onClick={() => void submit()}
             >

@@ -42,8 +42,8 @@ const roleOptions = [
 ];
 
 const statusColors = {
-  active: 'bg-green-100 text-green-800',
-  pending: 'bg-yellow-100 text-yellow-800',
+  active: 'bg-success/15 text-success',
+  pending: 'bg-warning/15 text-warning',
   inactive: 'bg-muted text-foreground'
 };
 
@@ -518,7 +518,7 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
                           <Label className="text-sm font-medium">Invitation Expires</Label>
                           <p className="text-sm">{formatDate(selectedUser.invitation_expires_at)}</p>
                           {isInvitationExpired(selectedUser.invitation_expires_at) && (
-                            <p className="text-sm text-red-600">⚠️ Invitation has expired</p>
+                            <p className="text-sm text-danger">⚠️ Invitation has expired</p>
                           )}
                         </div>
                       )}
@@ -633,7 +633,7 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
                       <div className="text-sm text-muted-foreground">
                         <div className="flex items-center space-x-1 mb-1">
                           <Mail className="h-3 w-3" />
-                          <span className={user.email === 'Invitation data unavailable' ? 'text-orange-600' : ''}>
+                          <span className={user.email === 'Invitation data unavailable' ? 'text-warning' : ''}>
                             {user.email}
                           </span>
                         </div>
@@ -648,7 +648,7 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
                           {user.status === 'pending' && user.inviter_name && (
                             <>
                               <span>•</span>
-                              <span className={user.inviter_name === 'Unknown' ? 'text-orange-600' : ''}>
+                              <span className={user.inviter_name === 'Unknown' ? 'text-warning' : ''}>
                                 Invited by {user.inviter_name}
                               </span>
                             </>
@@ -665,7 +665,7 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
                      >
                        {user.status}
                        {user.status === 'pending' && user.invitation_expires_at && isInvitationExpired(user.invitation_expires_at) && (
-                         <span className="ml-1 text-red-600">(Expired)</span>
+                         <span className="ml-1 text-danger">(Expired)</span>
                        )}
                      </Badge>
                      {user.status === 'pending' && user.invitation_expires_at && (
@@ -734,8 +734,8 @@ export const CompanyUserManagement: React.FC<CompanyUserManagementProps> = ({
         </DialogHeader>
         
         {deleteConfirmation && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-            <p className="text-sm text-yellow-800 mb-2">
+          <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 mb-4">
+            <p className="text-sm text-warning mb-2">
               ⚠️ {deleteConfirmation.message}
             </p>
             <div className="flex items-center space-x-2">

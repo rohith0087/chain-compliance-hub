@@ -53,10 +53,10 @@ export function SupplierRiskManagement() {
 
   const getRiskIcon = (level: string) => {
     switch (level) {
-      case 'critical': return <AlertTriangle className="w-5 h-5 text-red-600" />;
-      case 'high': return <AlertCircle className="w-5 h-5 text-orange-500" />;
-      case 'medium': return <Info className="w-5 h-5 text-yellow-500" />;
-      case 'low': return <Shield className="w-5 h-5 text-green-500" />;
+      case 'critical': return <AlertTriangle className="w-5 h-5 text-danger" />;
+      case 'high': return <AlertCircle className="w-5 h-5 text-warning" />;
+      case 'medium': return <Info className="w-5 h-5 text-warning" />;
+      case 'low': return <Shield className="w-5 h-5 text-success" />;
       default: return null;
     }
   };
@@ -72,10 +72,10 @@ export function SupplierRiskManagement() {
   };
 
   const riskCategories = [
-    { level: 'critical', count: performance.filter(p => p.risk_level === 'critical').length, color: 'bg-red-600' },
-    { level: 'high', count: performance.filter(p => p.risk_level === 'high').length, color: 'bg-orange-500' },
-    { level: 'medium', count: performance.filter(p => p.risk_level === 'medium').length, color: 'bg-yellow-500' },
-    { level: 'low', count: performance.filter(p => p.risk_level === 'low').length, color: 'bg-green-500' },
+    { level: 'critical', count: performance.filter(p => p.risk_level === 'critical').length, color: 'bg-danger' },
+    { level: 'high', count: performance.filter(p => p.risk_level === 'high').length, color: 'bg-warning' },
+    { level: 'medium', count: performance.filter(p => p.risk_level === 'medium').length, color: 'bg-warning' },
+    { level: 'low', count: performance.filter(p => p.risk_level === 'low').length, color: 'bg-success' },
   ];
 
   if (loading) {

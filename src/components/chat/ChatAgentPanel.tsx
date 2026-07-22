@@ -406,14 +406,14 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
       
     switch (currentStatus?.toLowerCase()) {
       case 'approved':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircle className="h-4 w-4 text-success" />;
       case 'pending':
       case 'pending_review':
       case 'submitted':
-        return <Clock className="h-4 w-4 text-yellow-500" />;
+        return <Clock className="h-4 w-4 text-warning" />;
       case 'expired':
       case 'rejected':
-        return <XCircle className="h-4 w-4 text-red-500" />;
+        return <XCircle className="h-4 w-4 text-danger" />;
       default:
         return <FileText className="h-4 w-4 text-muted-foreground" />;
     }
@@ -500,7 +500,7 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
             section.type === 'alert' || section.title?.includes('⚠️') ? 
             'border-l-4 border-l-destructive bg-destructive/5' :
             section.title?.includes('✅') ?
-            'border-l-4 border-l-green-500 bg-green-500/5' :
+            'border-l-4 border-l-green-500 bg-success' :
             'border-l-2 border-l-muted-foreground/30 bg-muted/20';
 
           return (
@@ -534,8 +534,8 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
                                     const isExpiringSoon = trimmedPart.match(/expiring|expires.*(\d{1,2}\s+days?)/i);
                                     return (
                                       <div key={idx} className={`text-xs flex items-center gap-1 font-medium ${
-                                        isExpired ? 'text-red-600' : 
-                                        isExpiringSoon ? 'text-amber-600' : 'text-muted-foreground'
+                                        isExpired ? 'text-danger' : 
+                                        isExpiringSoon ? 'text-warning' : 'text-muted-foreground'
                                       }`}>
                                         <Calendar className="h-3 w-3" />
                                         {trimmedPart}
@@ -582,13 +582,13 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
                     
                     return (
                       <div key={i} className={`flex items-start gap-2 text-sm p-2 rounded ${
-                        isPriority ? 'bg-red-50 border-l-2 border-l-red-500' :
-                        isImportant ? 'bg-yellow-50 border-l-2 border-l-yellow-500' :
+                        isPriority ? 'bg-danger/10 border-l-2 border-l-red-500' :
+                        isImportant ? 'bg-warning/10 border-l-2 border-l-yellow-500' :
                         'hover:bg-muted/50'
                       }`}>
                         <div className={`w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0 ${
-                          isPriority ? 'bg-red-500' :
-                          isImportant ? 'bg-yellow-500' :
+                          isPriority ? 'bg-danger' :
+                          isImportant ? 'bg-warning' :
                           'bg-primary'
                         }`} />
                         <span className="text-foreground leading-relaxed">{cleanItem}</span>
@@ -658,10 +658,10 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
             {response.documents.map((doc, idx) => {
               const statusColor = 
                 doc.status === "approved" 
-                  ? "border-l-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20"
+                  ? "border-l-emerald-500 bg-success/10"
                   : doc.status === "pending_review" || doc.status === "submitted"
-                  ? "border-l-amber-500 bg-amber-50/50 dark:bg-amber-950/20"
-                  : "border-l-red-500 bg-red-50/50 dark:bg-red-950/20";
+                  ? "border-l-amber-500 bg-warning/10"
+                  : "border-l-red-500 bg-danger/10";
                   
               return (
                 <Card key={idx} className={`border-l-4 transition-all hover:shadow-lg ${statusColor}`}>
@@ -680,16 +680,16 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
                       )}
                       
                       <div className="flex items-center gap-3 flex-wrap">
-                        <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400">
+                        <Badge className="bg-primary/15 text-primary">
                           {doc.document_type}
                         </Badge>
                         
                         {doc.expiration_date && (
                           <div className={`flex items-center gap-1 text-sm ${
                             isExpired(doc.expiration_date) 
-                              ? 'text-red-600 dark:text-red-400' 
+                              ? 'text-danger' 
                               : isExpiringSoon(doc.expiration_date) 
-                              ? 'text-amber-600 dark:text-amber-400' 
+                              ? 'text-warning' 
                               : 'text-muted-foreground'
                           }`}>
                             <Calendar className="w-4 h-4" />
@@ -705,10 +705,10 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
                           variant="outline"
                           className={`capitalize ${
                             doc.status === "approved"
-                              ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-400"
+                              ? "bg-success/15 text-success border-success/30"
                               : doc.status === "pending_review" || doc.status === "submitted"
-                              ? "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-400"
-                              : "bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-400"
+                              ? "bg-warning/15 text-warning border-warning/30"
+                              : "bg-danger/15 text-danger border-danger/30"
                           }`}
                         >
                           {doc.status.replace("_", " ")}

@@ -19,40 +19,40 @@ const getGroupConfig = (type: string) => {
       return {
         icon: FileX,
         title: 'Expired Documents',
-        color: 'text-red-500',
-        bgColor: 'bg-red-50 dark:bg-red-950/30',
-        borderColor: 'border-red-200 dark:border-red-800',
-        badgeClass: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-400',
+        color: 'text-danger',
+        bgColor: 'bg-danger/10',
+        borderColor: 'border-danger/20',
+        badgeClass: 'bg-danger/15 text-danger',
       };
     case 'missing_documents':
     case 'missing':
       return {
         icon: AlertCircle,
         title: 'Missing Documents',
-        color: 'text-amber-500',
-        bgColor: 'bg-amber-50 dark:bg-amber-950/30',
-        borderColor: 'border-amber-200 dark:border-amber-800',
-        badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400',
+        color: 'text-warning',
+        bgColor: 'bg-warning/10',
+        borderColor: 'border-warning/20',
+        badgeClass: 'bg-warning/15 text-warning',
       };
     case 'pending_review':
     case 'pending':
       return {
         icon: Clock,
         title: 'Pending Review',
-        color: 'text-blue-500',
-        bgColor: 'bg-blue-50 dark:bg-blue-950/30',
-        borderColor: 'border-blue-200 dark:border-blue-800',
-        badgeClass: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-400',
+        color: 'text-primary',
+        bgColor: 'bg-primary/10',
+        borderColor: 'border-primary/20',
+        badgeClass: 'bg-primary/15 text-primary',
       };
     case 'expiring_soon':
     case 'expiring':
       return {
         icon: AlertTriangle,
         title: 'Expiring Soon',
-        color: 'text-orange-500',
-        bgColor: 'bg-orange-50 dark:bg-orange-950/30',
-        borderColor: 'border-orange-200 dark:border-orange-800',
-        badgeClass: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-400',
+        color: 'text-warning',
+        bgColor: 'bg-warning/10',
+        borderColor: 'border-warning/20',
+        badgeClass: 'bg-warning/15 text-warning',
       };
     default:
       return {

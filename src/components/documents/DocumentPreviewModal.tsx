@@ -149,7 +149,7 @@ function ZoomableImage({ src, alt }: { src: string; alt: string }) {
         <Button size="icon" variant="ghost" className="h-8 w-8 rounded-[8px] text-foreground/80 hover:bg-muted" onClick={() => applyZoom(zoom - 0.25)} disabled={zoom <= 1} title="Zoom out">
           <Minus className="h-4 w-4" />
         </Button>
-        <span className="w-12 text-center text-[12px] font-semibold tabular-nums text-foreground/80">{Math.round(zoom * 100)}%</span>
+        <span className="w-12 text-center text-caption font-semibold tabular-nums text-foreground/80">{Math.round(zoom * 100)}%</span>
         <Button size="icon" variant="ghost" className="h-8 w-8 rounded-[8px] text-foreground/80 hover:bg-muted" onClick={() => applyZoom(zoom + 0.25)} disabled={zoom >= 6} title="Zoom in">
           <Plus className="h-4 w-4" />
         </Button>
@@ -268,8 +268,8 @@ export default function DocumentPreviewModal({
     if (error || !signedUrl) {
       return (
         <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-muted-foreground">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
-            <AlertTriangle className="h-6 w-6 text-red-600" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-danger/10">
+            <AlertTriangle className="h-6 w-6 text-danger" />
           </div>
           <p className="text-sm font-medium text-foreground">{error || 'No file available to preview'}</p>
           {upload?.file_path && (
@@ -302,7 +302,7 @@ export default function DocumentPreviewModal({
             className="h-full w-full border-0"
             onLoad={() => setOfficeLoaded(true)}
           />
-          <div className="pointer-events-none absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/95 px-3 py-1 text-[11px] text-muted-foreground shadow-sm">
+          <div className="pointer-events-none absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/95 px-3 py-1 text-micro text-muted-foreground shadow-sm">
             Not rendering?
             {officeFullUrl && (
               <a href={officeFullUrl} target="_blank" rel="noreferrer" className="pointer-events-auto font-semibold text-primary hover:underline">Open in new tab</a>
@@ -323,7 +323,7 @@ export default function DocumentPreviewModal({
         </div>
         <p className="text-sm font-medium text-foreground">This file type can't be previewed inline.</p>
         <p className="text-xs text-muted-foreground">{fileName}</p>
-        <Button className="rounded-[10px] bg-primary text-white hover:bg-[#1D4ED8]" onClick={() => void handleDownload()}>
+        <Button className="rounded-[10px] bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => void handleDownload()}>
           <Download className="mr-2 h-4 w-4" />Download to view
         </Button>
       </div>
@@ -343,15 +343,15 @@ export default function DocumentPreviewModal({
               <HeaderIcon className="h-5 w-5 text-primary" />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-[15px] font-bold text-foreground">{title || fileName || 'Document'}</p>
-              <p className="truncate text-[13px] text-muted-foreground">
+              <p className="truncate text-body font-bold text-foreground">{title || fileName || 'Document'}</p>
+              <p className="truncate text-small text-muted-foreground">
                 {[supplierName, fileName, formatBytes(upload?.file_size)].filter(Boolean).join(' · ') || 'Preview'}
               </p>
             </div>
           </div>
           <div className="flex flex-shrink-0 items-center gap-2">
             {statusConfig && (
-              <Badge className={`hidden items-center gap-1 rounded-full border px-2 py-0.5 text-[12px] font-medium md:inline-flex ${statusConfig.className}`}>
+              <Badge className={`hidden items-center gap-1 rounded-full border px-2 py-0.5 text-caption font-medium md:inline-flex ${statusConfig.className}`}>
                 <statusConfig.icon className="h-3 w-3" />{statusConfig.label}
               </Badge>
             )}
@@ -365,7 +365,7 @@ export default function DocumentPreviewModal({
                 <Button
                   size="icon"
                   variant="outline"
-                  className="h-[36px] w-[36px] flex-shrink-0 rounded-[10px] border-[#FCA5A5] bg-card text-[#DC2626] hover:bg-[#FEF2F2]"
+                  className="h-[36px] w-[36px] flex-shrink-0 rounded-[10px] border-danger/40 bg-card text-danger hover:bg-danger/10"
                   onClick={handleDecline}
                   title="Reject"
                 >
@@ -373,7 +373,7 @@ export default function DocumentPreviewModal({
                 </Button>
                 <Button
                   size="icon"
-                  className="h-[36px] w-[36px] flex-shrink-0 rounded-[10px] bg-[#10B981] text-white hover:bg-[#059669]"
+                  className="h-[36px] w-[36px] flex-shrink-0 rounded-[10px] bg-success text-success-foreground hover:bg-success/90"
                   disabled={approveBusy}
                   onClick={() => void handleApprove()}
                   title="Approve"
@@ -394,7 +394,7 @@ export default function DocumentPreviewModal({
             ) : (
               <Button
                 size="sm"
-                className="h-[36px] rounded-[10px] bg-[#10B981] px-3 font-semibold text-white hover:bg-[#059669]"
+                className="h-[36px] rounded-[10px] bg-success px-3 font-semibold text-success-foreground hover:bg-success/90"
                 disabled={downloading || !upload?.file_path}
                 onClick={() => void handleDownload()}
               >
@@ -405,7 +405,7 @@ export default function DocumentPreviewModal({
               <Button
                 size="icon"
                 variant="ghost"
-                className={`h-[36px] w-[36px] rounded-[10px] transition-colors ${notesOpen ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' : 'text-muted-foreground hover:bg-muted'}`}
+                className={`h-[36px] w-[36px] rounded-[10px] transition-colors ${notesOpen ? 'bg-warning/10 text-warning hover:bg-warning/15' : 'text-muted-foreground hover:bg-muted'}`}
                 onClick={() => setNotesOpen((v) => !v)}
                 title="Notes"
               >

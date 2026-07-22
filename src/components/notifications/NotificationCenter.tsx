@@ -24,25 +24,25 @@ const NotificationCenter = ({ onNavigate, onOpenHelpCenter }: NotificationCenter
     switch (type) {
       case 'document_approved':
       case 'document_submitted':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
+        return <CheckCircle className="w-5 h-5 text-success" />;
       case 'document_declined':
       case 'document_rejected':
-        return <AlertTriangle className="w-5 h-5 text-red-500" />;
+        return <AlertTriangle className="w-5 h-5 text-danger" />;
       case 'connection_request':
       case 'connection_response':
-        return <Users className="w-5 h-5 text-blue-500" />;
+        return <Users className="w-5 h-5 text-primary" />;
       case 'new_document_request':
-        return <FileText className="w-5 h-5 text-purple-500" />;
+        return <FileText className="w-5 h-5 text-primary" />;
       case 'document_uploaded':
-        return <Upload className="w-5 h-5 text-orange-500" />;
+        return <Upload className="w-5 h-5 text-warning" />;
       case 'document_renewed':
-        return <RefreshCw className="w-5 h-5 text-blue-500" />;
+        return <RefreshCw className="w-5 h-5 text-primary" />;
       case 'document_expiry_expires_soon':
-        return <Clock className="w-5 h-5 text-blue-500" />;
+        return <Clock className="w-5 h-5 text-primary" />;
       case 'document_expiry_urgent':
-        return <AlertTriangle className="w-5 h-5 text-amber-500" />;
+        return <AlertTriangle className="w-5 h-5 text-warning" />;
       case 'document_expiry_overdue':
-        return <AlertTriangle className="w-5 h-5 text-red-500" />;
+        return <AlertTriangle className="w-5 h-5 text-danger" />;
       case 'system_announcement':
         return <HelpCircle className="w-5 h-5 text-primary" />;
       default:
@@ -52,10 +52,10 @@ const NotificationCenter = ({ onNavigate, onOpenHelpCenter }: NotificationCenter
 
   const getExpiryUrgencyBadge = (type: string) => {
     if (type === 'document_expiry_expires_soon') {
-      return <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Expires Soon</Badge>;
+      return <Badge variant="secondary" className="text-xs bg-primary/15 text-primary">Expires Soon</Badge>;
     }
     if (type === 'document_expiry_urgent') {
-      return <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">Urgent</Badge>;
+      return <Badge variant="secondary" className="text-xs bg-warning/15 text-warning">Urgent</Badge>;
     }
     if (type === 'document_expiry_overdue') {
       return <Badge variant="destructive" className="text-xs">Overdue</Badge>;

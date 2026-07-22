@@ -51,7 +51,13 @@ import ApprovedDocumentSummaryModal from './ApprovedDocumentSummaryModal';
 import { DocumentNotesModal } from './DocumentNotesModal';
 import DocumentPreviewModal from './DocumentPreviewModal';
 import ReviewPagination from './ReviewPagination';
-import { STATUS_BADGE_CONFIG, CATEGORY_BADGE_CLASS } from './buyerReviewDesignSystem';
+import {
+  STATUS_BADGE_CONFIG,
+  CATEGORY_BADGE_CLASS,
+  reviewActionButtonPrimaryClass,
+  reviewActionButtonDangerClass,
+  reviewActionButtonSecondaryClass,
+} from '@/design/system';
 
 interface BuyerDocumentsManagerProps {
   documents: any[];
@@ -734,8 +740,8 @@ const BuyerDocumentsManager = ({
       {/* Page Title Block */}
       <div className="pt-7 pb-5 flex justify-between items-start">
         <div className="flex flex-col gap-1.5">
-          <h1 className="text-[26px] font-bold text-foreground leading-none">All Documents</h1>
-          <p className="text-[15px] text-muted-foreground">Manage and review supplier compliance documents</p>
+          <h1 className="text-h1 font-bold text-foreground leading-none">All Documents</h1>
+          <p className="text-body text-muted-foreground">Manage and review supplier compliance documents</p>
         </div>
       </div>
 
@@ -758,12 +764,12 @@ const BuyerDocumentsManager = ({
         {statusTabs.map((tab) => {
           const isActive = statusTab === tab.value;
           const badgeColors = tab.pinned
-            ? (isActive ? 'bg-amber-100 text-amber-700' : 'bg-amber-50 text-amber-600')
+            ? (isActive ? 'bg-warning/15 text-warning' : 'bg-warning/10 text-warning')
             : ({
-                all: 'bg-[#EAF1FF] text-primary',
+                all: 'bg-primary/10 text-primary',
                 pending_approval: 'bg-muted text-foreground/80',
-                approved: 'bg-[#ECFDF5] text-[#047857]',
-                declined: 'bg-[#FEF2F2] text-[#DC2626]',
+                approved: 'bg-success/10 text-success',
+                declined: 'bg-danger/10 text-danger',
               }[tab.value] || 'bg-muted text-muted-foreground');
           const count =
             tab.value === 'all' ? statusCounts.all
@@ -779,19 +785,19 @@ const BuyerDocumentsManager = ({
               )}
               <button
                 onClick={() => setStatusTab(tab.value)}
-                className={`relative h-full flex items-center gap-2 text-[14px] font-semibold transition-colors ${
+                className={`relative h-full flex items-center gap-2 text-body font-semibold transition-colors ${
                   isActive
-                    ? tab.pinned ? 'text-amber-600' : 'text-primary'
+                    ? tab.pinned ? 'text-warning' : 'text-primary'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {tab.pinned && <Pin className="h-3.5 w-3.5 flex-shrink-0" />}
                 {tab.label}
-                <span className={`h-[22px] min-w-[22px] rounded-full px-1.5 text-[12px] font-bold flex items-center justify-center ${badgeColors}`}>
+                <span className={`h-[22px] min-w-[22px] rounded-full px-1.5 text-caption font-bold flex items-center justify-center ${badgeColors}`}>
                   {count}
                 </span>
                 {isActive && (
-                  <div className={`absolute bottom-0 left-0 right-0 h-[3px] rounded-full ${tab.pinned ? 'bg-amber-500' : 'bg-primary'}`} />
+                  <div className={`absolute bottom-0 left-0 right-0 h-[3px] rounded-full ${tab.pinned ? 'bg-warning' : 'bg-primary'}`} />
                 )}
               </button>
             </div>
@@ -944,17 +950,17 @@ const BuyerDocumentsManager = ({
         <div className="text-center py-14 border border-dashed border-border rounded-[16px] bg-card">
           {statusTab === 'pinned' ? (
             <>
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 mx-auto mb-3">
-                <Pin className="w-6 h-6 text-amber-400" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-warning/10 mx-auto mb-3">
+                <Pin className="w-6 h-6 text-warning" />
               </div>
-              <h3 className="text-[15px] font-semibold text-foreground mb-1">No pinned documents yet</h3>
-              <p className="text-[13px] text-muted-foreground max-w-xs mx-auto">Pin any document using the <Pin className="inline w-3.5 h-3.5 text-muted-foreground mx-0.5" /> button in the actions column — they'll appear here for quick access, newest first.</p>
+              <h3 className="text-body font-semibold text-foreground mb-1">No pinned documents yet</h3>
+              <p className="text-small text-muted-foreground max-w-xs mx-auto">Pin any document using the <Pin className="inline w-3.5 h-3.5 text-muted-foreground mx-0.5" /> button in the actions column — they'll appear here for quick access, newest first.</p>
             </>
           ) : (
             <>
               <FileText className="w-12 h-12 text-muted-foreground/70 mx-auto mb-3" />
-              <h3 className="text-[15px] font-semibold text-foreground mb-1">No Documents Found</h3>
-              <p className="text-[13px] text-muted-foreground">
+              <h3 className="text-body font-semibold text-foreground mb-1">No Documents Found</h3>
+              <p className="text-small text-muted-foreground">
                 {activeFilterCount > 0 || statusTab !== 'all' ? "No documents match your current filters." : "No documents available."}
               </p>
             </>
@@ -1006,17 +1012,17 @@ const BuyerDocumentsManager = ({
                 <TableHead className="w-[4%] px-3">
                   <Checkbox checked={allPageSelected} onCheckedChange={(checked) => handleSelectAll(checked === true)} />
                 </TableHead>
-                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-muted-foreground px-3 w-[28%]">Document</TableHead>
-                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-muted-foreground px-3 w-[14%]">Supplier</TableHead>
-                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-muted-foreground px-3 w-[12%]">
+                <TableHead className="text-caption font-bold tracking-[0.04em] uppercase text-muted-foreground px-3 w-[28%]">Document</TableHead>
+                <TableHead className="text-caption font-bold tracking-[0.04em] uppercase text-muted-foreground px-3 w-[14%]">Supplier</TableHead>
+                <TableHead className="text-caption font-bold tracking-[0.04em] uppercase text-muted-foreground px-3 w-[12%]">
                   <button className="flex items-center gap-1 truncate" onClick={() => toggleSort('created_at')}>
                     <Calendar className="w-3.5 h-3.5 flex-shrink-0" /><span className="truncate">Date</span><SortIcon column="created_at" />
                   </button>
                 </TableHead>
-                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-muted-foreground px-3 w-[10%]">Uploader</TableHead>
-                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-muted-foreground px-3 w-[6%]">Size</TableHead>
-                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-muted-foreground px-3 w-[10%]">Status</TableHead>
-                <TableHead className="text-[12px] font-bold tracking-[0.04em] uppercase text-muted-foreground text-right px-3 w-[16%]">Actions</TableHead>
+                <TableHead className="text-caption font-bold tracking-[0.04em] uppercase text-muted-foreground px-3 w-[10%]">Uploader</TableHead>
+                <TableHead className="text-caption font-bold tracking-[0.04em] uppercase text-muted-foreground px-3 w-[6%]">Size</TableHead>
+                <TableHead className="text-caption font-bold tracking-[0.04em] uppercase text-muted-foreground px-3 w-[10%]">Status</TableHead>
+                <TableHead className="text-caption font-bold tracking-[0.04em] uppercase text-muted-foreground text-right px-3 w-[16%]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1047,17 +1053,17 @@ const BuyerDocumentsManager = ({
                         disabled={!hasFile}
                         title={hasFile ? 'Preview document' : undefined}
                       >
-                        <div className="w-[40px] h-[40px] rounded-[10px] bg-[#EFF6FF] flex items-center justify-center flex-shrink-0">
+                        <div className="w-[40px] h-[40px] rounded-[10px] bg-primary/10 flex items-center justify-center flex-shrink-0">
                           <FileText className="w-5 h-5 text-primary" />
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 min-w-0">
-                            <p className={`text-[14px] font-semibold text-foreground truncate ${hasFile ? 'hover:text-primary' : ''}`} title={doc.title || doc.document_type}>{doc.title || doc.document_type}</p>
+                            <p className={`text-body font-semibold text-foreground truncate ${hasFile ? 'hover:text-primary' : ''}`} title={doc.title || doc.document_type}>{doc.title || doc.document_type}</p>
                             {pinnedIds.has(doc.id) && (
-                              <Pin className="h-3 w-3 flex-shrink-0 text-amber-500 fill-amber-400" />
+                              <Pin className="h-3 w-3 flex-shrink-0 text-warning fill-warning/70" />
                             )}
                           </div>
-                          <p className="text-[13px] text-muted-foreground flex items-center gap-1.5">
+                          <p className="text-small text-muted-foreground flex items-center gap-1.5">
                             ID: {doc.id.slice(0, 8).toUpperCase()}
                             {getLatestUpload(doc.document_uploads)?.source_channel === 'email_reply' && (
                               <span title="Received by email reply" className="inline-flex items-center text-primary" aria-label="Received by email reply">
@@ -1069,40 +1075,40 @@ const BuyerDocumentsManager = ({
                       </button>
                     </TableCell>
                     <TableCell className="px-3 py-3">
-                      <div className="text-[14px] truncate">
+                      <div className="text-body truncate">
                         <p className="font-medium text-foreground truncate" title={doc.suppliers?.company_name}>{doc.suppliers?.company_name || 'Unknown'}</p>
                         <p className="text-muted-foreground">{supplierShortId(doc.supplier_id)}</p>
                       </div>
                     </TableCell>
-                    <TableCell className="px-3 py-3 text-[13px] text-muted-foreground truncate">
+                    <TableCell className="px-3 py-3 text-small text-muted-foreground truncate">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-3.5 h-3.5 text-muted-foreground/70 flex-shrink-0" />
                         <span className="truncate">{formatDate(doc.created_at)}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="px-3 py-3 text-[13px] text-muted-foreground truncate">
+                    <TableCell className="px-3 py-3 text-small text-muted-foreground truncate">
                       <div className="flex items-center gap-1.5" title={latestUpload?.uploader?.full_name}>
                         <User className="w-3.5 h-3.5 text-muted-foreground/70 flex-shrink-0" />
                         <span className="truncate">{latestUpload?.uploader?.full_name || '—'}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="px-3 py-3 text-[13px] text-muted-foreground truncate">
+                    <TableCell className="px-3 py-3 text-small text-muted-foreground truncate">
                       <span className="truncate">{formatFileSize(latestUpload?.file_size)}</span>
                     </TableCell>
                     <TableCell className="px-3 py-3">
                       <div className="flex items-center gap-1.5 flex-nowrap">
-                        <Badge variant="outline" className={`text-[12px] px-2 py-0.5 rounded-full font-medium border-0 flex items-center justify-center ${statusConfig.className}`}>
+                        <Badge variant="outline" className={`text-caption px-2 py-0.5 rounded-full font-medium border-0 flex items-center justify-center ${statusConfig.className}`}>
                           <StatusIcon className="w-3 h-3 mr-1" />{statusConfig.label}
                         </Badge>
                         <Popover>
                           <PopoverTrigger asChild>
-                            <button className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-medium bg-[#EEF2FF] text-[#4F46E5] hover:bg-[#E0E7FF] transition-colors border-0">
+                            <button className="flex items-center gap-1 text-micro px-1.5 py-0.5 rounded-md font-medium bg-primary/10 text-primary hover:bg-primary/15 transition-colors border-0">
                               <Sparkles className="w-3 h-3" />
                             </button>
                           </PopoverTrigger>
                           <PopoverContent className="w-72 p-3 text-xs bg-card border-border shadow-[0_12px_24px_rgba(15,23,42,0.12)] rounded-[12px]">
                             <div className="flex items-start gap-2">
-                              <Sparkles className="w-4 h-4 text-[#4F46E5] mt-0.5" />
+                              <Sparkles className="w-4 h-4 text-primary mt-0.5" />
                               <div>
                                 <p className="font-semibold mb-1 text-foreground">{insight.label}</p>
                                 <p className="text-muted-foreground leading-relaxed">{insight.description}</p>
@@ -1116,15 +1122,15 @@ const BuyerDocumentsManager = ({
                       <div className="flex items-center justify-end gap-1.5 flex-nowrap">
                         {canApproveOrDecline ? (
                           <>
-                            <Button size="icon" className="h-[36px] w-[36px] bg-[#10B981] hover:bg-[#059669] text-white rounded-[10px] shadow-sm flex-shrink-0" disabled={approveLoading === doc.id} onClick={() => onApprove(doc.id)} title="Approve">
+                            <Button size="icon" className={reviewActionButtonPrimaryClass} disabled={approveLoading === doc.id} onClick={() => onApprove(doc.id)} title="Approve">
                               <Check className="w-4 h-4" />
                             </Button>
-                            <Button size="icon" variant="outline" className="h-[36px] w-[36px] bg-card text-[#DC2626] border-[#FCA5A5] hover:bg-[#FEF2F2] rounded-[10px] shadow-sm flex-shrink-0" disabled={declineLoading === doc.id} onClick={() => onDecline(doc.id)} title="Decline">
+                            <Button size="icon" variant="outline" className={reviewActionButtonDangerClass} disabled={declineLoading === doc.id} onClick={() => onDecline(doc.id)} title="Decline">
                               <X className="w-4 h-4" />
                             </Button>
                           </>
                         ) : (
-                          <Button size="sm" variant="outline" className="h-[36px] px-[12px] bg-card text-foreground/80 border-border hover:bg-muted rounded-[10px] font-semibold shadow-sm" onClick={() => handleView(doc)}>
+                          <Button size="sm" variant="outline" className={reviewActionButtonSecondaryClass} onClick={() => handleView(doc)}>
                             View
                           </Button>
                         )}
@@ -1137,7 +1143,7 @@ const BuyerDocumentsManager = ({
                           <DropdownMenuContent align="end" className="rounded-[12px] shadow-[0_12px_24px_rgba(15,23,42,0.12)] border-border">
                             <DropdownMenuItem onClick={() => pinnedIds.has(doc.id) ? handleUnpin(doc.id) : handlePin(doc.id)} disabled={pinBusy === doc.id}>
                               {pinnedIds.has(doc.id)
-                                ? <><PinOff className="w-3.5 h-3.5 mr-2 text-amber-500" />Unpin</>
+                                ? <><PinOff className="w-3.5 h-3.5 mr-2 text-warning" />Unpin</>
                                 : <><Pin className="w-3.5 h-3.5 mr-2" />Pin</>}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => { setSelectedNotesDocument(doc); setNotesModalOpen(true); }}>
@@ -1153,7 +1159,7 @@ const BuyerDocumentsManager = ({
                             )}
                             <DropdownMenuSeparator className="bg-muted" />
                             {canWithdraw && (
-                              <DropdownMenuItem onClick={() => onWithdraw(doc.id, doc.title || doc.document_type)} disabled={withdrawLoading === doc.id} className="text-[#DC2626] focus:text-[#DC2626]">
+                              <DropdownMenuItem onClick={() => onWithdraw(doc.id, doc.title || doc.document_type)} disabled={withdrawLoading === doc.id} className="text-danger focus:text-danger">
                                 <Ban className="w-3.5 h-3.5 mr-2" />Withdraw request
                               </DropdownMenuItem>
                             )}

@@ -324,17 +324,17 @@ export function CommandPaletteSearch({
     switch (status) {
       case 'approved':
       case 'completed':
-        return 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/60 dark:text-green-300 dark:border-green-700';
+        return 'bg-success/15 text-success border-success/30';
       case 'pending':
       case 'invited':
-        return 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/60 dark:text-amber-300 dark:border-amber-700';
+        return 'bg-warning/15 text-warning border-warning/30';
       case 'rejected':
-        return 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/60 dark:text-red-300 dark:border-red-700';
+        return 'bg-danger/15 text-danger border-danger/30';
       case 'in_review':
       case 'under_review':
-        return 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/60 dark:text-blue-300 dark:border-blue-700';
+        return 'bg-primary/15 text-primary border-primary/30';
       default:
-        return 'bg-muted text-muted-foreground border-border dark:bg-gray-800 dark:text-muted-foreground/70';
+        return 'bg-muted text-muted-foreground border-border';
     }
   };
 
@@ -351,7 +351,7 @@ export function CommandPaletteSearch({
         <Search className="mr-2 h-4 w-4" />
         <span className="hidden lg:inline-flex">Search everything...</span>
         <span className="inline-flex lg:hidden">Search...</span>
-        <kbd className="pointer-events-none absolute right-[0.3rem] top-[0.3rem] hidden h-6 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+        <kbd className="pointer-events-none absolute right-[0.3rem] top-[0.3rem] hidden h-6 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-micro font-medium opacity-100 sm:flex">
           <span className="text-xs">⌘</span>K
         </kbd>
       </Button>

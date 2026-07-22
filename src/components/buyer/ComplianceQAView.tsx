@@ -137,7 +137,7 @@ export default function ComplianceQAView({ buyerId, lockSupplierId }: Compliance
                 {typeof turn.scope.documents_read === 'number' && turn.scope.documents_read > 0 && (
                   <Badge variant="outline" className="text-xs">{turn.scope.documents_read} document{turn.scope.documents_read > 1 ? 's' : ''} read</Badge>
                 )}
-                <span className="text-[10px] text-muted-foreground">· grounded in this supplier's compliance record only</span>
+                <span className="text-micro text-muted-foreground">· grounded in this supplier's compliance record only</span>
               </div>
             )}
           </div>

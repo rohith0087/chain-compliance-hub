@@ -103,9 +103,9 @@ export const NotificationSettingsForm: React.FC = () => {
             </div>
 
             {localSettings.new_request_email_enabled && (
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
-                <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-blue-700 dark:text-blue-300">
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                <Info className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-primary">
                   When enabled, email notifications for new requests will be sent to:
                   <ul className="list-disc list-inside mt-1 ml-1">
                     <li>Company owner</li>
@@ -157,7 +157,7 @@ export const NotificationSettingsForm: React.FC = () => {
               <div className="grid gap-6 md:grid-cols-3">
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                    <Badge variant="secondary" className="bg-primary/15 text-primary">
                       Expires Soon
                     </Badge>
                   </Label>
@@ -176,7 +176,7 @@ export const NotificationSettingsForm: React.FC = () => {
 
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
-                    <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                    <Badge variant="secondary" className="bg-warning/15 text-warning">
                       <AlertTriangle className="h-3 w-3 mr-1" />
                       Urgent
                     </Badge>
@@ -250,7 +250,7 @@ export const NotificationSettingsForm: React.FC = () => {
                 {/* Expires Soon */}
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                    <Badge variant="secondary" className="bg-primary/15 text-primary">
                       Expires Soon
                     </Badge>
                     <span className="text-sm text-muted-foreground">
@@ -286,7 +286,7 @@ export const NotificationSettingsForm: React.FC = () => {
                 {/* Urgent */}
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                    <Badge variant="secondary" className="bg-warning/15 text-warning">
                       <AlertTriangle className="h-3 w-3 mr-1" />
                       Urgent
                     </Badge>

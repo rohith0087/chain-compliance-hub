@@ -59,16 +59,16 @@ const DocumentPreview = ({ isOpen, onClose, request }: DocumentPreviewProps) => 
 
   const getFileIcon = (mimeType: string) => {
     if (mimeType?.startsWith('image/')) {
-      return <ImageIcon className="w-8 h-8 text-blue-500" />;
+      return <ImageIcon className="w-8 h-8 text-primary" />;
     }
     return <FileText className="w-8 h-8 text-muted-foreground" />;
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'pending_review': return 'bg-yellow-100 text-yellow-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
+      case 'approved': return 'bg-success/15 text-success';
+      case 'pending_review': return 'bg-warning/15 text-warning';
+      case 'rejected': return 'bg-danger/15 text-danger';
       default: return 'bg-muted text-foreground';
     }
   };
@@ -162,7 +162,7 @@ const DocumentPreview = ({ isOpen, onClose, request }: DocumentPreviewProps) => 
             
             {loading ? (
               <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                 <p className="text-sm text-muted-foreground mt-2">Loading documents...</p>
               </div>
             ) : uploads.length > 0 ? (

@@ -105,10 +105,10 @@ const DocumentCard = ({
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'submitted': return 'bg-blue-100 text-blue-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
+      case 'approved': return 'bg-success/15 text-success';
+      case 'pending': return 'bg-warning/15 text-warning';
+      case 'submitted': return 'bg-primary/15 text-primary';
+      case 'rejected': return 'bg-danger/15 text-danger';
       case 'expired': return 'bg-muted text-foreground';
       default: return 'bg-muted text-foreground';
     }
@@ -199,8 +199,8 @@ const DocumentCard = ({
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 text-blue-600" />
+              <div className="w-10 h-10 bg-primary/15 rounded-lg flex items-center justify-center">
+                <FileText className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <CardTitle className="text-lg">{document.title || document.document_type}</CardTitle>
@@ -216,7 +216,7 @@ const DocumentCard = ({
                   <span className="ml-1 capitalize">{document.status}</span>
                 </Badge>
                 {document.branch && (
-                  <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800">
+                  <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
                     <MapPin className="w-3 h-3 mr-1" />
                     {document.branch.branch_name}
                   </Badge>
@@ -258,7 +258,7 @@ const DocumentCard = ({
                     <Button 
                       size="sm" 
                       variant="default" 
-                      className="bg-green-600 hover:bg-green-700"
+                      className="bg-success hover:bg-success"
                       onClick={onApprove}
                       disabled={approveLoading || declineLoading}
                     >
@@ -277,7 +277,7 @@ const DocumentCard = ({
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="border-red-300 text-red-600 hover:bg-red-50"
+                      className="border-danger/30 text-danger hover:bg-danger/10"
                       onClick={onDecline}
                       disabled={approveLoading || declineLoading}
                     >
@@ -307,8 +307,8 @@ const DocumentCard = ({
                     size="sm" 
                     onClick={() => setShowRenewalDialog(true)}
                     className={expiryStatus.status === 'expired' 
-                      ? 'bg-red-600 hover:bg-red-700' 
-                      : 'bg-amber-600 hover:bg-amber-700'
+                      ? 'bg-danger hover:bg-danger' 
+                      : 'bg-warning hover:bg-warning'
                     }
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
@@ -390,7 +390,7 @@ const DocumentCard = ({
                       </Badge>
                     )}
                     {isExpiringSoon(document.expiration_date) && !isExpired(document.expiration_date) && (
-                      <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800">
+                      <Badge variant="outline" className="text-xs bg-warning/15 text-warning">
                         Expires Soon
                       </Badge>
                     )}
@@ -415,7 +415,7 @@ const DocumentCard = ({
                       </Badge>
                     )}
                     {isExpiringSoon(document.expiration_date) && !isExpired(document.expiration_date) && (
-                      <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800">
+                      <Badge variant="outline" className="text-xs bg-warning/15 text-warning">
                         Expires Soon
                       </Badge>
                     )}

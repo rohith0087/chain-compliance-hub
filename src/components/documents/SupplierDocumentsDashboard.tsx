@@ -506,7 +506,7 @@ const SupplierDocumentsDashboard = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Documents Dashboard</h1>
-        <Badge variant="outline" className="bg-green-100 text-green-800">
+        <Badge variant="outline" className="bg-success/15 text-success">
           Supplier Portal
         </Badge>
       </div>
@@ -535,7 +535,7 @@ const SupplierDocumentsDashboard = () => {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+            <div className="text-2xl font-bold text-warning">{stats.pending}</div>
           </CardContent>
         </Card>
         
@@ -548,7 +548,7 @@ const SupplierDocumentsDashboard = () => {
             <Upload className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.submitted}</div>
+            <div className="text-2xl font-bold text-primary">{stats.submitted}</div>
           </CardContent>
         </Card>
         
@@ -561,7 +561,7 @@ const SupplierDocumentsDashboard = () => {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
+            <div className="text-2xl font-bold text-success">{stats.approved}</div>
           </CardContent>
         </Card>
         
@@ -574,7 +574,7 @@ const SupplierDocumentsDashboard = () => {
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
+            <div className="text-2xl font-bold text-danger">{stats.rejected}</div>
           </CardContent>
         </Card>
         
@@ -587,7 +587,7 @@ const SupplierDocumentsDashboard = () => {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{stats.expiringSoon}</div>
+            <div className="text-2xl font-bold text-warning">{stats.expiringSoon}</div>
           </CardContent>
         </Card>
         
@@ -600,7 +600,7 @@ const SupplierDocumentsDashboard = () => {
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.expired}</div>
+            <div className="text-2xl font-bold text-danger">{stats.expired}</div>
           </CardContent>
         </Card>
       </div>
@@ -631,12 +631,12 @@ const SupplierDocumentsDashboard = () => {
                 </div>
                 <Button
                   onClick={() => setShowFilters(!showFilters)}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-success hover:bg-success text-white"
                 >
                   <Filter className="w-4 h-4 mr-2" />
                   Filters
                   {activeFiltersCount > 0 && (
-                    <Badge variant="secondary" className="ml-2 bg-card text-green-600">
+                    <Badge variant="secondary" className="ml-2 bg-card text-success">
                       {activeFiltersCount}
                     </Badge>
                   )}

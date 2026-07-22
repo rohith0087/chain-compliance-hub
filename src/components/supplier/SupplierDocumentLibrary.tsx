@@ -144,9 +144,9 @@ export const SupplierDocumentLibrary: React.FC<SupplierDocumentLibraryProps> = (
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'processing': return 'bg-blue-100 text-blue-800';
-      case 'failed': return 'bg-red-100 text-red-800';
+      case 'completed': return 'bg-success/15 text-success';
+      case 'processing': return 'bg-primary/15 text-primary';
+      case 'failed': return 'bg-danger/15 text-danger';
       default: return 'bg-muted text-foreground';
     }
   };

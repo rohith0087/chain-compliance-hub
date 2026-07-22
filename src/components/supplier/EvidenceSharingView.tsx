@@ -52,8 +52,8 @@ interface AuditLogEntry {
 }
 
 const statusConfig: Record<ClaimStatus, { label: string; icon: typeof CheckCircle2; className: string }> = {
-  extracted: { label: 'Needs review', icon: ClipboardCheck, className: 'border-amber-200 bg-amber-50 text-amber-800' },
-  verified: { label: 'Verified', icon: CheckCircle2, className: 'border-emerald-200 bg-emerald-50 text-emerald-800' },
+  extracted: { label: 'Needs review', icon: ClipboardCheck, className: 'border-warning/20 bg-warning/10 text-warning' },
+  verified: { label: 'Verified', icon: CheckCircle2, className: 'border-success/20 bg-success/10 text-success' },
   rejected: { label: 'Rejected', icon: XCircle, className: 'border-border bg-muted text-foreground/80' },
   superseded: { label: 'Superseded', icon: XCircle, className: 'border-border bg-muted text-muted-foreground' },
 };
@@ -290,7 +290,7 @@ function LegacyEvidenceSharingView({ supplierId }: EvidenceSharingViewProps) {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={grant.status === 'active' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-border bg-muted text-muted-foreground'}>
+                      <Badge variant="outline" className={grant.status === 'active' ? 'border-success/20 bg-success/10 text-success' : 'border-border bg-muted text-muted-foreground'}>
                         {grant.status === 'active' ? 'Active' : 'Revoked'}
                       </Badge>
                       {grant.status === 'active' && (

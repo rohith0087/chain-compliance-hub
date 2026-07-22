@@ -150,7 +150,7 @@ export function IntegrationsDirectoryModal({ open, onOpenChange }: IntegrationsD
                   <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
                   <Input 
                     placeholder="Search connectors..." 
-                    className="pl-10 h-11 bg-card border-border shadow-sm rounded-xl focus-visible:ring-1 focus-visible:ring-slate-300"
+                    className="pl-10 h-11 bg-card border-border shadow-sm rounded-xl focus-visible:ring-1 focus-visible:ring-primary/30"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                   />
@@ -189,11 +189,11 @@ export function IntegrationsDirectoryModal({ open, onOpenChange }: IntegrationsD
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold text-foreground">{integration.name}</h3>
                             {integration.new && (
-                              <span className="text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded">New</span>
+                              <span className="text-micro font-bold text-danger bg-danger/10 px-1.5 py-0.5 rounded">New</span>
                             )}
                           </div>
                           {integration.popular && (
-                            <div className="text-[11px] font-medium text-muted-foreground/70 mt-0.5">
+                            <div className="text-micro font-medium text-muted-foreground/70 mt-0.5">
                               {integration.popular}
                             </div>
                           )}

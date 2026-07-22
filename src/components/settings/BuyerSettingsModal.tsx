@@ -221,7 +221,7 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
       <DialogContent className="max-w-[860px] h-[88vh] p-0 gap-0 overflow-hidden rounded-[20px] border border-border shadow-2xl flex flex-col">
         {/* Header bar */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4 flex-shrink-0">
-          <h1 className="text-[15px] font-bold text-foreground">Settings</h1>
+          <h1 className="text-body font-bold text-foreground">Settings</h1>
           <button
             onClick={() => onOpenChange(false)}
             className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors"
@@ -237,7 +237,7 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
             {/* Workspace group */}
             {visibleNav.some((n) => n.ownerOnly || n.adminAndOwner) && (
               <>
-                <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Workspace</p>
+                <p className="mb-1.5 px-2 text-micro font-bold uppercase tracking-widest text-muted-foreground/70">Workspace</p>
                 {visibleNav
                   .filter((n) => n.ownerOnly || n.adminAndOwner)
                   .map((item) => (
@@ -253,7 +253,7 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
             )}
 
             {/* Personal group */}
-            <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Personal</p>
+            <p className="mb-1.5 px-2 text-micro font-bold uppercase tracking-widest text-muted-foreground/70">Personal</p>
             {visibleNav
               .filter((n) => !n.ownerOnly && !n.adminAndOwner && n.id !== 'integrations')
               .map((item) => (
@@ -268,7 +268,7 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
             <div className="my-3 border-t border-border" />
 
             {/* Platform group */}
-            <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Platform</p>
+            <p className="mb-1.5 px-2 text-micro font-bold uppercase tracking-widest text-muted-foreground/70">Platform</p>
             <NavBtn
               item={{ id: 'integrations', label: 'Integrations', icon: Plug }}
               active={resolvedSection === 'integrations'}
@@ -324,7 +324,7 @@ function NavBtn({ item, active, onClick }: NavBtnProps) {
     <button
       onClick={onClick}
       className={[
-        'flex w-full items-center gap-2.5 rounded-[9px] px-2.5 py-2 text-[13px] font-medium transition-colors mb-0.5',
+        'flex w-full items-center gap-2.5 rounded-[9px] px-2.5 py-2 text-small font-medium transition-colors mb-0.5',
         active
           ? 'bg-card text-foreground shadow-sm border border-border'
           : 'text-muted-foreground hover:bg-card/60 hover:text-foreground/80',
@@ -356,13 +356,13 @@ function CompanyPanel({
   return (
     <div className="space-y-6 max-w-[560px]">
       <div>
-        <h2 className="text-[16px] font-bold text-foreground">Company</h2>
-        <p className="text-[13px] text-muted-foreground mt-0.5">Manage your organization's profile and address.</p>
+        <h2 className="text-h3 font-bold text-foreground">Company</h2>
+        <p className="text-small text-muted-foreground mt-0.5">Manage your organization's profile and address.</p>
       </div>
 
       <div className="rounded-[14px] border border-border bg-card p-5 space-y-5">
         <div>
-          <Label className="text-[13px] font-semibold text-foreground/80">Company Logo</Label>
+          <Label className="text-small font-semibold text-foreground/80">Company Logo</Label>
           <div className="mt-2">
             <LogoUploadWidget
               currentLogoUrl={buyerData.company_logo_url}
@@ -377,16 +377,16 @@ function CompanyPanel({
         <form onSubmit={handleCompanySubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-[13px] font-medium text-foreground/80">Company Name</Label>
+              <Label className="text-small font-medium text-foreground/80">Company Name</Label>
               <Input
-                className="mt-1 h-9 text-[13px]"
+                className="mt-1 h-9 text-small"
                 value={buyerData.company_name}
                 onChange={(e) => setBuyerData((p: any) => ({ ...p, company_name: e.target.value }))}
                 required
               />
             </div>
             <div>
-              <Label className="text-[13px] font-medium text-foreground/80">Industry</Label>
+              <Label className="text-small font-medium text-foreground/80">Industry</Label>
               <SafeSelect
                 value={buyerData.industry}
                 onValueChange={(v) => setBuyerData((p: any) => ({ ...p, industry: v }))}
@@ -397,7 +397,7 @@ function CompanyPanel({
                 ))}
               </SafeSelect>
               {buyerData.industry === 'Auditor' && (
-                <p className="mt-1 text-[11px] text-blue-600 bg-blue-50 border border-blue-100 rounded-[6px] px-2 py-1.5">
+                <p className="mt-1 text-micro text-primary bg-primary/10 border border-primary/20 rounded-[6px] px-2 py-1.5">
                   Auditor workspace enabled — dashboard shows audit terminology.
                 </p>
               )}
@@ -406,9 +406,9 @@ function CompanyPanel({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-[13px] font-medium text-foreground/80">Contact Email</Label>
+              <Label className="text-small font-medium text-foreground/80">Contact Email</Label>
               <Input
-                className="mt-1 h-9 text-[13px]"
+                className="mt-1 h-9 text-small"
                 type="email"
                 value={buyerData.contact_email}
                 onChange={(e) => setBuyerData((p: any) => ({ ...p, contact_email: e.target.value }))}
@@ -416,9 +416,9 @@ function CompanyPanel({
               />
             </div>
             <div>
-              <Label className="text-[13px] font-medium text-foreground/80">Phone</Label>
+              <Label className="text-small font-medium text-foreground/80">Phone</Label>
               <Input
-                className="mt-1 h-9 text-[13px]"
+                className="mt-1 h-9 text-small"
                 value={buyerData.phone}
                 onChange={(e) => setBuyerData((p: any) => ({ ...p, phone: e.target.value }))}
               />
@@ -426,7 +426,7 @@ function CompanyPanel({
           </div>
 
           <div>
-            <Label className="text-[13px] font-semibold text-foreground/80 mb-1 block">Address</Label>
+            <Label className="text-small font-semibold text-foreground/80 mb-1 block">Address</Label>
             <AddressFields
               data={{
                 address_line1: buyerData.address_line1,
@@ -443,7 +443,7 @@ function CompanyPanel({
           <Button
             type="submit"
             disabled={loading}
-            className="h-9 w-full rounded-[10px] bg-primary text-[13px] font-semibold text-white hover:bg-primary-hover"
+            className="h-9 w-full rounded-[10px] bg-primary text-small font-semibold text-white hover:bg-primary-hover"
           >
             {loading ? 'Saving…' : 'Save Company Information'}
           </Button>

@@ -170,13 +170,13 @@ export const BulkInviteModal = ({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-blue-500" />
+            <Users className="w-5 h-5 text-primary" />
             Bulk Supplier Onboarding
           </DialogTitle>
         </DialogHeader>
 
         {/* Buyer ID Card */}
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800">
+        <Card className="bg-primary/5 border-primary/20">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -185,7 +185,7 @@ export const BulkInviteModal = ({
                 </div>
                 Your Buyer ID
               </CardTitle>
-              <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-100">
+              <Badge variant="secondary" className="bg-primary/15 text-primary">
                 Unique Identifier
               </Badge>
             </div>
@@ -229,12 +229,12 @@ export const BulkInviteModal = ({
               </Button>
             </div>
             
-            <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-100 dark:border-blue-900">
+            <div className="bg-primary/10 p-3 rounded-lg border border-primary/20">
               <div className="flex items-start gap-2">
-                <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                <div className="text-sm text-blue-800 dark:text-blue-200">
+                <Info className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-primary">
                   <p className="font-medium mb-1">Share this ID with suppliers to connect</p>
-                  <p className="text-blue-700 dark:text-blue-300">
+                  <p className="text-primary">
                     Suppliers can use this unique ID to send you connection requests directly. 
                     This makes it easier for trusted suppliers to connect with your company.
                   </p>
@@ -373,7 +373,7 @@ export const BulkInviteModal = ({
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Check className="w-5 h-5 text-green-500" />
+                  <Check className="w-5 h-5 text-success" />
                   Bulk Send Complete
                 </CardTitle>
               </CardHeader>
@@ -381,15 +381,15 @@ export const BulkInviteModal = ({
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-green-500" />
-                      <span className="font-medium text-green-700">
+                      <Check className="w-4 h-4 text-success" />
+                      <span className="font-medium text-success">
                         {results.success.length} Successful
                       </span>
                     </div>
                     {results.success.length > 0 && (
-                      <div className="max-h-32 overflow-y-auto bg-green-50 p-2 rounded text-xs">
+                      <div className="max-h-32 overflow-y-auto bg-success/10 p-2 rounded text-xs">
                         {results.success.map((email, i) => (
-                          <div key={i} className="text-green-700">{email}</div>
+                          <div key={i} className="text-success">{email}</div>
                         ))}
                       </div>
                     )}
@@ -397,15 +397,15 @@ export const BulkInviteModal = ({
 
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <X className="w-4 h-4 text-red-500" />
-                      <span className="font-medium text-red-700">
+                      <X className="w-4 h-4 text-danger" />
+                      <span className="font-medium text-danger">
                         {results.failed.length} Failed
                       </span>
                     </div>
                     {results.failed.length > 0 && (
-                      <div className="max-h-32 overflow-y-auto bg-red-50 p-2 rounded text-xs">
+                      <div className="max-h-32 overflow-y-auto bg-danger/10 p-2 rounded text-xs">
                         {results.failed.map((email, i) => (
-                          <div key={i} className="text-red-700">{email}</div>
+                          <div key={i} className="text-danger">{email}</div>
                         ))}
                       </div>
                     )}

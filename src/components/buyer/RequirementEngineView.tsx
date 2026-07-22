@@ -29,9 +29,9 @@ interface SubjectOption {
 type BooleanChoice = 'unknown' | 'yes' | 'no';
 
 const outcomeConfig = {
-  applies: { label: 'Applies', icon: CheckCircle2, className: 'border-emerald-200 bg-emerald-50 text-emerald-800' },
+  applies: { label: 'Applies', icon: CheckCircle2, className: 'border-success/20 bg-success/10 text-success' },
   does_not_apply: { label: 'Does not apply', icon: XCircle, className: 'border-border bg-muted text-foreground/80' },
-  indeterminate: { label: 'Needs information', icon: FileQuestion, className: 'border-amber-200 bg-amber-50 text-amber-800' },
+  indeterminate: { label: 'Needs information', icon: FileQuestion, className: 'border-warning/20 bg-warning/10 text-warning' },
 } as const;
 
 function toBoolean(value: BooleanChoice): boolean | undefined {
@@ -63,7 +63,7 @@ function RequirementCard({ result, onNavigateToDocuments }: {
       <CardContent className="space-y-4 text-sm">
         <p className="text-muted-foreground">{result.explanation}</p>
         {result.missing_inputs.length > 0 && (
-          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-900">
+          <div className="rounded-md border border-warning/20 bg-warning/10 p-3 text-warning">
             Missing inputs: {result.missing_inputs.join(', ')}
           </div>
         )}
@@ -268,8 +268,8 @@ export default function RequirementEngineView({ buyerId, onNavigateToDocuments }
             <ListChecks className="mx-auto mb-3 h-8 w-8 text-muted-foreground/60" />
             <p className="font-medium text-foreground">Pick a subject and evaluate</p>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-              You’ll get every framework requirement grouped by whether it <span className="font-medium text-emerald-600">applies</span>,
-              is <span className="font-medium text-amber-600">indeterminate</span> (needs more facts), or <span className="font-medium">doesn’t apply</span> — each with the reasoning.
+              You’ll get every framework requirement grouped by whether it <span className="font-medium text-success">applies</span>,
+              is <span className="font-medium text-warning">indeterminate</span> (needs more facts), or <span className="font-medium">doesn’t apply</span> — each with the reasoning.
             </p>
           </div>
         )}
@@ -279,8 +279,8 @@ export default function RequirementEngineView({ buyerId, onNavigateToDocuments }
             {/* Summary chips */}
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium">{totalResults} requirement{totalResults !== 1 ? 's' : ''} evaluated:</span>
-              <Badge className="border-emerald-200 bg-emerald-50 text-emerald-800">{groupedResults.applies.length} apply</Badge>
-              <Badge className="border-amber-200 bg-amber-50 text-amber-800">{groupedResults.indeterminate.length} indeterminate</Badge>
+              <Badge className="border-success/20 bg-success/10 text-success">{groupedResults.applies.length} apply</Badge>
+              <Badge className="border-warning/20 bg-warning/10 text-warning">{groupedResults.indeterminate.length} indeterminate</Badge>
               <Badge variant="outline">{groupedResults.does_not_apply.length} don’t apply</Badge>
             </div>
 

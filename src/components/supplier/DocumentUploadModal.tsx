@@ -431,10 +431,10 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                     </div>
 
                     {/* Document Details Section */}
-                    <div className="rounded-lg border border-amber-200/50 bg-amber-50/30 p-3 space-y-3">
+                    <div className="rounded-lg border border-warning/20 bg-warning/10 p-3 space-y-3">
                       <div className="flex items-center gap-2">
-                        <Info className="h-3.5 w-3.5 text-amber-600" />
-                        <span className="text-xs font-semibold text-amber-900 uppercase tracking-wide">Document Details</span>
+                        <Info className="h-3.5 w-3.5 text-warning" />
+                        <span className="text-xs font-semibold text-warning uppercase tracking-wide">Document Details</span>
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -469,7 +469,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
 
                         <div className="space-y-1">
                           <Label className="text-xs font-medium flex items-center gap-1.5">
-                            <Calendar className="h-3 w-3 text-amber-600" />
+                            <Calendar className="h-3 w-3 text-warning" />
                             Expiration Date <span className="text-destructive">*</span>
                           </Label>
                           <Input

@@ -40,12 +40,12 @@ const DocumentTimeline = ({ events }: DocumentTimelineProps) => {
 
   const getEventColor = (type: string) => {
     switch (type) {
-      case 'created': return 'text-blue-600 bg-blue-100';
-      case 'submitted': return 'text-purple-600 bg-purple-100';
-      case 'approved': return 'text-green-600 bg-green-100';
-      case 'rejected': return 'text-red-600 bg-red-100';
-      case 'expired': return 'text-orange-600 bg-orange-100';
-      case 'reminder': return 'text-yellow-600 bg-yellow-100';
+      case 'created': return 'text-primary bg-primary/15';
+      case 'submitted': return 'text-primary bg-primary/15';
+      case 'approved': return 'text-success bg-success/15';
+      case 'rejected': return 'text-danger bg-danger/15';
+      case 'expired': return 'text-warning bg-warning/15';
+      case 'reminder': return 'text-warning bg-warning/15';
       default: return 'text-muted-foreground bg-muted';
     }
   };

@@ -451,16 +451,16 @@ export const DefaultOnboardingSettings: React.FC = () => {
 
                     {/* Template indicator */}
                     {req.template_file_path && (
-                      <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
-                        <FileDown className="h-4 w-4 text-blue-600" />
+                      <div className="flex items-center gap-2 p-2 bg-primary/10 border border-primary/20 rounded-lg">
+                        <FileDown className="h-4 w-4 text-primary" />
                         <div className="flex-1">
-                          <span className="text-sm font-medium text-blue-800">Template attached: </span>
-                          <span className="text-sm text-blue-700">{req.template_file_name}</span>
+                          <span className="text-sm font-medium text-primary">Template attached: </span>
+                          <span className="text-sm text-primary">{req.template_file_name}</span>
                         </div>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-blue-600 hover:text-blue-800"
+                          className="text-primary hover:text-primary"
                           onClick={async () => {
                             const { data } = await supabase.storage
                               .from('compliance-documents')
@@ -496,7 +496,7 @@ export const DefaultOnboardingSettings: React.FC = () => {
                         <Badge variant="secondary">Required</Badge>
                       )}
                       {req.template_file_path && (
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
                           Template
                         </Badge>
                       )}

@@ -391,8 +391,8 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
   const pageDocTypes = filteredDocTypes.slice(pageStart, pageStart + rowsPerPage);
 
   const uploadStatusTabs: Array<{ value: 'all' | 'uploaded' | 'not-uploaded'; label: string; count: number; badgeClass: string }> = [
-    { value: 'all', label: 'All', count: stats.total, badgeClass: 'bg-[#EAF1FF] text-primary' },
-    { value: 'uploaded', label: 'Uploaded', count: stats.configured, badgeClass: 'bg-[#ECFDF5] text-[#047857]' },
+    { value: 'all', label: 'All', count: stats.total, badgeClass: 'bg-primary/10 text-primary' },
+    { value: 'uploaded', label: 'Uploaded', count: stats.configured, badgeClass: 'bg-success/10 text-success' },
     { value: 'not-uploaded', label: 'Needs Template', count: stats.remaining, badgeClass: 'bg-muted text-foreground/80' },
   ];
 
@@ -415,30 +415,30 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className={reviewMetricCardClass}>
-          <div className={`${reviewMetricIconCircleClass} bg-[#EFF6FF]`}>
+          <div className={`${reviewMetricIconCircleClass} bg-primary/10`}>
             <FileText className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <p className="text-[20px] font-bold text-foreground leading-none">{stats.total}</p>
-            <p className="text-[12px] text-muted-foreground">Document Types</p>
+            <p className="text-h2 font-bold text-foreground leading-none">{stats.total}</p>
+            <p className="text-caption text-muted-foreground">Document Types</p>
           </div>
         </div>
         <div className={reviewMetricCardClass}>
-          <div className={`${reviewMetricIconCircleClass} bg-[#F0FDF4]`}>
-            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+          <div className={`${reviewMetricIconCircleClass} bg-success/10`}>
+            <CheckCircle2 className="h-5 w-5 text-success" />
           </div>
           <div>
-            <p className="text-[20px] font-bold text-foreground leading-none">{stats.configured}</p>
-            <p className="text-[12px] text-muted-foreground">Templates Uploaded</p>
+            <p className="text-h2 font-bold text-foreground leading-none">{stats.configured}</p>
+            <p className="text-caption text-muted-foreground">Templates Uploaded</p>
           </div>
         </div>
         <div className={reviewMetricCardClass}>
-          <div className={`${reviewMetricIconCircleClass} bg-[#FFFBEB]`}>
-            <XCircle className="h-5 w-5 text-amber-600" />
+          <div className={`${reviewMetricIconCircleClass} bg-warning/10`}>
+            <XCircle className="h-5 w-5 text-warning" />
           </div>
           <div>
-            <p className="text-[20px] font-bold text-foreground leading-none">{stats.remaining}</p>
-            <p className="text-[12px] text-muted-foreground">Without Templates</p>
+            <p className="text-h2 font-bold text-foreground leading-none">{stats.remaining}</p>
+            <p className="text-caption text-muted-foreground">Without Templates</p>
           </div>
         </div>
       </div>
@@ -451,12 +451,12 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
             <button
               key={tab.value}
               onClick={() => setUploadStatus(tab.value)}
-              className={`relative h-full flex items-center gap-2 text-[14px] font-semibold transition-colors ${
+              className={`relative h-full flex items-center gap-2 text-body font-semibold transition-colors ${
                 isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               {tab.label}
-              <span className={`h-[24px] min-w-[24px] rounded-full px-2 text-[13px] font-bold flex items-center justify-center ${tab.badgeClass}`}>
+              <span className={`h-[24px] min-w-[24px] rounded-full px-2 text-small font-bold flex items-center justify-center ${tab.badgeClass}`}>
                 {tab.count}
               </span>
               {isActive && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-primary rounded-full" />}
@@ -524,7 +524,7 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
       </div>
 
       {hasActiveFilters && (
-        <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+        <div className="flex items-center gap-2 text-small text-muted-foreground">
           <span>Showing <span className="font-medium text-foreground">{stats.filteredTotal}</span> of {stats.total} document types</span>
           {stats.filteredConfigured > 0 && (
             <Badge variant="secondary" className="text-xs">
@@ -558,23 +558,23 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
                 key={doc.id}
                 className={`h-[88px] flex items-center justify-between px-4 ${
                   index !== pageDocTypes.length - 1 ? 'border-b border-border' : ''
-                } ${hasTemplate ? 'bg-emerald-50/30' : 'hover:bg-muted/50'}`}
+                } ${hasTemplate ? 'bg-success/10' : 'hover:bg-muted/50'}`}
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className={`w-[40px] h-[40px] rounded-[10px] flex items-center justify-center flex-shrink-0 ${hasTemplate ? 'bg-[#F0FDF4]' : 'bg-[#EFF6FF]'}`}>
-                    <Icon className={`h-5 w-5 ${hasTemplate ? 'text-emerald-600' : 'text-primary'}`} />
+                  <div className={`w-[40px] h-[40px] rounded-[10px] flex items-center justify-center flex-shrink-0 ${hasTemplate ? 'bg-success/10' : 'bg-primary/10'}`}>
+                    <Icon className={`h-5 w-5 ${hasTemplate ? 'text-success' : 'text-primary'}`} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-[14px] font-semibold text-foreground truncate">{doc.title}</p>
+                      <p className="text-body font-semibold text-foreground truncate">{doc.title}</p>
                       {hasTemplate && (
-                        <Badge variant="outline" className="text-[12px] px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 border-emerald-200">
+                        <Badge variant="outline" className="text-caption px-2 py-0.5 rounded-full font-medium bg-success/10 text-success border-success/20">
                           <CheckCircle2 className="h-3 w-3 mr-1" />
                           Template Set
                         </Badge>
                       )}
                     </div>
-                    <p className="text-[13px] text-muted-foreground truncate">
+                    <p className="text-small text-muted-foreground truncate">
                       {hasTemplate
                         ? `${template.sample_file_name} · ${formatFileSize(template.sample_file_size)}`
                         : doc.category
@@ -655,8 +655,8 @@ export function SampleTemplateManager({ buyerId }: SampleTemplateManagerProps) {
                 </div>
               </div>
               {viewingTemplate.notes && (
-                <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                  <p className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">Guidance Notes:</p>
+                <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                  <p className="text-sm font-medium text-primary mb-1">Guidance Notes:</p>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap">{viewingTemplate.notes}</p>
                 </div>
               )}

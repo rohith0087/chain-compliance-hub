@@ -135,13 +135,13 @@ const DocumentCardWithSelection = ({
   };
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'approved': return 'bg-gradient-to-r from-[hsl(var(--green-accent))] to-[hsl(var(--emerald-accent))] text-white border-0';
-      case 'pending': return 'bg-gradient-to-r from-[hsl(var(--orange-accent))] to-amber-500 text-white border-0';
-      case 'submitted': return 'bg-gradient-to-r from-[hsl(var(--blue-accent))] to-[hsl(var(--accent))] text-white border-0';
-      case 'rejected': return 'bg-gradient-to-r from-destructive to-red-600 text-white border-0';
-      case 'expired': return 'bg-gradient-to-r from-gray-400 to-gray-500 text-white border-0';
-      case 'withdrawn': return 'bg-gradient-to-r from-gray-400 to-gray-500 text-white border-0';
-      default: return 'bg-gradient-to-r from-[hsl(var(--teal-accent))] to-cyan-600 text-white border-0';
+      case 'approved': return 'bg-success text-success-foreground border-0';
+      case 'pending': return 'bg-warning text-warning-foreground border-0';
+      case 'submitted': return 'bg-primary text-primary-foreground border-0';
+      case 'rejected': return 'bg-danger text-danger-foreground border-0';
+      case 'expired': return 'bg-muted text-muted-foreground border-0';
+      case 'withdrawn': return 'bg-muted text-muted-foreground border-0';
+      default: return 'bg-primary text-primary-foreground border-0';
     }
   };
 
@@ -221,7 +221,7 @@ const DocumentCardWithSelection = ({
         document.status === 'approved' ? 'border-l-green-500' :
         getCategoryColor(document.category)
       } ${isSelected ? 'ring-2 ring-[hsl(var(--blue-accent))] shadow-[0_0_20px_hsl(var(--blue-accent)/0.3)]' : ''} ${
-        isClickable ? 'cursor-pointer hover:ring-1 hover:ring-[#003f88]/50' : ''
+        isClickable ? 'cursor-pointer hover:ring-1 hover:ring-primary/50' : ''
       }`}
       onClick={handleCardClick}
     >
@@ -246,10 +246,10 @@ const DocumentCardWithSelection = ({
               {document.title || document.document_type}
             </h3>
             <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground whitespace-nowrap">
+              <span className="text-micro px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground whitespace-nowrap">
                 {document.document_type}
               </span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground whitespace-nowrap">
+              <span className="text-micro px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground whitespace-nowrap">
                 {document.category}
               </span>
             </div>
@@ -261,11 +261,11 @@ const DocumentCardWithSelection = ({
           <div className="flex items-center gap-2">
             <Badge 
               variant="secondary" 
-              className={`text-[10px] font-medium border px-1.5 py-0 rounded-md ${
-                isExpired(document.expiration_date) ? 'bg-red-50 text-red-600 border-red-200' :
-                isExpiringSoon(document.expiration_date) ? 'bg-amber-50 text-amber-600 border-amber-200' :
-                document.status === 'pending' ? 'bg-blue-50 text-blue-600 border-blue-200' :
-                document.status === 'approved' ? 'bg-green-50 text-green-600 border-green-200' :
+              className={`text-micro font-medium border px-1.5 py-0 rounded-md ${
+                isExpired(document.expiration_date) ? 'bg-danger/10 text-danger border-danger/20' :
+                isExpiringSoon(document.expiration_date) ? 'bg-warning/10 text-warning border-warning/20' :
+                document.status === 'pending' ? 'bg-primary/10 text-primary border-primary/20' :
+                document.status === 'approved' ? 'bg-success/10 text-success border-success/20' :
                 'bg-muted text-muted-foreground border-border/50'
               }`}
             >
@@ -286,9 +286,9 @@ const DocumentCardWithSelection = ({
             <Popover>
               <PopoverTrigger asChild>
                 <button 
-                  className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-medium border transition-colors ${
-                    isExpired(document.expiration_date) || document.status === 'rejected' ? 'bg-red-50/50 text-red-600 border-red-200/50 hover:bg-red-50' :
-                    isExpiringSoon(document.expiration_date) || document.status === 'pending' ? 'bg-amber-50/50 text-amber-600 border-amber-200/50 hover:bg-amber-50' :
+                  className={`flex items-center gap-1 text-micro px-1.5 py-0.5 rounded-md font-medium border transition-colors ${
+                    isExpired(document.expiration_date) || document.status === 'rejected' ? 'bg-danger/10 text-danger border-danger/20 hover:bg-danger/10' :
+                    isExpiringSoon(document.expiration_date) || document.status === 'pending' ? 'bg-warning/10 text-warning border-warning/20 hover:bg-warning/10' :
                     'bg-primary/5 text-primary border-primary/10 hover:bg-primary/10'
                   }`}
                   onClick={(e) => e.stopPropagation()}
@@ -321,9 +321,9 @@ const DocumentCardWithSelection = ({
             </Popover>
           </div>
 
-          <span className={`text-[10px] ${
-            isExpired(document.expiration_date) ? 'text-red-500 font-medium' :
-            isExpiringSoon(document.expiration_date) ? 'text-amber-500 font-medium' :
+          <span className={`text-micro ${
+            isExpired(document.expiration_date) ? 'text-danger font-medium' :
+            isExpiringSoon(document.expiration_date) ? 'text-warning font-medium' :
             'text-muted-foreground'
           }`}>
             {isExpired(document.expiration_date) 
@@ -337,7 +337,7 @@ const DocumentCardWithSelection = ({
         </div>
 
         {/* 3. DETAILS */}
-        <div className="flex flex-col min-w-0 text-[10px] text-muted-foreground gap-1 justify-center">
+        <div className="flex flex-col min-w-0 text-micro text-muted-foreground gap-1 justify-center">
           <div className="flex items-center gap-1.5 flex-wrap">
             {userRole === 'buyer' && document.supplier && (
               <span className="truncate flex items-center gap-1">
@@ -422,7 +422,7 @@ const DocumentCardWithSelection = ({
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 
                       onClick={onWithdraw} 
-                      className="text-amber-600 focus:text-amber-600 focus:bg-amber-50"
+                      className="text-warning focus:text-warning focus:bg-warning/10"
                     >
                       <Ban className="mr-2 h-4 w-4" />
                       Withdraw
@@ -435,14 +435,14 @@ const DocumentCardWithSelection = ({
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 
                       onClick={onApprove} 
-                      className="text-green-600 focus:text-green-600 focus:bg-green-50"
+                      className="text-success focus:text-success focus:bg-success/10"
                     >
                       <ThumbsUp className="mr-2 h-4 w-4" />
                       Approve
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={onDecline} 
-                      className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                      className="text-danger focus:text-danger focus:bg-danger/10"
                     >
                       <ThumbsDown className="mr-2 h-4 w-4" />
                       Decline

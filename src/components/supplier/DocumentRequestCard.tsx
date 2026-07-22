@@ -82,20 +82,20 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'submitted': return 'bg-blue-100 text-blue-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
+      case 'approved': return 'bg-success/15 text-success';
+      case 'pending': return 'bg-warning/15 text-warning';
+      case 'submitted': return 'bg-primary/15 text-primary';
+      case 'rejected': return 'bg-danger/15 text-danger';
       default: return 'bg-muted text-foreground';
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'urgent': return 'bg-red-100 text-red-800 border-red-200';
-      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-green-100 text-green-800 border-green-200';
+      case 'urgent': return 'bg-danger/15 text-danger border-danger/30';
+      case 'high': return 'bg-warning/15 text-warning border-warning/30';
+      case 'medium': return 'bg-warning/15 text-warning border-warning/30';
+      case 'low': return 'bg-success/15 text-success border-success/30';
       default: return 'bg-muted text-foreground border-border';
     }
   };
@@ -132,8 +132,8 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <FileCheck className="w-5 h-5 text-blue-600" />
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                <FileCheck className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <CardTitle className="text-lg">{request.title}</CardTitle>
@@ -172,7 +172,7 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                          <p className="text-sm font-medium text-muted-foreground">Document Type</p>
                          <p className="text-sm capitalize">{request.document_type}</p>
                          {isCustomTemplate && (
-                           <Badge variant="outline" className="mt-1 bg-purple-50 text-purple-700 border-purple-200">
+                           <Badge variant="outline" className="mt-1 bg-secondary text-secondary-foreground border-border">
                              Custom Template
                            </Badge>
                          )}
@@ -241,7 +241,7 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                         </div>
                         {request.due_date && (
                           <div className="flex items-center gap-2">
-                            <AlertCircle className="w-4 h-4 text-orange-500" />
+                            <AlertCircle className="w-4 h-4 text-warning" />
                             <div>
                               <p className="text-sm font-medium">Due Date</p>
                               <p className="text-sm text-muted-foreground">
@@ -266,18 +266,18 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                     {/* Rejection Feedback - Show for rejected status */}
                     {request.status === 'rejected' && request.document_uploads && request.document_uploads.length > 0 && (
                       <div>
-                        <h4 className="font-semibold mb-3 text-red-900">Rejection Feedback</h4>
-                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <h4 className="font-semibold mb-3 text-danger">Rejection Feedback</h4>
+                        <div className="p-3 bg-danger/10 border border-danger/20 rounded-lg">
                           <div className="flex items-start gap-2">
-                            <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5" />
+                            <AlertTriangle className="w-4 h-4 text-danger mt-0.5" />
                             <div>
-                              <p className="text-sm font-medium text-red-800 mb-1">Document was rejected</p>
+                              <p className="text-sm font-medium text-danger mb-1">Document was rejected</p>
                               {request.document_uploads[0]?.reviewer_notes ? (
-                                <p className="text-sm text-red-700">{request.document_uploads[0].reviewer_notes}</p>
+                                <p className="text-sm text-danger">{request.document_uploads[0].reviewer_notes}</p>
                               ) : (
-                                <p className="text-sm text-red-700">No specific feedback provided. Please review and resubmit with corrections.</p>
+                                <p className="text-sm text-danger">No specific feedback provided. Please review and resubmit with corrections.</p>
                               )}
-                              <p className="mt-2 text-xs text-red-700">Reply to the correction email with the updated document, or use Resubmit below. Your previous version remains in the audit history.</p>
+                              <p className="mt-2 text-xs text-danger">Reply to the correction email with the updated document, or use Resubmit below. Your previous version remains in the audit history.</p>
                             </div>
                           </div>
                         </div>
@@ -306,7 +306,7 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                 <Button 
                   size="sm" 
                   onClick={() => setShowUpload(true)}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-primary hover:bg-primary/90"
                 >
                   <Upload className="w-4 h-4 mr-2" />
                   Upload
@@ -318,7 +318,7 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                 <Button 
                   size="sm" 
                   onClick={() => setShowTemplateResponse(true)}
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-primary hover:bg-primary/90"
                 >
                   <FileCheck className="w-4 h-4 mr-2" />
                   {request.status === 'rejected' ? 'Resubmit Template' : 'Complete Template'}
@@ -330,7 +330,7 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                 <Button 
                   size="sm" 
                   onClick={() => setShowUpload(true)}
-                  className="bg-orange-600 hover:bg-orange-700"
+                  className="bg-primary hover:bg-primary/90"
                 >
                   <Upload className="w-4 h-4 mr-2" />
                   Resubmit
@@ -343,8 +343,8 @@ const DocumentRequestCard = ({ request, onUploadSuccess }: DocumentRequestCardPr
                   size="sm" 
                   onClick={() => setShowRenewalUpload(true)}
                   className={expiryStatus.status === 'expired' 
-                    ? 'bg-red-600 hover:bg-red-700' 
-                    : 'bg-amber-600 hover:bg-amber-700'
+                    ? 'bg-danger hover:bg-danger/90 text-danger-foreground' 
+                    : 'bg-warning hover:bg-warning/90 text-warning-foreground'
                   }
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />

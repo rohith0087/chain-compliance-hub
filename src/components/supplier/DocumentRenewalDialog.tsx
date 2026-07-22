@@ -225,17 +225,17 @@ const DocumentRenewalDialog = ({
           {/* Expiry Alert */}
           <div className={`p-3 rounded-lg border ${
             expiryStatus.status === 'expired'
-              ? 'bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-900'
-              : 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900'
+              ? 'bg-danger/10 border-danger/20'
+              : 'bg-warning/10 border-warning/20'
           }`}>
             <div className="flex items-center gap-2">
               <AlertTriangle className={`w-4 h-4 ${
-                expiryStatus.status === 'expired' ? 'text-red-600' : 'text-amber-600'
+                expiryStatus.status === 'expired' ? 'text-danger' : 'text-warning'
               }`} />
               <span className={`text-sm font-medium ${
                 expiryStatus.status === 'expired' 
-                  ? 'text-red-800 dark:text-red-300' 
-                  : 'text-amber-800 dark:text-amber-300'
+                  ? 'text-danger dark:text-danger' 
+                  : 'text-warning dark:text-warning'
               }`}>
                 {expiryStatus.status === 'expired'
                   ? `Document expired ${expiryStatus.days} day${expiryStatus.days !== 1 ? 's' : ''} ago`
@@ -269,13 +269,13 @@ const DocumentRenewalDialog = ({
                 isDragActive 
                   ? 'border-primary bg-primary/5' 
                   : file 
-                    ? 'border-green-500 bg-green-50 dark:bg-green-950/30' 
+                    ? 'border-success bg-success/10' 
                     : 'border-border hover:border-primary/50'
               }`}
             >
               <input {...getInputProps()} />
               {file ? (
-                <div className="flex items-center justify-center gap-2 text-green-600">
+                <div className="flex items-center justify-center gap-2 text-success">
                   <FileText className="w-5 h-5" />
                   <span className="font-medium">{file.name}</span>
                 </div>
@@ -319,8 +319,8 @@ const DocumentRenewalDialog = ({
               onClick={handleRenewal} 
               disabled={!file || uploading}
               className={expiryStatus.status === 'expired' 
-                ? 'bg-red-600 hover:bg-red-700' 
-                : 'bg-amber-600 hover:bg-amber-700'
+                ? 'bg-danger hover:bg-danger' 
+                : 'bg-warning hover:bg-warning'
               }
             >
               {uploading ? (

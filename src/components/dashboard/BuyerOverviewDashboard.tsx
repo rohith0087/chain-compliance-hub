@@ -57,7 +57,7 @@ interface BuyerOverviewDashboardProps {
 
 /* ------------------------------------------------------------------ shells */
 
-const Panel = ({
+export const Panel = ({
   title,
   action,
   children,
@@ -82,7 +82,7 @@ const Panel = ({
   </section>
 );
 
-const LinkOut = ({ label, onClick }: { label: string; onClick: () => void }) => (
+export const LinkOut = ({ label, onClick }: { label: string; onClick: () => void }) => (
   <button
     onClick={onClick}
     className="inline-flex shrink-0 items-center gap-0.5 text-[11px] font-semibold text-primary transition-colors hover:text-primary-hover"
@@ -92,7 +92,7 @@ const LinkOut = ({ label, onClick }: { label: string; onClick: () => void }) => 
 );
 
 /** Shown wherever the data genuinely isn't there -- never a fabricated curve. */
-const Empty = ({ icon: Icon, children }: { icon: typeof Inbox; children: React.ReactNode }) => (
+export const Empty = ({ icon: Icon, children }: { icon: typeof Inbox; children: React.ReactNode }) => (
   <div className="flex flex-1 flex-col items-center justify-center gap-2 py-6 text-center">
     <Icon className="h-6 w-6 text-muted-foreground/50" />
     <p className="max-w-[24ch] text-[12px] leading-snug text-muted-foreground">{children}</p>
@@ -100,7 +100,7 @@ const Empty = ({ icon: Icon, children }: { icon: typeof Inbox; children: React.R
 );
 
 /** Real delta or nothing. There is no placeholder percentage here by design. */
-const Delta = ({ value, suffix = '' }: { value: number | null; suffix?: string }) => {
+export const Delta = ({ value, suffix = '' }: { value: number | null; suffix?: string }) => {
   if (value === null) {
     return <span className="font-mono text-[10px] text-muted-foreground">no prior month</span>;
   }

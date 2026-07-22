@@ -315,7 +315,7 @@ const ComplianceEmailComposer: React.FC<ComplianceEmailComposerProps> = ({
                     >
                       {draft.supplier_name}
                       {sentSuppliers.has(draft.supplier_id) && (
-                        <CheckCircle className="w-3 h-3 text-green-500 ml-1" />
+                        <CheckCircle className="w-3 h-3 text-success ml-1" />
                       )}
                     </TabsTrigger>
                   ))}
@@ -444,9 +444,9 @@ const ComplianceEmailComposer: React.FC<ComplianceEmailComposerProps> = ({
 
                 {/* Sent indicator */}
                 {sentSuppliers.has(currentDraft.supplier_id) && (
-                  <div className="flex items-center gap-2 p-4 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span className="text-sm text-green-700 dark:text-green-400">
+                  <div className="flex items-center gap-2 p-4 rounded-lg bg-success/10 border border-success/20">
+                    <CheckCircle className="w-5 h-5 text-success" />
+                    <span className="text-sm text-success">
                       Email sent successfully to {currentDraft.supplier_name}
                     </span>
                   </div>

@@ -32,6 +32,7 @@ import {
   HelpCircle,
   ArrowLeftRight,
   FlaskConical,
+  GitCompare,
   ListTree,
   BookOpenCheck,
   ClipboardCheck,
@@ -90,6 +91,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { WhatsNewDialog } from '@/components/shared/WhatsNewDialog';
 import { APP_VERSION } from '@/config/version';
 import { getWorkspaceProfileForIndustry } from '@/config/workspaceProfiles';
+import { navIconClass, navSubIconClass } from '@/components/documents/buyerReviewDesignSystem';
 
 // Version button component for sidebar footer
 function VersionButton() {
@@ -222,6 +224,31 @@ export function BuyerSidebarLayout({
   }, [mode, clearOverlayTimers]);
   useEffect(() => () => clearOverlayTimers(), [clearOverlayTimers]);
 
+  // Dual-tier: hover preview of a section's tier-2 panel. Short delay in, graceful
+  // delay out, so sweeping the rail feels smooth instead of flickery.
+  const [previewValue, setPreviewValue] = useState<string | null>(null);
+  const previewOpenRef = useRef<NodeJS.Timeout | null>(null);
+  const previewCloseRef = useRef<NodeJS.Timeout | null>(null);
+  const previewEnter = useCallback((value: string) => {
+    if (previewCloseRef.current) { clearTimeout(previewCloseRef.current); previewCloseRef.current = null; }
+    if (previewOpenRef.current) clearTimeout(previewOpenRef.current);
+    previewOpenRef.current = setTimeout(() => { setPreviewValue(value); previewOpenRef.current = null; }, 130);
+  }, []);
+  const previewLeave = useCallback(() => {
+    if (previewOpenRef.current) { clearTimeout(previewOpenRef.current); previewOpenRef.current = null; }
+    if (previewCloseRef.current) clearTimeout(previewCloseRef.current);
+    previewCloseRef.current = setTimeout(() => { setPreviewValue(null); previewCloseRef.current = null; }, 280);
+  }, []);
+  const previewCancelClose = useCallback(() => {
+    if (previewCloseRef.current) { clearTimeout(previewCloseRef.current); previewCloseRef.current = null; }
+  }, []);
+  // Keeps the last previewed section mounted so the overlay can animate out.
+  const lastPreviewRef = useRef<NavigationItem | null>(null);
+  useEffect(() => () => {
+    if (previewOpenRef.current) clearTimeout(previewOpenRef.current);
+    if (previewCloseRef.current) clearTimeout(previewCloseRef.current);
+  }, []);
+
   // Single active dropdown state (accordion behavior)
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -334,6 +361,7 @@ export function BuyerSidebarLayout({
 
   const requestsSubmenu = [
     { title: t('common:navigation.documents'), value: 'documents', icon: FileCheck },
+    wsProfile.id === 'auditor' && { title: 'AI Document Comparison', value: 'document-comparison', icon: GitCompare },
     emailReplyIngestionEnabled && { title: 'Email Intake', value: 'email-intake', icon: Inbox },
     { title: 'Activity', value: 'document-activity', icon: Activity },
     { title: 'Templates', value: 'templates', icon: FileText },
@@ -453,11 +481,7 @@ export function BuyerSidebarLayout({
       navigate('/messages');
       return;
     }
-    // Open Settings Modal
-    if (value === 'settings') {
-      onShowSettings();
-      return;
-    }
+    // Settings is a full page now (Settings-04 style tab in the dashboard).
     // Switch to All Branches view when clicking Onboarding Pipeline
     if (value === 'onboarding') {
       setCurrentBranch(null); // Set to null for all branches view
@@ -722,26 +746,25 @@ export function BuyerSidebarLayout({
             <TooltipContent side="right">New Request</TooltipContent>
           </Tooltip>
 
-          {/* Nav items - icon only */}
+          {/* Nav items - icon only. Hover previews the section's tier-2 panel;
+              click navigates and pins the panel open for sections with children. */}
           <div className="mt-2 flex flex-col items-center gap-1 w-full px-2">
             {navigationItems.map((item) => {
               const active = isActiveRoute(item.value) || (item.submenu?.some(s => isActiveRoute(s.value)) ?? false);
+              const previewing = previewValue === item.value;
               return (
                 <Tooltip key={item.value}>
                   <TooltipTrigger asChild>
                     <button
+                      onMouseEnter={() => (item.submenu ? previewEnter(item.value) : previewLeave())}
+                      onMouseLeave={previewLeave}
                       onClick={() => {
-                        if (item.submenu) {
-                          // Open overlay so user can pick a sub-item
-                          cancelOverlayClose();
-                          setOverlayOpen(true);
-                          setActiveDropdown(item.value);
-                        } else {
-                          handleMenuClick(item.value);
-                        }
+                        setPreviewValue(null);
+                        if (item.submenu) setMode('pinned');
+                        handleMenuClick(item.value);
                       }}
-                      className={`relative h-11 w-11 rounded-xl flex items-center justify-center transition-colors ${
-                        active ? 'bg-primary/10 text-primary' : 'text-foreground/80 hover:bg-sidebar-accent hover:text-foreground'
+                      className={`relative h-11 w-11 rounded-xl flex items-center justify-center transition-colors duration-150 ${
+                        active ? 'bg-primary/10 text-primary' : previewing ? 'bg-sidebar-accent text-foreground' : 'text-foreground/80 hover:bg-sidebar-accent hover:text-foreground'
                       }`}
                       aria-label={item.title}
                     >
@@ -754,7 +777,7 @@ export function BuyerSidebarLayout({
                       ) : null}
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="right">{item.title}</TooltipContent>
+                  {!item.submenu && <TooltipContent side="right">{item.title}</TooltipContent>}
                 </Tooltip>
               );
             })}
@@ -798,53 +821,117 @@ export function BuyerSidebarLayout({
         );
       }
 
-      // Desktop: custom rail/pinned + optional overlay
-      const inFlowWidth = mode === 'pinned' ? 280 : 72;
+      // Desktop: dual-tier — 72px icon rail + 232px tier-2 panel for the active
+      // section. Hovering another section previews its panel as an overlay; the
+      // in-flow panel width animates so the main body reflows smoothly with it.
+      const TIER2_W = 232;
       const overlayTopOffset = isImpersonating ? 48 : 0;
 
+      const activeSection =
+        navigationItems.find((i) => isActiveRoute(i.value) || (i.submenu?.some((s) => isActiveRoute(s.value)) ?? false)) ?? null;
+      const pinnedSection = mode === 'pinned' && activeSection?.submenu ? activeSection : null;
+      const previewCandidate = previewValue ? navigationItems.find((i) => i.value === previewValue) ?? null : null;
+      const previewSection =
+        previewCandidate?.submenu && previewCandidate.value !== pinnedSection?.value ? previewCandidate : null;
+      if (previewSection) lastPreviewRef.current = previewSection;
+      const shownPreview = previewSection ?? lastPreviewRef.current;
+
+      const renderTier2 = (section: NavigationItem, overlay: boolean) => {
+        const SectionIcon = section.icon;
+        const items = section.submenu ?? [];
+        const activeIdx = items.findIndex((s) => isActiveRoute(s.value));
+        return (
+          <div className="flex h-full w-[232px] flex-col bg-sidebar">
+            {/* Section identity — icon coin + title + progress-ish context */}
+            <div className="px-3 pt-4 pb-3">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
+                  <SectionIcon className={navIconClass} />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-[14px] font-semibold leading-tight text-foreground">{section.title}</p>
+                  <p className="text-[11px] leading-tight text-muted-foreground">
+                    {activeIdx >= 0 ? `${activeIdx + 1} of ${items.length}` : `${items.length} pages`}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mx-3 h-px bg-gradient-to-r from-sidebar-border via-sidebar-border to-transparent" />
+
+            <nav className="flex-1 overflow-y-auto px-2 py-2.5 space-y-0.5">
+              {items.map((sub) => {
+                const subActive = isActiveRoute(sub.value);
+                return (
+                  <button
+                    key={sub.value}
+                    onClick={() => { setPreviewValue(null); if (overlay) setMode('pinned'); handleMenuClick(sub.value); }}
+                    className={`group relative w-full flex items-center gap-2.5 h-9 pl-3 pr-2 rounded-lg text-[13.5px] transition-all duration-150 ${
+                      subActive
+                        ? 'bg-primary/10 text-primary font-semibold'
+                        : 'text-foreground/75 hover:bg-sidebar-accent hover:text-foreground hover:translate-x-0.5'
+                    }`}
+                  >
+                    {subActive && <span className="absolute -left-2 top-1.5 bottom-1.5 w-[3px] rounded-full bg-primary" />}
+                    {sub.icon && (
+                      <sub.icon className={`${navSubIconClass} shrink-0 transition-transform duration-150 group-hover:scale-110 ${subActive ? '' : 'text-muted-foreground group-hover:text-foreground'}`} />
+                    )}
+                    <span className="truncate text-left">{sub.title}</span>
+                    {sub.badge ? <Badge variant="secondary" className="ml-auto">{sub.badge}</Badge> : null}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Footer accent — keeps the panel from feeling empty */}
+            <div className="px-3 pb-3">
+              <div className="rounded-xl border border-sidebar-border bg-card/60 px-3 py-2.5">
+                <p className="truncate text-[11px] font-semibold text-foreground/80">
+                  {buyerProfile?.company_name || 'Workspace'}
+                </p>
+                <p className="mt-0.5 truncate text-[10.5px] leading-snug text-muted-foreground">
+                  {buyerProfile?.industry || 'Compliance workspace'}
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
       return (
-        <>
-          {/* In-flow sidebar (rail in auto-hide, full in pinned) */}
-          <aside
-            data-mode={mode}
-            style={{
-              width: inFlowWidth,
-              transition: `width 220ms ${EASE}`,
-            }}
-            className="hidden md:flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar sticky top-0 h-screen overflow-hidden motion-reduce:transition-none"
-            onMouseEnter={mode === 'auto-hide' ? scheduleOverlayOpen : undefined}
-            onMouseLeave={mode === 'auto-hide' ? scheduleOverlayClose : undefined}
-          >
-            {mode === 'pinned' ? fullBody : railBody}
+        <div className="hidden md:flex shrink-0 sticky top-0 h-screen z-50">
+          {/* Tier 1 — icon rail */}
+          <aside className="w-[72px] shrink-0 flex flex-col border-r border-sidebar-border bg-sidebar overflow-hidden">
+            {railBody}
           </aside>
 
-          {/* Auto-hide: edge trigger + overlay */}
-          {mode === 'auto-hide' && (
-            <>
-              <div
-                aria-hidden
-                style={{ top: overlayTopOffset }}
-                className="hidden md:block fixed left-0 bottom-0 w-2 z-50"
-                onMouseEnter={scheduleOverlayOpen}
-              />
-              <aside
-                style={{
-                  width: 280,
-                  top: overlayTopOffset,
-                  transform: overlayOpen ? 'translateX(0)' : 'translateX(-110%)',
-                  transition: `transform ${overlayOpen ? 260 : 220}ms ${EASE}, opacity 200ms ${EASE}`,
-                  opacity: overlayOpen ? 1 : 0,
-                  pointerEvents: overlayOpen ? 'auto' : 'none',
-                }}
-                className="hidden md:flex fixed left-0 bottom-0 z-50 flex-col border-r border-sidebar-border bg-sidebar shadow-2xl overflow-hidden motion-reduce:transition-none"
-                onMouseEnter={cancelOverlayClose}
-                onMouseLeave={scheduleOverlayClose}
-              >
-                {fullBody}
-              </aside>
-            </>
-          )}
-        </>
+          {/* Tier 2 — in flow for the active section; the body reflows as it animates */}
+          <aside
+            style={{ width: pinnedSection ? TIER2_W : 0, transition: `width 240ms ${EASE}` }}
+            className="shrink-0 overflow-hidden border-r border-sidebar-border bg-sidebar motion-reduce:transition-none"
+            aria-hidden={!pinnedSection}
+          >
+            {pinnedSection && renderTier2(pinnedSection, false)}
+          </aside>
+
+          {/* Tier 2 — hover preview overlay for other sections */}
+          <div
+            style={{
+              top: overlayTopOffset,
+              left: 72,
+              width: TIER2_W,
+              transform: previewSection ? 'translateX(0)' : 'translateX(-10px)',
+              opacity: previewSection ? 1 : 0,
+              pointerEvents: previewSection ? 'auto' : 'none',
+              transition: `transform 190ms ${EASE}, opacity 170ms ${EASE}`,
+            }}
+            className="fixed bottom-0 z-50 border-r border-sidebar-border bg-sidebar shadow-2xl motion-reduce:transition-none"
+            onMouseEnter={previewCancelClose}
+            onMouseLeave={previewLeave}
+          >
+            {shownPreview && renderTier2(shownPreview, true)}
+          </div>
+        </div>
       );
       })()}
 
@@ -1000,7 +1087,7 @@ export function BuyerSidebarLayout({
               {children}
             </div>
           ) : (
-            <div className="container mx-auto py-[28px] px-[32px] max-w-[1440px]">
+            <div className="w-full px-6 py-5">
               {children}
             </div>
           )}

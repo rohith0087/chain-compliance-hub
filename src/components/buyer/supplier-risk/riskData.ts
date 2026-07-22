@@ -12,6 +12,8 @@ export interface NewsSignal {
   tags: string[];
   riskImpact: number;
   reason: string;
+  /** External source URL for click-through verification (when captured). */
+  url?: string;
 }
 
 export interface RecallItem {
@@ -21,6 +23,8 @@ export interface RecallItem {
   severity: 'Critical' | 'High' | 'Medium' | 'Low';
   status: 'Open' | 'Resolved';
   agency: string;
+  /** External source URL for click-through verification (when captured). */
+  url?: string;
 }
 
 export interface WebSignal {
@@ -28,6 +32,8 @@ export interface WebSignal {
   type: string;
   confidence: 'High' | 'Medium' | 'Low';
   detail: string;
+  /** External source URL for click-through verification (when captured). */
+  url?: string;
 }
 
 export interface DocumentItem {

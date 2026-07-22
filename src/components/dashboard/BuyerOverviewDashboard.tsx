@@ -1,568 +1,611 @@
+import { formatDistanceToNow } from 'date-fns';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
-  Users,
-  UserCheck,
-  Clock,
   AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
+  ChevronRight,
+  Clock,
   FileCheck,
   FlaskConical,
+  Inbox,
+  Minus,
+  RefreshCw,
   ShieldAlert,
-  UserPlus,
   Sparkles,
-  ChevronRight,
-  ArrowUpRight,
-  Activity,
+  UserPlus,
 } from 'lucide-react';
 import {
-  BarChart,
   Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  Area,
-  AreaChart,
 } from 'recharts';
+
 import { ComplianceRing } from '@/components/dashboard/ComplianceRing';
+import {
+  dashboardCardClass,
+  dashboardCardPrimaryClass,
+} from '@/components/documents/buyerReviewDesignSystem';
+import {
+  BAR_RADIUS,
+  SEMANTIC,
+  SERIES,
+  axisProps,
+  gridProps,
+  tooltipProps,
+} from './chartTheme';
+import {
+  useBuyerDashboardData,
+  type ActionItem,
+  type ExpiringItem,
+  type RiskHotspot,
+} from './useBuyerDashboardData';
+import { useBuyerAiSummary, type AiBullet } from './useBuyerAiSummary';
 
 interface BuyerOverviewDashboardProps {
-  stats: {
-    connectedSuppliers: number;
-    activeRequests: number;
-    pendingReview: number;
-    approvedDocs: number;
-    expiringSoon: number;
-    onboardingCount: number;
-    rejectedDocs: number;
-    totalDocs: number;
-  };
+  buyerId: string | null | undefined;
+  branchId: string | null;
   onTabChange: (tab: string) => void;
   onNewRequest: () => void;
   onAddSupplier: () => void;
 }
 
-// Build last 6 months ending with current month, formatted "MMM 'YY"
-const buildLast6Months = () => {
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const now = new Date();
-  const result: string[] = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const yy = String(d.getFullYear()).slice(-2);
-    result.push(`${monthNames[d.getMonth()]} '${yy}`);
+/* ------------------------------------------------------------------ shells */
+
+const Panel = ({
+  title,
+  action,
+  children,
+  className = '',
+  primary = false,
+}: {
+  title: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+  /** Lifts the panel a tier so the grid isn't uniformly weighted. */
+  primary?: boolean;
+}) => (
+  <section
+    className={`${primary ? dashboardCardPrimaryClass : dashboardCardClass} flex min-h-0 flex-col p-4 ${className}`}
+  >
+    <header className="mb-3 flex shrink-0 items-center justify-between gap-2">
+      <h3 className="text-[13px] font-semibold text-foreground">{title}</h3>
+      {action}
+    </header>
+    {children}
+  </section>
+);
+
+const LinkOut = ({ label, onClick }: { label: string; onClick: () => void }) => (
+  <button
+    onClick={onClick}
+    className="inline-flex shrink-0 items-center gap-0.5 text-[11px] font-semibold text-primary transition-colors hover:text-primary-hover"
+  >
+    {label} <ChevronRight className="h-3 w-3" />
+  </button>
+);
+
+/** Shown wherever the data genuinely isn't there -- never a fabricated curve. */
+const Empty = ({ icon: Icon, children }: { icon: typeof Inbox; children: React.ReactNode }) => (
+  <div className="flex flex-1 flex-col items-center justify-center gap-2 py-6 text-center">
+    <Icon className="h-6 w-6 text-muted-foreground/50" />
+    <p className="max-w-[24ch] text-[12px] leading-snug text-muted-foreground">{children}</p>
+  </div>
+);
+
+/** Real delta or nothing. There is no placeholder percentage here by design. */
+const Delta = ({ value, suffix = '' }: { value: number | null; suffix?: string }) => {
+  if (value === null) {
+    return <span className="font-mono text-[10px] text-muted-foreground">no prior month</span>;
   }
-  return result;
+  if (value === 0) {
+    return (
+      <span className="inline-flex items-center gap-0.5 font-mono text-[10px] text-muted-foreground">
+        <Minus className="h-3 w-3" /> no change
+      </span>
+    );
+  }
+  const up = value > 0;
+  const Icon = up ? ArrowUpRight : ArrowDownRight;
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 font-mono text-[10px] font-medium ${
+        up ? 'text-success' : 'text-danger'
+      }`}
+    >
+      <Icon className="h-3 w-3" />
+      {up ? '+' : ''}
+      {value}
+      {suffix} vs last month
+    </span>
+  );
 };
 
+/* ------------------------------------------------------------------- rows */
+
+const ActionRow = ({ item, onClick }: { item: ActionItem; onClick: () => void }) => (
+  <button
+    onClick={onClick}
+    className="group flex w-full items-center gap-3 rounded-[10px] px-2 py-2 text-left transition-colors hover:bg-muted"
+  >
+    <span
+      className={`h-1.5 w-1.5 shrink-0 rounded-full ${item.overdue ? 'bg-danger' : 'bg-primary'}`}
+    />
+    <span className="min-w-0 flex-1">
+      <span className="block truncate text-[13px] font-medium text-foreground">{item.title}</span>
+      <span className="block truncate font-mono text-[11px] text-muted-foreground">
+        {item.supplierName}
+      </span>
+    </span>
+    {item.overdue && (
+      <span className="shrink-0 rounded-full bg-danger/10 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase text-danger">
+        overdue
+      </span>
+    )}
+    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-primary" />
+  </button>
+);
+
+const ExpiringRow = ({ item, onClick }: { item: ExpiringItem; onClick: () => void }) => {
+  const urgent = item.daysLeft <= 30;
+  return (
+    <button
+      onClick={onClick}
+      className="group flex w-full items-center gap-3 rounded-[10px] px-2 py-2 text-left transition-colors hover:bg-muted"
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[13px] font-medium text-foreground">
+          {item.documentName}
+        </span>
+        <span className="block truncate font-mono text-[11px] text-muted-foreground">
+          {item.supplierName}
+        </span>
+      </span>
+      <span
+        className={`shrink-0 font-mono text-[11px] font-semibold tabular-nums ${
+          urgent ? 'text-danger' : 'text-warning'
+        }`}
+      >
+        {item.daysLeft}d
+      </span>
+    </button>
+  );
+};
+
+const HotspotRow = ({ item, onClick }: { item: RiskHotspot; onClick: () => void }) => {
+  const tone =
+    item.level === 'High' ? 'text-danger' : item.level === 'Medium' ? 'text-warning' : 'text-success';
+  return (
+    <button
+      onClick={onClick}
+      className="group flex w-full items-center gap-2.5 rounded-[10px] px-2 py-1.5 text-left transition-colors hover:bg-muted"
+    >
+      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
+        {item.supplierName}
+      </span>
+      {item.delta !== null && item.delta !== 0 && (
+        <span
+          className={`font-mono text-[10px] ${item.delta > 0 ? 'text-danger' : 'text-success'}`}
+        >
+          {item.delta > 0 ? '+' : ''}
+          {item.delta}
+        </span>
+      )}
+      <span className={`shrink-0 font-mono text-[12px] font-semibold tabular-nums ${tone}`}>
+        {item.score}
+      </span>
+    </button>
+  );
+};
+
+/* ------------------------------------------------------------------- main */
+
 export const BuyerOverviewDashboard = ({
-  stats,
+  buyerId,
+  branchId,
   onTabChange,
   onNewRequest,
   onAddSupplier,
 }: BuyerOverviewDashboardProps) => {
-  const complianceScore =
-    stats.totalDocs > 0
-      ? Math.round((stats.approvedDocs / stats.totalDocs) * 100)
-      : 0;
+  const d = useBuyerDashboardData(buyerId, branchId);
 
-  const months = buildLast6Months();
+  const ai = useBuyerAiSummary(buyerId);
+  const navigate = useNavigate();
 
-  // Derived chart data — illustrative trend built from current snapshot
-  const approvalData = months.map((month, i) => {
-    const base = Math.max(stats.approvedDocs / 6, 4);
-    return {
-      month,
-      approved: Math.round(base + i * 2),
-      pending: Math.max(2, Math.round(stats.pendingReview / 2 + (i % 3))),
-      blocked: Math.max(1, Math.round(stats.pendingReview / 4 + (i % 2))),
-      rejected: Math.max(1, Math.round(stats.rejectedDocs / 4 + ((i + 1) % 3))),
-    };
-  });
+  const actionItems = [...d.overdue, ...d.awaitingReview];
+  const actionTotal = actionItems.length + d.pendingConnections;
+  const goDocs = () => onTabChange('documents');
+  const goSuppliers = () => onTabChange('suppliers');
 
-  const lastMonth = approvalData[approvalData.length - 1];
-  const totalThisMonth =
-    lastMonth.approved + lastMonth.pending + lastMonth.blocked + lastMonth.rejected;
-
-  const high = Math.max(1, Math.round(stats.connectedSuppliers * 0.18));
-  const medium = Math.max(1, Math.round(stats.connectedSuppliers * 0.32));
-  const low = Math.max(1, stats.connectedSuppliers - high - medium);
-
-  const riskData = [
-    { name: 'High Risk', value: high, color: '#f47b74' },
-    { name: 'Medium Risk', value: medium, color: '#f59e0b' },
-    { name: 'Low Risk', value: low, color: '#10b981' },
-  ];
-
-  const complianceTrend = months.map((month, i) => ({
-    month,
-    value: Math.min(100, Math.max(50, complianceScore - 6 + i * 1.2)),
-  }));
-
-  const expiryTrend = [
-    { bucket: '0-30 Days', value: stats.expiringSoon },
-    {
-      bucket: '31-60 Days',
-      value: Math.max(stats.expiringSoon, Math.round(stats.expiringSoon * 1.4) + 8),
+  /**
+   * Locally-derived bullets. These were the whole card before the background job
+   * existed; they stay as the fallback so a buyer whose summary hasn't generated
+   * yet (or whose last run failed) still sees something true.
+   */
+  const fallbackBullets: AiBullet[] = [
+    d.overdue.length > 0 && {
+      text: `${d.overdue.length} request${d.overdue.length > 1 ? 's are' : ' is'} past due — chase these first.`,
+      tone: 'danger' as const,
     },
-    { bucket: '61-90 Days', value: Math.max(1, Math.round(stats.expiringSoon * 0.9)) },
-  ];
+    d.awaitingReview.length > 0 && {
+      text: `${d.awaitingReview.length} submission${d.awaitingReview.length > 1 ? 's' : ''} awaiting your review.`,
+      tone: 'warn' as const,
+    },
+    d.expiring[0]?.value > 0 && {
+      text: `${d.expiring[0].value} document${d.expiring[0].value > 1 ? 's' : ''} expire within 30 days.`,
+      tone: 'warn' as const,
+    },
+    d.scoreDelta !== null && {
+      text: `Compliance score moved ${d.scoreDelta > 0 ? '+' : ''}${d.scoreDelta}pt vs last month.`,
+      tone: 'neutral' as const,
+    },
+    d.hasRiskData && d.riskHotspots[0] && {
+      text: `Highest risk supplier is ${d.riskHotspots[0].supplierName} at ${d.riskHotspots[0].score}.`,
+      tone: 'warn' as const,
+    },
+    {
+      text: `${d.connectedSuppliers} supplier${d.connectedSuppliers === 1 ? '' : 's'} connected.`,
+      tone: 'neutral' as const,
+    },
+  ].filter(Boolean) as AiBullet[];
+
+  const usingLive = ai.bullets.length > 0;
+  const summaryBullets = (usingLive ? ai.bullets : fallbackBullets).slice(0, 7);
+  const followUps = ai.followUps;
+
+  const updatedLabel = ai.loading
+    ? ''
+    : usingLive && ai.generatedAt
+      ? `Updated ${formatDistanceToNow(new Date(ai.generatedAt), { addSuffix: true })}`
+      : 'Live view';
+
+  /**
+   * Hands the briefing plus the chosen question to the chat page and asks it to
+   * send immediately, so the user arrives mid-conversation.
+   */
+  const askFollowUp = (question: string) => {
+    const briefing = summaryBullets.map((b) => `- ${b.text}`).join('\n');
+    navigate('/chat', {
+      state: {
+        initialPrompt: `Here is my compliance summary for today:\n${briefing}\n\n${question}`,
+        autoSend: true,
+      },
+    });
+  };
+
+  if (d.error) {
+    return (
+      <div className={`${dashboardCardClass} p-8 text-center`}>
+        <AlertTriangle className="mx-auto mb-2 h-6 w-6 text-danger" />
+        <p className="text-[13px] font-medium text-foreground">Couldn’t load your dashboard</p>
+        <p className="mt-1 font-mono text-[11px] text-muted-foreground">{d.error}</p>
+        <button
+          onClick={d.refresh}
+          className="mt-4 rounded-[10px] bg-primary px-4 py-2 text-[13px] font-semibold text-primary-foreground hover:bg-primary-hover"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="h-[calc(100vh-120px)] overflow-y-auto bg-background -m-6 p-6">
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35 }}
-        className="space-y-4 max-w-[1600px] mx-auto"
-      >
-        {/* Stat Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <StatCard
-            label="Total Suppliers"
-            value={stats.connectedSuppliers}
-            sub="All time"
-            subIcon={<Users className="w-3 h-3" />}
-            icon={<Users className="w-4 h-4 text-sky-600 dark:text-sky-400" />}
-            iconBg="bg-sky-100/70 dark:bg-sky-500/15"
-            onClick={() => onTabChange('suppliers')}
-          />
-          <StatCard
-            label="Active Suppliers"
-            value={stats.activeRequests}
-            sub={<span className="text-emerald-600 dark:text-emerald-400 font-medium">↑ {Math.max(1, Math.round(stats.activeRequests * 0.07))} this month</span>}
-            icon={<UserCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
-            iconBg="bg-emerald-100/70 dark:bg-emerald-500/15"
-            onClick={() => onTabChange('suppliers')}
-          />
-          <StatCard
-            label="Technical Approvals Pending"
-            value={stats.pendingReview}
-            sub={<span className="text-amber-600 dark:text-amber-400 font-medium">{Math.min(2, stats.pendingReview)} blocked</span>}
-            icon={<Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />}
-            iconBg="bg-amber-100/70 dark:bg-amber-500/15"
-            onClick={() => onTabChange('documents')}
-          />
-          <StatCard
-            label="Critical Issues / Expiring Soon"
-            value={stats.expiringSoon}
-            sub={<span className="text-danger font-medium">Within 30 days</span>}
-            icon={<AlertTriangle className="w-4 h-4 text-danger" />}
-            iconBg="bg-danger/15"
-            onClick={() => onTabChange('documents')}
-          />
-          {/* Compliance Score with ring */}
-          <div className="rounded-2xl bg-card border border-border shadow-sm p-4 hover:shadow-md transition-all min-h-[112px]">
-            <div className="flex items-center justify-between h-full">
-              <div className="space-y-0.5">
-                <p className="text-xs font-medium text-muted-foreground leading-tight">Overall Compliance Score</p>
-                <p className="text-3xl font-bold text-foreground tabular-nums tracking-tight">
-                  {complianceScore}%
-                </p>
-                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium inline-flex items-center gap-0.5">
-                  <ArrowUpRight className="w-3 h-3" /> 4% vs last month
-                </p>
-              </div>
-              <ComplianceRing score={complianceScore} size={58} strokeWidth={6} showLabel={false} />
-            </div>
+    /* One page: on lg+ the shell is bounded to the viewport minus the app chrome
+       (72px header + main's py-5 = 112px) and the two rows split it, so long
+       lists scroll INSIDE their panel instead of growing the page. Below lg it
+       falls back to normal document flow. */
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="mx-auto flex max-w-[1600px] flex-col gap-3.5 lg:h-[calc(100vh-112px)] lg:min-h-0"
+    >
+      {/* ---- Row 1: action queue (hero) | score + risk | AI summary ---- */}
+      <div className="grid grid-cols-1 gap-3.5 lg:min-h-0 lg:flex-[1.05] lg:grid-cols-12">
+        {/* Needs your action */}
+        <Panel
+          title="Needs your action"
+          primary
+          className="lg:col-span-5"
+          action={<LinkOut label="All requests" onClick={goDocs} />}
+        >
+          <div className="mb-3 flex shrink-0 items-baseline gap-2">
+            <span className="font-mono text-[30px] font-medium leading-none tabular-nums text-foreground">
+              {d.loading ? '—' : actionTotal}
+            </span>
+            <span className="text-[12px] text-muted-foreground">
+              {d.overdue.length > 0 && (
+                <span className="font-medium text-danger">{d.overdue.length} overdue · </span>
+              )}
+              {d.awaitingReview.length} awaiting review
+              {d.pendingConnections > 0 && ` · ${d.pendingConnections} new connection`}
+              {d.pendingConnections > 1 && 's'}
+            </span>
           </div>
+          <div className="-mx-2 min-h-0 flex-1 space-y-0.5 overflow-y-auto">
+            {d.loading ? null : actionItems.length === 0 ? (
+              <Empty icon={FileCheck}>You’re all caught up — nothing is waiting on you.</Empty>
+            ) : (
+              actionItems.slice(0, 6).map((i) => <ActionRow key={i.id} item={i} onClick={goDocs} />)
+            )}
+          </div>
+        </Panel>
+
+        {/* Compliance score + risk hotspots */}
+        <div className="flex flex-col gap-3.5 lg:col-span-4">
+          <section className={`${dashboardCardClass} shrink-0 p-4`}>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0 space-y-1">
+                <p className="text-[12px] font-medium text-muted-foreground">
+                  Overall compliance score
+                </p>
+                <p className="font-mono text-[30px] font-medium leading-none tabular-nums text-foreground">
+                  {d.loading ? '—' : `${d.complianceScore}%`}
+                </p>
+                {/* The % on its own is decorative; the denominator is what makes
+                    it actionable. */}
+                {!d.loading && (
+                  <p className="text-[12px] leading-snug text-muted-foreground">
+                    <span className="font-medium text-foreground">{d.approvedTotal}</span> of{' '}
+                    <span className="font-medium text-foreground">{d.requestTotal}</span> requested
+                    documents approved
+                  </p>
+                )}
+                {!d.loading && <Delta value={d.scoreDelta} suffix="pt" />}
+              </div>
+              <ComplianceRing score={d.complianceScore} size={56} strokeWidth={6} showLabel={false} />
+            </div>
+          </section>
+
+          <Panel
+            title="Risk hotspots"
+            className="min-h-[168px] flex-1"
+            action={<LinkOut label="Supplier risk" onClick={() => onTabChange('supplier-risk')} />}
+          >
+            <div className="-mx-2 min-h-0 flex-1 space-y-0.5 overflow-y-auto">
+              {d.loading ? null : !d.hasRiskData ? (
+                <Empty icon={ShieldAlert}>
+                  No risk scores yet. Run an assessment to populate this.
+                </Empty>
+              ) : (
+                d.riskHotspots.map((h) => (
+                  <HotspotRow key={h.supplierId} item={h} onClick={() => onTabChange('supplier-risk')} />
+                ))
+              )}
+            </div>
+          </Panel>
         </div>
 
-        {/* Middle Row: Approval Record + Risk + AI Summary */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Technical Approval Record */}
-          <div className="lg:col-span-5 rounded-2xl bg-card border border-border shadow-sm p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-foreground">Technical Approval Record</h3>
-              <select className="text-xs font-medium text-muted-foreground bg-muted border border-border rounded-lg px-2.5 py-1 outline-none">
-                <option>Last 6 Months</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-4 text-[11px] text-muted-foreground mb-2 flex-wrap">
-              <Legend dot="#10b981" label="Approved" />
-              <Legend dot="#f59e0b" label="Pending" />
-              <Legend dot="#64748b" label="Blocked" />
-              <Legend dot="#f47b74" label="Rejected" />
-            </div>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={approvalData} barCategoryGap={18}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))", borderRadius: 12, fontSize: 12 }}
-                />
-                <Bar dataKey="approved" stackId="a" fill="#10b981" />
-                <Bar dataKey="pending" stackId="a" fill="#f59e0b" />
-                <Bar dataKey="blocked" stackId="a" fill="#64748b" />
-                <Bar dataKey="rejected" stackId="a" fill="#f47b74" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-            <p className="text-[11px] text-muted-foreground/60 mt-2">
-              Total approvals this month: <span className="font-semibold text-foreground/80">{totalThisMonth}</span>
-            </p>
-          </div>
-
-          {/* Compliance Risk Breakdown */}
-          <div className="lg:col-span-4 rounded-2xl bg-card border border-border shadow-sm p-4 flex flex-col">
-            <h3 className="text-sm font-semibold text-foreground mb-3">Compliance Risk Breakdown</h3>
-            <div className="flex-1 flex items-center gap-4">
-              <div className="relative shrink-0" style={{ width: 150, height: 150 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={riskData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={48}
-                      outerRadius={72}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {riskData.map((e, i) => (
-                        <Cell key={i} fill={e.color} stroke="none" />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <p className="text-2xl font-bold text-foreground tabular-nums">{stats.connectedSuppliers}</p>
-                  <p className="text-[10px] text-muted-foreground font-medium">Suppliers</p>
-                </div>
-              </div>
-              <div className="flex-1 space-y-2.5">
-                {riskData.map((r) => {
-                  const pct = stats.connectedSuppliers ? Math.round((r.value / stats.connectedSuppliers) * 100) : 0;
-                  return (
-                    <div key={r.name} className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-2 text-foreground/80 font-medium">
-                        <span className="w-2 h-2 rounded-full" style={{ background: r.color }} />
-                        {r.name}
-                      </span>
-                      <span className="text-muted-foreground tabular-nums">
-                        {r.value} ({pct}%)
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <button
-              onClick={() => onTabChange('suppliers')}
-              className="mt-3 text-xs font-semibold text-primary hover:text-primary/80 inline-flex items-center gap-1 self-start"
-            >
-              View all suppliers <ChevronRight className="w-3 h-3" />
-            </button>
-          </div>
-
-          {/* AI Summary — promoted to middle row */}
-          <div className="lg:col-span-3 ai-card p-4 flex flex-col">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-fuchsia-600 dark:text-fuchsia-400 dark:text-fuchsia-500" />
-                <h3 className="text-sm font-semibold text-foreground">AI Summary</h3>
-              </div>
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-fuchsia-600 dark:text-fuchsia-400 dark:text-fuchsia-500 bg-fuchsia-100/70 dark:bg-fuchsia-500/15 border border-fuchsia-200 dark:border-fuchsia-500/30 px-1.5 py-0.5 rounded">
+        {/* AI Summary — kept, now on-brand and driven by real numbers */}
+        <section className="ai-card flex flex-col p-4 lg:col-span-3">
+          <header className="mb-3 flex items-center justify-between">
+            <div className="flex min-w-0 items-center gap-2">
+              <Sparkles className="h-4 w-4 shrink-0 text-primary" />
+              <h3 className="text-[13px] font-semibold text-foreground">AI Summary</h3>
+              <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-primary">
                 Beta
               </span>
             </div>
-            <ul className="flex-1 flex flex-col justify-around gap-2 text-xs text-muted-foreground leading-relaxed">
-              <li className="flex gap-2">
-                <span className="text-fuchsia-400 dark:text-fuchsia-500 mt-1.5">•</span>
-                <span>Compliance score moved <span className="font-semibold text-foreground">+4%</span> this month, driven by {stats.approvedDocs} new approvals.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="text-fuchsia-400 dark:text-fuchsia-500 mt-1.5">•</span>
-                <span><span className="font-semibold text-foreground">{stats.pendingReview}</span> technical approvals pending review.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="text-fuchsia-400 dark:text-fuchsia-500 mt-1.5">•</span>
-                <span><span className="font-semibold text-foreground">{stats.expiringSoon}</span> documents expire within 30 days — prioritize highest-risk first.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="text-fuchsia-400 dark:text-fuchsia-500 mt-1.5">•</span>
-                <span><span className="font-semibold text-foreground">{stats.connectedSuppliers}</span> suppliers connected across {Math.max(1, Math.round(stats.connectedSuppliers * 0.5))} active categories.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="text-fuchsia-400 dark:text-fuchsia-500 mt-1.5">•</span>
-                <span><span className="font-semibold text-emerald-600 dark:text-emerald-400">{Math.round((stats.approvedDocs / Math.max(1, stats.totalDocs)) * 100)}%</span> of submitted documents currently approved.</span>
-              </li>
-            </ul>
-
-            <button className="mt-3 text-xs font-semibold text-fuchsia-600 dark:text-fuchsia-400 dark:text-fuchsia-500 hover:text-fuchsia-700 dark:text-fuchsia-300 inline-flex items-center gap-1 self-start">
-              View AI Recommendations <Sparkles className="w-3 h-3" />
-            </button>
-          </div>
-
-        </div>
-
-        {/* Lower Row: Trends + Quick Actions/Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Compliance Trend */}
-          <div className="lg:col-span-4 rounded-2xl bg-card border border-border shadow-sm p-4 flex flex-col min-h-[260px]">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-foreground">Compliance Trend</h3>
-              <select className="text-xs font-medium text-muted-foreground bg-muted border border-border rounded-lg px-2.5 py-1 outline-none">
-                <option>Last 6 Months</option>
-              </select>
-            </div>
-            <div className="flex-1 min-h-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={complianceTrend}>
-                  <defs>
-                    <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#735fe9" stopOpacity={0.25} />
-                      <stop offset="100%" stopColor="#735fe9" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} domain={[0, 100]} />
-                  <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))", borderRadius: 12, fontSize: 12 }} />
-                  <Area type="monotone" dataKey="value" stroke="#735fe9" strokeWidth={2.5} fill="url(#trendGrad)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Upcoming Expiry Trend */}
-          <div className="lg:col-span-4 rounded-2xl bg-card border border-border shadow-sm p-4 flex flex-col min-h-[260px]">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-foreground">Upcoming Expiry Trend</h3>
-              <select className="text-xs font-medium text-muted-foreground bg-muted border border-border rounded-lg px-2.5 py-1 outline-none">
-                <option>Next 90 Days</option>
-              </select>
-            </div>
-            <div className="flex-1 min-h-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={expiryTrend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis dataKey="bucket" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))", borderRadius: 12, fontSize: 12 }} />
-                  <Line type="monotone" dataKey="value" stroke="#735fe9" strokeWidth={2.5} dot={{ r: 4, fill: '#735fe9' }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-2 flex items-center gap-2 text-xs bg-danger/10 border border-danger/20 rounded-lg px-3 py-1.5">
-              <AlertTriangle className="w-3.5 h-3.5 text-danger" />
-              <span className="text-foreground/80">
-                <span className="font-semibold text-danger">{stats.expiringSoon}</span> expire within 30 days
-              </span>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <span className="font-mono text-[10px] text-muted-foreground">{updatedLabel}</span>
               <button
-                onClick={() => onTabChange('documents')}
-                className="ml-auto text-primary font-semibold inline-flex items-center gap-0.5"
+                onClick={ai.refresh}
+                disabled={ai.refreshing || !buyerId}
+                aria-label="Regenerate summary"
+                title="Regenerate summary"
+                className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:opacity-40"
               >
-                View <ChevronRight className="w-3 h-3" />
+                <RefreshCw className={`h-3.5 w-3.5 ${ai.refreshing ? 'animate-spin' : ''}`} />
               </button>
             </div>
-          </div>
+          </header>
+          {/* justify-start, not center: centring the list was what left dead
+              space above and below the bullets. */}
+          <ul className="flex min-h-0 flex-1 flex-col justify-start gap-2.5 overflow-y-auto text-[12px] leading-relaxed text-muted-foreground">
+            {summaryBullets.map((b, i) => (
+              <li key={i} className="flex gap-2">
+                <span
+                  className={`mt-[7px] h-1 w-1 shrink-0 rounded-full ${
+                    b.tone === 'danger'
+                      ? 'bg-danger'
+                      : b.tone === 'warn'
+                        ? 'bg-warning'
+                        : 'bg-primary'
+                  }`}
+                />
+                <span>{b.text}</span>
+              </li>
+            ))}
+          </ul>
 
+          {/* Follow-ups: each hands the briefing plus the question to /chat and
+              sends it, so the user lands mid-conversation rather than staring
+              at an empty composer. */}
+          {followUps.length > 0 && (
+            <div className="mt-3 shrink-0 border-t border-primary/15 pt-2.5">
+              <p className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+                Ask a follow-up
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {followUps.slice(0, 3).map((f) => (
+                  <button
+                    key={f.label}
+                    onClick={() => askFollowUp(f.prompt)}
+                    className="rounded-full border border-primary/25 bg-primary/[0.06] px-2.5 py-1 text-left text-[11px] font-medium text-foreground/85 transition-colors hover:border-primary/50 hover:bg-primary/12 hover:text-foreground"
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
 
-          {/* Quick Actions + Recent Activity stacked */}
-          <div className="lg:col-span-4 space-y-4">
-            <div className="rounded-2xl bg-card border border-border shadow-sm p-4">
-              <div className="flex items-center justify-between mb-2.5">
-                <h3 className="text-sm font-semibold text-foreground">Quick Actions</h3>
+      {/* ---- Row 2: approval trend | expiring | quick actions ---- */}
+      <div className="grid grid-cols-1 gap-3.5 lg:min-h-0 lg:flex-1 lg:grid-cols-12">
+        <Panel title="Approval activity — last 6 months" className="lg:col-span-5">
+          {d.loading ? (
+            <div className="h-[186px]" />
+          ) : !d.hasHistory ? (
+            <Empty icon={Clock}>
+              Not enough history yet — this fills in once you have activity across two or more
+              months.
+            </Empty>
+          ) : (
+            <>
+              <div className="mb-2 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+                <Legend color={SERIES.accent} label="Approved" />
+                <Legend color={SERIES.accentSoft} label="Submitted" />
+                <Legend color={SERIES.neutral} label="Pending" />
+                <Legend color={SEMANTIC.danger} label="Rejected" />
               </div>
-              <div className="space-y-1.5">
-                <ActionRow
-                  icon={<FileCheck className="w-4 h-4 text-sky-600 dark:text-sky-400" />}
-                  iconBg="bg-sky-100/70 dark:bg-sky-500/15"
-                  label="New Compliance Request"
-                  onClick={onNewRequest}
-                />
-                <ActionRow
-                  icon={<FlaskConical className="w-4 h-4 text-fuchsia-600 dark:text-fuchsia-400 dark:text-fuchsia-500" />}
-                  iconBg="bg-fuchsia-100/70 dark:bg-fuchsia-500/15"
-                  label="COA Analysis"
-                  onClick={() => onTabChange('coa-analysis')}
-                />
-                <ActionRow
-                  icon={<ShieldAlert className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
-                  iconBg="bg-emerald-100/70 dark:bg-emerald-500/15"
-                  label="Supplier Risk Review"
-                  onClick={() => onTabChange('supplier-risk')}
-                />
-                <ActionRow
-                  icon={<UserPlus className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />}
-                  iconBg="bg-indigo-100/70 dark:bg-indigo-500/15"
-                  label="Add New Supplier"
-                  onClick={onAddSupplier}
-                />
+              <ResponsiveContainer width="100%" height={160}>
+                <BarChart data={d.trend} barCategoryGap={20}>
+                  <CartesianGrid {...gridProps} />
+                  <XAxis dataKey="month" {...axisProps} />
+                  <YAxis {...axisProps} allowDecimals={false} width={26} />
+                  <Tooltip {...tooltipProps} />
+                  <Bar dataKey="approved" stackId="a" fill={SERIES.accent} />
+                  <Bar dataKey="submitted" stackId="a" fill={SERIES.accentSoft} />
+                  <Bar dataKey="pending" stackId="a" fill={SERIES.neutral} />
+                  <Bar dataKey="rejected" stackId="a" fill={SEMANTIC.danger} radius={BAR_RADIUS} />
+                </BarChart>
+              </ResponsiveContainer>
+              <p className="mt-1.5 shrink-0 font-mono text-[11px] text-muted-foreground">
+                {d.approvedThisMonth} approved this month · <Delta value={d.approvedDelta} />
+              </p>
+            </>
+          )}
+        </Panel>
+
+        <Panel
+          title="Expiring soon"
+          className="lg:col-span-4"
+          action={<LinkOut label="All documents" onClick={goDocs} />}
+        >
+          {d.loading ? (
+            <div className="h-[186px]" />
+          ) : d.expiringItems.length === 0 ? (
+            <Empty icon={FileCheck}>Nothing expires in the next 90 days.</Empty>
+          ) : (
+            <>
+              {/* Three labelled buckets with counts on them. This replaced a
+                  smooth area curve, which implied a continuous trend over what
+                  are really three discrete windows -- and whose axis labels
+                  collided at the right edge. */}
+              <ExpiryBuckets buckets={d.expiring} total={d.expiringItems.length} />
+              <div className="-mx-2 mt-2.5 min-h-0 flex-1 space-y-0.5 overflow-y-auto border-t border-border/60 pt-1.5">
+                {d.expiringItems.slice(0, 4).map((i) => (
+                  <ExpiringRow key={i.id} item={i} onClick={goDocs} />
+                ))}
               </div>
+            </>
+          )}
+        </Panel>
+
+        <Panel title="Quick actions" className="lg:col-span-3">
+          <div className="flex flex-1 flex-col gap-1.5">
+            {[
+              { label: 'New compliance request', icon: FileCheck, onClick: onNewRequest },
+              { label: 'Add new supplier', icon: UserPlus, onClick: onAddSupplier },
+              { label: 'COA analysis', icon: FlaskConical, onClick: () => onTabChange('coa-analysis') },
+              { label: 'Supplier risk review', icon: ShieldAlert, onClick: () => onTabChange('supplier-risk') },
+            ].map((a) => (
               <button
-                onClick={() => onTabChange('documents')}
-                className="mt-2.5 text-xs font-semibold text-primary hover:text-primary/80 inline-flex items-center gap-1"
+                key={a.label}
+                onClick={a.onClick}
+                className="group flex items-center gap-2.5 rounded-[12px] border border-border/70 px-3 py-2 text-left transition-colors hover:border-primary/30 hover:bg-primary/[0.04]"
               >
-                Manage workflows <ChevronRight className="w-3 h-3" />
+                <a.icon className="h-[18px] w-[18px] shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
+                <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
+                  {a.label}
+                </span>
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-primary" />
               </button>
-            </div>
+            ))}
 
-            <div className="rounded-2xl bg-card border border-border shadow-sm p-4">
-              <div className="flex items-center gap-2 mb-2.5">
-                <Activity className="w-4 h-4 text-muted-foreground" />
-                <h3 className="text-sm font-semibold text-foreground">Recent Activity</h3>
-              </div>
-              <ul className="text-xs text-muted-foreground space-y-2">
-                <li className="flex justify-between gap-2">
-                  <span>New approval — <span className="font-medium text-foreground">Logic Foods</span></span>
-                  <span className="text-muted-foreground/60 shrink-0">2h</span>
-                </li>
-                <li className="flex justify-between gap-2">
-                  <span>Document expiring — <span className="font-medium text-foreground">ISO 9001</span></span>
-                  <span className="text-muted-foreground/60 shrink-0">5h</span>
-                </li>
-                <li className="flex justify-between gap-2">
-                  <span>Supplier added — <span className="font-medium text-foreground">Acme Co.</span></span>
-                  <span className="text-muted-foreground/60 shrink-0">1d</span>
-                </li>
-              </ul>
+            {/* Fills what was dead space under four buttons with real workspace
+                counts rather than padding. All three are queried, not derived. */}
+            <div className="mt-auto grid grid-cols-3 gap-2 border-t border-border/60 pt-3">
+              {[
+                { label: 'Suppliers', value: d.connectedSuppliers, onClick: goSuppliers },
+                { label: 'Onboarding', value: d.onboardingCount, onClick: () => onTabChange('onboarding') },
+                { label: 'Requests', value: d.pendingConnections, onClick: goSuppliers },
+              ].map((s) => (
+                <button
+                  key={s.label}
+                  onClick={s.onClick}
+                  className="rounded-[10px] px-1 py-1.5 text-left transition-colors hover:bg-muted"
+                >
+                  <span className="block font-mono text-[19px] font-medium leading-none tabular-nums text-foreground">
+                    {d.loading ? '—' : s.value}
+                  </span>
+                  <span className="mt-1 block text-[11px] text-muted-foreground">{s.label}</span>
+                </button>
+              ))}
             </div>
           </div>
-        </div>
+        </Panel>
+      </div>
+    </motion.div>
+  );
+};
 
-        {/* Manager Attention */}
-        <div className="rounded-2xl bg-card border border-border shadow-sm p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-foreground">Manager Attention (Priority Actions)</h3>
-            <button
-              onClick={() => onTabChange('documents')}
-              className="text-xs font-semibold text-primary hover:text-primary/80 inline-flex items-center gap-1"
-            >
-              View all actions <ChevronRight className="w-3 h-3" />
-            </button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-left text-muted-foreground/60 font-medium border-b border-border/60">
-                  <th className="pb-2 pr-4 font-medium">Priority</th>
-                  <th className="pb-2 pr-4 font-medium">Supplier</th>
-                  <th className="pb-2 pr-4 font-medium">Issue</th>
-                  <th className="pb-2 pr-4 font-medium">Due / Since</th>
-                  <th className="pb-2 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody className="text-foreground/80">
-                <AttentionRow priority="high" supplier="Logic Foods" issue="ISO 9001 Certificate expired" due="18 days ago" dueColor="text-danger" status="Overdue" statusBg="bg-danger/10 text-danger border-danger/20" />
-                <AttentionRow priority="high" supplier="Test Supplier" issue="2 technical approvals pending" due="2 days" dueColor="text-amber-600 dark:text-amber-400" status="Pending Review" statusBg="bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-100 dark:border-amber-500/25" />
-                <AttentionRow priority="medium" supplier="Manufacturing License" issue="Document expiring soon" due="12 days" dueColor="text-amber-600 dark:text-amber-400" status="Expiring Soon" statusBg="bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-100 dark:border-amber-500/25" />
-                <AttentionRow priority="medium" supplier="OHSAS 18001 Certificate" issue="Certificate will expire" due="27 days" dueColor="text-amber-600 dark:text-amber-400" status="Expiring Soon" statusBg="bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-100 dark:border-amber-500/25" />
-              </tbody>
-            </table>
-          </div>
+/**
+ * Expiry windows as three proportional bars with the count stated on each.
+ * Severity rises as the window shortens, so 0-30 reads danger and the later
+ * windows step down -- the color carries meaning rather than decorating.
+ */
+const ExpiryBuckets = ({
+  buckets,
+  total,
+}: {
+  buckets: { bucket: string; value: number }[];
+  total: number;
+}) => {
+  const max = Math.max(1, ...buckets.map((b) => b.value));
+  const tone = [
+    { bar: SEMANTIC.danger, text: 'text-danger' },
+    { bar: SEMANTIC.warn, text: 'text-warning' },
+    { bar: SERIES.neutral, text: 'text-muted-foreground' },
+  ];
+  return (
+    <div className="shrink-0 space-y-2">
+      <p className="font-mono text-[11px] text-muted-foreground">
+        <span className="font-semibold text-foreground">{total}</span> expiring in the next 90 days
+      </p>
+      {buckets.map((b, i) => (
+        <div key={b.bucket} className="flex items-center gap-2.5">
+          <span className="w-[62px] shrink-0 font-mono text-[11px] text-muted-foreground">
+            {b.bucket.replace(' days', 'd')}
+          </span>
+          <span className="h-[7px] flex-1 overflow-hidden rounded-full bg-muted">
+            <span
+              className="block h-full rounded-full transition-[width] duration-500"
+              style={{ width: `${(b.value / max) * 100}%`, background: tone[i].bar }}
+            />
+          </span>
+          <span
+            className={`w-5 shrink-0 text-right font-mono text-[12px] font-semibold tabular-nums ${tone[i].text}`}
+          >
+            {b.value}
+          </span>
         </div>
-      </motion.div>
+      ))}
     </div>
   );
 };
 
-const StatCard = ({
-  label,
-  value,
-  sub,
-  subIcon,
-  icon,
-  iconBg,
-  onClick,
-}: {
-  label: string;
-  value: number;
-  sub: React.ReactNode;
-  subIcon?: React.ReactNode;
-  icon: React.ReactNode;
-  iconBg: string;
-  onClick?: () => void;
-}) => (
-  <button
-    onClick={onClick}
-    className="text-left rounded-2xl bg-card border border-border shadow-sm p-4 hover:shadow-md hover:border-border transition-all group min-h-[112px]"
-  >
-    <div className="flex items-start gap-2.5">
-      <div className={`p-2 rounded-lg ${iconBg} shrink-0`}>{icon}</div>
-      <div className="min-w-0 space-y-0.5">
-        <p className="text-xs font-medium text-muted-foreground leading-tight">{label}</p>
-        <p className="text-2xl font-bold text-foreground tabular-nums tracking-tight">{value}</p>
-        <p className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
-          {sub} {subIcon}
-        </p>
-      </div>
-    </div>
-  </button>
-);
-
-const Legend = ({ dot, label }: { dot: string; label: string }) => (
+const Legend = ({ color, label }: { color: string; label: string }) => (
   <span className="inline-flex items-center gap-1.5">
-    <span className="w-2 h-2 rounded-full" style={{ background: dot }} />
+    <span className="h-2 w-2 rounded-full" style={{ background: color }} />
     {label}
   </span>
 );
-
-const ActionRow = ({
-  icon,
-  iconBg,
-  label,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  iconBg: string;
-  label: string;
-  onClick: () => void;
-}) => (
-  <button
-    onClick={onClick}
-    className="w-full flex items-center gap-3 px-2.5 py-2 rounded-lg border border-border/70 hover:border-border hover:bg-muted/60 transition-all group"
-  >
-    <div className={`p-1.5 rounded-lg ${iconBg}`}>{icon}</div>
-    <span className="text-xs font-medium text-foreground/80 flex-1 text-left">{label}</span>
-    <ChevronRight className="w-4 h-4 text-muted-foreground/60 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
-  </button>
-);
-
-const AttentionRow = ({
-  priority,
-  supplier,
-  issue,
-  due,
-  dueColor,
-  status,
-  statusBg,
-}: {
-  priority: 'high' | 'medium' | 'low';
-  supplier: string;
-  issue: string;
-  due: string;
-  dueColor: string;
-  status: string;
-  statusBg: string;
-}) => {
-  const dot =
-    priority === 'high' ? 'bg-danger' : priority === 'medium' ? 'bg-amber-500' : 'bg-emerald-500';
-  const label = priority.charAt(0).toUpperCase() + priority.slice(1);
-  return (
-    <tr className="border-b border-border/40 last:border-0 hover:bg-muted/50 transition-colors">
-      <td className="py-2.5 pr-4">
-        <span className="inline-flex items-center gap-2 text-foreground/80 font-medium">
-          <span className={`w-2 h-2 rounded-full ${dot}`} />
-          {label}
-        </span>
-      </td>
-      <td className="py-2.5 pr-4 font-medium text-foreground">{supplier}</td>
-      <td className="py-2.5 pr-4 text-muted-foreground">{issue}</td>
-      <td className={`py-2.5 pr-4 font-semibold tabular-nums ${dueColor}`}>{due}</td>
-      <td className="py-2.5">
-        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold border ${statusBg}`}>
-          {status}
-        </span>
-      </td>
-    </tr>
-  );
-};
-
-export default BuyerOverviewDashboard;

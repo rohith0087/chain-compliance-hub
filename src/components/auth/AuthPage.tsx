@@ -559,8 +559,10 @@ const AuthPage = () => {
         <div
           className="relative hidden lg:flex flex-col justify-between min-h-[600px] p-10 overflow-hidden"
           style={{
+            // Teal ledger ramp, matching the marketing site's dark evidence
+            // sections. Was a magenta/purple ramp from the old brand.
             backgroundImage:
-              "radial-gradient(120% 90% at 85% 15%, #7B2D8E 0%, #5B2470 38%, #2A1438 75%, #1A0B22 100%)",
+              "radial-gradient(120% 90% at 85% 15%, #0d9e8a 0%, #0a7a6b 34%, #0f2e30 72%, #0a151b 100%)",
           }}
         >
           {/* Grain overlay */}
@@ -1102,11 +1104,11 @@ const AuthPage = () => {
                 <p className="text-center text-sm text-white/55 mt-5">
                   {activeTab === 'login' ? (
                     <>Don't have an account?{' '}
-                      <button type="button" onClick={() => setActiveTab('signup')} className="text-[#818CF8] hover:text-[#A5B4FC] font-medium">Sign up</button>
+                      <button type="button" onClick={() => setActiveTab('signup')} className="text-[#2fbf8f] hover:text-[#5fd4ab] font-medium">Sign up</button>
                     </>
                   ) : (
                     <>Already have an account?{' '}
-                      <button type="button" onClick={() => setActiveTab('login')} className="text-[#818CF8] hover:text-[#A5B4FC] font-medium">Sign in</button>
+                      <button type="button" onClick={() => setActiveTab('login')} className="text-[#2fbf8f] hover:text-[#5fd4ab] font-medium">Sign in</button>
                     </>
                   )}
                 </p>

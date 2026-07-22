@@ -12,6 +12,7 @@ import AgentManagementDashboard from '@/components/agents/AgentManagementDashboa
 import BuyerDocumentsDashboard from '@/components/documents/BuyerDocumentsDashboard';
 import BuyerConnectionRequests from '@/components/buyer/BuyerConnectionRequests';
 import { UnifiedSettingsModal } from '@/components/settings/UnifiedSettingsModal';
+import { SettingsWorkspace } from '@/components/settings/SettingsWorkspace';
 import { CompanyManagementDashboard } from '@/components/company/CompanyManagementDashboard';
 import CustomTemplateManager from '@/components/buyer/CustomTemplateManager';
 import { BulkInviteModal } from '@/components/buyer/BulkInviteModal';
@@ -21,6 +22,8 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import SubscriptionPage from '@/pages/SubscriptionPage';
 import { useBranchContext } from '@/contexts/BranchContext';
 import ItemComplianceView from '@/components/buyer/ItemComplianceView';
+import ItemComplianceDemo from '@/components/buyer/ItemComplianceDemo';
+import FacilityMatrixDemo from '@/components/buyer/FacilityMatrixDemo';
 import { AllSuppliersPerformanceDashboard } from '@/components/buyer/AllSuppliersPerformanceDashboard';
 import { SupplierRiskManagement } from '@/components/buyer/SupplierRiskManagement';
 import { DocumentAssignmentManager } from '@/components/buyer/DocumentAssignmentManager';
@@ -58,6 +61,7 @@ import DossierGeneratorView from '@/components/buyer/DossierGeneratorView';
 import SupplierComplianceWorkspace from '@/components/buyer/SupplierComplianceWorkspace';
 import SupplierDetailPage from '@/components/buyer/SupplierDetailPage';
 import { InboundEmailReviewQueue } from '@/components/buyer/InboundEmailReviewQueue';
+import AuditorDocumentComparisonView from '@/components/buyer/AuditorDocumentComparisonView';
 import { useOrganizationFeature } from '@/hooks/useOrganizationFeature';
 
 import { supabase } from '@/integrations/supabase/client';
@@ -76,8 +80,30 @@ interface BuyerDashboardProps {
 const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: BuyerDashboardProps) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(() => {
+    // Composio OAuth returns to /?open=integrations; open Settings on that tab.
+    if (typeof window !== 'undefined' &&
+        new URLSearchParams(window.location.search).get('open') === 'integrations') {
+      return 'settings';
+    }
     return localStorage.getItem('buyerDashboard_activeTab') || 'dashboard';
   });
+  // Captured once at mount: did we arrive from the Composio OAuth return? Used
+  // to open Settings on the integrations sub-tab. Stable across the URL cleanup
+  // below and the panel stripping its own composio_* params.
+  const [openIntegrationsOnMount] = useState(
+    () => typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('open') === 'integrations',
+  );
+  // Strip only `open` so we don't re-trigger the tab switch; the composio_*
+  // params ride along to the integrations panel for its toast.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('open') === 'integrations') {
+      params.delete('open');
+      const qs = params.toString();
+      window.history.replaceState({}, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`);
+    }
+  }, []);
   const [dashboardView, setDashboardView] = useState<'overview' | 'detailed'>(() => {
     return (localStorage.getItem('buyerDashboard_view') as 'overview' | 'detailed') || 'overview';
   });
@@ -165,6 +191,8 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
   
   // Reset activeTab if non-owner tries to access owner-only tabs
   useEffect(() => {
+    // 'settings' is already owner-gated by the sidebar nav filter; guarding it
+    // here too caused a redirect race on direct load.
     const ownerOnlyTabs = ['company', 'subscription'];
     if (!permissionsLoading && ownerOnlyTabs.includes(activeTab) && !isOwner) {
       setActiveTab('dashboard');
@@ -399,7 +427,8 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
             </div>
           ) : dashboardView === 'overview' ? (
             <BuyerOverviewDashboard
-              stats={dashboardStats}
+              buyerId={companyId}
+              branchId={!allBranchesView && currentBranch?.id ? currentBranch.id : null}
               onTabChange={setActiveTab}
               onNewRequest={() => setShowRequestForm(true)}
               onAddSupplier={() => setShowBulkInvite(true)}
@@ -643,6 +672,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
           <InboundEmailReviewQueue buyerId={companyId} />
         )}
 
+        {/* Auditor AI: side-by-side document comparison */}
+        {activeTab === 'document-comparison' && companyId && (
+          <AuditorDocumentComparisonView buyerId={companyId} />
+        )}
+
         {/* Performance Dashboard */}
         {activeTab === 'performance' && (
           <AllSuppliersPerformanceDashboard />
@@ -658,19 +692,19 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
           <DocumentAssignmentManager />
         )}
 
-        {/* Item Compliance Content */}
+        {/* Item Compliance Content — static demo dataset */}
         {activeTab === 'item-compliance' && companyId && (
-          <ItemComplianceView buyerId={companyId} />
+          <ItemComplianceDemo />
         )}
 
-        {/* Facility Matrix Content */}
+        {/* Facility Matrix Content — static demo dataset */}
         {activeTab === 'facility-matrix' && (
-          <BuyerSupplierFacilityMatrix />
+          <FacilityMatrixDemo />
         )}
 
         {/* Supplier Risk Assessment */}
         {activeTab === 'supplier-risk' && (
-          <SupplierRiskAssessment />
+          <SupplierRiskAssessment buyerId={companyId} />
         )}
 
         {/* Onboarding Content - Use Pipeline View */}
@@ -762,6 +796,16 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
         {/* Subscription & Billing */}
         {activeTab === 'subscription' && (
           <SubscriptionPage />
+        )}
+
+        {/* Settings — full page (Settings-04 style), replaces the old modal on the buyer side */}
+        {activeTab === 'settings' && (
+          <SettingsWorkspace
+            companyId={companyId}
+            companyType="buyer"
+            companyName={buyerProfile?.company_name || 'Your Company'}
+            defaultTab={openIntegrationsOnMount ? 'integrations' : undefined}
+          />
         )}
 
         {/* Modals */}

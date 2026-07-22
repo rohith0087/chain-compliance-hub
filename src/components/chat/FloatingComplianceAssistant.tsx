@@ -543,26 +543,28 @@ export function FloatingComplianceAssistant() {
           >
             <span className="compliance-assistant-launcher__halo" aria-hidden="true" />
             <span className="compliance-assistant-launcher__face" aria-hidden="true">
+              {/* A sparkle mark, not a cartoon face. The previous smiley used a
+                  sky-blue (#0EA5E9) gradient that predated the teal brand and
+                  read as though it came from a different product. */}
               <svg viewBox="0 0 120 120">
                 <defs>
                   <linearGradient id="compliance-ai-face" x1="18" y1="12" x2="104" y2="108" gradientUnits="userSpaceOnUse">
-                    <stop stopColor="#2563EB" />
-                    <stop offset="1" stopColor="#0EA5E9" />
-                  </linearGradient>
-                  <linearGradient id="compliance-ai-shield" x1="76" y1="20" x2="99" y2="43" gradientUnits="userSpaceOnUse">
-                    <stop stopColor="#FFFFFF" />
-                    <stop offset="1" stopColor="#DBEAFE" />
+                    <stop stopColor="hsl(var(--primary))" />
+                    <stop offset="1" stopColor="hsl(var(--primary-hover))" />
                   </linearGradient>
                 </defs>
                 <circle cx="60" cy="60" r="45" fill="url(#compliance-ai-face)" />
-                <circle cx="60" cy="60" r="43.5" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="1.5" />
-                <ellipse className="compliance-assistant-eye compliance-assistant-eye--left" cx="43" cy="47" rx="3.4" ry="9" />
-                <ellipse className="compliance-assistant-eye compliance-assistant-eye--right" cx="77" cy="47" rx="3.4" ry="9" />
-                <path className="compliance-assistant-smile" d="M34 68 Q60 89 86 68" />
-                <g className="compliance-assistant-shield">
-                  <path d="M92 18.5 101 22v6.5c0 5.8-3.8 9.8-9 11.9-5.2-2.1-9-6.1-9-11.9V22l9-3.5Z" fill="url(#compliance-ai-shield)" />
-                  <path d="m88.4 28.9 2.5 2.5 5.2-5.7" fill="none" stroke="#2563EB" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-                </g>
+                <circle cx="60" cy="60" r="43.5" fill="none" stroke="hsl(var(--primary-foreground) / 0.22)" strokeWidth="1.5" />
+                <path
+                  className="compliance-assistant-spark"
+                  d="M60 36c1.6 9.4 5.8 13.6 15.2 15.2C65.8 52.8 61.6 57 60 66.4 58.4 57 54.2 52.8 44.8 51.2 54.2 49.6 58.4 45.4 60 36Z"
+                  fill="hsl(var(--primary-foreground))"
+                />
+                <path
+                  className="compliance-assistant-spark compliance-assistant-spark--sm"
+                  d="M78 62c.9 5.2 3.2 7.5 8.4 8.4-5.2.9-7.5 3.2-8.4 8.4-.9-5.2-3.2-7.5-8.4-8.4 5.2-.9 7.5-3.2 8.4-8.4Z"
+                  fill="hsl(var(--primary-foreground) / 0.7)"
+                />
               </svg>
             </span>
           </button>

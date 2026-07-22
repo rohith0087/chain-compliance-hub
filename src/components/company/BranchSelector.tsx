@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronDown, Building2, MapPin, Globe, Check } from 'lucide-react';
+import { ChevronDown, Check } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,8 +43,7 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
   // If only one branch and no all-branches option, show static display
   if (branches.length <= 1 && !showAllBranchesOption) {
     return (
-      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-        <Building2 className="h-4 w-4" />
+      <div className="text-sm text-muted-foreground">
         <span>{currentBranch?.branch_name || 'Main Office'}</span>
       </div>
     );
@@ -64,19 +63,9 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant={compact ? "ghost" : "outline"} size="sm" className={compact ? "h-7 text-xs text-primary px-2" : "h-8"}>
-          {allBranchesView ? (
-            <>
-              <Globe className="h-4 w-4 mr-2" />
-              <span className="max-w-32 truncate">All Branches</span>
-            </>
-          ) : (
-            <>
-              <Building2 className="h-4 w-4 mr-2" />
-              <span className="max-w-32 truncate">
-                {currentBranch?.branch_name || 'Select Branch'}
-              </span>
-            </>
-          )}
+          <span className="max-w-32 truncate">
+            {allBranchesView ? 'All Branches' : currentBranch?.branch_name || 'Select Branch'}
+          </span>
           <ChevronDown className="h-4 w-4 ml-2" />
         </Button>
       </DropdownMenuTrigger>
@@ -87,10 +76,7 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
               onClick={handleAllBranchesToggle}
               className="flex items-center justify-between p-3 hover:bg-muted focus:bg-muted"
             >
-              <div className="flex items-center space-x-3">
-                <Globe className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">All Branches</span>
-              </div>
+              <span className="font-medium">All Branches</span>
               {allBranchesView && (
                 <Check className="h-4 w-4 text-primary" />
               )}
@@ -105,17 +91,15 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
             onClick={() => handleBranchSelect(branch)}
             className="flex items-center justify-between p-3 hover:bg-muted focus:bg-muted"
           >
-            <div className="flex items-center space-x-3 flex-1">
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-              <div className="flex-1">
-                <div className="font-medium text-foreground">{branch.branch_name}</div>
-                {branch.location && (
-                  <div className="text-xs text-muted-foreground flex items-center mt-1">
-                    <MapPin className="h-3 w-3 mr-1" />
-                    {branch.location}
-                  </div>
-                )}
-              </div>
+            <div className="flex-1">
+              <div className="font-medium text-foreground">{branch.branch_name}</div>
+              {branch.location && (
+                // Mono for location, per the brand system's "captions and record
+                // values are mono" rule -- reads more deliberate than a pin glyph.
+                <div className="mt-0.5 font-mono text-[11px] tracking-[0.02em] text-muted-foreground">
+                  {branch.location}
+                </div>
+              )}
             </div>
             {!allBranchesView && currentBranch?.id === branch.id && (
               <Check className="h-4 w-4 text-primary" />

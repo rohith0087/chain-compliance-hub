@@ -743,7 +743,7 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
             <div className="flex items-center justify-between px-4 pt-4 pb-1">
               <h3 className="text-[15px] font-bold text-foreground">Priority Review Queue</h3>
               {onNavigateToComplianceDecisions && (
-                <Button variant="ghost" size="sm" className="text-xs text-[#2563EB] hover:text-[#1D4ED8]" onClick={onNavigateToComplianceDecisions}>
+                <Button variant="ghost" size="sm" className="text-xs text-primary hover:text-[#1D4ED8]" onClick={onNavigateToComplianceDecisions}>
                   View all in Compliance Decisions <ChevronRight className="w-3 h-3 ml-1" />
                 </Button>
               )}
@@ -811,7 +811,7 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-xs text-[#2563EB] hover:text-[#1D4ED8]"
+                          className="text-xs text-primary hover:text-[#1D4ED8]"
                           onClick={() => handleViewDocument(item)}
                         >
                           Review
@@ -836,7 +836,7 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
               </div>
               <div className="px-4 pb-4 divide-y divide-[#EEF2F7]">
                 {[
-                  { icon: Building2, color: 'text-[#2563EB]', label: 'Suppliers', value: overallStats.totalSuppliers },
+                  { icon: Building2, color: 'text-primary', label: 'Suppliers', value: overallStats.totalSuppliers },
                   { icon: ClipboardList, color: 'text-purple-600', label: 'Documents', value: overallStats.totalRequests },
                   { icon: Clock, color: 'text-amber-600', label: 'Open Items', value: overallStats.pendingRequests },
                   { icon: AlertCircle, color: 'text-red-600', label: 'Risk: High', value: overallStats.highRiskSuppliers },
@@ -853,7 +853,7 @@ const BuyerComplianceDashboard = ({ onNavigateToComplianceDecisions }: BuyerComp
                 {!workbenchLoading && decisionSummary.totalDecisions > 0 && (
                   <>
                     {[
-                      { icon: ListChecks, color: 'text-[#2563EB]', label: 'Open Tasks', value: decisionSummary.openTasks },
+                      { icon: ListChecks, color: 'text-primary', label: 'Open Tasks', value: decisionSummary.openTasks },
                       { icon: AlertTriangle, color: 'text-red-600', label: 'Critical/High Findings', value: decisionSummary.criticalHighFindings },
                       { icon: Clock, color: 'text-amber-600', label: 'Pending Approvals', value: decisionSummary.pendingApprovals },
                       { icon: ShieldCheck, color: 'text-emerald-600', label: 'Requirement Compliance', value: decisionSummary.complianceRate !== null ? `${decisionSummary.complianceRate}%` : '—' },

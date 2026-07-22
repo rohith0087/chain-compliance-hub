@@ -14,7 +14,7 @@ export const ImpersonationBanner: React.FC = () => {
 
   const handleExit = async () => {
     await endImpersonation();
-    navigate('/super-admin');
+    navigate('/platform-admin/dashboard');
   };
 
   return (

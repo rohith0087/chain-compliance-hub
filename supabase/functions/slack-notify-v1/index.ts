@@ -25,6 +25,9 @@ interface SlackPayload {
 interface IntegrationRow {
   id: string;
   access_token: string | null;
+  // Moved out of `config` so the secret can be revoked from client reads while
+  // the display settings in `config` stay readable.
+  webhook_url: string | null;
   config: Record<string, unknown>;
   status: string;
 }
@@ -127,7 +130,7 @@ Deno.serve(async (req) => {
 
   const { data: conn, error: connErr } = await admin
     .from('integration_connections')
-    .select('id, access_token, config, status')
+    .select('id, access_token, webhook_url, config, status')
     .eq('organization_id', organization_id)
     .eq('provider', 'slack')
     .eq('status', 'active')
@@ -143,7 +146,12 @@ Deno.serve(async (req) => {
     return jsonResponse(context, { skipped: true, reason: `${configKey} disabled` });
   }
 
-  const webhookUrl = (conn.config.webhook_url as string | undefined) || (conn.access_token ?? '');
+  // Prefer the dedicated column; fall back to the old locations so rows written
+  // before the secret migration keep working.
+  const webhookUrl =
+    conn.webhook_url ||
+    (conn.config.webhook_url as string | undefined) ||
+    (conn.access_token ?? '');
   if (!webhookUrl) {
     return jsonResponse(context, { skipped: true, reason: 'no_webhook_url' });
   }

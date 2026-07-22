@@ -158,6 +158,8 @@ Deno.serve(async (req) => {
       },
       compliance_score,
       metrics,
+      categories,
+      frameworks_linked: coverage.map((c) => c.framework_code),
       totals: { framework_requirements: totalReq, compliant: compliantReq, open_gaps: openGaps, frameworks: coverage.length },
       framework_coverage: coverage,
       requirements: requirements.map((r) => ({

@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Shield, AlertCircle } from 'lucide-react';
+import { AlertCircle, Lock } from 'lucide-react';
 import { usePlatformAdmin } from '@/hooks/usePlatformAdmin';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
+import { AdminBrand } from '@/components/platform-admin/AdminBrand';
+import { AdminCard } from '@/components/platform-admin/ui';
 
 const isTurnstileEnabled = import.meta.env.VITE_TURNSTILE_ENABLED === 'true';
 
@@ -26,34 +27,30 @@ export default function PlatformAdminLogin() {
     setError('');
 
     const { error } = await signInPlatformAdmin(email, password, turnstileToken || undefined);
-    
+
     if (error) {
       setError(error.message);
       setLoading(false);
-      // Reset turnstile token on error to force re-verification
       setTurnstileToken(null);
       return;
     }
-
-    // Redirect to platform admin dashboard
     navigate('/platform-admin/dashboard');
   };
 
   const isSubmitDisabled = loading || (isTurnstileEnabled && !turnstileToken);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/50 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <Shield className="h-6 w-6 text-primary" />
-          </div>
-          <CardTitle className="text-2xl font-bold">Platform Administration</CardTitle>
-          <CardDescription>
-            Secure access for platform administrators only
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+    <div className="admin-portal flex min-h-screen items-center justify-center p-4"
+      style={{ background: 'hsl(var(--admin-background))' }}>
+      <div className="w-full max-w-md">
+        <div className="mb-6 flex flex-col items-center">
+          <AdminBrand size="lg" />
+          <p className="mt-3 text-sm" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+            Secure access for platform administrators
+          </p>
+        </div>
+
+        <AdminCard>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <Alert variant="destructive">
@@ -61,36 +58,24 @@ export default function PlatformAdminLogin() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@platform.com"
-                required
-                disabled={loading}
-              />
+
+            <div className="space-y-1.5">
+              <Label htmlFor="email" style={{ color: 'hsl(var(--admin-text))' }}>Email</Label>
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@tracer2c.com" required disabled={loading}
+                style={{ background: 'hsl(var(--admin-card))', borderColor: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }} />
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                disabled={loading}
-              />
+
+            <div className="space-y-1.5">
+              <Label htmlFor="password" style={{ color: 'hsl(var(--admin-text))' }}>Password</Label>
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••" required disabled={loading}
+                style={{ background: 'hsl(var(--admin-card))', borderColor: 'hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }} />
             </div>
 
             {isTurnstileEnabled && (
               <div className="flex justify-center">
-                <TurnstileWidget 
+                <TurnstileWidget
                   siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ''}
                   onSuccess={setTurnstileToken}
                   onError={() => setTurnstileToken(null)}
@@ -98,24 +83,25 @@ export default function PlatformAdminLogin() {
                 />
               </div>
             )}
-            
-            <Button type="submit" className="w-full" disabled={isSubmitDisabled}>
-              {loading ? 'Authenticating...' : 'Sign In'}
+
+            <Button type="submit" className="w-full" disabled={isSubmitDisabled}
+              style={{ background: 'hsl(var(--admin-accent-blue))', color: 'white' }}>
+              {loading ? 'Authenticating…' : 'Sign in'}
             </Button>
           </form>
-          
-          <div className="mt-6 text-center">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => navigate('/')}
-              className="text-muted-foreground"
-            >
-              ← Back to Main Site
-            </Button>
+
+          <div className="mt-5 flex items-center justify-center gap-1.5 text-xs" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+            <Lock className="h-3 w-3" />
+            <span>Access is restricted and audited.</span>
           </div>
-        </CardContent>
-      </Card>
+        </AdminCard>
+
+        <div className="mt-6 text-center">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/')} style={{ color: 'hsl(var(--admin-text-muted))' }}>
+            ← Back to main site
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

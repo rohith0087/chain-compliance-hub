@@ -1,16 +1,5 @@
-import { useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import {
-  Search, Settings, User, Shield,
-  Bell, Users, Building2, Blocks, CreditCard, Laptop,
-} from 'lucide-react';
-import { AccountSettingsForm } from './AccountSettingsForm';
-import { PasswordChangeForm } from './PasswordChangeForm';
-import { NotificationSettingsForm } from './NotificationSettingsForm';
-import { IntegrationsPanel } from './IntegrationsPanel';
-import { CompanyManagementDashboard } from '@/components/company/CompanyManagementDashboard';
-import SubscriptionPage from '@/pages/SubscriptionPage';
+import { SettingsWorkspace } from './SettingsWorkspace';
 
 interface UnifiedSettingsModalProps {
   open: boolean;
@@ -21,183 +10,28 @@ interface UnifiedSettingsModalProps {
   companyName?: string;
 }
 
+// Thin dialog wrapper around the Settings-04 style workspace so existing
+// callers (e.g. the supplier dashboard) keep working with the new look.
+// On the buyer side, Settings is now a full dashboard tab rendering
+// SettingsWorkspace directly.
 export function UnifiedSettingsModal({
   open,
   onOpenChange,
-  defaultTab = 'general',
+  defaultTab = 'account',
   companyId,
   companyType,
   companyName,
 }: UnifiedSettingsModalProps) {
-  const [activeTab, setActiveTab] = useState(defaultTab);
-  const [search, setSearch] = useState('');
-
-  const navigation = [
-    { id: 'general', label: 'General', icon: Settings },
-    { id: 'account', label: 'Account', icon: User },
-    { id: 'security', label: 'Security', icon: Shield },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'users', label: 'Users', icon: Users },
-    { id: 'branches', label: 'Branches', icon: Building2 },
-    { id: 'integrations', label: 'Integrations', icon: Blocks },
-    { id: 'billing', label: 'Billing', icon: CreditCard },
-  ];
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[1100px] h-[85vh] p-0 gap-0 overflow-hidden bg-card flex flex-col border-none shadow-2xl rounded-2xl">
-
-        {/* Main Content Area */}
-        <div className="flex flex-1 overflow-hidden h-full">
-
-          {/* Sidebar */}
-          <div className="w-[280px] shrink-0 border-r border-border bg-muted flex flex-col relative z-10">
-            {/* Header / Search */}
-            <div className="p-4 flex flex-col gap-4">
-              <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
-                <Input
-                  placeholder="Search settings..."
-                  className="pl-9 h-9 bg-card border-border shadow-sm rounded-lg focus-visible:ring-1 focus-visible:ring-slate-300 text-sm"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-              <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
-                Settings
-              </div>
-            </div>
-
-            {/* Navigation */}
-            <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-0.5">
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`flex items-center gap-3 w-full px-3 py-2 text-sm rounded-lg transition-colors ${
-                      isActive
-                        ? 'font-semibold text-foreground bg-muted/60'
-                        : 'font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {item.label}
-                  </button>
-                );
-              })}
-            </nav>
-
-            <div className="p-4 border-t border-border bg-muted space-y-2">
-              <div className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-muted-foreground cursor-not-allowed opacity-50">
-                <Laptop className="w-4 h-4" /> Desktop App (Soon)
-              </div>
-            </div>
-          </div>
-
-          {/* Right Content Area */}
-          <div className="flex-1 flex flex-col h-full bg-card relative overflow-hidden">
-
-            <div className="flex-1 overflow-y-auto">
-              <div className="max-w-3xl mx-auto p-10 pb-20">
-
-                {/* Dynamic Content based on activeTab */}
-                {activeTab === 'general' && companyId && companyType && (
-                  <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <CompanyManagementDashboard
-                      companyId={companyId}
-                      companyType={companyType}
-                      companyName={companyName || 'Company'}
-                      defaultTab="overview"
-                      embedded
-                    />
-                  </div>
-                )}
-
-                {activeTab === 'general' && (!companyId || !companyType) && (
-                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div>
-                      <h2 className="text-xl font-bold font-serif text-foreground mb-1">General</h2>
-                      <p className="text-sm text-muted-foreground">Company management requires an active company context.</p>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === 'account' && (
-                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div>
-                      <h2 className="text-xl font-bold font-serif text-foreground mb-1">Account</h2>
-                      <p className="text-sm text-muted-foreground">Manage your personal profile and preferences.</p>
-                    </div>
-                    <AccountSettingsForm />
-                  </div>
-                )}
-
-                {activeTab === 'security' && (
-                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div>
-                      <h2 className="text-xl font-bold font-serif text-foreground mb-1">Security</h2>
-                      <p className="text-sm text-muted-foreground">Update your password and secure your account.</p>
-                    </div>
-                    <PasswordChangeForm />
-                  </div>
-                )}
-
-                {activeTab === 'notifications' && (
-                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div>
-                      <h2 className="text-xl font-bold font-serif text-foreground mb-1">Notifications</h2>
-                      <p className="text-sm text-muted-foreground">Choose what updates you want to receive and how.</p>
-                    </div>
-                    <NotificationSettingsForm />
-                  </div>
-                )}
-
-                {activeTab === 'users' && companyId && companyType && (
-                  <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <CompanyManagementDashboard
-                      companyId={companyId}
-                      companyType={companyType}
-                      companyName={companyName || 'Company'}
-                      defaultTab="users"
-                      embedded
-                    />
-                  </div>
-                )}
-
-                {activeTab === 'branches' && companyId && companyType && (
-                  <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <CompanyManagementDashboard
-                      companyId={companyId}
-                      companyType={companyType}
-                      companyName={companyName || 'Company'}
-                      defaultTab="branches"
-                      embedded
-                    />
-                  </div>
-                )}
-
-              </div>
-
-              {/* Integrations panel */}
-              {activeTab === 'integrations' && (
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-3xl mx-auto p-10 pb-20">
-                  <IntegrationsPanel organizationId={companyId ?? null} />
-                </div>
-              )}
-
-              {/* Billing — embedded subscription page */}
-              {activeTab === 'billing' && (
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl mx-auto px-6 pt-6 pb-20 [&_.min-h-screen]:min-h-0 [&_.bg-gradient-subtle]:bg-transparent">
-                  <SubscriptionPage />
-                </div>
-              )}
-            </div>
-
-          </div>
-        </div>
+      <DialogContent className="max-w-[1100px] h-[85vh] p-0 gap-0 overflow-y-auto bg-card border-none shadow-2xl rounded-2xl">
+        <SettingsWorkspace
+          embedded
+          defaultTab={defaultTab}
+          companyId={companyId}
+          companyType={companyType}
+          companyName={companyName}
+        />
       </DialogContent>
     </Dialog>
   );

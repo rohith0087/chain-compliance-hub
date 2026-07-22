@@ -270,6 +270,9 @@ const ChatPage: React.FC<ChatPageProps> = ({ embedded = false, lockedSupplier })
   const location = useLocation();
 
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo>(null);
+  // Holds a prompt arriving with `autoSend` until the send path's prerequisites
+  // (companyInfo, user) exist. See the auto-send effect below.
+  const pendingAutoSendRef = useRef<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [currentSession, setCurrentSession] = useState<string | null>(null);
@@ -341,7 +344,9 @@ const ChatPage: React.FC<ChatPageProps> = ({ embedded = false, lockedSupplier })
   const mentionMatches = connectedSuppliers.filter((s) => s.name.toLowerCase().includes(mention.query)).slice(0, 6);
 
   useEffect(() => {
-    const state = location.state as { initialPrompt?: string; sessionId?: string } | null;
+    const state = location.state as
+      | { initialPrompt?: string; sessionId?: string; autoSend?: boolean }
+      | null;
     const initialPrompt = state?.initialPrompt;
     const resumeSessionId = state?.sessionId;
     if (!initialPrompt && !resumeSessionId) return;
@@ -352,9 +357,30 @@ const ChatPage: React.FC<ChatPageProps> = ({ embedded = false, lockedSupplier })
     }
     if (initialPrompt) {
       setInputMessage(initialPrompt);
+      // Auto-send can't fire here: sendMessage() bails unless companyInfo and
+      // user are loaded, and on a cold navigation they aren't yet. Park the
+      // prompt and let the effect below send it once they are.
+      if (state?.autoSend) pendingAutoSendRef.current = initialPrompt;
     }
     navigate(location.pathname, { replace: true, state: null });
   }, [location.pathname, location.state, navigate]);
+
+  // Fires the parked prompt exactly once, after the session context the send
+  // path depends on has loaded. The ref is cleared before sending so a
+  // re-render (or a later refresh) can't replay the message.
+  useEffect(() => {
+    if (!pendingAutoSendRef.current) return;
+    if (!companyInfo || !user) return;
+    const prompt = pendingAutoSendRef.current;
+    pendingAutoSendRef.current = null;
+    setInputMessage(prompt);
+    const t = setTimeout(() => sendMessage(), 100);
+    return () => clearTimeout(t);
+    // sendMessage is a plain function declaration, so it is a new reference each
+    // render; listing it would re-run this effect constantly. The ref guard above
+    // is what makes the send happen exactly once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyInfo, user]);
 
   /* ---- Effects ---- */
 

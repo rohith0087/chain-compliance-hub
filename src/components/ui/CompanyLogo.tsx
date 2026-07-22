@@ -1,5 +1,4 @@
 import React from 'react';
-import { Building2 } from 'lucide-react';
 
 interface CompanyLogoProps {
   logoUrl?: string | null;
@@ -9,50 +8,90 @@ interface CompanyLogoProps {
   fallbackIcon?: React.ReactNode;
 }
 
+const sizeClasses = {
+  sm: 'h-8 w-8',
+  md: 'h-12 w-12',
+  lg: 'h-16 w-16',
+} as const;
+
+const monogramTextClasses = {
+  sm: 'text-[11px]',
+  md: 'text-[15px]',
+  lg: 'text-[19px]',
+} as const;
+
+/**
+ * Initials from the company name -- "Logic Foods" -> "LF", "Test" -> "TE".
+ * Skips legal-form noise so "Acme Foods Inc." reads AF, not AI.
+ */
+const STOPWORDS = new Set(['inc', 'inc.', 'llc', 'ltd', 'ltd.', 'co', 'co.', 'corp', 'corp.', 'gmbh', 'sa', 'bv', 'plc', 'the', 'and', '&']);
+
+function getInitials(name: string): string {
+  const words = name
+    .trim()
+    .split(/[\s\-_]+/)
+    .filter((w) => w && !STOPWORDS.has(w.toLowerCase()));
+  if (words.length === 0) return name.slice(0, 2).toUpperCase();
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+}
+
+/**
+ * Monogram fallback. This used to be a dashed-border box with a generic
+ * `Building2` glyph -- identical for every company, and dashed borders read as
+ * "placeholder / unfinished". Initials on a solid accent tint give each
+ * supplier a distinct mark and match the brand system's mono-for-records rule.
+ */
+const Monogram: React.FC<{ companyName: string; size: keyof typeof sizeClasses; className?: string }> = ({
+  companyName,
+  size,
+  className = '',
+}) => (
+  <div
+    aria-hidden="true"
+    className={`${sizeClasses[size]} flex shrink-0 items-center justify-center rounded-[10px] bg-primary/10 text-primary ring-1 ring-primary/15 ${className}`}
+  >
+    <span className={`font-mono font-semibold leading-none tracking-[0.02em] ${monogramTextClasses[size]}`}>
+      {getInitials(companyName)}
+    </span>
+  </div>
+);
+
 export const CompanyLogo: React.FC<CompanyLogoProps> = ({
   logoUrl,
   companyName = 'Company',
   size = 'md',
   className = '',
-  fallbackIcon
+  fallbackIcon,
 }) => {
-  const sizeClasses = {
-    sm: 'h-8 w-8',
-    md: 'h-12 w-12',
-    lg: 'h-16 w-16'
-  };
+  // Track load failure in React rather than mutating the DOM by hand, so the
+  // fallback is the same element in both paths.
+  const [failed, setFailed] = React.useState(false);
 
-  const iconSizeClasses = {
-    sm: 'h-4 w-4',
-    md: 'h-6 w-6',
-    lg: 'h-8 w-8'
-  };
+  React.useEffect(() => {
+    setFailed(false);
+  }, [logoUrl]);
 
-  if (logoUrl) {
+  if (logoUrl && !failed) {
     return (
       <img
         src={logoUrl}
         alt={`${companyName} logo`}
-        className={`${sizeClasses[size]} object-contain rounded border ${className}`}
-        onError={(e) => {
-          // Fallback to icon if image fails to load
-          const target = e.target as HTMLImageElement;
-          target.style.display = 'none';
-          const parent = target.parentElement;
-          if (parent) {
-            const fallback = document.createElement('div');
-            fallback.className = `${sizeClasses[size]} flex items-center justify-center rounded border border-dashed border-muted-foreground/25 bg-muted/50`;
-            fallback.innerHTML = `<svg class="${iconSizeClasses[size]} text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>`;
-            parent.appendChild(fallback);
-          }
-        }}
+        className={`${sizeClasses[size]} shrink-0 rounded-[10px] border border-border object-contain ${className}`}
+        onError={() => setFailed(true)}
       />
     );
   }
 
-  return (
-    <div className={`${sizeClasses[size]} flex items-center justify-center rounded border border-dashed border-muted-foreground/25 bg-muted/50 ${className}`}>
-      {fallbackIcon || <Building2 className={`${iconSizeClasses[size]} text-muted-foreground`} />}
-    </div>
-  );
+  if (fallbackIcon) {
+    return (
+      <div
+        className={`${sizeClasses[size]} flex shrink-0 items-center justify-center rounded-[10px] bg-primary/10 text-primary ring-1 ring-primary/15 ${className}`}
+      >
+        {fallbackIcon}
+      </div>
+    );
+  }
+
+  return <Monogram companyName={companyName} size={size} className={className} />;
 };

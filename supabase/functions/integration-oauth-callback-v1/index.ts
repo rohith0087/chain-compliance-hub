@@ -271,6 +271,12 @@ Deno.serve(async (req) => {
         ? new Date(Date.now() + tokens.expiresIn * 1000).toISOString()
         : null;
 
+      // Slack's OAuth response carries the incoming webhook inside config.
+      // Split it into the dedicated secret column so `config` never holds a
+      // credential -- `config` is readable by org members, the column is not.
+      const { webhook_url: exchangedWebhook, ...safeConfig } = tokens.config as
+        Record<string, unknown> & { webhook_url?: unknown };
+
       await admin.from('integration_connections').upsert(
         {
           organization_id: oauthState.organization_id,
@@ -279,7 +285,8 @@ Deno.serve(async (req) => {
           access_token: tokens.accessToken,
           refresh_token: tokens.refreshToken ?? null,
           token_expires_at: expiresAt,
-          config: tokens.config,
+          webhook_url: exchangedWebhook ? String(exchangedWebhook) : null,
+          config: safeConfig,
           connected_by: oauthState.initiated_by,
           connected_at: new Date().toISOString(),
           last_error: null,
@@ -328,10 +335,27 @@ Deno.serve(async (req) => {
 
   // ── save_webhook (Slack shortcut — no code exchange) ─────────────────────────
   if (action === 'save_webhook') {
-    const webhookUrl = String(body.webhook_url ?? '').trim();
-    if (!webhookUrl.startsWith('https://hooks.slack.com/')) {
+    const rawWebhook = String(body.webhook_url ?? '').trim();
+
+    // The client can no longer read the stored webhook (it is a secret, revoked
+    // from client grants), so editing the toggles alone sends an empty value.
+    // Treat that as "keep the existing one" rather than wiping it.
+    let webhookUrl = rawWebhook;
+    if (!webhookUrl) {
+      const { data: current } = await admin
+        .from('integration_connections')
+        .select('webhook_url')
+        .eq('organization_id', organizationId)
+        .eq('provider', 'slack')
+        .maybeSingle();
+      webhookUrl = current?.webhook_url ?? '';
+      if (!webhookUrl) {
+        return jsonResponse(context, { error: 'A Slack webhook URL is required' }, 400);
+      }
+    } else if (!webhookUrl.startsWith('https://hooks.slack.com/')) {
       return jsonResponse(context, { error: 'Invalid Slack webhook URL' }, 400);
     }
+
     const extraConfig = (body.config as Record<string, unknown> | undefined) ?? {};
     const { error: upsertErr } = await admin.from('integration_connections').upsert(
       {
@@ -341,8 +365,9 @@ Deno.serve(async (req) => {
         access_token: null,
         refresh_token: null,
         token_expires_at: null,
+        // Secret lives in its own column so `config` stays client-readable.
+        webhook_url: webhookUrl,
         config: {
-          webhook_url: webhookUrl,
           channel_name: String(body.channel_name ?? ''),
           notify_on_submit:  extraConfig.notify_on_submit  ?? true,
           notify_on_approve: extraConfig.notify_on_approve ?? true,

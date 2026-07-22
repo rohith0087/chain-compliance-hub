@@ -229,7 +229,7 @@ export function SupplierProfileModal({
               </div>
               <div className={reviewMetricCardClass}>
                 <div className={`${reviewMetricIconCircleClass} bg-[#EFF6FF]`}>
-                  <Package className="h-5 w-5 text-[#2563EB]" />
+                  <Package className="h-5 w-5 text-primary" />
                 </div>
                 <div>
                   <p className="text-[20px] font-bold text-foreground leading-none">{loading ? '—' : totalRequests}</p>

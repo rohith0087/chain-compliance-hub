@@ -145,7 +145,7 @@ export default function CanonicalEvidenceReviewWorkspace({ buyerId }: Props) {
                 <button
                   key={item.id}
                   onClick={() => setSelectedId(item.id)}
-                  className={`w-full rounded-[12px] border p-3 text-left transition-colors ${selected.id === item.id ? 'border-[#2563EB] bg-[#EAF1FF]' : 'border-border bg-card hover:bg-muted/50'}`}
+                  className={`w-full rounded-[12px] border p-3 text-left transition-colors ${selected.id === item.id ? 'border-primary bg-[#EAF1FF]' : 'border-border bg-card hover:bg-muted/50'}`}
                 >
                   <p className="font-medium text-foreground">{item.record?.display_name || item.request?.document_type}</p>
                   <p className="mt-1 text-xs text-muted-foreground">{item.request?.title}</p>
@@ -174,7 +174,7 @@ export default function CanonicalEvidenceReviewWorkspace({ buyerId }: Props) {
                   ) : (
                     <div className="flex h-64 flex-col items-center justify-center gap-2 rounded-[12px] border border-border bg-muted/50 text-sm text-muted-foreground">
                       <p>This file type can't be previewed inline.</p>
-                      <a href={previewUrl} download className="inline-flex items-center gap-1 text-[#2563EB] hover:underline"><Download className="h-3.5 w-3.5" />Download to view</a>
+                      <a href={previewUrl} download className="inline-flex items-center gap-1 text-primary hover:underline"><Download className="h-3.5 w-3.5" />Download to view</a>
                     </div>
                   )}
                 </div>

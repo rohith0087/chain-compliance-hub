@@ -4,8 +4,26 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Newspaper, ShieldAlert, Globe, RefreshCw, Inbox } from 'lucide-react';
+import { Newspaper, ShieldAlert, Globe, RefreshCw, Inbox, ExternalLink } from 'lucide-react';
 import { SupplierRiskProfile } from './riskData';
+
+// Renders a signal title as an external "verify source" link when a source URL
+// was captured; otherwise plain text.
+function SourceTitle({ title, url }: { title: string; url?: string }) {
+  if (!url) return <>{title}</>;
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-start gap-1 text-primary hover:underline"
+      title="Verify source (opens in a new tab)"
+    >
+      <span>{title}</span>
+      <ExternalLink className="h-3 w-3 mt-0.5 flex-shrink-0" />
+    </a>
+  );
+}
 
 const severityColor = (s: string) => {
   if (s === 'Critical') return 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300';
@@ -55,7 +73,7 @@ export function SignalsSection({ supplier }: { supplier: SupplierRiskProfile }) 
                   {supplier.news.map((n, i) => (
                     <div key={i} className="p-3 rounded-lg border border-border/50 bg-muted/20 space-y-2">
                       <div className="flex items-start justify-between gap-2">
-                        <h4 className="text-sm font-medium leading-tight">{n.headline}</h4>
+                        <h4 className="text-sm font-medium leading-tight"><SourceTitle title={n.headline} url={n.url} /></h4>
                         {n.riskImpact > 0 && (
                           <Badge variant="destructive" className="text-xs flex-shrink-0">+{n.riskImpact}</Badge>
                         )}
@@ -90,7 +108,7 @@ export function SignalsSection({ supplier }: { supplier: SupplierRiskProfile }) 
                   {supplier.recalls.map((r, i) => (
                     <div key={i} className="p-3 rounded-lg border border-border/50 bg-muted/20 space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-medium">{r.eventType}</h4>
+                        <h4 className="text-sm font-medium"><SourceTitle title={r.eventType} url={r.url} /></h4>
                         <Badge className={`text-xs border-0 ${severityColor(r.severity)}`}>{r.severity}</Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">{r.product}</p>
@@ -112,7 +130,7 @@ export function SignalsSection({ supplier }: { supplier: SupplierRiskProfile }) 
                 {supplier.webSignals.map((w, i) => (
                   <div key={i} className="p-3 rounded-lg border border-border/50 bg-muted/20 space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium">{w.title}</h4>
+                      <h4 className="text-sm font-medium"><SourceTitle title={w.title} url={w.url} /></h4>
                       <Badge variant="outline" className="text-xs">{w.confidence} confidence</Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">{w.detail}</p>

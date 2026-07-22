@@ -391,7 +391,7 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
         {/* Enhanced Empty State */}
         {documentSets.length === 0 ? (
           <div className={`${reviewEmptyStateContainerClass} border-dashed border-2 py-16`}>
-            <div className="rounded-full bg-[#EFF6FF] p-4 mb-4 inline-flex">
+            <div className="rounded-full bg-primary/10 p-4 mb-4 inline-flex">
               <Package className="h-10 w-10 text-primary" />
             </div>
             <h3 className="text-lg font-semibold text-foreground mb-2">Create Your First Document Set</h3>
@@ -465,16 +465,16 @@ export function DocumentSetManager({ buyerId }: DocumentSetManagerProps) {
                   {/* Badges row */}
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {set.is_default && (
-                      <Badge variant="outline" className="text-[12px] px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground border-border">Default</Badge>
+                      <Badge variant="outline" className="text-caption px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground border-border">Default</Badge>
                     )}
                     {isPopularSet(set.usage_count || 0) && (
-                      <Badge variant="outline" className="text-[12px] px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 border-emerald-200">
+                      <Badge variant="outline" className="text-caption px-2 py-0.5 rounded-full font-medium bg-success/10 text-success border-success/20">
                         <TrendingUp className="h-3 w-3 mr-1" />
                         Popular
                       </Badge>
                     )}
                     {isNewSet(set.created_at) && !isPopularSet(set.usage_count || 0) && (
-                      <Badge variant="outline" className="text-[12px] px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700 border-blue-200">
+                      <Badge variant="outline" className="text-caption px-2 py-0.5 rounded-full font-medium bg-primary/10 text-primary border-primary/20">
                         <Sparkles className="h-3 w-3 mr-1" />
                         New
                       </Badge>

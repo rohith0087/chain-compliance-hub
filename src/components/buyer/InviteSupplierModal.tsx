@@ -164,8 +164,8 @@ export const InviteSupplierModal = ({
 
         <div className="space-y-6">
           {/* Buyer Info Card */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
-            <h3 className="font-semibold text-blue-900 mb-2">Your Company Details</h3>
+          <div className="bg-primary/5 p-4 rounded-lg border border-primary/20">
+            <h3 className="font-semibold text-primary mb-2">Your Company Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
               <div><span className="font-medium">Company:</span> {buyerProfile.company_name}</div>
               <div><span className="font-medium">Contact:</span> {userProfile.full_name}</div>
@@ -175,7 +175,7 @@ export const InviteSupplierModal = ({
               )}
             </div>
             <div className="mt-3 flex items-center gap-2">
-              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+              <Badge variant="secondary" className="bg-primary/15 text-primary">
                 Buyer ID: {buyerId}
               </Badge>
               <Button variant="ghost" size="sm" onClick={handleCopyBuyerId}>

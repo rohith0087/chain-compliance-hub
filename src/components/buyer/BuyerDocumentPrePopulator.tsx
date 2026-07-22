@@ -348,7 +348,7 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
         {/* Selected Supplier Info */}
         {selectedSupplier && (
           <div className="flex items-center gap-3 p-3 rounded-[16px] bg-muted/50 border border-border">
-            <div className="flex items-center justify-center h-9 w-9 rounded-[10px] bg-[#EFF6FF]">
+            <div className="flex items-center justify-center h-9 w-9 rounded-[10px] bg-primary/10">
               <Building2 className="h-4 w-4 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
@@ -360,7 +360,7 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
               </p>
             </div>
             {existingRequests.length > 0 && (
-              <Badge variant="outline" className="text-[12px] px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground border-border">
+              <Badge variant="outline" className="text-caption px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground border-border">
                 {existingRequests.length} existing requests
               </Badge>
             )}
@@ -373,7 +373,7 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
           className={cn(
             "relative rounded-[16px] border bg-muted/30 p-6 text-center cursor-pointer transition-all duration-200",
             isDragActive
-              ? "border-primary bg-blue-50/40 ring-2 ring-primary/20"
+              ? "border-primary bg-primary/10 ring-2 ring-primary/20"
               : "border-border hover:border-primary/40 hover:bg-muted/60"
           )}
         >
@@ -381,7 +381,7 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
           <div className="flex flex-col items-center gap-2">
             <div className={cn(
               "flex items-center justify-center h-12 w-12 rounded-[10px] transition-colors",
-              isDragActive ? "bg-blue-100" : "bg-[#EFF6FF]"
+              isDragActive ? "bg-primary/15" : "bg-primary/10"
             )}>
               <Upload className={cn(
                 "h-5 w-5 transition-colors",
@@ -419,7 +419,7 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
               </Button>
             </div>
 
-            <div className="rounded-[16px] border border-border divide-y divide-[#EEF2F7] overflow-hidden">
+            <div className="rounded-[16px] border border-border divide-y divide-border overflow-hidden">
               {files.map((file, index) => {
                 const matchingRequests = file.documentType ? getMatchingRequests(file.documentType) : [];
 
@@ -427,7 +427,7 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
                   <div key={index} className="p-3 bg-card hover:bg-muted/50 transition-colors space-y-3">
                     {/* File Info Row */}
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center h-8 w-8 rounded-[10px] bg-[#EFF6FF] flex-shrink-0">
+                      <div className="flex items-center justify-center h-8 w-8 rounded-[10px] bg-primary/10 flex-shrink-0">
                         <FileText className="h-4 w-4 text-primary" />
                       </div>
 
@@ -442,7 +442,7 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
                         variant="ghost"
                         size="sm"
                         onClick={() => removeFile(index)}
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-[#DC2626]"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-danger"
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -535,10 +535,10 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
 
                     {/* Link to Existing Request Option */}
                     {file.documentType && matchingRequests.length > 0 && (
-                      <div className="flex items-start gap-2 p-2 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
-                        <Link2 className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex items-start gap-2 p-2 rounded-md bg-primary/10 border border-primary/20">
+                        <Link2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                         <div className="flex-1 space-y-2">
-                          <p className="text-xs text-blue-700 dark:text-blue-300">
+                          <p className="text-xs text-primary">
                             Found {matchingRequests.length} existing request(s) for this document type
                           </p>
                           <Select 
@@ -560,7 +560,7 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
                             </SelectContent>
                           </Select>
                           {linkToExisting[index] && (
-                            <p className="text-xs text-blue-600 dark:text-blue-400">
+                            <p className="text-xs text-primary">
                               ✓ Will add as new version to existing request
                             </p>
                           )}
@@ -574,9 +574,9 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
 
             {/* Expiry Date Reminder */}
             {files.some(f => !f.expirationDate && f.documentType) && (
-              <div className="flex items-center gap-2 p-2 rounded-[10px] bg-amber-50 border border-amber-200">
-                <CalendarIcon className="h-4 w-4 text-amber-600" />
-                <p className="text-xs text-amber-700">
+              <div className="flex items-center gap-2 p-2 rounded-[10px] bg-warning/10 border border-warning/20">
+                <CalendarIcon className="h-4 w-4 text-warning" />
+                <p className="text-xs text-warning">
                   Tip: Add expiration dates to receive automatic renewal notifications
                 </p>
               </div>
@@ -610,12 +610,12 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
               className="h-1.5"
             />
             <div className="flex items-center gap-3 text-xs">
-              <div className="flex items-center gap-1 text-emerald-600">
+              <div className="flex items-center gap-1 text-success">
                 <CheckCircle className="h-3.5 w-3.5" />
                 {progress.successfulUploads} successful
               </div>
               {progress.failedUploads > 0 && (
-                <div className="flex items-center gap-1 text-red-600">
+                <div className="flex items-center gap-1 text-danger">
                   <XCircle className="h-3.5 w-3.5" />
                   {progress.failedUploads} failed
                 </div>
@@ -639,7 +639,7 @@ export const BuyerDocumentPrePopulator: React.FC<BuyerDocumentPrePopulatorProps>
             size="sm"
             onClick={handleUpload}
             disabled={!canUpload || isUploading}
-            className="h-9 min-w-28 rounded-[10px] bg-[#10B981] hover:bg-[#059669] text-white"
+            className="h-9 min-w-28 rounded-[10px] bg-success hover:bg-success/90 text-success-foreground"
           >
             {isUploading ? 'Uploading...' : files.length > 0 ? `Upload ${files.length} Files` : 'Upload'}
           </Button>

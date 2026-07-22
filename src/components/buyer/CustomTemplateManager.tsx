@@ -47,21 +47,21 @@ interface TemplateStatusConfig {
 // Template lifecycle status is distinct from document-submission status
 // (STATUS_BADGE_CONFIG), so it gets its own small, page-local config.
 const TEMPLATE_STATUS_CONFIG: Record<'active' | 'inactive' | 'expired', TemplateStatusConfig> = {
-  active: { label: 'Active', icon: CheckCircle, className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  active: { label: 'Active', icon: CheckCircle, className: 'bg-success/10 text-success border-success/20' },
   inactive: { label: 'Inactive', icon: Ban, className: 'bg-muted text-muted-foreground border-border' },
-  expired: { label: 'Expired', icon: AlertTriangle, className: 'bg-red-50 text-red-700 border-red-200' },
+  expired: { label: 'Expired', icon: AlertTriangle, className: 'bg-danger/10 text-danger border-danger/20' },
 };
 
 // Template categories (Risk Control, Traceability, etc.) are a different
 // taxonomy than CATEGORY_BADGE_CLASS's document categories, so they get
 // their own color cycle here rather than falling through to a default gray.
 const TEMPLATE_CATEGORY_COLORS = [
-  'bg-blue-50 text-blue-700 border-blue-200',
-  'bg-emerald-50 text-emerald-700 border-emerald-200',
-  'bg-orange-50 text-orange-700 border-orange-200',
-  'bg-pink-50 text-pink-700 border-pink-200',
-  'bg-teal-50 text-teal-700 border-teal-200',
-  'bg-indigo-50 text-indigo-700 border-indigo-200',
+  'bg-primary/10 text-primary border-primary/20',
+  'bg-success/10 text-success border-success/20',
+  'bg-warning/10 text-warning border-warning/20',
+  'bg-primary/10 text-primary border-primary/20',
+  'bg-primary/10 text-primary border-primary/20',
+  'bg-primary/10 text-primary border-primary/20',
 ];
 
 function getCategoryClass(category: string, allCategories: string[]): string {
@@ -369,32 +369,32 @@ export const CustomTemplateManager = () => {
                   <TableRow key={template.id} className="h-[88px] border-b border-border hover:bg-muted/50">
                     <TableCell className="px-3 py-3">
                       <div className="flex items-start gap-3">
-                        <div className="w-[40px] h-[40px] rounded-[10px] bg-[#EFF6FF] flex items-center justify-center flex-shrink-0">
+                        <div className="w-[40px] h-[40px] rounded-[10px] bg-primary/10 flex items-center justify-center flex-shrink-0">
                           <FileText className="w-5 h-5 text-primary" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[14px] font-semibold text-foreground truncate" title={template.template_name}>{template.template_name}</p>
+                          <p className="text-body font-semibold text-foreground truncate" title={template.template_name}>{template.template_name}</p>
                           {template.description && (
-                            <p className="text-[13px] text-muted-foreground truncate" title={template.description}>{template.description}</p>
+                            <p className="text-small text-muted-foreground truncate" title={template.description}>{template.description}</p>
                           )}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="px-3 py-3">
-                      <Badge variant="outline" className={`text-[12px] px-2 py-0.5 rounded-full font-medium border ${getCategoryClass(template.category, categories)}`}>
+                      <Badge variant="outline" className={`text-caption px-2 py-0.5 rounded-full font-medium border ${getCategoryClass(template.category, categories)}`}>
                         {template.category}
                       </Badge>
                     </TableCell>
-                    <TableCell className="px-3 py-3 text-[13px] text-muted-foreground truncate">{template.document_type}</TableCell>
+                    <TableCell className="px-3 py-3 text-small text-muted-foreground truncate">{template.document_type}</TableCell>
                     <TableCell className="px-3 py-3">
-                      <Badge variant="outline" className={`text-[12px] px-2 py-0.5 rounded-full font-medium border flex items-center justify-center w-fit ${status.className}`}>
+                      <Badge variant="outline" className={`text-caption px-2 py-0.5 rounded-full font-medium border flex items-center justify-center w-fit ${status.className}`}>
                         <StatusIcon className="w-3 h-3 mr-1" />{status.label}
                       </Badge>
                     </TableCell>
-                    <TableCell className="px-3 py-3 text-[13px] text-muted-foreground">
+                    <TableCell className="px-3 py-3 text-small text-muted-foreground">
                       {formatFileSize(template.file_size)} · Used {template.usage_count}x
                     </TableCell>
-                    <TableCell className="px-3 py-3 text-[13px] text-muted-foreground">
+                    <TableCell className="px-3 py-3 text-small text-muted-foreground">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-3.5 h-3.5 text-muted-foreground/70 flex-shrink-0" />
                         {new Date(template.created_at).toLocaleDateString()}
@@ -443,7 +443,7 @@ export const CustomTemplateManager = () => {
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction
                                 onClick={() => handleDeleteTemplate(template.id)}
-                                className="bg-red-500 hover:bg-red-600"
+                                className="bg-danger hover:bg-danger"
                               >
                                 Delete
                               </AlertDialogAction>

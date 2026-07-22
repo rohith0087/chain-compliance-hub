@@ -162,10 +162,10 @@ export function SupplierProfileModal({
   const riskAssessment = calculateRiskAssessment(complianceScore, overdueRate, rejectionRate, pendingRate);
 
   const riskBadgeClass = riskAssessment.level === 'Low'
-    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    ? 'bg-success/10 text-success border-success/20'
     : riskAssessment.level === 'Medium'
-      ? 'bg-amber-50 text-amber-700 border-amber-200'
-      : 'bg-red-50 text-red-700 border-red-200';
+      ? 'bg-warning/10 text-warning border-warning/20'
+      : 'bg-danger/10 text-danger border-danger/20';
 
   const handleContact = () => {
     if (supplier.contact_email) {
@@ -195,15 +195,15 @@ export function SupplierProfileModal({
             <div className="flex min-w-0 items-center gap-3">
               <CompanyLogo logoUrl={supplier.company_logo_url} companyName={supplier.company_name} size="md" />
               <div className="min-w-0">
-                <p className="truncate text-[18px] font-bold text-foreground">{supplier.company_name}</p>
+                <p className="truncate text-h3 font-bold text-foreground">{supplier.company_name}</p>
                 <div className="mt-1 flex items-center gap-2">
                   {supplier.industry && (
-                    <Badge variant="outline" className={`text-[12px] px-2 py-0.5 rounded-full font-medium ${getIndustryBadgeClass(supplier.industry, allIndustries)}`}>
+                    <Badge variant="outline" className={`text-caption px-2 py-0.5 rounded-full font-medium ${getIndustryBadgeClass(supplier.industry, allIndustries)}`}>
                       {supplier.industry}
                     </Badge>
                   )}
                   {connectionStatus && STATUS_BADGE_CONFIG[connectionStatus === 'approved' ? 'approved' : connectionStatus] && (
-                    <Badge variant="outline" className={`text-[12px] px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE_CONFIG[connectionStatus === 'approved' ? 'approved' : connectionStatus].className}`}>
+                    <Badge variant="outline" className={`text-caption px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE_CONFIG[connectionStatus === 'approved' ? 'approved' : connectionStatus].className}`}>
                       {connectionStatus === 'approved' ? 'Connected' : connectionStatus}
                     </Badge>
                   )}
@@ -219,39 +219,39 @@ export function SupplierProfileModal({
             {/* Metric row */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className={reviewMetricCardClass}>
-                <div className={`${reviewMetricIconCircleClass} bg-[#F0FDF4]`}>
-                  <Target className="h-5 w-5 text-emerald-600" />
+                <div className={`${reviewMetricIconCircleClass} bg-success/10`}>
+                  <Target className="h-5 w-5 text-success" />
                 </div>
                 <div>
-                  <p className="text-[20px] font-bold text-foreground leading-none">{loading ? '—' : `${complianceScore}%`}</p>
-                  <p className="text-[12px] text-muted-foreground">Compliance</p>
+                  <p className="text-h2 font-bold text-foreground leading-none">{loading ? '—' : `${complianceScore}%`}</p>
+                  <p className="text-caption text-muted-foreground">Compliance</p>
                 </div>
               </div>
               <div className={reviewMetricCardClass}>
-                <div className={`${reviewMetricIconCircleClass} bg-[#EFF6FF]`}>
+                <div className={`${reviewMetricIconCircleClass} bg-primary/10`}>
                   <Package className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-[20px] font-bold text-foreground leading-none">{loading ? '—' : totalRequests}</p>
-                  <p className="text-[12px] text-muted-foreground">Total Requests</p>
+                  <p className="text-h2 font-bold text-foreground leading-none">{loading ? '—' : totalRequests}</p>
+                  <p className="text-caption text-muted-foreground">Total Requests</p>
                 </div>
               </div>
               <div className={reviewMetricCardClass}>
-                <div className={`${reviewMetricIconCircleClass} bg-[#FFFBEB]`}>
-                  <Clock className="h-5 w-5 text-amber-600" />
+                <div className={`${reviewMetricIconCircleClass} bg-warning/10`}>
+                  <Clock className="h-5 w-5 text-warning" />
                 </div>
                 <div>
-                  <p className="text-[20px] font-bold text-foreground leading-none">{loading ? '—' : pendingRequests}</p>
-                  <p className="text-[12px] text-muted-foreground">Pending</p>
+                  <p className="text-h2 font-bold text-foreground leading-none">{loading ? '—' : pendingRequests}</p>
+                  <p className="text-caption text-muted-foreground">Pending</p>
                 </div>
               </div>
               <div className={reviewMetricCardClass}>
-                <div className={`${reviewMetricIconCircleClass} bg-[#FEF2F2]`}>
-                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                <div className={`${reviewMetricIconCircleClass} bg-danger/10`}>
+                  <AlertTriangle className="h-5 w-5 text-danger" />
                 </div>
                 <div>
-                  <p className="text-[20px] font-bold text-foreground leading-none">{loading ? '—' : overdueCount}</p>
-                  <p className="text-[12px] text-muted-foreground">Overdue</p>
+                  <p className="text-h2 font-bold text-foreground leading-none">{loading ? '—' : overdueCount}</p>
+                  <p className="text-caption text-muted-foreground">Overdue</p>
                 </div>
               </div>
             </div>
@@ -261,7 +261,7 @@ export function SupplierProfileModal({
               <HoverCard>
                 <HoverCardTrigger asChild>
                   <div className="flex w-fit cursor-help items-center gap-1.5">
-                    <Badge variant="outline" className={`text-[12px] px-2 py-0.5 rounded-full font-medium ${riskBadgeClass}`}>
+                    <Badge variant="outline" className={`text-caption px-2 py-0.5 rounded-full font-medium ${riskBadgeClass}`}>
                       {riskAssessment.level} Risk
                     </Badge>
                     <Info className="h-3.5 w-3.5 text-muted-foreground/70" />
@@ -348,7 +348,7 @@ export function SupplierProfileModal({
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">{request.title || request.document_type}</p>
                         </div>
-                        <Badge variant="outline" className={`text-[12px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${statusConfig.className}`}>
+                        <Badge variant="outline" className={`text-caption px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${statusConfig.className}`}>
                           {statusConfig.label}
                         </Badge>
                         <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">

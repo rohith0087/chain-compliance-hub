@@ -261,7 +261,7 @@ export function SupplierMap() {
                 checked={facilityTypeFilter.includes('headquarters')}
                 onCheckedChange={() => toggleFacilityType('headquarters')}
               />
-              <Building2 className="w-4 h-4 text-blue-700" />
+              <Building2 className="w-4 h-4 text-primary" />
               <label htmlFor="facility-hq" className="text-sm cursor-pointer flex-1">
                 Headquarters
               </label>
@@ -272,7 +272,7 @@ export function SupplierMap() {
                 checked={facilityTypeFilter.includes('distribution')}
                 onCheckedChange={() => toggleFacilityType('distribution')}
               />
-              <Truck className="w-4 h-4 text-orange-600" />
+              <Truck className="w-4 h-4 text-warning" />
               <label htmlFor="facility-dist" className="text-sm cursor-pointer flex-1">
                 Distribution Centers
               </label>
@@ -283,7 +283,7 @@ export function SupplierMap() {
                 checked={facilityTypeFilter.includes('store')}
                 onCheckedChange={() => toggleFacilityType('store')}
               />
-              <Store className="w-4 h-4 text-green-600" />
+              <Store className="w-4 h-4 text-success" />
               <label htmlFor="facility-store" className="text-sm cursor-pointer flex-1">
                 Stores
               </label>
@@ -355,7 +355,7 @@ export function SupplierMap() {
       <div className={`${reviewCardContainerClass} absolute top-4 left-4 z-10 w-80 max-h-[calc(100vh-160px)] overflow-y-auto hidden lg:block`}>
         <div className="px-4 pt-4 pb-2 flex items-center gap-2">
           <Filter className="w-4 h-4 text-muted-foreground" />
-          <h3 className="text-[15px] font-bold text-foreground">Filters</h3>
+          <h3 className="text-body font-bold text-foreground">Filters</h3>
         </div>
         <div className="px-4 pb-4 space-y-4">
           <FilterControls />
@@ -382,7 +382,7 @@ export function SupplierMap() {
       {/* Results Count */}
       <div className={`${reviewCardContainerClass} absolute top-4 right-4 z-10`}>
         <div className="p-3">
-          <p className="text-[13px] font-medium text-foreground">
+          <p className="text-small font-medium text-foreground">
             Showing {filteredMarkers.length} of {allMarkers.length} locations
           </p>
         </div>
@@ -453,7 +453,7 @@ export function SupplierMap() {
                 )}
                 
                 {selectedMarker.type === 'buyer-branch' && (
-                  <Badge className="mb-2 bg-emerald-600 hover:bg-emerald-700">
+                  <Badge className="mb-2 bg-success hover:bg-success">
                     Your Branch
                   </Badge>
                 )}
@@ -490,26 +490,26 @@ export function SupplierMap() {
       {/* Legend */}
       <div className={`${reviewCardContainerClass} absolute bottom-4 left-4 z-10`}>
         <div className="p-3">
-          <div className="text-[12px] font-bold text-foreground mb-2">Map Legend</div>
-          <div className="space-y-1.5 text-[12px] text-foreground/80">
+          <div className="text-caption font-bold text-foreground mb-2">Map Legend</div>
+          <div className="space-y-1.5 text-caption text-foreground/80">
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-blue-700"></div>
+              <div className="w-4 h-4 rounded-full bg-primary"></div>
               <span>Supplier HQ</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-orange-600"></div>
+              <div className="w-4 h-4 rounded-full bg-warning"></div>
               <span>Distribution</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-green-600"></div>
+              <div className="w-4 h-4 rounded-full bg-success"></div>
               <span>Store</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-emerald-500"></div>
+              <div className="w-4 h-4 rounded-full bg-success"></div>
               <span>Your HQ</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-emerald-600"></div>
+              <div className="w-4 h-4 rounded-full bg-success"></div>
               <span>Your Branch</span>
             </div>
           </div>

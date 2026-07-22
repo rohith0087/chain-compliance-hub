@@ -31,6 +31,17 @@ interface CompanyManagementDashboardProps {
   companyName: string;
   defaultTab?: string;
   embedded?: boolean;
+  // Optional escape hatches for contexts that already surface the same
+  // functionality elsewhere (e.g. the buyer Settings workspace):
+  // - hideTabs: tab values to omit from the sub-nav and content (e.g.
+  //   'notifications', which now lives in NotificationSettingsPage).
+  // - showDashboardViewPreference: the Overview tab's DashboardViewPreference
+  //   block also lives in PreferencesSettingsPage; hide it there.
+  // - showBranchSelector: the floating branch picker above the tab bar
+  //   duplicates the app-level BranchSelector in the sidebar layout header.
+  hideTabs?: string[];
+  showDashboardViewPreference?: boolean;
+  showBranchSelector?: boolean;
 }
 
 export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProps> = ({
@@ -38,8 +49,12 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
   companyType,
   companyName,
   defaultTab = 'overview',
-  embedded = false
+  embedded = false,
+  hideTabs = [],
+  showDashboardViewPreference = true,
+  showBranchSelector = true
 }) => {
+  const isTabHidden = (tab: string) => hideTabs.includes(tab);
   const {
     branches,
     companyUsers,
@@ -245,7 +260,7 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
 
-        {branches.length > 1 && (
+        {showBranchSelector && branches.length > 1 && (
           <BranchSelector
             branches={branches}
             currentBranch={currentBranch}
@@ -304,7 +319,7 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
                   <FileText className="h-3.5 w-3.5" />
                   Onboarding
                 </TabsTrigger>
-                {!embedded && (
+                {!embedded && !isTabHidden('notifications') && (
                   <TabsTrigger 
                     value="notifications" 
                     className="rounded-full px-5 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none hover:text-foreground flex items-center gap-1"
@@ -318,7 +333,7 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          {companyType === 'buyer' && <DashboardViewPreference />}
+          {companyType === 'buyer' && showDashboardViewPreference && <DashboardViewPreference />}
           {/* Actionable Stats Overview - Now inside Overview tab only */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {/* Branches Card - Clickable */}
@@ -720,7 +735,7 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
         )}
 
         {/* Notification Settings Tab (Buyer only) */}
-        {companyType === 'buyer' && (
+        {companyType === 'buyer' && !isTabHidden('notifications') && (
           <TabsContent value="notifications" className="space-y-4">
             <Card>
               <CardHeader>

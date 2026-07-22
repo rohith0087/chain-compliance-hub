@@ -384,6 +384,84 @@
 }
 
 /* ============================================================
+ * Settings submenu icon micro-animations (buyer sidebar)
+ * One distinctive gesture per icon, transform/opacity only.
+ * Triggered on row hover (.group:hover) and, at a slower idle
+ * cadence, while the row is the active route (.settings-sub-active).
+ * ========================================================== */
+@keyframes sanim-nod {
+  0%   { transform: rotate(0deg); }
+  30%  { transform: rotate(-12deg); }
+  60%  { transform: rotate(7deg); }
+  80%  { transform: rotate(-3deg); }
+  100% { transform: rotate(0deg); }
+}
+@keyframes sanim-rise {
+  0%   { transform: translateY(1px); opacity: 0.85; }
+  45%  { transform: translateY(-2px); opacity: 1; }
+  75%  { transform: translateY(0.5px); }
+  100% { transform: translateY(0); }
+}
+@keyframes sanim-shield {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.16); }
+  65%  { transform: scale(0.97); }
+  100% { transform: scale(1); }
+}
+@keyframes sanim-bell {
+  0%   { transform: rotate(0deg); }
+  15%  { transform: rotate(16deg); }
+  35%  { transform: rotate(-13deg); }
+  55%  { transform: rotate(8deg); }
+  75%  { transform: rotate(-4deg); }
+  100% { transform: rotate(0deg); }
+}
+@keyframes sanim-slide {
+  0%   { transform: translateX(0); }
+  30%  { transform: translateX(2px); }
+  65%  { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+@keyframes sanim-plug {
+  0%   { transform: translateY(0); }
+  35%  { transform: translateY(-2px); }
+  70%  { transform: translateY(1px); }
+  100% { transform: translateY(0); }
+}
+@keyframes sanim-card {
+  0%   { transform: perspective(48px) rotateY(0deg); }
+  40%  { transform: perspective(48px) rotateY(-22deg) translateX(1px); }
+  75%  { transform: perspective(48px) rotateY(8deg); }
+  100% { transform: perspective(48px) rotateY(0deg); }
+}
+
+.sanim-user  { transform-origin: 50% 100%; }
+.sanim-bell  { transform-origin: 50% 0%; }
+
+.group:hover .sanim-user     { animation: sanim-nod 600ms cubic-bezier(0.22, 1, 0.36, 1); }
+.group:hover .sanim-building { animation: sanim-rise 550ms cubic-bezier(0.22, 1, 0.36, 1); }
+.group:hover .sanim-shield   { animation: sanim-shield 600ms cubic-bezier(0.22, 1, 0.36, 1); }
+.group:hover .sanim-bell     { animation: sanim-bell 800ms cubic-bezier(0.22, 1, 0.36, 1); }
+.group:hover .sanim-sliders  { animation: sanim-slide 550ms cubic-bezier(0.22, 1, 0.36, 1); }
+.group:hover .sanim-plug     { animation: sanim-plug 500ms cubic-bezier(0.22, 1, 0.36, 1); }
+.group:hover .sanim-card     { animation: sanim-card 650ms cubic-bezier(0.22, 1, 0.36, 1); }
+
+.settings-sub-active .sanim-user     { animation: sanim-nod 2.8s ease-in-out infinite; }
+.settings-sub-active .sanim-building { animation: sanim-rise 2.8s ease-in-out infinite; }
+.settings-sub-active .sanim-shield   { animation: sanim-shield 2.8s ease-in-out infinite; }
+.settings-sub-active .sanim-bell     { animation: sanim-bell 3s ease-in-out infinite; }
+.settings-sub-active .sanim-sliders  { animation: sanim-slide 2.8s ease-in-out infinite; }
+.settings-sub-active .sanim-plug     { animation: sanim-plug 2.6s ease-in-out infinite; }
+.settings-sub-active .sanim-card     { animation: sanim-card 3s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .group:hover [class*='sanim-'],
+  .settings-sub-active [class*='sanim-'] {
+    animation: none !important;
+  }
+}
+
+/* ============================================================
  * Textured CTA — gradient-light sheen + faint film grain.
  * Used behind the primary sidebar action (New Request / Upload).
  * Gradient leads; grain is a whisper so it reads "lit", not noisy.

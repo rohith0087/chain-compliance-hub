@@ -12,10 +12,14 @@ interface OrganizationSettingsPageProps {
 // Company, Onboarding) and page header — so this page only adds the "Settings"
 // eyebrow, not a duplicate H1.
 //
-// Known duplications (left in place because CompanyManagementDashboard is shared
-// with the supplier side; revisit in Phase 3):
-//  - Overview tab embeds DashboardViewPreference (also on the Preferences page).
-//  - Non-embedded buyer mode shows a Notifications tab (also a settings page).
+// Redundancies from the shared dashboard (still used as-is by the supplier side
+// and the legacy SettingsWorkspace) are hidden here via props:
+//  - 'notifications' tab: notification settings have their own dedicated
+//    settings page (NotificationSettingsPage).
+//  - Overview's DashboardViewPreference block: lives on PreferencesSettingsPage.
+//  - The floating branch selector above the tab bar: duplicates the app-level
+//    BranchSelector in the buyer sidebar layout header. Branch switching stays
+//    available via the "Current Branch" card's compact selector.
 export function OrganizationSettingsPage({ companyId, companyName }: OrganizationSettingsPageProps) {
   return (
     <motion.div
@@ -29,6 +33,9 @@ export function OrganizationSettingsPage({ companyId, companyName }: Organizatio
         companyId={companyId}
         companyType="buyer"
         companyName={companyName}
+        hideTabs={['notifications']}
+        showDashboardViewPreference={false}
+        showBranchSelector={false}
       />
     </motion.div>
   );

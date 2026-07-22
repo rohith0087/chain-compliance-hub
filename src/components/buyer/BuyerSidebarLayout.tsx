@@ -113,6 +113,33 @@ function VersionButton() {
 }
 
 
+// Maps each Settings submenu value to its micro-animation class (keyframes in
+// index.css). Plays once on row hover via .group:hover and idles slowly while
+// the row is the active route via .settings-sub-active.
+const SETTINGS_SUB_ANIM: Record<string, string> = {
+  settings: 'sanim-user',
+  'settings-organization': 'sanim-building',
+  'settings-security': 'sanim-shield',
+  'settings-notifications': 'sanim-bell',
+  'settings-preferences': 'sanim-sliders',
+  'settings-integrations': 'sanim-plug',
+  'settings-billing': 'sanim-card',
+};
+
+function AnimatedSubIcon({
+  value,
+  icon: Icon,
+  className,
+}: {
+  value: string;
+  icon: NavigationItem['icon'];
+  className?: string;
+}) {
+  const anim = SETTINGS_SUB_ANIM[value];
+  return <Icon className={anim ? `${className ?? ''} ${anim}` : className} />;
+}
+
+
 interface NavigationItem {
   title: string;
   icon: any;
@@ -661,12 +688,20 @@ export function BuyerSidebarLayout({
                                     onClick={() => handleMenuClick(subItem.value)}
                                     className={`w-full group h-8 px-3 rounded-lg text-body transition-colors ${
                                       subActive
-                                        ? 'bg-primary/5 text-primary font-medium'
+                                        ? `bg-primary/5 text-primary font-medium${item.value === 'settings' ? ' settings-sub-active' : ''}`
                                         : 'text-muted-foreground hover:text-foreground hover:bg-sidebar-accent'
                                     }`}
                                   >
                                     {subItem.icon && (
-                                      <subItem.icon className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
+                                      item.value === 'settings' ? (
+                                        <AnimatedSubIcon
+                                          value={subItem.value}
+                                          icon={subItem.icon}
+                                          className="h-4 w-4 transition-transform duration-200 group-hover:scale-110"
+                                        />
+                                      ) : (
+                                        <subItem.icon className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
+                                      )
                                     )}
                                     <span className="truncate">{subItem.title}</span>
                                     {subItem.badge && (
@@ -885,13 +920,21 @@ export function BuyerSidebarLayout({
                     onClick={() => { setPreviewValue(null); if (overlay) setMode('pinned'); handleMenuClick(sub.value); }}
                     className={`group relative w-full flex items-center gap-2.5 h-9 pl-3 pr-2 rounded-lg text-small transition-all duration-150 ${
                       subActive
-                        ? 'bg-primary/10 text-primary font-semibold'
+                        ? `bg-primary/10 text-primary font-semibold${section.value === 'settings' ? ' settings-sub-active' : ''}`
                         : 'text-foreground/75 hover:bg-sidebar-accent hover:text-foreground hover:translate-x-0.5'
                     }`}
                   >
                     {subActive && <span className="absolute -left-2 top-1.5 bottom-1.5 w-[3px] rounded-full bg-primary" />}
                     {sub.icon && (
-                      <sub.icon className={`${navSubIconClass} shrink-0 transition-transform duration-150 group-hover:scale-110 ${subActive ? '' : 'text-muted-foreground group-hover:text-foreground'}`} />
+                      section.value === 'settings' ? (
+                        <AnimatedSubIcon
+                          value={sub.value}
+                          icon={sub.icon}
+                          className={`${navSubIconClass} shrink-0 transition-transform duration-150 group-hover:scale-110 ${subActive ? '' : 'text-muted-foreground group-hover:text-foreground'}`}
+                        />
+                      ) : (
+                        <sub.icon className={`${navSubIconClass} shrink-0 transition-transform duration-150 group-hover:scale-110 ${subActive ? '' : 'text-muted-foreground group-hover:text-foreground'}`} />
+                      )
                     )}
                     <span className="truncate text-left">{sub.title}</span>
                     {sub.badge ? <Badge variant="secondary" className="ml-auto">{sub.badge}</Badge> : null}

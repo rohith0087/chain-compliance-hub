@@ -736,6 +736,19 @@ const AuthPage = () => {
                         </p>
                       )}
                       
+                      {passkeySupported && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handlePasskeySignIn}
+                          disabled={passkeyLoading || loading}
+                          className="w-full h-11 border-[var(--r2c-line)] bg-[var(--r2c-surface-2)]/50 hover:bg-[var(--r2c-surface-2)] text-[var(--r2c-ink)] gap-2"
+                        >
+                          <Fingerprint className="w-4 h-4" />
+                          {passkeyLoading ? 'Waiting for passkey…' : 'Sign in with a passkey'}
+                        </Button>
+                      )}
+                      
                       <div className="text-center">
                         <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
                           <DialogTrigger asChild>

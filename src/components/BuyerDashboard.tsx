@@ -44,6 +44,8 @@ import { ActivityQuickActionsPanel } from '@/components/dashboard/ActivityQuickA
 import { AuditorDashboardPanel } from '@/components/dashboard/auditor/AuditorDashboardPanel';
 import { getWorkspaceProfileForIndustry } from '@/config/workspaceProfiles';
 import { BuyerOverviewDashboard } from '@/components/dashboard/BuyerOverviewDashboard';
+import { BuyerFocusDashboard } from '@/components/dashboard/BuyerFocusDashboard';
+import { BuyerPulseDashboard } from '@/components/dashboard/BuyerPulseDashboard';
 import { motion } from 'framer-motion';
 import { Users, Clock, AlertTriangle } from 'lucide-react';
 import { useCommunicationThreads } from '@/hooks/useCommunicationThreads';
@@ -104,12 +106,12 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
       window.history.replaceState({}, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`);
     }
   }, []);
-  const [dashboardView, setDashboardView] = useState<'overview' | 'detailed'>(() => {
-    return (localStorage.getItem('buyerDashboard_view') as 'overview' | 'detailed') || 'overview';
+  const [dashboardView, setDashboardView] = useState<'overview' | 'detailed' | 'focus' | 'pulse'>(() => {
+    return (localStorage.getItem('buyerDashboard_view') as 'overview' | 'detailed' | 'focus' | 'pulse') || 'overview';
   });
   useEffect(() => {
     const handler = () => {
-      setDashboardView((localStorage.getItem('buyerDashboard_view') as 'overview' | 'detailed') || 'overview');
+      setDashboardView((localStorage.getItem('buyerDashboard_view') as 'overview' | 'detailed' | 'focus' | 'pulse') || 'overview');
     };
     window.addEventListener('buyer-dashboard-view-changed', handler);
     return () => window.removeEventListener('buyer-dashboard-view-changed', handler);
@@ -433,6 +435,20 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
               onNewRequest={() => setShowRequestForm(true)}
               onAddSupplier={() => setShowBulkInvite(true)}
             />
+          ) : dashboardView === 'focus' ? (
+            <BuyerFocusDashboard
+              buyerId={companyId}
+              branchId={!allBranchesView && currentBranch?.id ? currentBranch.id : null}
+              onTabChange={setActiveTab}
+              onNewRequest={() => setShowRequestForm(true)}
+              onAddSupplier={() => setShowBulkInvite(true)}
+            />
+          ) : dashboardView === 'pulse' ? (
+            <BuyerPulseDashboard
+              buyerId={companyId}
+              branchId={!allBranchesView && currentBranch?.id ? currentBranch.id : null}
+              onTabChange={setActiveTab}
+            />
           ) : (
             <div className="h-[calc(100vh-120px)] overflow-hidden flex flex-col animate-fade-in">
               {/* Top Metrics Bar - Fixed Height */}
@@ -704,7 +720,11 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
 
         {/* Supplier Risk Assessment */}
         {activeTab === 'supplier-risk' && (
-          <SupplierRiskAssessment buyerId={companyId} />
+          // DEMO MODE (temporary): buyerId intentionally withheld so the page
+          // falls back to the built-in 3-company demo dataset instead of
+          // showing real connected suppliers' risk. Restore buyerId={companyId}
+          // to re-enable the real risk engine.
+          <SupplierRiskAssessment />
         )}
 
         {/* Onboarding Content - Use Pipeline View */}

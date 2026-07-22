@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, LayoutGrid, Check } from 'lucide-react';
+import { LayoutDashboard, LayoutGrid, ListChecks, Activity, Check } from 'lucide-react';
 
-type View = 'overview' | 'detailed';
+type View = 'overview' | 'detailed' | 'focus' | 'pulse';
 
 const STORAGE_KEY = 'buyerDashboard_view';
 
@@ -30,6 +30,18 @@ export function DashboardViewPreference() {
       label: 'Detailed',
       desc: 'Full operational dashboard with all panels.',
       icon: LayoutGrid,
+    },
+    {
+      id: 'focus',
+      label: 'Focus',
+      desc: 'Daily triage — a ranked list of what to do first.',
+      icon: ListChecks,
+    },
+    {
+      id: 'pulse',
+      label: 'Pulse',
+      desc: 'Compliance trends, graphs, and metrics.',
+      icon: Activity,
     },
   ];
 

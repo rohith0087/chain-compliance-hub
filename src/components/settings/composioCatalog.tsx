@@ -56,18 +56,18 @@ export const COMPOSIO_ROADMAP: { name: string; capability: string; group: string
     name: 'SharePoint',
     capability: 'Read supplier documents from SharePoint document libraries.',
     group: 'Document sources',
-    logo: tile('#038387', <span className="text-[11px] font-black text-white">SP</span>),
+    logo: tile('#038387', <span className="text-micro font-black text-white">SP</span>),
   },
   {
     name: 'Outlook',
     capability: 'Draft and send supplier follow-ups from your mailbox (with approval).',
     group: 'Supplier outreach',
-    logo: tile('#0F6CBD', <span className="text-[13px] font-black text-white">O</span>),
+    logo: tile('#0F6CBD', <span className="text-small font-black text-white">O</span>),
   },
   {
     name: 'DocuSign',
     capability: 'Send quality agreements and spec sign-offs for signature.',
     group: 'Supplier outreach',
-    logo: tile('#C9E500', <span className="text-[11px] font-black text-[#111]">DS</span>),
+    logo: tile('#C9E500', <span className="text-micro font-black text-[#111]">DS</span>),
   },
 ];

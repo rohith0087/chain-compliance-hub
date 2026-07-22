@@ -120,15 +120,15 @@ export function AiIntegrationSection({ organizationId }: AiIntegrationSectionPro
 
   return (
     <div className="space-y-2">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">Artificial Intelligence</p>
+      <p className="text-micro font-semibold uppercase tracking-wide text-muted-foreground/70">Artificial Intelligence</p>
       <div className="rounded-[12px] border border-border bg-card p-4">
         <div className="flex items-start gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-border bg-background">
             <Sparkles className="h-5 w-5 text-primary" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[14px] font-semibold">AI provider</p>
-            <p className="text-[12px] text-muted-foreground">
+            <p className="text-body font-semibold">AI provider</p>
+            <p className="text-caption text-muted-foreground">
               Powers mapping analysis, requirement extraction, and the compliance assistant. Use our key or bring your own.
             </p>
 
@@ -138,7 +138,7 @@ export function AiIntegrationSection({ organizationId }: AiIntegrationSectionPro
               <div className="mt-3 space-y-3">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
-                    <Label className="text-[12px]">Provider</Label>
+                    <Label className="text-caption">Provider</Label>
                     <Select value={provider} onValueChange={(v) => onProviderChange(v as Provider)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -149,7 +149,7 @@ export function AiIntegrationSection({ organizationId }: AiIntegrationSectionPro
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-[12px]">Model</Label>
+                    <Label className="text-caption">Model</Label>
                     <Select value={model} onValueChange={setModel}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -159,7 +159,7 @@ export function AiIntegrationSection({ organizationId }: AiIntegrationSectionPro
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 text-[12px]">
+                <div className="flex flex-wrap items-center gap-2 text-caption">
                   <label className="flex cursor-pointer items-center gap-2">
                     <input
                       type="radio"
@@ -179,9 +179,9 @@ export function AiIntegrationSection({ organizationId }: AiIntegrationSectionPro
 
                 {useOwnKey && (
                   <div>
-                    <Label className="flex items-center gap-1 text-[12px]">
+                    <Label className="flex items-center gap-1 text-caption">
                       <KeyRound className="h-3 w-3" /> API key
-                      {hasOwnKey && <span className="ml-1 text-emerald-600">· a key is saved</span>}
+                      {hasOwnKey && <span className="ml-1 text-success">· a key is saved</span>}
                     </Label>
                     <Input
                       type="password"
@@ -190,14 +190,14 @@ export function AiIntegrationSection({ organizationId }: AiIntegrationSectionPro
                       onChange={(e) => setApiKey(e.target.value)}
                       autoComplete="off"
                     />
-                    <p className="mt-1 text-[11px] text-muted-foreground">
+                    <p className="mt-1 text-micro text-muted-foreground">
                       Stored encrypted in our vault — never shown again after saving, never sent to the browser.
                     </p>
                   </div>
                 )}
 
                 {testResult && (
-                  <div className={`flex items-center gap-2 text-[12px] ${testResult.ok ? 'text-emerald-600' : 'text-red-600'}`}>
+                  <div className={`flex items-center gap-2 text-caption ${testResult.ok ? 'text-success' : 'text-danger'}`}>
                     {testResult.ok ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
                     {testResult.text}
                   </div>

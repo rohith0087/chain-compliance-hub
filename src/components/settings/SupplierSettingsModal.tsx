@@ -457,11 +457,11 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
                       />
                     </div>
 
-                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
-                      <p className="text-sm text-blue-800 dark:text-blue-200">
+                    <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mt-4">
+                      <p className="text-sm text-primary">
                         <strong>When enabled</strong>, email notifications for new requests will be sent to:
                       </p>
-                      <ul className="mt-2 text-sm text-blue-700 dark:text-blue-300 list-disc list-inside space-y-1">
+                      <ul className="mt-2 text-sm text-primary list-disc list-inside space-y-1">
                         <li>Company owner</li>
                         <li>Company administrators</li>
                         <li>Users assigned to the target branch (if applicable)</li>

@@ -652,6 +652,47 @@ export type Database = {
           },
         ]
       }
+      buyer_ai_summaries: {
+        Row: {
+          bullets: Json
+          buyer_id: string
+          checked_at: string
+          error: string | null
+          follow_ups: Json
+          generated_at: string | null
+          input_fingerprint: string | null
+          model: string | null
+        }
+        Insert: {
+          bullets?: Json
+          buyer_id: string
+          checked_at?: string
+          error?: string | null
+          follow_ups?: Json
+          generated_at?: string | null
+          input_fingerprint?: string | null
+          model?: string | null
+        }
+        Update: {
+          bullets?: Json
+          buyer_id?: string
+          checked_at?: string
+          error?: string | null
+          follow_ups?: Json
+          generated_at?: string | null
+          input_fingerprint?: string | null
+          model?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyer_ai_summaries_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: true
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       buyer_default_onboarding_settings: {
         Row: {
           allow_branch_selection: boolean
@@ -805,6 +846,75 @@ export type Database = {
           },
         ]
       }
+      buyer_framework_activations: {
+        Row: {
+          activated_at: string
+          activated_by: string | null
+          buyer_id: string
+          deactivated_at: string | null
+          framework_id: string
+          id: string
+          notes: string | null
+          supplier_id: string | null
+        }
+        Insert: {
+          activated_at?: string
+          activated_by?: string | null
+          buyer_id: string
+          deactivated_at?: string | null
+          framework_id: string
+          id?: string
+          notes?: string | null
+          supplier_id?: string | null
+        }
+        Update: {
+          activated_at?: string
+          activated_by?: string | null
+          buyer_id?: string
+          deactivated_at?: string | null
+          framework_id?: string
+          id?: string
+          notes?: string | null
+          supplier_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyer_framework_activations_activated_by_fkey"
+            columns: ["activated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_framework_activations_activated_by_fkey"
+            columns: ["activated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_framework_activations_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_framework_activations_framework_id_fkey"
+            columns: ["framework_id"]
+            isOneToOne: false
+            referencedRelation: "requirement_frameworks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_framework_activations_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       buyer_notification_settings: {
         Row: {
           buyer_id: string
@@ -868,6 +978,62 @@ export type Database = {
             foreignKeyName: "buyer_notification_settings_buyer_id_fkey"
             columns: ["buyer_id"]
             isOneToOne: true
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      buyer_risk_policies: {
+        Row: {
+          buyer_id: string
+          created_at: string
+          created_by: string | null
+          critical_topics: string[]
+          dimensions: Json
+          event_rules: Json
+          id: string
+          industry: string | null
+          is_published: boolean
+          low_relevance_topics: string[]
+          policy_key: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string
+          created_by?: string | null
+          critical_topics?: string[]
+          dimensions?: Json
+          event_rules?: Json
+          id?: string
+          industry?: string | null
+          is_published?: boolean
+          low_relevance_topics?: string[]
+          policy_key?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string
+          created_by?: string | null
+          critical_topics?: string[]
+          dimensions?: Json
+          event_rules?: Json
+          id?: string
+          industry?: string | null
+          is_published?: boolean
+          low_relevance_topics?: string[]
+          policy_key?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyer_risk_policies_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
             referencedRelation: "buyers"
             referencedColumns: ["id"]
           },
@@ -2901,7 +3067,7 @@ export type Database = {
           completed_at: string | null
           completed_by: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           decision_result_id: string | null
           description: string | null
           due_date: string | null
@@ -2923,7 +3089,7 @@ export type Database = {
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           decision_result_id?: string | null
           description?: string | null
           due_date?: string | null
@@ -2945,7 +3111,7 @@ export type Database = {
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           decision_result_id?: string | null
           description?: string | null
           due_date?: string | null
@@ -3051,6 +3217,70 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      composio_connections: {
+        Row: {
+          auth_config_id: string
+          buyer_id: string | null
+          connected_account_id: string | null
+          connected_at: string | null
+          created_at: string
+          id: string
+          last_error: string | null
+          profile_id: string
+          status: string
+          toolkit: string
+          updated_at: string
+        }
+        Insert: {
+          auth_config_id: string
+          buyer_id?: string | null
+          connected_account_id?: string | null
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          profile_id: string
+          status?: string
+          toolkit: string
+          updated_at?: string
+        }
+        Update: {
+          auth_config_id?: string
+          buyer_id?: string | null
+          connected_account_id?: string | null
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          profile_id?: string
+          status?: string
+          toolkit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "composio_connections_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "composio_connections_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "composio_connections_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
             referencedColumns: ["id"]
           },
         ]
@@ -4551,6 +4781,7 @@ export type Database = {
           occurred_at: string
           prev_hash: string | null
           row_hash: string
+          seq: number
           version_id: string | null
         }
         Insert: {
@@ -4562,6 +4793,7 @@ export type Database = {
           occurred_at?: string
           prev_hash?: string | null
           row_hash: string
+          seq?: number
           version_id?: string | null
         }
         Update: {
@@ -4573,6 +4805,7 @@ export type Database = {
           occurred_at?: string
           prev_hash?: string | null
           row_hash?: string
+          seq?: number
           version_id?: string | null
         }
         Relationships: [
@@ -5794,6 +6027,7 @@ export type Database = {
           default_minimum_validity_days: number
           document_type_overrides: Json
           require_four_eyes: boolean
+          require_mapping_approval: boolean
           updated_at: string
         }
         Insert: {
@@ -5803,6 +6037,7 @@ export type Database = {
           default_minimum_validity_days?: number
           document_type_overrides?: Json
           require_four_eyes?: boolean
+          require_mapping_approval?: boolean
           updated_at?: string
         }
         Update: {
@@ -5812,6 +6047,7 @@ export type Database = {
           default_minimum_validity_days?: number
           document_type_overrides?: Json
           require_four_eyes?: boolean
+          require_mapping_approval?: boolean
           updated_at?: string
         }
         Relationships: [
@@ -6873,6 +7109,7 @@ export type Database = {
           refresh_token: string | null
           status: string
           token_expires_at: string | null
+          webhook_url: string | null
         }
         Insert: {
           access_token?: string | null
@@ -6887,6 +7124,7 @@ export type Database = {
           refresh_token?: string | null
           status?: string
           token_expires_at?: string | null
+          webhook_url?: string | null
         }
         Update: {
           access_token?: string | null
@@ -6901,6 +7139,7 @@ export type Database = {
           refresh_token?: string | null
           status?: string
           token_expires_at?: string | null
+          webhook_url?: string | null
         }
         Relationships: [
           {
@@ -7511,6 +7750,61 @@ export type Database = {
         }
         Relationships: []
       }
+      organization_ai_settings: {
+        Row: {
+          buyer_id: string
+          has_own_key: boolean
+          model: string
+          provider: string
+          updated_at: string
+          updated_by: string | null
+          use_own_key: boolean
+          vault_secret_name: string | null
+        }
+        Insert: {
+          buyer_id: string
+          has_own_key?: boolean
+          model?: string
+          provider?: string
+          updated_at?: string
+          updated_by?: string | null
+          use_own_key?: boolean
+          vault_secret_name?: string | null
+        }
+        Update: {
+          buyer_id?: string
+          has_own_key?: boolean
+          model?: string
+          provider?: string
+          updated_at?: string
+          updated_by?: string | null
+          use_own_key?: boolean
+          vault_secret_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_ai_settings_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: true
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_ai_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_ai_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_feature_flags: {
         Row: {
           configured_at: string
@@ -7594,7 +7888,7 @@ export type Database = {
           created_at: string
           expires_at: string
           id: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           ceremony_type: string
@@ -7602,7 +7896,7 @@ export type Database = {
           created_at?: string
           expires_at?: string
           id?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           ceremony_type?: string
@@ -7610,7 +7904,7 @@ export type Database = {
           created_at?: string
           expires_at?: string
           id?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -7759,6 +8053,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_disabled: boolean
           avatar_url: string | null
           company_name: string | null
           created_at: string | null
@@ -7772,6 +8067,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          account_disabled?: boolean
           avatar_url?: string | null
           company_name?: string | null
           created_at?: string | null
@@ -7785,6 +8081,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          account_disabled?: boolean
           avatar_url?: string | null
           company_name?: string | null
           created_at?: string | null
@@ -8298,6 +8595,228 @@ export type Database = {
           },
         ]
       }
+      requirement_evidence_mappings: {
+        Row: {
+          ai_analyzed_at: string | null
+          ai_concerns: Json
+          ai_confidence: number | null
+          ai_document_excerpt: string | null
+          ai_document_read: boolean | null
+          ai_findings: Json
+          ai_model: string | null
+          ai_reasoning: string | null
+          ai_verdict: string | null
+          buyer_id: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_notes: string | null
+          evidence_display_name: string | null
+          evidence_document_type: string | null
+          evidence_version_id: string
+          framework_code: string
+          framework_version: string
+          id: string
+          match_reasons: Json
+          match_score: number | null
+          proposed_at: string
+          requirement_key: string
+          requirement_title: string | null
+          status: string
+          subject_id: string
+          subject_type: string
+          supplier_id: string
+        }
+        Insert: {
+          ai_analyzed_at?: string | null
+          ai_concerns?: Json
+          ai_confidence?: number | null
+          ai_document_excerpt?: string | null
+          ai_document_read?: boolean | null
+          ai_findings?: Json
+          ai_model?: string | null
+          ai_reasoning?: string | null
+          ai_verdict?: string | null
+          buyer_id: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_notes?: string | null
+          evidence_display_name?: string | null
+          evidence_document_type?: string | null
+          evidence_version_id: string
+          framework_code: string
+          framework_version: string
+          id?: string
+          match_reasons?: Json
+          match_score?: number | null
+          proposed_at?: string
+          requirement_key: string
+          requirement_title?: string | null
+          status?: string
+          subject_id: string
+          subject_type?: string
+          supplier_id: string
+        }
+        Update: {
+          ai_analyzed_at?: string | null
+          ai_concerns?: Json
+          ai_confidence?: number | null
+          ai_document_excerpt?: string | null
+          ai_document_read?: boolean | null
+          ai_findings?: Json
+          ai_model?: string | null
+          ai_reasoning?: string | null
+          ai_verdict?: string | null
+          buyer_id?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_notes?: string | null
+          evidence_display_name?: string | null
+          evidence_document_type?: string | null
+          evidence_version_id?: string
+          framework_code?: string
+          framework_version?: string
+          id?: string
+          match_reasons?: Json
+          match_score?: number | null
+          proposed_at?: string
+          requirement_key?: string
+          requirement_title?: string | null
+          status?: string
+          subject_id?: string
+          subject_type?: string
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requirement_evidence_mappings_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_evidence_mappings_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_evidence_mappings_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_evidence_mappings_evidence_version_id_fkey"
+            columns: ["evidence_version_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_evidence_mappings_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      requirement_extraction_drafts: {
+        Row: {
+          ai_confidence: number | null
+          ai_model: string | null
+          buyer_id: string
+          created_at: string
+          created_by: string | null
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          rationale: string | null
+          requirement_statement: string
+          responsible_party: string | null
+          source_name: string
+          source_quote: string | null
+          status: string
+          suggested_document_type: string | null
+          suggested_evidence_name: string | null
+        }
+        Insert: {
+          ai_confidence?: number | null
+          ai_model?: string | null
+          buyer_id: string
+          created_at?: string
+          created_by?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          rationale?: string | null
+          requirement_statement: string
+          responsible_party?: string | null
+          source_name: string
+          source_quote?: string | null
+          status?: string
+          suggested_document_type?: string | null
+          suggested_evidence_name?: string | null
+        }
+        Update: {
+          ai_confidence?: number | null
+          ai_model?: string | null
+          buyer_id?: string
+          created_at?: string
+          created_by?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          rationale?: string | null
+          requirement_statement?: string
+          responsible_party?: string | null
+          source_name?: string
+          source_quote?: string | null
+          status?: string
+          suggested_document_type?: string | null
+          suggested_evidence_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requirement_extraction_drafts_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_extraction_drafts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_extraction_drafts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_extraction_drafts_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requirement_extraction_drafts_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       requirement_framework_versions: {
         Row: {
           content_hash: string
@@ -8387,36 +8906,48 @@ export type Database = {
       }
       requirement_frameworks: {
         Row: {
+          authority: string | null
           code: string
           created_at: string
           created_by: string | null
           description: string | null
           framework_type: string
           id: string
+          industry: string | null
           name: string
           owner_buyer_id: string | null
+          region: string | null
+          sort_order: number
           updated_at: string
         }
         Insert: {
+          authority?: string | null
           code: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           framework_type: string
           id?: string
+          industry?: string | null
           name: string
           owner_buyer_id?: string | null
+          region?: string | null
+          sort_order?: number
           updated_at?: string
         }
         Update: {
+          authority?: string | null
           code?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           framework_type?: string
           id?: string
+          industry?: string | null
           name?: string
           owner_buyer_id?: string | null
+          region?: string | null
+          sort_order?: number
           updated_at?: string
         }
         Relationships: [
@@ -8574,6 +9105,225 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      risk_entities: {
+        Row: {
+          canonical_entity_id: string | null
+          canonical_name: string
+          country: string | null
+          created_at: string
+          domain: string | null
+          entity_type: string
+          id: string
+          lei: string | null
+          registration_number: string | null
+          supplier_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          canonical_entity_id?: string | null
+          canonical_name: string
+          country?: string | null
+          created_at?: string
+          domain?: string | null
+          entity_type: string
+          id?: string
+          lei?: string | null
+          registration_number?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          canonical_entity_id?: string | null
+          canonical_name?: string
+          country?: string | null
+          created_at?: string
+          domain?: string | null
+          entity_type?: string
+          id?: string
+          lei?: string | null
+          registration_number?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_entities_canonical_entity_id_fkey"
+            columns: ["canonical_entity_id"]
+            isOneToOne: false
+            referencedRelation: "risk_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_entities_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_entity_edges: {
+        Row: {
+          confidence: number
+          created_at: string
+          discovered_at: string
+          edge_type: string
+          id: string
+          last_verified_at: string | null
+          source: string
+          source_entity_id: string
+          source_url: string | null
+          target_entity_id: string
+          verification: string
+        }
+        Insert: {
+          confidence?: number
+          created_at?: string
+          discovered_at?: string
+          edge_type: string
+          id?: string
+          last_verified_at?: string | null
+          source: string
+          source_entity_id: string
+          source_url?: string | null
+          target_entity_id: string
+          verification?: string
+        }
+        Update: {
+          confidence?: number
+          created_at?: string
+          discovered_at?: string
+          edge_type?: string
+          id?: string
+          last_verified_at?: string | null
+          source?: string
+          source_entity_id?: string
+          source_url?: string | null
+          target_entity_id?: string
+          verification?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_entity_edges_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "risk_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_entity_edges_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "risk_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_signals: {
+        Row: {
+          buyer_id: string
+          detected_at: string
+          explanation: string | null
+          framework_code: string
+          framework_version: string
+          id: string
+          requirement_key: string
+          requirement_title: string | null
+          resolved_at: string | null
+          signal_type: string
+          status: string
+          subject_id: string
+          subject_type: string
+          supplier_id: string | null
+          weight: number
+        }
+        Insert: {
+          buyer_id: string
+          detected_at?: string
+          explanation?: string | null
+          framework_code: string
+          framework_version: string
+          id?: string
+          requirement_key: string
+          requirement_title?: string | null
+          resolved_at?: string | null
+          signal_type: string
+          status?: string
+          subject_id: string
+          subject_type: string
+          supplier_id?: string | null
+          weight: number
+        }
+        Update: {
+          buyer_id?: string
+          detected_at?: string
+          explanation?: string | null
+          framework_code?: string
+          framework_version?: string
+          id?: string
+          requirement_key?: string
+          requirement_title?: string | null
+          resolved_at?: string | null
+          signal_type?: string
+          status?: string
+          subject_id?: string
+          subject_type?: string
+          supplier_id?: string | null
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_signals_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_signals_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_source_records: {
+        Row: {
+          connector: string
+          connector_version: string
+          content_sha256: string | null
+          created_at: string
+          id: string
+          raw_payload: Json
+          retrieved_at: string
+          source_type: string
+          source_url: string | null
+        }
+        Insert: {
+          connector: string
+          connector_version?: string
+          content_sha256?: string | null
+          created_at?: string
+          id?: string
+          raw_payload?: Json
+          retrieved_at?: string
+          source_type: string
+          source_url?: string | null
+        }
+        Update: {
+          connector?: string
+          connector_version?: string
+          content_sha256?: string | null
+          created_at?: string
+          id?: string
+          raw_payload?: Json
+          retrieved_at?: string
+          source_type?: string
+          source_url?: string | null
+        }
+        Relationships: []
       }
       shared_documents: {
         Row: {
@@ -9299,6 +10049,206 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      supplier_risk_events: {
+        Row: {
+          created_at: string
+          detected_at: string
+          dimension: string
+          entity_match_confidence: number
+          event_key: string | null
+          event_type: string
+          evidence_status: string
+          facility_entity_id: string | null
+          id: string
+          industry_relevance: Json
+          occurred_at: string | null
+          remediation_status: string
+          risk_entity_id: string | null
+          severity: number
+          source_confidence: number
+          source_record_id: string | null
+          status: string
+          supplier_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          detected_at?: string
+          dimension: string
+          entity_match_confidence?: number
+          event_key?: string | null
+          event_type: string
+          evidence_status?: string
+          facility_entity_id?: string | null
+          id?: string
+          industry_relevance?: Json
+          occurred_at?: string | null
+          remediation_status?: string
+          risk_entity_id?: string | null
+          severity: number
+          source_confidence?: number
+          source_record_id?: string | null
+          status?: string
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          detected_at?: string
+          dimension?: string
+          entity_match_confidence?: number
+          event_key?: string | null
+          event_type?: string
+          evidence_status?: string
+          facility_entity_id?: string | null
+          id?: string
+          industry_relevance?: Json
+          occurred_at?: string | null
+          remediation_status?: string
+          risk_entity_id?: string | null
+          severity?: number
+          source_confidence?: number
+          source_record_id?: string | null
+          status?: string
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_risk_events_facility_entity_id_fkey"
+            columns: ["facility_entity_id"]
+            isOneToOne: false
+            referencedRelation: "risk_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_risk_events_risk_entity_id_fkey"
+            columns: ["risk_entity_id"]
+            isOneToOne: false
+            referencedRelation: "risk_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_risk_events_source_record_id_fkey"
+            columns: ["source_record_id"]
+            isOneToOne: false
+            referencedRelation: "risk_source_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_risk_events_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_risk_feedback: {
+        Row: {
+          buyer_id: string
+          created_at: string
+          created_by: string | null
+          feedback_type: string
+          id: string
+          note: string | null
+          risk_event_id: string | null
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string
+          created_by?: string | null
+          feedback_type: string
+          id?: string
+          note?: string | null
+          risk_event_id?: string | null
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string
+          created_by?: string | null
+          feedback_type?: string
+          id?: string
+          note?: string | null
+          risk_event_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_risk_feedback_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_risk_feedback_risk_event_id_fkey"
+            columns: ["risk_event_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_risk_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_risk_scores: {
+        Row: {
+          buyer_id: string
+          calculated_at: string
+          change_reasons: Json
+          created_at: string
+          dimension_scores: Json
+          engine_version: string
+          id: string
+          input_event_ids: string[]
+          overall_score: number
+          policy_version: number | null
+          previous_score: number | null
+          supplier_id: string
+        }
+        Insert: {
+          buyer_id: string
+          calculated_at?: string
+          change_reasons?: Json
+          created_at?: string
+          dimension_scores?: Json
+          engine_version?: string
+          id?: string
+          input_event_ids?: string[]
+          overall_score: number
+          policy_version?: number | null
+          previous_score?: number | null
+          supplier_id: string
+        }
+        Update: {
+          buyer_id?: string
+          calculated_at?: string
+          change_reasons?: Json
+          created_at?: string
+          dimension_scores?: Json
+          engine_version?: string
+          id?: string
+          input_event_ids?: string[]
+          overall_score?: number
+          policy_version?: number | null
+          previous_score?: number | null
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_risk_scores_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_risk_scores_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       supplier_upload_sessions: {
         Row: {
@@ -10359,6 +11309,71 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_delete_org_feature_flag: {
+        Args: { p_key: string; p_org_id: string; p_org_type: string }
+        Returns: undefined
+      }
+      admin_list_feature_flags: {
+        Args: never
+        Returns: {
+          default_enabled: boolean
+          description: string
+          key: string
+          lifecycle: string
+          override_count: number
+        }[]
+      }
+      admin_list_org_feature_flags: {
+        Args: never
+        Returns: {
+          company_name: string
+          enabled: boolean
+          expires_at: string
+          feature_key: string
+          organization_id: string
+          organization_type: string
+        }[]
+      }
+      admin_list_tables: {
+        Args: never
+        Returns: {
+          approx_rows: number
+          table_name: string
+        }[]
+      }
+      admin_query_table: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_order_by?: string
+          p_order_dir?: string
+          p_search?: string
+          p_search_col?: string
+          p_table: string
+        }
+        Returns: Json
+      }
+      admin_set_global_feature_flag: {
+        Args: { p_enabled: boolean; p_key: string }
+        Returns: undefined
+      }
+      admin_set_org_feature_flag: {
+        Args: {
+          p_enabled: boolean
+          p_expires?: string
+          p_key: string
+          p_org_id: string
+          p_org_type: string
+        }
+        Returns: undefined
+      }
+      admin_table_columns: {
+        Args: { p_table: string }
+        Returns: {
+          column_name: string
+          data_type: string
+        }[]
+      }
       approve_connection_with_onboarding: {
         Args: {
           p_connection_id: string
@@ -10391,6 +11406,29 @@ export type Database = {
       auto_verify_evidence_v1: {
         Args: { p_evidence_version_id: string }
         Returns: Json
+      }
+      calculate_supplier_risk_score: {
+        Args: { p_buyer_id: string; p_supplier_id: string }
+        Returns: {
+          buyer_id: string
+          calculated_at: string
+          change_reasons: Json
+          created_at: string
+          dimension_scores: Json
+          engine_version: string
+          id: string
+          input_event_ids: string[]
+          overall_score: number
+          policy_version: number | null
+          previous_score: number | null
+          supplier_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "supplier_risk_scores"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       can_manage_company_users: {
         Args: {
@@ -10562,6 +11600,7 @@ export type Database = {
         }
       }
       cleanup_expired_knowledge_entries: { Args: never; Returns: number }
+      command_center_summary_v1: { Args: { p_buyer_id: string }; Returns: Json }
       complete_compliance_task_v1: {
         Args: { p_task_id: string }
         Returns: undefined
@@ -10700,8 +11739,16 @@ export type Database = {
         Args: { p_approval_id: string; p_decision: string; p_notes: string }
         Returns: undefined
       }
+      decide_requirement_evidence_mapping_v1: {
+        Args: { p_decision: string; p_mapping_id: string; p_notes?: string }
+        Returns: Json
+      }
       delete_branch_with_validation: {
         Args: { p_branch_id: string }
+        Returns: Json
+      }
+      detect_compliance_gaps_v1: {
+        Args: { p_buyer_id?: string }
         Returns: Json
       }
       evaluate_evidence_eligibility_v1: {
@@ -10741,6 +11788,11 @@ export type Database = {
         Args: { p_notes?: string; p_onboarding_request_id: string }
         Returns: Json
       }
+      framework_coverage_v1: { Args: { p_buyer_id: string }; Returns: Json }
+      framework_requirements_v1: {
+        Args: { p_framework_code: string }
+        Returns: Json
+      }
       get_admin_user_stats: {
         Args: never
         Returns: {
@@ -10756,6 +11808,20 @@ export type Database = {
           total_chat_sessions: number
           total_document_requests: number
           total_document_uploads: number
+        }[]
+      }
+      get_all_suppliers_risk_overview: {
+        Args: never
+        Returns: {
+          active_events: number
+          company_name: string
+          country: string
+          dimensions: string[]
+          industry: string
+          latest_event_at: string
+          max_severity: number
+          review_events: number
+          supplier_id: string
         }[]
       }
       get_all_users_detailed: {
@@ -10814,6 +11880,7 @@ export type Database = {
         }[]
       }
       get_onboarding_supplier_ids_for_buyer: { Args: never; Returns: string[] }
+      get_org_ai_key_v1: { Args: { p_buyer_id: string }; Returns: string }
       get_platform_admin_invitations: {
         Args: never
         Returns: {
@@ -10863,6 +11930,33 @@ export type Database = {
         }[]
       }
       get_super_admin_stats: { Args: never; Returns: Json }
+      get_supplier_risk_events_with_sources: {
+        Args: { p_supplier_id: string }
+        Returns: {
+          connector: string
+          detected_at: string
+          dimension: string
+          entity_match_confidence: number
+          event_type: string
+          evidence_status: string
+          id: string
+          occurred_at: string
+          remediation_status: string
+          severity: number
+          source_confidence: number
+          source_published: string
+          source_record_id: string
+          source_summary: string
+          source_title: string
+          source_type: string
+          source_url: string
+          status: string
+        }[]
+      }
+      get_supplier_risk_graph: {
+        Args: { p_supplier_id: string }
+        Returns: Json
+      }
       get_user_buyer_ids: { Args: never; Returns: string[] }
       get_user_roles: {
         Args: { _user_id: string }
@@ -11224,6 +12318,7 @@ export type Database = {
           default_minimum_validity_days: number
           document_type_overrides: Json
           require_four_eyes: boolean
+          require_mapping_approval: boolean
           updated_at: string
         }
         SetofOptions: {
@@ -11233,11 +12328,25 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_org_ai_settings_v1: {
+        Args: {
+          p_api_key?: string
+          p_buyer_id: string
+          p_model: string
+          p_provider: string
+          p_use_own_key: boolean
+        }
+        Returns: Json
+      }
       super_admin_reset_password: {
         Args: { new_password: string; target_user_id: string }
         Returns: boolean
       }
       supplier_can_view_buyer: { Args: { buyer_id: string }; Returns: boolean }
+      update_compliance_task_v1: {
+        Args: { p_action: string; p_assignee_id?: string; p_task_id: string }
+        Returns: Json
+      }
       user_can_act_for_buyer: { Args: { _buyer_id: string }; Returns: boolean }
       user_has_branch_access: {
         Args: { p_branch_id: string; p_user_id: string }

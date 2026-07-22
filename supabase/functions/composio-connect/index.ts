@@ -68,17 +68,17 @@ Deno.serve(async (req: Request) => {
     }
 
     // ---- ask Composio to start the OAuth dance ----
+    // Composio-managed OAuth auth configs must use /connected_accounts/link
+    // (the plain /connected_accounts POST is deprecated for them and 400s).
+    // The link endpoint returns a hosted connect URL + the connected_account_id.
     const callbackUrl = `${SUPABASE_URL}/functions/v1/composio-callback`;
-    const res = await fetch(`${COMPOSIO_BASE}/connected_accounts`, {
+    const res = await fetch(`${COMPOSIO_BASE}/connected_accounts/link`, {
       method: 'POST',
       headers: { 'x-api-key': apiKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        auth_config: { id: config.authConfigId },
-        connection: {
-          state: { authScheme: 'OAUTH2', val: { status: 'INITIALIZING' } },
-          user_id: composioUser,
-          callback_url: callbackUrl,
-        },
+        auth_config_id: config.authConfigId,
+        user_id: composioUser,
+        callback_url: callbackUrl,
       }),
     });
 
@@ -97,7 +97,9 @@ Deno.serve(async (req: Request) => {
       return json({ error: 'We couldn’t start the connection. Please try again.' }, 502);
     }
 
-    const connectedAccountId: string | null = payload?.id ?? null;
+    // /link returns connected_account_id (not id) and redirect_url.
+    const connectedAccountId: string | null =
+      payload?.connected_account_id ?? payload?.id ?? null;
     const redirectUrl: string | null =
       payload?.redirect_url ?? payload?.redirect_uri ?? payload?.connectionData?.val?.redirectUrl ?? null;
 

@@ -29,7 +29,7 @@ const getStatusBadge = (status: string) => {
   switch (normalizedStatus) {
     case 'approved':
       return (
-        <Badge className="bg-green-500/20 text-green-400 border-green-500/30 gap-1">
+        <Badge className="bg-success text-success border-success gap-1">
           <CheckCircle2 className="h-3 w-3" />
           Approved
         </Badge>
@@ -38,21 +38,21 @@ const getStatusBadge = (status: string) => {
     case 'pending_review':
     case 'submitted':
       return (
-        <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 gap-1">
+        <Badge className="bg-warning text-warning border-warning gap-1">
           <Clock className="h-3 w-3" />
           Pending
         </Badge>
       );
     case 'rejected':
       return (
-        <Badge className="bg-red-500/20 text-red-400 border-red-500/30 gap-1">
+        <Badge className="bg-danger text-danger border-danger gap-1">
           <XCircle className="h-3 w-3" />
           Rejected
         </Badge>
       );
     case 'expired':
       return (
-        <Badge className="bg-red-500/20 text-red-400 border-red-500/30 gap-1">
+        <Badge className="bg-danger text-danger border-danger gap-1">
           <AlertTriangle className="h-3 w-3" />
           Expired
         </Badge>
@@ -74,9 +74,9 @@ const getExpiryStyle = (expirationDate?: string) => {
   const thirtyDaysFromNow = addDays(now, 30);
   
   if (isBefore(expDate, now)) {
-    return 'text-red-400 font-medium';
+    return 'text-danger font-medium';
   } else if (isBefore(expDate, thirtyDaysFromNow)) {
-    return 'text-yellow-400 font-medium';
+    return 'text-warning font-medium';
   }
   return 'text-muted-foreground';
 };

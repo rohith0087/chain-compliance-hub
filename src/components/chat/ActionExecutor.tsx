@@ -157,9 +157,9 @@ const ActionExecutor: React.FC<ActionExecutorProps> = ({
       case 'executing':
         return <Loader2 className="w-4 h-4 animate-spin" />;
       case 'success':
-        return <CheckCircle className="w-4 h-4 text-green-600" />;
+        return <CheckCircle className="w-4 h-4 text-success" />;
       case 'error':
-        return <XCircle className="w-4 h-4 text-red-600" />;
+        return <XCircle className="w-4 h-4 text-danger" />;
       default:
         return null;
     }
@@ -206,7 +206,7 @@ const ActionExecutor: React.FC<ActionExecutorProps> = ({
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-1">
-          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+          <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
           <span className="text-sm font-medium">Available Actions</span>
         </div>
         <Badge variant="outline" className="text-xs">
@@ -242,7 +242,7 @@ const ActionExecutor: React.FC<ActionExecutorProps> = ({
                     
                     {result && (
                       <div className={`text-xs p-2 rounded ${
-                        hasError ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'
+                        hasError ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'
                       }`}>
                         {result.message}
                         {result.details && (

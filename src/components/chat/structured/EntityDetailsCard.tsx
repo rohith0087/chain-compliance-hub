@@ -18,16 +18,16 @@ const getStatusIcon = (status?: string) => {
     case 'success':
     case 'good':
     case 'approved':
-      return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
+      return <CheckCircle2 className="w-4 h-4 text-success" />;
     case 'warning':
     case 'action_required':
-      return <AlertTriangle className="w-4 h-4 text-amber-500" />;
+      return <AlertTriangle className="w-4 h-4 text-warning" />;
     case 'error':
     case 'high':
     case 'critical':
-      return <AlertTriangle className="w-4 h-4 text-red-500" />;
+      return <AlertTriangle className="w-4 h-4 text-danger" />;
     case 'pending':
-      return <Clock className="w-4 h-4 text-amber-500" />;
+      return <Clock className="w-4 h-4 text-warning" />;
     default:
       return <Info className="w-4 h-4 text-muted-foreground" />;
   }
@@ -38,14 +38,14 @@ const getStatusClass = (status?: string) => {
     case 'success':
     case 'good':
     case 'approved':
-      return 'text-emerald-700 dark:text-emerald-400';
+      return 'text-success';
     case 'warning':
     case 'action_required':
-      return 'text-amber-700 dark:text-amber-400';
+      return 'text-warning';
     case 'error':
     case 'high':
     case 'critical':
-      return 'text-red-700 dark:text-red-400';
+      return 'text-danger';
     default:
       return 'text-foreground';
   }

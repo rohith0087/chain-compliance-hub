@@ -496,7 +496,7 @@ export function FloatingComplianceAssistant() {
                 {sending && (
                   <div className="flex items-center gap-2" aria-label="Working behind the scenes">
                     <span className="compliance-assistant-typing"><span /><span /><span /></span>
-                    <ThinkingIndicator className="text-[13px] text-muted-foreground" />
+                    <ThinkingIndicator className="text-small text-muted-foreground" />
                   </div>
                 )}
               </div>

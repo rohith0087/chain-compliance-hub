@@ -71,7 +71,7 @@ export const OnboardingActivityFeed = ({ buyerId, isOpen, onClose, onRequestClic
         message: `Onboarding request created for ${request.supplier_company_name || request.supplier_email}`,
         timestamp: request.created_at,
         icon: UserPlus,
-        color: 'text-blue-500'
+        color: 'text-primary'
       }));
       setActivities(initialActivities);
     }
@@ -89,16 +89,16 @@ export const OnboardingActivityFeed = ({ buyerId, isOpen, onClose, onRequestClic
         message: `New onboarding request created`,
         timestamp: newRecord.created_at,
         icon: UserPlus,
-        color: 'text-blue-500'
+        color: 'text-primary'
       };
     }
     
     if (eventType === 'UPDATE' && oldRecord.status !== newRecord.status) {
       const statusMessages: Record<string, { message: string; icon: any; color: string }> = {
-        'onboarding_initiated': { message: 'Supplier started onboarding', icon: Clock, color: 'text-yellow-500' },
-        'under_review': { message: 'Ready for review', icon: Bell, color: 'text-orange-500' },
-        'approved': { message: 'Onboarding approved', icon: CheckCircle, color: 'text-green-500' },
-        'declined': { message: 'Onboarding declined', icon: XCircle, color: 'text-red-500' },
+        'onboarding_initiated': { message: 'Supplier started onboarding', icon: Clock, color: 'text-warning' },
+        'under_review': { message: 'Ready for review', icon: Bell, color: 'text-warning' },
+        'approved': { message: 'Onboarding approved', icon: CheckCircle, color: 'text-success' },
+        'declined': { message: 'Onboarding declined', icon: XCircle, color: 'text-danger' },
       };
       
       const statusInfo = statusMessages[newRecord.status] || { message: 'Status updated', icon: FileText, color: 'text-muted-foreground' };

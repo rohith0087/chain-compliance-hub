@@ -61,7 +61,7 @@ export default function SupplierFrameworkCoverageCard({ buyerId, supplierId, onO
           <h3 className={reviewSectionHeaderClass}>Frameworks &amp; compliance</h3>
         </div>
         {totals.total > 0 && (
-          <span className={`text-sm font-semibold ${score === 100 ? 'text-emerald-600' : totals.gaps > 0 ? 'text-red-600' : 'text-amber-600'}`}>{score}%</span>
+          <span className={`text-sm font-semibold ${score === 100 ? 'text-success' : totals.gaps > 0 ? 'text-danger' : 'text-warning'}`}>{score}%</span>
         )}
       </div>
 
@@ -84,10 +84,10 @@ export default function SupplierFrameworkCoverageCard({ buyerId, supplierId, onO
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">{r.compliant}/{r.total} met</span>
                     {fullyCompliant
-                      ? <Badge className="bg-emerald-600/15 text-emerald-600 hover:bg-emerald-600/15 text-xs"><ShieldCheck className="mr-1 h-3 w-3" />compliant</Badge>
+                      ? <Badge className="bg-success text-success hover:bg-success text-xs"><ShieldCheck className="mr-1 h-3 w-3" />compliant</Badge>
                       : r.gaps > 0
-                        ? <Badge className="bg-red-600/15 text-red-600 hover:bg-red-600/15 text-xs">{r.gaps} gap{r.gaps > 1 ? 's' : ''}</Badge>
-                        : <Badge className="bg-amber-500/15 text-amber-600 hover:bg-amber-500/15 text-xs">{r.pending} pending</Badge>}
+                        ? <Badge className="bg-danger text-danger hover:bg-danger text-xs">{r.gaps} gap{r.gaps > 1 ? 's' : ''}</Badge>
+                        : <Badge className="bg-warning text-warning hover:bg-warning text-xs">{r.pending} pending</Badge>}
                   </div>
                 </div>
               );

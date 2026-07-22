@@ -71,7 +71,7 @@ const ConnectionApprovalModal = ({
               <RadioGroupItem value="custom" id="custom" className="mt-1" />
               <Label htmlFor="custom" className="flex-1 cursor-pointer">
                 <div className="flex items-center gap-2 font-medium">
-                  <FileEdit className="w-4 h-4 text-orange-500" />
+                  <FileEdit className="w-4 h-4 text-warning" />
                   Start Custom Onboarding
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -84,7 +84,7 @@ const ConnectionApprovalModal = ({
               <RadioGroupItem value="none" id="none" className="mt-1" />
               <Label htmlFor="none" className="flex-1 cursor-pointer">
                 <div className="flex items-center gap-2 font-medium">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <CheckCircle className="w-4 h-4 text-success" />
                   Approve Only (No Onboarding Yet)
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">

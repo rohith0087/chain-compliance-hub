@@ -76,7 +76,7 @@ export default function SupplierComplianceWorkspace({
 
   const score = totals.total > 0 ? Math.round((totals.compliant / totals.total) * 100) : 0;
 
-  const scoreTone = score === 100 ? 'text-emerald-600' : totals.gaps > 0 ? 'text-red-600' : 'text-amber-600';
+  const scoreTone = score === 100 ? 'text-success' : totals.gaps > 0 ? 'text-danger' : 'text-warning';
 
   return (
     <div className="h-[calc(100vh-80px)] overflow-y-auto px-6 pb-6">
@@ -100,7 +100,7 @@ export default function SupplierComplianceWorkspace({
               {totals.total > 0 && (
                 <span className={`ml-1 inline-flex items-baseline gap-1 rounded-full border border-border/60 bg-muted/40 px-2.5 py-0.5 text-sm font-semibold ${scoreTone}`}>
                   {score}%
-                  <span className="text-[11px] font-normal text-muted-foreground">{totals.compliant}/{totals.total} met</span>
+                  <span className="text-micro font-normal text-muted-foreground">{totals.compliant}/{totals.total} met</span>
                 </span>
               )}
             </div>
@@ -137,14 +137,14 @@ export default function SupplierComplianceWorkspace({
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-mono text-sm font-semibold text-primary">{row.framework_code}</span>
                       {fullyCompliant
-                        ? <Badge className="bg-emerald-600/15 text-emerald-600 hover:bg-emerald-600/15 text-xs"><ShieldCheck className="mr-1 h-3 w-3" />compliant</Badge>
+                        ? <Badge className="bg-success text-success hover:bg-success text-xs"><ShieldCheck className="mr-1 h-3 w-3" />compliant</Badge>
                         : row.gaps > 0
-                          ? <Badge className="bg-red-600/15 text-red-600 hover:bg-red-600/15 text-xs">{row.gaps} gap{row.gaps > 1 ? 's' : ''}</Badge>
-                          : <Badge className="bg-amber-500/15 text-amber-600 hover:bg-amber-500/15 text-xs">{row.pending} in progress</Badge>}
+                          ? <Badge className="bg-danger text-danger hover:bg-danger text-xs">{row.gaps} gap{row.gaps > 1 ? 's' : ''}</Badge>
+                          : <Badge className="bg-warning text-warning hover:bg-warning text-xs">{row.pending} in progress</Badge>}
                     </div>
                     <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
                       <div
-                        className={`h-full ${fullyCompliant ? 'bg-emerald-500' : row.gaps > 0 ? 'bg-red-500' : 'bg-amber-500'}`}
+                        className={`h-full ${fullyCompliant ? 'bg-success' : row.gaps > 0 ? 'bg-danger' : 'bg-warning'}`}
                         style={{ width: `${row.total > 0 ? (row.compliant / row.total) * 100 : 0}%` }}
                       />
                     </div>

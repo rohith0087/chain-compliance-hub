@@ -26,11 +26,11 @@ export const SupplierDetailModal: React.FC<SupplierDetailModalProps> = ({
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved':
-        return 'bg-green-50 text-green-700 border-green-200';
+        return 'bg-success/10 text-success border-success/20';
       case 'pending':
-        return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+        return 'bg-warning/10 text-warning border-warning/20';
       case 'rejected':
-        return 'bg-red-50 text-red-700 border-red-200';
+        return 'bg-danger/10 text-danger border-danger/20';
       default:
         return 'bg-muted text-foreground/80 border-border';
     }

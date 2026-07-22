@@ -38,10 +38,10 @@ export const OnboardingSupplierCard = ({
 
   const getStatusDot = () => {
     if (alertStatus.level === 'critical') return 'bg-destructive';
-    if (alertStatus.level === 'warning') return 'bg-yellow-500';
-    if (alertStatus.level === 'success') return 'bg-green-500';
+    if (alertStatus.level === 'warning') return 'bg-warning';
+    if (alertStatus.level === 'success') return 'bg-success';
     if (alertStatus.level === 'ended') return 'bg-muted-foreground';
-    return 'bg-green-500';
+    return 'bg-success';
   };
 
   const displayName = request.supplier_company_name || request.supplier_email;
@@ -104,7 +104,7 @@ export const OnboardingSupplierCard = ({
 
         {/* Completed/Declined badges */}
         {stageId === 'approved' && (
-          <div className="flex items-center gap-1 text-xs text-green-600">
+          <div className="flex items-center gap-1 text-xs text-success">
             <CheckCircle className="h-3 w-3" />
             <span>Complete</span>
           </div>
@@ -150,7 +150,7 @@ export const OnboardingSupplierCard = ({
                         className="h-6 w-6 p-0"
                         onClick={onPopulateRequirements}
                       >
-                        <AlertCircle className="h-3 w-3 text-yellow-500" />
+                        <AlertCircle className="h-3 w-3 text-warning" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Populate Requirements</TooltipContent>

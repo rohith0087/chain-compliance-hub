@@ -387,10 +387,10 @@ export const OnboardingRequestDetailDrawer = ({
     
     // Check per-document review status
     const docStatus = submission.status || 'pending';
-    if (docStatus === 'approved') return { status: 'approved', icon: CheckCircle, color: 'text-green-600', label: 'Approved' };
+    if (docStatus === 'approved') return { status: 'approved', icon: CheckCircle, color: 'text-success', label: 'Approved' };
     if (docStatus === 'rejected') return { status: 'rejected', icon: XCircle, color: 'text-destructive', label: 'Rejected' };
-    if (docStatus === 'resubmitted') return { status: 'resubmitted', icon: RotateCcw, color: 'text-blue-600', label: 'Resubmitted' };
-    return { status: 'pending', icon: Clock, color: 'text-amber-600', label: 'Pending Review' };
+    if (docStatus === 'resubmitted') return { status: 'resubmitted', icon: RotateCcw, color: 'text-primary', label: 'Resubmitted' };
+    return { status: 'pending', icon: Clock, color: 'text-warning', label: 'Pending Review' };
   };
 
   const calculateProgress = () => {
@@ -694,11 +694,11 @@ export const OnboardingRequestDetailDrawer = ({
                                   {submission && submission.is_document_available !== false && (
                                     <div className="text-xs text-muted-foreground mt-1">
                                       {submission.file_name} • {Math.round((submission.file_size || 0) / 1024)}KB
-                                      {submission.version > 1 && <span className="ml-2 text-blue-600">v{submission.version}</span>}
+                                      {submission.version > 1 && <span className="ml-2 text-primary">v{submission.version}</span>}
                                     </div>
                                   )}
                                   {submission && submission.is_document_available === false && (
-                                    <div className="text-xs text-orange-600 mt-1">
+                                    <div className="text-xs text-warning mt-1">
                                       Reason: {submission.unavailability_reason || 'Not provided'}
                                     </div>
                                   )}
@@ -749,7 +749,7 @@ export const OnboardingRequestDetailDrawer = ({
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="text-green-600 border-green-600 hover:bg-green-50"
+                                  className="text-success border-success hover:bg-success/10"
                                   onClick={() => handleApproveDocument(submission.id)}
                                   disabled={actionLoading}
                                 >

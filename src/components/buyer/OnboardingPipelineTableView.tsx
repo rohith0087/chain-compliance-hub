@@ -103,9 +103,9 @@ export const OnboardingPipelineTableView = ({
 
   const getStatusDotColor = (alertStatus: { level: string }) => {
     if (alertStatus.level === 'critical') return 'bg-destructive';
-    if (alertStatus.level === 'warning') return 'bg-yellow-500';
-    if (alertStatus.level === 'success') return 'bg-green-500';
-    return 'bg-green-500';
+    if (alertStatus.level === 'warning') return 'bg-warning';
+    if (alertStatus.level === 'success') return 'bg-success';
+    return 'bg-success';
   };
 
   return (
@@ -242,7 +242,7 @@ export const OnboardingPipelineTableView = ({
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={(e) => onPopulateRequirements(request.id, e)}>
-                                    <AlertCircle className="h-3.5 w-3.5 text-yellow-500" />
+                                    <AlertCircle className="h-3.5 w-3.5 text-warning" />
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>Populate Requirements</TooltipContent>

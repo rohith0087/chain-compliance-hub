@@ -235,40 +235,40 @@ const ItemComplianceView = ({ buyerId }: ItemComplianceViewProps) => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-4">
-                <div className="p-4 bg-green-50 rounded-lg">
+                <div className="p-4 bg-success/10 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <CheckCircle className="w-5 h-5 text-success" />
                     <span className="text-sm font-medium">Linked Documents</span>
                   </div>
-                  <p className="text-2xl font-bold text-green-600 mt-2">{linkedDocuments.length}</p>
+                  <p className="text-2xl font-bold text-success mt-2">{linkedDocuments.length}</p>
                 </div>
-                <div className="p-4 bg-blue-50 rounded-lg">
+                <div className="p-4 bg-primary/10 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-blue-600" />
+                    <FileText className="w-5 h-5 text-primary" />
                     <span className="text-sm font-medium">General Documents</span>
                   </div>
-                  <p className="text-2xl font-bold text-blue-600 mt-2">{generalDocuments.length}</p>
+                  <p className="text-2xl font-bold text-primary mt-2">{generalDocuments.length}</p>
                 </div>
-                <div className="p-4 bg-orange-50 rounded-lg">
+                <div className="p-4 bg-warning/10 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5 text-orange-600" />
+                    <AlertTriangle className="w-5 h-5 text-warning" />
                     <span className="text-sm font-medium">Missing Documents</span>
                   </div>
-                  <p className="text-2xl font-bold text-orange-600 mt-2">{missingDocs.length}</p>
+                  <p className="text-2xl font-bold text-warning mt-2">{missingDocs.length}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {missingDocs.length > 0 && (
-            <Card className="border-orange-200 bg-orange-50">
+            <Card className="border-warning/20 bg-warning/10">
               <CardHeader>
-                <CardTitle className="text-orange-800">Missing Compliance Documents</CardTitle>
+                <CardTitle className="text-warning">Missing Compliance Documents</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-1">
                   {missingDocs.map((doc, idx) => (
-                    <li key={idx} className="text-sm text-orange-700">• {doc}</li>
+                    <li key={idx} className="text-sm text-warning">• {doc}</li>
                   ))}
                 </ul>
               </CardContent>

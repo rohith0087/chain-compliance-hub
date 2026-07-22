@@ -187,7 +187,7 @@ const IndustryBasedSupplierSetup = ({ buyerProfile, onComplete }: IndustryBasedS
 
             {loading && (
               <div className="text-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
                 Loading suppliers in {selectedIndustry}...
               </div>
             )}

@@ -80,8 +80,8 @@ export function AllSuppliersPerformanceDashboard() {
 
   const getTrendIcon = (direction: string) => {
     switch (direction) {
-      case 'improving': return <TrendingUp className="w-4 h-4 text-green-500" />;
-      case 'declining': return <TrendingDown className="w-4 h-4 text-red-500" />;
+      case 'improving': return <TrendingUp className="w-4 h-4 text-success" />;
+      case 'declining': return <TrendingDown className="w-4 h-4 text-danger" />;
       default: return <Minus className="w-4 h-4 text-muted-foreground" />;
     }
   };
@@ -136,7 +136,7 @@ export function AllSuppliersPerformanceDashboard() {
             <CardTitle className="text-sm font-medium text-muted-foreground">High Risk Suppliers</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.criticalRisk + stats.highRisk}</div>
+            <div className="text-2xl font-bold text-danger">{stats.criticalRisk + stats.highRisk}</div>
             <p className="text-xs text-muted-foreground mt-1">Require attention</p>
           </CardContent>
         </Card>
@@ -150,22 +150,22 @@ export function AllSuppliersPerformanceDashboard() {
         <CardContent>
           <div className="grid grid-cols-4 gap-4">
             <div className="flex flex-col items-center p-4 border rounded-lg">
-              <AlertTriangle className="w-8 h-8 text-red-600 mb-2" />
+              <AlertTriangle className="w-8 h-8 text-danger mb-2" />
               <div className="text-2xl font-bold">{stats.criticalRisk}</div>
               <Badge variant="destructive" className="mt-2">Critical</Badge>
             </div>
             <div className="flex flex-col items-center p-4 border rounded-lg">
-              <AlertTriangle className="w-8 h-8 text-orange-500 mb-2" />
+              <AlertTriangle className="w-8 h-8 text-warning mb-2" />
               <div className="text-2xl font-bold">{stats.highRisk}</div>
               <Badge variant="destructive" className="mt-2">High</Badge>
             </div>
             <div className="flex flex-col items-center p-4 border rounded-lg">
-              <Clock className="w-8 h-8 text-yellow-500 mb-2" />
+              <Clock className="w-8 h-8 text-warning mb-2" />
               <div className="text-2xl font-bold">{stats.mediumRisk}</div>
               <Badge variant="default" className="mt-2">Medium</Badge>
             </div>
             <div className="flex flex-col items-center p-4 border rounded-lg">
-              <CheckCircle2 className="w-8 h-8 text-green-500 mb-2" />
+              <CheckCircle2 className="w-8 h-8 text-success mb-2" />
               <div className="text-2xl font-bold">{stats.lowRisk}</div>
               <Badge variant="secondary" className="mt-2">Low</Badge>
             </div>

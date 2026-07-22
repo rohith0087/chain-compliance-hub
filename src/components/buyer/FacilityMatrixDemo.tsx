@@ -32,7 +32,7 @@ const FACILITIES: Facility[] = [
 ];
 
 const AUDIT_TONE: Record<string, string> = {
-  passed: 'bg-emerald-600/15 text-emerald-600', due: 'bg-amber-500/15 text-amber-600', finding: 'bg-red-600/15 text-red-600',
+  passed: 'bg-success text-success', due: 'bg-warning text-warning', finding: 'bg-danger text-danger',
 };
 const AUDIT_ICON = { passed: CheckCircle2, due: Clock, finding: AlertTriangle } as const;
 
@@ -62,14 +62,14 @@ export default function FacilityMatrixDemo() {
           <h1 className="flex items-center gap-2 text-2xl font-semibold text-foreground">
             <Factory className="h-6 w-6 text-primary" /> Facility Compliance Matrix
           </h1>
-          <Badge variant="outline" className="text-[10px] uppercase tracking-wide text-muted-foreground">Demo dataset</Badge>
+          <Badge variant="outline" className="text-micro uppercase tracking-wide text-muted-foreground">Demo dataset</Badge>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Kpi icon={Building2} value={String(FACILITIES.length)} label="Facilities in network" />
-          <Kpi icon={ShieldCheck} value={`${certified}/${FACILITIES.length}`} label="Audit-current" tone="text-emerald-600" />
-          <Kpi icon={CalendarClock} value={String(auditsDue)} label="Audits due < 30 days" tone="text-amber-600" />
-          <Kpi icon={AlertTriangle} value={String(findings)} label="Open findings" tone="text-red-600" />
+          <Kpi icon={ShieldCheck} value={`${certified}/${FACILITIES.length}`} label="Audit-current" tone="text-success" />
+          <Kpi icon={CalendarClock} value={String(auditsDue)} label="Audits due < 30 days" tone="text-warning" />
+          <Kpi icon={AlertTriangle} value={String(findings)} label="Open findings" tone="text-danger" />
         </div>
 
         {/* Facility × item production matrix */}
@@ -103,8 +103,8 @@ export default function FacilityMatrixDemo() {
                       const cell = f.items[it];
                       return (
                         <td key={it} className="p-3 text-center">
-                          {cell === 'compliant' ? <CheckCircle2 className="mx-auto h-4 w-4 text-emerald-500" />
-                            : cell === 'issue' ? <XCircle className="mx-auto h-4 w-4 text-red-500" />
+                          {cell === 'compliant' ? <CheckCircle2 className="mx-auto h-4 w-4 text-success" />
+                            : cell === 'issue' ? <XCircle className="mx-auto h-4 w-4 text-danger" />
                             : <span className="text-muted-foreground/30">·</span>}
                         </td>
                       );
@@ -115,8 +115,8 @@ export default function FacilityMatrixDemo() {
             </table>
           </div>
           <div className="flex flex-wrap gap-4 border-t border-border p-3 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Produced &amp; compliant</span>
-            <span className="inline-flex items-center gap-1"><XCircle className="h-3.5 w-3.5 text-red-500" /> Produced, compliance issue</span>
+            <span className="inline-flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5 text-success" /> Produced &amp; compliant</span>
+            <span className="inline-flex items-center gap-1"><XCircle className="h-3.5 w-3.5 text-danger" /> Produced, compliance issue</span>
             <span className="inline-flex items-center gap-1"><span className="text-muted-foreground/40">·</span> Not produced here</span>
           </div>
         </div>
@@ -125,7 +125,7 @@ export default function FacilityMatrixDemo() {
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {facilities.map((f) => {
             const AIcon = AUDIT_ICON[f.audit.state];
-            const scoreTone = f.score >= 85 ? 'text-emerald-600' : f.score >= 70 ? 'text-amber-600' : 'text-red-600';
+            const scoreTone = f.score >= 85 ? 'text-success' : f.score >= 70 ? 'text-warning' : 'text-danger';
             const produced = Object.values(f.items).filter((c) => c !== 'not_produced').length;
             return (
               <div key={f.id} className={`${reviewCardContainerClass} p-4`}>
@@ -137,7 +137,7 @@ export default function FacilityMatrixDemo() {
                   <span className={`text-xl font-semibold ${scoreTone}`}>{f.score}</span>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-1">
-                  {f.certs.map((c) => <Badge key={c} variant="secondary" className="text-[10px]">{c}</Badge>)}
+                  {f.certs.map((c) => <Badge key={c} variant="secondary" className="text-micro">{c}</Badge>)}
                 </div>
                 <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs">
                   <Badge className={`gap-1 ${AUDIT_TONE[f.audit.state]}`}><AIcon className="h-3 w-3" />{f.audit.label}</Badge>

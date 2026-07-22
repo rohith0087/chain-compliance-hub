@@ -484,7 +484,7 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
                 <div key={index} className="border rounded-lg p-4 space-y-4 relative">
                   <div className="absolute top-2 right-2 flex items-center gap-2">
                     {req.template_file_path && (
-                      <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                      <Badge variant="secondary" className="text-xs bg-primary/15 text-primary">
                         <FileDown className="w-3 h-3 mr-1" />
                         Template
                       </Badge>
@@ -548,17 +548,17 @@ export const OnboardingRequestForm: React.FC<OnboardingRequestFormProps> = ({
                   
                   {/* Template indicator */}
                   {req.template_file_path && (
-                    <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-950 dark:border-blue-800">
-                      <FileDown className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <div className="flex items-center gap-2 p-2 bg-primary/10 border border-primary/20 rounded-lg">
+                      <FileDown className="h-4 w-4 text-primary" />
                       <div className="flex-1">
-                        <span className="text-sm font-medium text-blue-800 dark:text-blue-300">Template attached: </span>
-                        <span className="text-sm text-blue-700 dark:text-blue-400">{req.template_file_name}</span>
+                        <span className="text-sm font-medium text-primary">Template attached: </span>
+                        <span className="text-sm text-primary">{req.template_file_name}</span>
                       </div>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                        className="text-primary hover:text-primary"
                         onClick={async () => {
                           const { data } = await supabase.storage
                             .from('compliance-documents')

@@ -39,10 +39,17 @@ export const TOOLKITS: Record<ToolkitSlug, ToolkitConfig> = {
     authConfigId: 'ac_DcD6zkTsfvIW',
     label: 'OneDrive',
     capability: 'Lets the assistant find and read supplier certificates stored in your OneDrive.',
+    // NOTE: Composio's `restrict_to_following_tools` on the auth config gates the
+    // agent/link surface but NOT direct /tools/execute (verified live), so the
+    // real enforcement is the ONEDRIVE_ALLOWED_TOOLS set in simple-rag-chat.
+    // Keep this list in sync with it.
+    // ONE_DRIVE_ONEDRIVE_LIST_ITEMS lists the root and works on personal +
+    // work accounts; SEARCH_DRIVE_ITEMS only works on work/school (Entra)
+    // accounts, so the agent prefers listing.
     readTools: [
+      'ONE_DRIVE_ONEDRIVE_LIST_ITEMS',
       'ONE_DRIVE_LIST_DRIVES',
       'ONE_DRIVE_LIST_FOLDER_CHILDREN',
-      'ONE_DRIVE_SEARCH_DRIVE_ITEMS',
       'ONE_DRIVE_GET_ITEM',
       'ONE_DRIVE_DOWNLOAD_FILE',
       'ONE_DRIVE_DOWNLOAD_FILE_BY_PATH',

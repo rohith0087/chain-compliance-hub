@@ -682,6 +682,22 @@ This tool creates a DRAFT that the user MUST review before sending. For complian
         }
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_onedrive_files",
+      description: "List files and folders in the user's connected OneDrive. Use this to find supplier certificates or compliance documents the user stores in OneDrive — e.g. to cross-reference against their records. Returns names and ids. Call with no folder_id for the OneDrive root; pass a folder_id from a previous result to open that folder. Requires the user to have connected OneDrive in Settings > Integrations; if not connected, the result says so and you should tell them to connect it there.",
+      parameters: {
+        type: "object",
+        properties: {
+          folder_id: {
+            type: "string",
+            description: "Optional. Id of a folder to open (from a previous result). Omit to list the OneDrive root."
+          }
+        }
+      }
+    }
   }
 ];
 
@@ -4327,12 +4343,97 @@ async function executeToolCall(
     case "query_supplier_risk":
       console.log('⚠️ Querying supplier risk data:', args);
       return querySupplierRisk(args);
-    
+
+    // ============= COMPOSIO / EXTERNAL TOOLS =============
+    case "list_onedrive_files":
+      console.log('📁 Listing OneDrive files:', args);
+      return await listOneDriveFiles(args, context);
+
     default:
       return {
         success: false,
         error: `Unknown tool: ${toolName}`
       };
+  }
+}
+
+// ============= COMPOSIO EXTERNAL TOOL EXECUTION =============
+// Composio's `restrict_to_following_tools` on the auth config does NOT block
+// direct /tools/execute calls made with the project API key — verified live.
+// So THIS allowlist is the real enforcement: the agent may only ever run these.
+const COMPOSIO_BASE = 'https://backend.composio.dev/api/v3.1';
+const ONEDRIVE_ALLOWED_TOOLS = new Set([
+  'ONE_DRIVE_ONEDRIVE_LIST_ITEMS',   // root listing (works on personal + work)
+  'ONE_DRIVE_LIST_FOLDER_CHILDREN',  // open a folder by id
+  'ONE_DRIVE_LIST_DRIVES',
+  'ONE_DRIVE_GET_ITEM',
+]);
+
+/**
+ * Runs one allowlisted Composio tool for a user. The Composio user_id is
+ * `user:<profile_id>` — derived here from the authenticated user, never from
+ * anything the model produced.
+ */
+async function executeComposioTool(profileId: string, tool: string, args: Record<string, unknown>) {
+  if (!ONEDRIVE_ALLOWED_TOOLS.has(tool)) {
+    throw new Error(`Tool not allowed: ${tool}`);
+  }
+  const apiKey = Deno.env.get('COMPOSIO_API_KEY');
+  if (!apiKey) throw new Error('Composio is not configured');
+
+  const res = await fetch(`${COMPOSIO_BASE}/tools/execute/${tool}`, {
+    method: 'POST',
+    headers: { 'x-api-key': apiKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: `user:${profileId}`, arguments: args }),
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const body: any = await res.json().catch(() => null);
+  if (!res.ok || body?.successful === false) {
+    // Provider detail to logs; caller surfaces a friendly line.
+    console.error('composio execute failed', { tool, status: res.status, error: body?.error });
+    throw new Error(typeof body?.error === 'string' ? body.error : `Composio ${res.status}`);
+  }
+  return body?.data;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function listOneDriveFiles(args: any, context?: { userId?: string }) {
+  const profileId = context?.userId;
+  if (!profileId) return { success: false, error: 'You must be signed in to read OneDrive.' };
+
+  // Must have an ACTIVE connection for this user. Metadata only — no tokens here.
+  const { data: conn } = await supabase
+    .from('composio_connections')
+    .select('status')
+    .eq('profile_id', profileId)
+    .eq('toolkit', 'one_drive')
+    .eq('status', 'active')
+    .maybeSingle();
+  if (!conn) {
+    return {
+      success: false,
+      not_connected: true,
+      error: 'OneDrive is not connected for this user. Tell them to connect it in Settings → Integrations, then try again.',
+    };
+  }
+
+  try {
+    const folderId = typeof args?.folder_id === 'string' && args.folder_id ? args.folder_id : null;
+    const data = folderId
+      ? await executeComposioTool(profileId, 'ONE_DRIVE_LIST_FOLDER_CHILDREN', { use_me_drive: true, folder_item_id: folderId })
+      : await executeComposioTool(profileId, 'ONE_DRIVE_ONEDRIVE_LIST_ITEMS', {});
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw: any[] = data?.value ?? data?.items ?? [];
+    const files = raw.slice(0, 50).map((i) => ({
+      name: i.name,
+      id: i.id,
+      is_folder: !!i.folder,
+      size: i.size ?? null,
+      last_modified: i.lastModifiedDateTime ?? null,
+    }));
+    return { success: true, folder_id: folderId ?? 'root', count: files.length, files };
+  } catch (_e) {
+    return { success: false, error: 'Could not read OneDrive right now. Please try again.' };
   }
 }
 

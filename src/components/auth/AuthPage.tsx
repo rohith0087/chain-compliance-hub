@@ -572,14 +572,16 @@ const AuthPage = () => {
             style={{ backgroundImage: "url('/grain-texture.webp')", backgroundSize: '420px 420px', backgroundRepeat: 'repeat' }}
           />
 
-          {/* Wordmark top-left */}
-          <button
-            onClick={() => navigate('/')}
+          {/* Wordmark top-left — links out to the public marketing site */}
+          <a
+            href="https://tracer2c.com"
+            target="_blank"
+            rel="noopener noreferrer"
             aria-label="TraceR2C home"
             className="relative z-10 inline-flex items-start text-white hover:opacity-80 transition-opacity"
           >
             <Wordmark size={22} invertLogo className="text-white" />
-          </button>
+          </a>
 
           {/* Testimonial */}
           <div className="relative z-10 max-w-[320px]">
@@ -608,9 +610,17 @@ const AuthPage = () => {
             style={{ backgroundImage: "url('/grain-texture.webp')", backgroundSize: '420px 420px', backgroundRepeat: 'repeat' }}
           />
 
-          {/* Mobile wordmark */}
+          {/* Mobile wordmark — same outbound link as the desktop wordmark */}
           <div className="flex lg:hidden items-center justify-center mb-6 relative z-10">
-            <Wordmark size={22} invertLogo className="text-white" />
+            <a
+              href="https://tracer2c.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="TraceR2C home"
+              className="inline-flex text-white hover:opacity-80 transition-opacity"
+            >
+              <Wordmark size={22} invertLogo className="text-white" />
+            </a>
           </div>
 
           <div className="auth-plasma relative z-10 w-full max-w-sm mx-auto">

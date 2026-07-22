@@ -1,21 +1,14 @@
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LayoutDashboard, LayoutGrid, ListChecks, Activity, Check } from 'lucide-react';
+import { useBuyerDashboardView, type BuyerDashboardView } from '@/hooks/useBuyerDashboardView';
 
-type View = 'overview' | 'detailed' | 'focus' | 'pulse';
-
-const STORAGE_KEY = 'buyerDashboard_view';
+type View = BuyerDashboardView;
 
 export function DashboardViewPreference() {
-  const [view, setView] = useState<View>(() => {
-    if (typeof window === 'undefined') return 'overview';
-    return (localStorage.getItem(STORAGE_KEY) as View) || 'overview';
-  });
+  const { view, setView } = useBuyerDashboardView();
 
   const update = (next: View) => {
-    setView(next);
-    localStorage.setItem(STORAGE_KEY, next);
-    window.dispatchEvent(new Event('buyer-dashboard-view-changed'));
+    void setView(next);
   };
 
   const options: { id: View; label: string; desc: string; icon: typeof LayoutDashboard }[] = [

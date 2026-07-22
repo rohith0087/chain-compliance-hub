@@ -46,6 +46,7 @@ import { getWorkspaceProfileForIndustry } from '@/config/workspaceProfiles';
 import { BuyerOverviewDashboard } from '@/components/dashboard/BuyerOverviewDashboard';
 import { BuyerFocusDashboard } from '@/components/dashboard/BuyerFocusDashboard';
 import { BuyerPulseDashboard } from '@/components/dashboard/BuyerPulseDashboard';
+import { useBuyerDashboardView } from '@/hooks/useBuyerDashboardView';
 import { motion } from 'framer-motion';
 import { Users, Clock, AlertTriangle } from 'lucide-react';
 import { useCommunicationThreads } from '@/hooks/useCommunicationThreads';
@@ -106,16 +107,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
       window.history.replaceState({}, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`);
     }
   }, []);
-  const [dashboardView, setDashboardView] = useState<'overview' | 'detailed' | 'focus' | 'pulse'>(() => {
-    return (localStorage.getItem('buyerDashboard_view') as 'overview' | 'detailed' | 'focus' | 'pulse') || 'overview';
-  });
-  useEffect(() => {
-    const handler = () => {
-      setDashboardView((localStorage.getItem('buyerDashboard_view') as 'overview' | 'detailed' | 'focus' | 'pulse') || 'overview');
-    };
-    window.addEventListener('buyer-dashboard-view-changed', handler);
-    return () => window.removeEventListener('buyer-dashboard-view-changed', handler);
-  }, []);
+  const { view: dashboardView } = useBuyerDashboardView();
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showBulkInvite, setShowBulkInvite] = useState(false);

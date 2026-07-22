@@ -264,6 +264,52 @@ const AuthPage = () => {
     setLoading(false);
   };
 
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const passkeySupported = typeof window !== 'undefined' && !!window.PublicKeyCredential;
+
+  const handlePasskeySignIn = async () => {
+    setPasskeyLoading(true);
+    try {
+      const beginRes = await supabase.functions.invoke('passkey-auth-begin', {
+        body: email.trim() ? { email: email.trim() } : {},
+      });
+      if (beginRes.error || !beginRes.data) {
+        throw new Error(beginRes.error?.message || 'Failed to start passkey sign-in');
+      }
+
+      const assertion = await startAuthentication({ optionsJSON: beginRes.data });
+
+      const finishRes = await supabase.functions.invoke('passkey-auth-finish', {
+        body: { response: assertion },
+      });
+      if (finishRes.error || !finishRes.data?.verified || !finishRes.data?.token_hash) {
+        throw new Error(finishRes.error?.message || 'Passkey verification failed');
+      }
+
+      const { error: verifyErr } = await supabase.auth.verifyOtp({
+        token_hash: finishRes.data.token_hash,
+        type: 'magiclink',
+      });
+      if (verifyErr) throw verifyErr;
+
+      toast({ title: 'Signed in', description: 'Welcome back.' });
+      // Auth state change handles navigation
+    } catch (err: any) {
+      if (err?.name === 'NotAllowedError') {
+        // User cancelled; stay quiet
+      } else {
+        toast({
+          title: 'Passkey sign-in failed',
+          description: err?.message || 'Please try again or use your password.',
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setPasskeyLoading(false);
+    }
+  };
+
+
   const handleMFAVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setMfaError(null);

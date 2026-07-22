@@ -258,7 +258,7 @@ export const OnboardingFormCompletion: React.FC<OnboardingFormCompletionProps> =
               <div className="space-y-2">
                 <Label htmlFor={field.id} className="flex items-center gap-1">
                   {field.field_label}
-                  {field.is_required && <span className="text-red-500">*</span>}
+                  {field.is_required && <span className="text-danger">*</span>}
                 </Label>
                 {field.field_description && (
                   <p className="text-sm text-muted-foreground">
@@ -281,7 +281,7 @@ export const OnboardingFormCompletion: React.FC<OnboardingFormCompletionProps> =
             {saving ? 'Saving...' : 'Save Responses'}
           </Button>
           {!allRequiredCompleted && (
-            <span className="text-sm text-red-600">
+            <span className="text-sm text-danger">
               Please complete all required fields
             </span>
           )}
@@ -289,7 +289,7 @@ export const OnboardingFormCompletion: React.FC<OnboardingFormCompletionProps> =
       )}
 
       {isCompleted && (
-        <div className="flex items-center gap-2 text-green-600 pt-4">
+        <div className="flex items-center gap-2 text-success pt-4">
           <CheckCircle className="w-4 h-4" />
           <span className="text-sm">Form completion finished</span>
         </div>

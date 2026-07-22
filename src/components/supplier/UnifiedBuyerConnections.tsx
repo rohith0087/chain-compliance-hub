@@ -134,8 +134,8 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
 
   const getConnectionDisplayStatus = (connection: any) => {
     const onboardingRequest = connection.supplier_onboarding_requests;
-    if (connection.status === 'pending') return connection.initiated_by === 'supplier' ? { status: 'requested', label: 'Connection Requested', color: 'bg-purple-100 text-purple-800', icon: <Clock className="w-4 h-4 text-purple-500" />, action: 'awaiting_buyer' } : { status: 'pending_approval', label: 'Pending Your Approval', color: 'bg-orange-100 text-orange-800', icon: <AlertCircle className="w-4 h-4 text-orange-500" />, action: 'approve_reject' };
-    if (connection.status === 'rejected') return { status: 'rejected', label: 'Connection Rejected', color: 'bg-red-100 text-red-800', icon: <XCircle className="w-4 h-4 text-red-500" />, action: 'none' };
+    if (connection.status === 'pending') return connection.initiated_by === 'supplier' ? { status: 'requested', label: 'Connection Requested', color: 'bg-primary/15 text-primary', icon: <Clock className="w-4 h-4 text-primary" />, action: 'awaiting_buyer' } : { status: 'pending_approval', label: 'Pending Your Approval', color: 'bg-warning/15 text-warning', icon: <AlertCircle className="w-4 h-4 text-warning" />, action: 'approve_reject' };
+    if (connection.status === 'rejected') return { status: 'rejected', label: 'Connection Rejected', color: 'bg-danger/15 text-danger', icon: <XCircle className="w-4 h-4 text-danger" />, action: 'none' };
     if (connection.status === 'approved') {
       if (!onboardingRequest) return { status: 'connected_no_onboarding', label: 'Connected - No Onboarding', color: 'bg-muted text-foreground', icon: <CheckCircle className="w-4 h-4 text-muted-foreground" />, action: 'request_onboarding', description: `${wsT.buyer} has not initiated onboarding process yet` };
       
@@ -143,23 +143,23 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
       const hasRejectedDocuments = (onboardingRequest.status === 'under_review' || onboardingRequest.status === 'partially_approved') && onboardingRequest.rejection_reason;
       
       const statusMap: any = { 
-        requested: { status: 'onboarding_requested', label: 'Onboarding Requested', color: 'bg-purple-100 text-purple-800', icon: <Clock className="w-4 h-4 text-purple-500" />, action: 'awaiting_buyer', description: `Waiting for ${wsT.buyer.toLowerCase()} to approve` }, 
-        pending: { status: 'onboarding_pending', label: 'Onboarding Pending', color: 'bg-amber-100 text-amber-800', icon: <AlertCircle className="w-4 h-4 text-amber-500" />, action: 'start_onboarding', description: onboardingRequest.rejection_reason ? `Changes requested: ${onboardingRequest.rejection_reason}` : 'Ready to start onboarding' }, 
-        onboarding_initiated: { status: 'onboarding_in_progress', label: 'Onboarding In Progress', color: 'bg-blue-100 text-blue-800', icon: <Clock className="w-4 h-4 text-blue-500" />, action: 'continue_onboarding', description: 'Complete remaining steps' }, 
+        requested: { status: 'onboarding_requested', label: 'Onboarding Requested', color: 'bg-primary/15 text-primary', icon: <Clock className="w-4 h-4 text-primary" />, action: 'awaiting_buyer', description: `Waiting for ${wsT.buyer.toLowerCase()} to approve` }, 
+        pending: { status: 'onboarding_pending', label: 'Onboarding Pending', color: 'bg-warning/15 text-warning', icon: <AlertCircle className="w-4 h-4 text-warning" />, action: 'start_onboarding', description: onboardingRequest.rejection_reason ? `Changes requested: ${onboardingRequest.rejection_reason}` : 'Ready to start onboarding' }, 
+        onboarding_initiated: { status: 'onboarding_in_progress', label: 'Onboarding In Progress', color: 'bg-primary/15 text-primary', icon: <Clock className="w-4 h-4 text-primary" />, action: 'continue_onboarding', description: 'Complete remaining steps' }, 
         under_review: hasRejectedDocuments 
-          ? { status: 'changes_requested', label: 'Changes Requested', color: 'bg-orange-100 text-orange-800', icon: <AlertCircle className="w-4 h-4 text-orange-500" />, action: 'continue_onboarding', description: `Revisions needed: ${onboardingRequest.rejection_reason}` }
-          : { status: 'under_review', label: 'Under Review', color: 'bg-yellow-100 text-yellow-800', icon: <Clock className="w-4 h-4 text-yellow-500" />, action: 'awaiting_buyer', description: `${wsT.buyer} is reviewing` }, 
+          ? { status: 'changes_requested', label: 'Changes Requested', color: 'bg-warning/15 text-warning', icon: <AlertCircle className="w-4 h-4 text-warning" />, action: 'continue_onboarding', description: `Revisions needed: ${onboardingRequest.rejection_reason}` }
+          : { status: 'under_review', label: 'Under Review', color: 'bg-warning/15 text-warning', icon: <Clock className="w-4 h-4 text-warning" />, action: 'awaiting_buyer', description: `${wsT.buyer} is reviewing` }, 
         partially_approved: { 
           status: 'changes_requested', 
           label: 'Changes Requested', 
-          color: 'bg-orange-100 text-orange-800', 
-          icon: <AlertCircle className="w-4 h-4 text-orange-500" />, 
+          color: 'bg-warning/15 text-warning', 
+          icon: <AlertCircle className="w-4 h-4 text-warning" />, 
           action: 'continue_onboarding', 
           description: onboardingRequest.rejection_reason 
             ? `Revisions needed: ${onboardingRequest.rejection_reason}` 
             : 'Some documents need resubmission'
         },
-        approved: { status: 'fully_connected', label: 'Fully Connected', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="w-4 h-4 text-green-500" />, action: 'none', description: 'Onboarding complete' } 
+        approved: { status: 'fully_connected', label: 'Fully Connected', color: 'bg-success/15 text-success', icon: <CheckCircle className="w-4 h-4 text-success" />, action: 'none', description: 'Onboarding complete' } 
       };
       return statusMap[onboardingRequest.status] || { status: 'unknown', label: 'Status Unknown', color: 'bg-muted text-foreground', icon: <AlertCircle className="w-4 h-4 text-muted-foreground" />, action: 'none' };
     }
@@ -290,7 +290,7 @@ const UnifiedBuyerConnections = ({ onConnectionRequest }: UnifiedBuyerConnection
         });
 
   if (loading) return <Card><CardContent className="py-12 text-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div><p>Loading...</p></CardContent></Card>;
-  if (error) return <Card><CardContent className="py-12 text-center"><AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" /><p className="text-red-600 mb-2">{error}</p><Button onClick={fetchData} variant="outline" size="sm"><RefreshCw className="w-4 h-4 mr-2" />Try Again</Button></CardContent></Card>;
+  if (error) return <Card><CardContent className="py-12 text-center"><AlertCircle className="w-12 h-12 text-danger mx-auto mb-4" /><p className="text-danger mb-2">{error}</p><Button onClick={fetchData} variant="outline" size="sm"><RefreshCw className="w-4 h-4 mr-2" />Try Again</Button></CardContent></Card>;
 
   return (
     <div className="space-y-6">

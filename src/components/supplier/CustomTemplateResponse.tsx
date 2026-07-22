@@ -319,13 +319,13 @@ export const CustomTemplateResponse = ({ isOpen, onClose, request, onSubmissionC
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'submitted':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-primary/15 text-primary';
       case 'approved':
-        return 'bg-green-100 text-green-800';
+        return 'bg-success/15 text-success';
       case 'rejected':
-        return 'bg-red-100 text-red-800';
+        return 'bg-danger/15 text-danger';
       case 'revision_requested':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-warning/15 text-warning';
       default:
         return 'bg-muted text-foreground';
     }
@@ -375,7 +375,7 @@ export const CustomTemplateResponse = ({ isOpen, onClose, request, onSubmissionC
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FileCheck className="w-5 h-5 text-green-600" />
+            <FileCheck className="w-5 h-5 text-success" />
             Custom Template Response: {request.title}
           </DialogTitle>
           <DialogDescription>
@@ -436,9 +436,9 @@ export const CustomTemplateResponse = ({ isOpen, onClose, request, onSubmissionC
             </div>
 
             {submission && submission.reviewer_notes && (
-              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <Label className="text-sm font-medium text-yellow-800">Reviewer Notes:</Label>
-                <p className="text-sm text-yellow-700 mt-1">{submission.reviewer_notes}</p>
+              <div className="p-3 bg-warning/10 border border-warning/20 rounded-lg">
+                <Label className="text-sm font-medium text-warning">Reviewer Notes:</Label>
+                <p className="text-sm text-warning mt-1">{submission.reviewer_notes}</p>
               </div>
             )}
 
@@ -503,7 +503,7 @@ export const CustomTemplateResponse = ({ isOpen, onClose, request, onSubmissionC
                 ) : (
                   <div className="border rounded-lg p-3">
                     <div className="flex items-center space-x-3">
-                      <FileText className="h-6 w-6 text-blue-500" />
+                      <FileText className="h-6 w-6 text-primary" />
                       <div className="flex-1">
                         <p className="text-sm font-medium text-foreground">{selectedFile.name}</p>
                         <p className="text-xs text-muted-foreground">

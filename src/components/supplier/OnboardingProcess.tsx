@@ -158,13 +158,13 @@ export const OnboardingProcess: React.FC<OnboardingProcessProps> = ({
     <div className="space-y-6">
       {/* Rejection Feedback Banner */}
       {request.rejection_reason && (
-        <div className="bg-amber-50 border-l-4 border-amber-500 p-4">
+        <div className="bg-warning/10 border-l-4 border-warning p-4">
           <div className="flex items-start">
-            <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 mr-3 flex-shrink-0" />
+            <AlertCircle className="h-5 w-5 text-warning mt-0.5 mr-3 flex-shrink-0" />
             <div>
-              <h4 className="font-semibold text-amber-800">Changes Requested</h4>
-              <p className="text-sm text-amber-700 mt-1">{request.rejection_reason}</p>
-              <p className="text-xs text-amber-600 mt-2">
+              <h4 className="font-semibold text-warning">Changes Requested</h4>
+              <p className="text-sm text-warning mt-1">{request.rejection_reason}</p>
+              <p className="text-xs text-warning mt-2">
                 Please review the feedback and update your submission accordingly.
               </p>
             </div>
@@ -211,7 +211,7 @@ export const OnboardingProcess: React.FC<OnboardingProcessProps> = ({
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-full ${
-                    isCompleted ? 'bg-green-100 text-green-600' :
+                    isCompleted ? 'bg-success/15 text-success' :
                     isCurrent ? 'bg-primary/10 text-primary' :
                     'bg-muted text-muted-foreground/70'
                   }`}>
@@ -228,7 +228,7 @@ export const OnboardingProcess: React.FC<OnboardingProcessProps> = ({
                     </p>
                   </div>
                   {isCompleted && (
-                    <Badge className="bg-green-100 text-green-800">
+                    <Badge className="bg-success/15 text-success">
                       Completed
                     </Badge>
                   )}
@@ -257,21 +257,21 @@ export const OnboardingProcess: React.FC<OnboardingProcessProps> = ({
 
       {/* Submit for Review */}
       {isAllStepsCompleted && (
-        <Card className="border-green-200 bg-green-50">
+        <Card className="border-success/20 bg-success/10">
           <CardContent className="py-6">
             <div className="text-center space-y-4">
-              <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mx-auto">
-                <CheckCircle className="w-6 h-6 text-green-600" />
+              <div className="flex items-center justify-center w-12 h-12 bg-success/15 rounded-full mx-auto">
+                <CheckCircle className="w-6 h-6 text-success" />
               </div>
               <div>
-                <h3 className="font-semibold text-green-800">All Steps Completed!</h3>
-                <p className="text-sm text-green-700">
+                <h3 className="font-semibold text-success">All Steps Completed!</h3>
+                <p className="text-sm text-success">
                   You've completed all onboarding requirements. Submit for {wsT.buyer.toLowerCase()} review.
                 </p>
               </div>
               <Button
                 onClick={handleSubmitForReview}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-success hover:bg-success"
               >
                 <Send className="w-4 h-4 mr-2" />
                 Submit for Review

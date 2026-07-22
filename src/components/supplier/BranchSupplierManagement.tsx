@@ -112,10 +112,10 @@ export const BranchSupplierManagement: React.FC<BranchSupplierManagementProps> =
                 {isAdmin && (
                   <div className="space-y-2">
                     {connectedSuppliers.length > 0 && (
-                      <div className="p-3 border rounded-lg bg-blue-50 border-blue-200">
+                      <div className="p-3 border rounded-lg bg-primary/10 border-primary/20">
                         <div className="flex items-center gap-2 mb-2">
-                          <Users className="h-4 w-4 text-blue-600" />
-                          <span className="text-sm font-medium text-blue-900">Quick Assign Connected Suppliers</span>
+                          <Users className="h-4 w-4 text-primary" />
+                          <span className="text-sm font-medium text-primary">Quick Assign Connected Suppliers</span>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {connectedSuppliers.map((supplier) => (
@@ -124,7 +124,7 @@ export const BranchSupplierManagement: React.FC<BranchSupplierManagementProps> =
                               variant="outline"
                               size="sm"
                               onClick={() => assignSupplierToBranch(supplier.id, 'Assigned from connected suppliers')}
-                              className="text-xs border-blue-200 hover:bg-blue-100"
+                              className="text-xs border-primary/20 hover:bg-primary/15"
                             >
                               + {supplier.company_name}
                             </Button>

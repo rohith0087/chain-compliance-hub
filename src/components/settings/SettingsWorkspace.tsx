@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AccountSettingsForm } from './AccountSettingsForm';
+import { MFASettingsSection } from './MFASettingsSection';
 import { PasswordChangeForm } from './PasswordChangeForm';
 import { NotificationSettingsForm } from './NotificationSettingsForm';
 import { IntegrationsPanel } from './IntegrationsPanel';
@@ -81,7 +82,14 @@ export function SettingsWorkspace({
 
       {/* Content */}
       <div className="pt-6 pb-16 animate-in fade-in slide-in-from-bottom-2 duration-300" key={active}>
-        {active === 'account' && <AccountSettingsForm />}
+        {active === 'account' && (
+          <>
+            <AccountSettingsForm />
+            {/* MFA was separated out of AccountSettingsForm for the buyer pages;
+                re-mounted here so this workspace keeps its original content. */}
+            <MFASettingsSection />
+          </>
+        )}
         {active === 'security' && <div className="max-w-xl"><PasswordChangeForm /></div>}
         {active === 'notifications' && <NotificationSettingsForm />}
         {active === 'integrations' && <IntegrationsPanel organizationId={companyId ?? null} />}

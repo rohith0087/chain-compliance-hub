@@ -42,7 +42,9 @@ import {
   Activity,
   Inbox,
   PanelLeft,
-  PanelLeftClose
+  PanelLeftClose,
+  SlidersHorizontal,
+  Plug
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
@@ -388,6 +390,19 @@ export function BuyerSidebarLayout({
     !wsFlags.hideFacilityMatrix && { title: 'Facility Matrix', value: 'facility-matrix', icon: Building2 }
   ].filter(Boolean) as { title: string; value: string; icon: any }[];
 
+  const settingsSubmenu = [
+    { title: 'Account', value: 'settings', icon: User },
+    // Org + billing are owner-only surfaces; the whole Settings section is
+    // owner-gated below too, but filter here so that stays true if the
+    // parent gate ever relaxes.
+    isCompanyOwner() && { title: 'Organization', value: 'settings-organization', icon: Building2 },
+    { title: 'Security & sign-in', value: 'settings-security', icon: ShieldCheck },
+    { title: 'Notifications', value: 'settings-notifications', icon: Bell },
+    { title: 'Preferences', value: 'settings-preferences', icon: SlidersHorizontal },
+    { title: 'Integrations', value: 'settings-integrations', icon: Plug },
+    isCompanyOwner() && { title: 'Plan & Billing', value: 'settings-billing', icon: CreditCard }
+  ].filter(Boolean) as { title: string; value: string; icon: NavigationItem['icon'] }[];
+
   // Define navigation items with role requirements
   const navigationItems: NavigationItem[] = [
     {
@@ -438,7 +453,8 @@ export function BuyerSidebarLayout({
     {
       title: 'Settings',
       icon: Settings,
-      value: 'settings'
+      value: 'settings',
+      submenu: settingsSubmenu
     }
   ].filter(item => {
     // Filter out items based on permissions
@@ -504,7 +520,8 @@ export function BuyerSidebarLayout({
         navigate(wsFlags.showAuditFindings ? '/audit-assistant' : '/chat');
         break;
       case 'subscription':
-        navigate('/subscription');
+        // Billing now lives inside the Settings section, not the standalone route.
+        onTabChange('settings-billing');
         break;
       case 'messages':
         navigate('/messages');

@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import UnauthorizedAccess from '@/components/auth/UnauthorizedAccess';
 import { supabase } from '@/integrations/supabase/client';
 
-export default function SubscriptionPage() {
+export default function SubscriptionPage({ embedded = false }: { embedded?: boolean }) {
   const { profile, user } = useAuth();
   const { hasRole } = useUserRoles();
   const [resolvedCompanyId, setResolvedCompanyId] = useState<string | null>(null);
@@ -57,7 +57,7 @@ export default function SubscriptionPage() {
   // Show loading while resolving company ID or permissions
   if (loading || companyIdLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className={`flex items-center justify-center ${embedded ? 'py-24' : 'min-h-screen'}`}>
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
@@ -69,22 +69,26 @@ export default function SubscriptionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-subtle">
-      <div className="container mx-auto py-8 px-4 space-y-8 max-w-7xl">
+    // embedded: rendered inside the buyer Settings > Plan & billing page — the
+    // page supplies the header and there is no full-screen canvas to claim.
+    <div className={embedded ? '' : 'min-h-screen bg-gradient-subtle'}>
+      <div className={embedded ? 'space-y-8' : 'container mx-auto py-8 px-4 space-y-8 max-w-7xl'}>
         {/* Simplified Header */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold tracking-tight">
-              Subscription & Billing
-            </h1>
-            <Badge variant="secondary" className="px-3 py-1 text-sm">
-              {userType === 'buyer' ? 'Buyer' : 'Supplier'}
-            </Badge>
+        {!embedded && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h1 className="text-3xl font-bold tracking-tight">
+                Subscription & Billing
+              </h1>
+              <Badge variant="secondary" className="px-3 py-1 text-sm">
+                {userType === 'buyer' ? 'Buyer' : 'Supplier'}
+              </Badge>
+            </div>
+            <p className="text-muted-foreground">
+              Simple, transparent pricing. Upgrade or downgrade anytime.
+            </p>
           </div>
-          <p className="text-muted-foreground">
-            Simple, transparent pricing. Upgrade or downgrade anytime.
-          </p>
-        </div>
+        )}
 
         {/* Current Status */}
         <SubscriptionStatus />

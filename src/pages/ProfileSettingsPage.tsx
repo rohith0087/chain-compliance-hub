@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { AccountSettingsForm } from '@/components/settings/AccountSettingsForm';
+import { MFASettingsSection } from '@/components/settings/MFASettingsSection';
 import { PasswordChangeForm } from '@/components/settings/PasswordChangeForm';
 import { IntegrationsDirectoryModal } from '@/components/settings/IntegrationsDirectoryModal';
 import { PasskeysSettingsSection } from '@/components/settings/PasskeysSettingsSection';
@@ -71,6 +72,11 @@ const ProfileSettingsPage = () => {
               <h2 className="text-lg font-semibold">Account</h2>
             </div>
             <AccountSettingsForm />
+            {/* MFA was separated out of AccountSettingsForm; re-mounted here to
+                keep this page's content unchanged (buyer pages mount MFA under Security). */}
+            <div className="mt-8">
+              <MFASettingsSection />
+            </div>
           </section>
 
           <Separator />

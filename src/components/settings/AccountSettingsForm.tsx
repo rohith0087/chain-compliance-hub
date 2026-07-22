@@ -7,7 +7,6 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { MFASettingsSection } from './MFASettingsSection';
 import { Camera, Trash2, Loader2 } from 'lucide-react';
 
 export const AccountSettingsForm = () => {
@@ -330,8 +329,6 @@ export const AccountSettingsForm = () => {
         </CardContent>
       </Card>
 
-      {/* MFA Settings Section */}
-      <MFASettingsSection />
     </div>
   );
 };

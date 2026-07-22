@@ -11,15 +11,18 @@ import BuyerComplianceDashboard from '@/components/dashboard/BuyerComplianceDash
 import AgentManagementDashboard from '@/components/agents/AgentManagementDashboard';
 import BuyerDocumentsDashboard from '@/components/documents/BuyerDocumentsDashboard';
 import BuyerConnectionRequests from '@/components/buyer/BuyerConnectionRequests';
-import { UnifiedSettingsModal } from '@/components/settings/UnifiedSettingsModal';
-import { SettingsWorkspace } from '@/components/settings/SettingsWorkspace';
-import { CompanyManagementDashboard } from '@/components/company/CompanyManagementDashboard';
+import { AccountSettingsPage } from '@/components/settings/pages/AccountSettingsPage';
+import { SecuritySettingsPage } from '@/components/settings/pages/SecuritySettingsPage';
+import { NotificationSettingsPage } from '@/components/settings/pages/NotificationSettingsPage';
+import { PreferencesSettingsPage } from '@/components/settings/pages/PreferencesSettingsPage';
+import { IntegrationSettingsPage } from '@/components/settings/pages/IntegrationSettingsPage';
+import { OrganizationSettingsPage } from '@/components/settings/pages/OrganizationSettingsPage';
+import { BillingSettingsPage } from '@/components/settings/pages/BillingSettingsPage';
 import CustomTemplateManager from '@/components/buyer/CustomTemplateManager';
 import { BulkInviteModal } from '@/components/buyer/BulkInviteModal';
 import BuyerSidebarLayout from '@/components/buyer/BuyerSidebarLayout';
 import { BuyerDocumentPrePopulator } from '@/components/buyer/BuyerDocumentPrePopulator';
 import { SidebarProvider } from '@/components/ui/sidebar';
-import SubscriptionPage from '@/pages/SubscriptionPage';
 import { useBranchContext } from '@/contexts/BranchContext';
 import ItemComplianceView from '@/components/buyer/ItemComplianceView';
 import ItemComplianceDemo from '@/components/buyer/ItemComplianceDemo';
@@ -83,20 +86,14 @@ interface BuyerDashboardProps {
 const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: BuyerDashboardProps) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(() => {
-    // Composio OAuth returns to /?open=integrations; open Settings on that tab.
+    // Composio OAuth returns to /?open=integrations; open the Integrations
+    // settings page directly.
     if (typeof window !== 'undefined' &&
         new URLSearchParams(window.location.search).get('open') === 'integrations') {
-      return 'settings';
+      return 'settings-integrations';
     }
     return localStorage.getItem('buyerDashboard_activeTab') || 'dashboard';
   });
-  // Captured once at mount: did we arrive from the Composio OAuth return? Used
-  // to open Settings on the integrations sub-tab. Stable across the URL cleanup
-  // below and the panel stripping its own composio_* params.
-  const [openIntegrationsOnMount] = useState(
-    () => typeof window !== 'undefined' &&
-      new URLSearchParams(window.location.search).get('open') === 'integrations',
-  );
   // Strip only `open` so we don't re-trigger the tab switch; the composio_*
   // params ride along to the integrations panel for its toast.
   useEffect(() => {
@@ -109,7 +106,6 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
   }, []);
   const { view: dashboardView } = useBuyerDashboardView();
   const [showRequestForm, setShowRequestForm] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [showBulkInvite, setShowBulkInvite] = useState(false);
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
   const [companyId, setCompanyId] = useState<string | undefined>(impersonatedBuyerId);
@@ -183,67 +179,22 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
   // Get unread message count for sidebar badge
   const { totalUnread } = useCommunicationThreads(companyId || '', 'buyer');
   
+  // Backward-compat redirects: pre-redesign tab ids (incl. values restored from
+  // localStorage buyerDashboard_activeTab) land on their new settings pages.
+  useEffect(() => {
+    if (activeTab === 'company') setActiveTab('settings-organization');
+    else if (activeTab === 'subscription') setActiveTab('settings-billing');
+  }, [activeTab]);
+
   // Reset activeTab if non-owner tries to access owner-only tabs
   useEffect(() => {
     // 'settings' is already owner-gated by the sidebar nav filter; guarding it
     // here too caused a redirect race on direct load.
-    const ownerOnlyTabs = ['company', 'subscription'];
+    const ownerOnlyTabs = ['settings-organization', 'settings-billing'];
     if (!permissionsLoading && ownerOnlyTabs.includes(activeTab) && !isOwner) {
-      setActiveTab('dashboard');
+      setActiveTab('settings');
     }
   }, [activeTab, permissionsLoading, isOwner]);
-
-  // Refresh buyer profile function  
-  const refreshBuyerProfile = async () => {
-    if (!authUser) return;
-    
-    try {
-      // Check if user is a team member first
-      const { data: teamMember } = await supabase
-        .from('company_users')
-        .select('company_id, company_type')
-        .eq('profile_id', authUser.id)
-        .eq('company_type', 'buyer')
-        .eq('status', 'active')
-        .single();
-
-      if (teamMember) {
-        // Team member - fetch company data using company_id
-        logger.debug('Refreshing profile for team member');
-        const { data: buyer, error: buyerError } = await supabase
-          .from('buyers')
-          .select('*')
-          .eq('id', teamMember.company_id)
-          .single();
-
-        if (buyerError && buyerError.code !== 'PGRST116') {
-          console.error('Error fetching buyer profile:', buyerError);
-          return;
-        }
-
-        setBuyerProfile(buyer);
-        setCompanyId(teamMember.company_id);
-      } else {
-        // Company owner - fetch using profile_id
-        logger.debug('Refreshing profile for company owner');
-        const { data: buyer, error: buyerError } = await supabase
-          .from('buyers')
-          .select('*')
-          .eq('profile_id', authUser.id)
-          .single();
-
-        if (buyerError && buyerError.code !== 'PGRST116') {
-          console.error('Error fetching buyer profile:', buyerError);
-          return;
-        }
-
-        setBuyerProfile(buyer);
-        setCompanyId(buyer?.id);
-      }
-    } catch (error) {
-      console.error('Error refreshing buyer profile:', error);
-    }
-  };
 
   // Persist active tab to localStorage
   useEffect(() => {
@@ -399,7 +350,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
         onLogout={handleLogoutClick}
         onRoleSwitch={onRoleSwitch}
         onShowRequestForm={() => setShowRequestForm(true)}
-        onShowSettings={() => setShowSettings(true)}
+        onShowSettings={() => setActiveTab('settings')}
         onShowQuickOnboarding={() => setActiveTab('onboarding')}
         onShowBulkInvite={() => setShowBulkInvite(true)}
         buyerProfile={buyerProfile}
@@ -796,28 +747,38 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
           />
         )}
 
-        {/* Company Content */}
-        {activeTab === 'company' && companyId && (
-          <CompanyManagementDashboard 
+        {/* Settings — first-class sidebar section; each sub-item is a focused page.
+            'settings' (Account) is the landing page. Old 'company'/'subscription'
+            tab ids are redirected above to the settings pages below. */}
+        {activeTab === 'settings' && (
+          <AccountSettingsPage />
+        )}
+
+        {activeTab === 'settings-organization' && companyId && isOwner && (
+          <OrganizationSettingsPage
             companyId={companyId}
-            companyType="buyer"
             companyName={buyerProfile?.company_name || 'Company'}
           />
         )}
 
-        {/* Subscription & Billing */}
-        {activeTab === 'subscription' && (
-          <SubscriptionPage />
+        {activeTab === 'settings-billing' && isOwner && (
+          <BillingSettingsPage />
         )}
 
-        {/* Settings — full page (Settings-04 style), replaces the old modal on the buyer side */}
-        {activeTab === 'settings' && (
-          <SettingsWorkspace
-            companyId={companyId}
-            companyType="buyer"
-            companyName={buyerProfile?.company_name || 'Your Company'}
-            defaultTab={openIntegrationsOnMount ? 'integrations' : undefined}
-          />
+        {activeTab === 'settings-security' && (
+          <SecuritySettingsPage />
+        )}
+
+        {activeTab === 'settings-notifications' && (
+          <NotificationSettingsPage />
+        )}
+
+        {activeTab === 'settings-preferences' && (
+          <PreferencesSettingsPage />
+        )}
+
+        {activeTab === 'settings-integrations' && companyId && (
+          <IntegrationSettingsPage companyId={companyId} />
         )}
 
         {/* Modals */}
@@ -827,17 +788,6 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
         onCreateRequest={handleCreateRequest}
         userType="buyer"
         currentBranch={currentBranch}
-      />
-
-      <UnifiedSettingsModal
-        open={showSettings}
-        onOpenChange={(open) => {
-          setShowSettings(open);
-          if (!open) refreshBuyerProfile();
-        }}
-        companyId={companyId}
-        companyType="buyer"
-        companyName={buyerProfile?.company_name || 'Your Company'}
       />
 
       {companyId && profile && (

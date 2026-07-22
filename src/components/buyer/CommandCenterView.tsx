@@ -209,7 +209,7 @@ export default function CommandCenterView({ buyerId, onNavigate }: CommandCenter
           {(summary?.open_tasks ?? []).map((task) => (
             <div key={task.id} className={`${reviewCardContainerClass} flex flex-wrap items-center justify-between gap-2 p-3`}>
               <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <Badge variant="secondary" className="text-xs">{task.task_type.replaceAll('_', ' ')}</Badge>
+                <Badge variant="secondary" className="text-xs">{task.task_type.replace(/_/g, ' ')}</Badge>
                 {task.status === 'in_progress' && <Badge className="bg-sky-600/15 text-sky-500 text-xs">in progress</Badge>}
                 <span className="truncate text-sm">{task.title}</span>
                 {task.supplier_name && <Badge variant="outline" className="text-xs">{task.supplier_name}</Badge>}

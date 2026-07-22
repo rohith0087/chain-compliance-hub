@@ -245,7 +245,7 @@ export default function EvidenceMappingReviewQueue({ buyerId, supplierId }: Evid
                     Evidence: {row.evidence_display_name ?? row.evidence_document_type ?? row.evidence_version_id}
                   </p>
                   {row.match_reasons?.length > 0 && (
-                    <p className="mt-1 text-xs text-muted-foreground">Matched on: {row.match_reasons.join(', ').replaceAll('_', ' ')}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Matched on: {row.match_reasons.join(', ').replace(/_/g, ' ')}</p>
                   )}
                 </div>
                 {row.status === 'proposed' && (

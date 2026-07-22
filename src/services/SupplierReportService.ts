@@ -142,7 +142,7 @@ export function renderSupplierReport(d: SupplierReportData): Blob {
       const col = f.gaps > 0 ? BRAND.red : (f.compliant === f.total ? BRAND.green : BRAND.amber);
       doc.setTextColor(...BRAND.ink); doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.text(f.framework_code, M, y + 9);
       doc.setFillColor(...BRAND.track); doc.roundedRect(barX, y, barW, 12, 6, 6, 'F');
-      if (pct > 0) { doc.setFillColor(...col); doc.roundedRect(barX, y, Math.max(barW * pct, 8), 12, 6, 6, 'F'); }
+      if (pct > 0) { doc.setFillColor(...(col as readonly [number, number, number])); doc.roundedRect(barX, y, Math.max(barW * pct, 8), 12, 6, 6, 'F'); }
       doc.setTextColor(...BRAND.sub); doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
       doc.text(`${f.compliant}/${f.total}${f.gaps ? ` · ${f.gaps} gap${f.gaps > 1 ? 's' : ''}` : ''}`, barX + barW + 8, y + 9);
       y += 24;

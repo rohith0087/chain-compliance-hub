@@ -101,9 +101,9 @@ const SampleDocumentViewer = ({
 
   return (
     <>
-      <Card className={`border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800 ${className}`}>
+      <Card className={`border-primary/20 bg-primary/10 ${className}`}>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2 text-blue-800 dark:text-blue-300">
+          <CardTitle className="text-sm flex items-center gap-2 text-primary">
             <FileText className="w-4 h-4" />
             Reference Document from Buyer
           </CardTitle>
@@ -163,22 +163,22 @@ const SampleDocumentViewer = ({
 
           {/* Buyer's notes */}
           {notes && (
-            <div className="text-sm bg-card/60 dark:bg-background/40 p-3 rounded-md border border-blue-100 dark:border-blue-800">
-              <p className="font-medium text-blue-800 dark:text-blue-300 mb-1">Buyer's Instructions:</p>
+            <div className="text-sm bg-card/60 dark:bg-background/40 p-3 rounded-md border border-primary/20">
+              <p className="font-medium text-primary mb-1">Buyer's Instructions:</p>
               <p className="text-muted-foreground whitespace-pre-wrap">{notes}</p>
             </div>
           )}
 
           {/* Upload timestamp */}
           {uploadedAt && (
-            <div className="flex items-center gap-1 text-xs text-blue-700 dark:text-blue-400">
+            <div className="flex items-center gap-1 text-xs text-primary">
               <Calendar className="w-3 h-3" />
               Sample uploaded: {format(new Date(uploadedAt), 'PPP')}
             </div>
           )}
 
           {/* Guidance text */}
-          <p className="text-xs text-blue-600 dark:text-blue-400 italic">
+          <p className="text-xs text-primary italic">
             Use this sample as a reference for the expected format and content of your document.
           </p>
         </CardContent>

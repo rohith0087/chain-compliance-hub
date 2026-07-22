@@ -206,10 +206,10 @@ export const PermissionManagementInterface: React.FC<PermissionManagementInterfa
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'company_admin': return 'bg-purple-100 text-purple-800';
-      case 'branch_manager': return 'bg-blue-100 text-blue-800';
-      case 'document_manager': return 'bg-green-100 text-green-800';
-      case 'approver': return 'bg-orange-100 text-orange-800';
+      case 'company_admin': return 'bg-primary/15 text-primary';
+      case 'branch_manager': return 'bg-primary/15 text-primary';
+      case 'document_manager': return 'bg-success/15 text-success';
+      case 'approver': return 'bg-warning/15 text-warning';
       case 'viewer': return 'bg-muted text-foreground';
       default: return 'bg-muted text-foreground';
     }

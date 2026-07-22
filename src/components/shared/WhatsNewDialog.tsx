@@ -83,7 +83,7 @@ export function WhatsNewDialog({ open, onOpenChange }: WhatsNewDialogProps) {
                 {release.version === "1.3" && (
                   <Button 
                     onClick={() => setShowPresentation(true)}
-                    className="w-full bg-gradient-to-r from-accent to-blue-500 hover:from-accent/90 hover:to-blue-500/90 text-white border-0"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground border-0"
                   >
                     <Sparkles className="w-4 h-4 mr-2" />
                     View Interactive Workflow

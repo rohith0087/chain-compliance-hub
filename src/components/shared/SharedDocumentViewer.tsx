@@ -121,11 +121,11 @@ const SharedDocumentViewer: React.FC = () => {
   const getPermissionBadgeColor = (permission: string) => {
     switch (permission) {
       case 'public':
-        return 'bg-green-100 text-green-800 border-green-300';
+        return 'bg-success/15 text-success border-success/30';
       case 'organization':
-        return 'bg-blue-100 text-blue-800 border-blue-300';
+        return 'bg-primary/15 text-primary border-primary/30';
       case 'admin_only':
-        return 'bg-red-100 text-red-800 border-red-300';
+        return 'bg-danger/15 text-danger border-danger/30';
       default:
         return 'bg-muted text-foreground border-border';
     }

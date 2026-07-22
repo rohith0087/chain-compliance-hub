@@ -95,9 +95,9 @@ export const PipelineAnalytics = ({ requests }: PipelineAnalyticsProps) => {
                 <p className="text-2xl font-bold">{metrics.conversions.overallConversion}%</p>
               </div>
               {parseFloat(metrics.conversions.overallConversion) > 50 ? (
-                <TrendingUp className="h-8 w-8 text-green-500" />
+                <TrendingUp className="h-8 w-8 text-success" />
               ) : (
-                <TrendingDown className="h-8 w-8 text-red-500" />
+                <TrendingDown className="h-8 w-8 text-danger" />
               )}
             </div>
           </CardContent>
@@ -110,7 +110,7 @@ export const PipelineAnalytics = ({ requests }: PipelineAnalyticsProps) => {
                 <p className="text-sm text-muted-foreground">Avg Time to Complete</p>
                 <p className="text-2xl font-bold">{metrics.avgTimeToComplete} days</p>
               </div>
-              <Clock className="h-8 w-8 text-blue-500" />
+              <Clock className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -122,7 +122,7 @@ export const PipelineAnalytics = ({ requests }: PipelineAnalyticsProps) => {
                 <p className="text-sm text-muted-foreground">Completed</p>
                 <p className="text-2xl font-bold">{metrics.byStatus.approved}</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
+              <CheckCircle className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -134,7 +134,7 @@ export const PipelineAnalytics = ({ requests }: PipelineAnalyticsProps) => {
                 <p className="text-sm text-muted-foreground">Bottlenecks</p>
                 <p className="text-2xl font-bold">{metrics.bottlenecks}</p>
               </div>
-              <AlertCircle className="h-8 w-8 text-orange-500" />
+              <AlertCircle className="h-8 w-8 text-warning" />
             </div>
           </CardContent>
         </Card>
@@ -175,7 +175,7 @@ export const PipelineAnalytics = ({ requests }: PipelineAnalyticsProps) => {
                   labelLine={false}
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                   outerRadius={80}
-                  fill="#8884d8"
+                  fill="hsl(var(--chart-1))"
                   dataKey="value"
                 >
                   {statusDistribution.map((entry, index) => (

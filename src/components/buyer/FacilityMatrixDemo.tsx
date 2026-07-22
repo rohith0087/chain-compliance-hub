@@ -32,7 +32,7 @@ const FACILITIES: Facility[] = [
 ];
 
 const AUDIT_TONE: Record<string, string> = {
-  passed: 'bg-success text-success', due: 'bg-warning text-warning', finding: 'bg-danger text-danger',
+  passed: 'bg-success/15 text-success', due: 'bg-warning/15 text-warning', finding: 'bg-danger/15 text-danger',
 };
 const AUDIT_ICON = { passed: CheckCircle2, due: Clock, finding: AlertTriangle } as const;
 

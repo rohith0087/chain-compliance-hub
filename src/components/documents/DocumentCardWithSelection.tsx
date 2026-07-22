@@ -215,10 +215,10 @@ const DocumentCardWithSelection = ({
   return (
     <Card 
       className={`relative hover:shadow-elegant transition-all duration-300 border-l-4 overflow-hidden ${
-        isExpired(document.expiration_date) || document.status === 'rejected' ? 'border-l-red-500' :
-        isExpiringSoon(document.expiration_date) ? 'border-l-amber-500' :
-        document.status === 'pending' ? 'border-l-blue-500' :
-        document.status === 'approved' ? 'border-l-green-500' :
+        isExpired(document.expiration_date) || document.status === 'rejected' ? 'border-l-danger' :
+        isExpiringSoon(document.expiration_date) ? 'border-l-warning' :
+        document.status === 'pending' ? 'border-l-primary' :
+        document.status === 'approved' ? 'border-l-success' :
         getCategoryColor(document.category)
       } ${isSelected ? 'ring-2 ring-[hsl(var(--blue-accent))] shadow-[0_0_20px_hsl(var(--blue-accent)/0.3)]' : ''} ${
         isClickable ? 'cursor-pointer hover:ring-1 hover:ring-primary/50' : ''

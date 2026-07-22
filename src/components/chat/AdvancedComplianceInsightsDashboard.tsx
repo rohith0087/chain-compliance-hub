@@ -381,13 +381,13 @@ const AdvancedComplianceInsightsDashboard: React.FC<AdvancedComplianceInsightsDa
   const getUrgencyStyles = (urgency: string) => {
     switch (urgency) {
       case 'critical':
-        return 'border-l-4 border-l-red-500 bg-red-500/5';
+        return 'border-l-4 border-l-danger bg-red-500/5';
       case 'high':
-        return 'border-l-4 border-l-orange-500 bg-orange-500/5';
+        return 'border-l-4 border-l-warning bg-orange-500/5';
       case 'medium':
-        return 'border-l-4 border-l-yellow-500 bg-yellow-500/5';
+        return 'border-l-4 border-l-warning bg-yellow-500/5';
       case 'low':
-        return 'border-l-4 border-l-green-500 bg-green-500/5';
+        return 'border-l-4 border-l-success bg-green-500/5';
       default:
         return 'border-l-4 border-l-muted bg-muted/5';
     }

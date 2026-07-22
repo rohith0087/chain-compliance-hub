@@ -137,10 +137,10 @@ export default function SupplierComplianceWorkspace({
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-mono text-sm font-semibold text-primary">{row.framework_code}</span>
                       {fullyCompliant
-                        ? <Badge className="bg-success text-success hover:bg-success text-xs"><ShieldCheck className="mr-1 h-3 w-3" />compliant</Badge>
+                        ? <Badge className="bg-success/15 text-success hover:bg-success/15 text-xs"><ShieldCheck className="mr-1 h-3 w-3" />compliant</Badge>
                         : row.gaps > 0
-                          ? <Badge className="bg-danger text-danger hover:bg-danger text-xs">{row.gaps} gap{row.gaps > 1 ? 's' : ''}</Badge>
-                          : <Badge className="bg-warning text-warning hover:bg-warning text-xs">{row.pending} in progress</Badge>}
+                          ? <Badge className="bg-danger/15 text-danger hover:bg-danger/15 text-xs">{row.gaps} gap{row.gaps > 1 ? 's' : ''}</Badge>
+                          : <Badge className="bg-warning/15 text-warning hover:bg-warning/15 text-xs">{row.pending} in progress</Badge>}
                     </div>
                     <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
                       <div

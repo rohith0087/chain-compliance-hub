@@ -334,7 +334,7 @@ export default function FrameworkLibraryView({ buyerId, onOpenSupplier }: Framew
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-sm font-semibold text-primary">{item.code}</span>
                       {item.ready
-                        ? <Badge className="bg-success text-success hover:bg-success text-xs">ready</Badge>
+                        ? <Badge className="bg-success/15 text-success hover:bg-success/15 text-xs">ready</Badge>
                         : <Badge variant="outline" className="text-xs">available</Badge>}
                       {item.activation_rows > 0 && (
                         <Badge className="bg-primary/10 text-primary hover:bg-primary/10 text-xs"><CheckCircle2 className="mr-1 h-3 w-3" />active</Badge>
@@ -427,9 +427,9 @@ export default function FrameworkLibraryView({ buyerId, onOpenSupplier }: Framew
                           const cell = row.cells.get(code);
                           if (!cell) return <td key={code} className="p-3 text-muted-foreground/40">—</td>;
                           const fullyCompliant = cell.gaps === 0 && cell.pending === 0 && cell.compliant === cell.total;
-                          const tone = fullyCompliant ? 'bg-success text-success'
-                            : cell.gaps > 0 ? 'bg-danger text-danger'
-                            : 'bg-warning text-warning';
+                          const tone = fullyCompliant ? 'bg-success/15 text-success'
+                            : cell.gaps > 0 ? 'bg-danger/15 text-danger'
+                            : 'bg-warning/15 text-warning';
                           return (
                             <td key={code} className="p-3">
                               <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs ${tone}`}>

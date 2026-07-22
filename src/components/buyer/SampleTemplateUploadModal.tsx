@@ -246,7 +246,7 @@ export function SampleTemplateUploadModal({
               </div>
             ) : existingTemplate && !file ? (
               <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 border rounded-lg bg-success border-success overflow-hidden">
+                <div className="flex items-center justify-between p-3 border rounded-lg bg-success/5 border-success/20 overflow-hidden">
                   <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
                     <FileText className="h-8 w-8 text-success flex-shrink-0" />
                     <div className="min-w-0 flex-1 overflow-hidden">

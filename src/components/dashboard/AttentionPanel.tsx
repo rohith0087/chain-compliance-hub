@@ -213,8 +213,8 @@ export function AttentionPanel({ buyerId, onNavigateToDocuments }: AttentionPane
                     "group p-3 rounded-lg border transition-all duration-200 cursor-pointer",
                     "hover:shadow-md hover:border-primary/30",
                     item.is_overdue 
-                      ? "border-l-4 border-l-red-500 bg-card border-border/30" 
-                      : "border-l-4 border-l-teal-500 bg-card border-border/30"
+                      ? "border-l-4 border-l-danger bg-card border-border/30" 
+                      : "border-l-4 border-l-primary bg-card border-border/30"
                   )}
                 >
                   <div className="flex items-start gap-2">

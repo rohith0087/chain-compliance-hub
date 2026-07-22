@@ -26,14 +26,14 @@ const ITEMS: Item[] = [
 ];
 
 const STATUS = {
-  compliant: { tone: 'text-success', bg: 'bg-success text-success', icon: CheckCircle2, label: 'Compliant' },
-  at_risk: { tone: 'text-warning', bg: 'bg-warning text-warning', icon: AlertTriangle, label: 'At risk' },
-  noncompliant: { tone: 'text-danger', bg: 'bg-danger text-danger', icon: XCircle, label: 'Non-compliant' },
+  compliant: { tone: 'text-success', bg: 'bg-success/15 text-success', icon: CheckCircle2, label: 'Compliant' },
+  at_risk: { tone: 'text-warning', bg: 'bg-warning/15 text-warning', icon: AlertTriangle, label: 'At risk' },
+  noncompliant: { tone: 'text-danger', bg: 'bg-danger/15 text-danger', icon: XCircle, label: 'Non-compliant' },
 } as const;
 const COA = {
-  current: { bg: 'bg-success text-success', label: 'COA current', icon: FlaskConical },
-  expiring: { bg: 'bg-warning text-warning', label: 'COA expiring', icon: Clock },
-  missing: { bg: 'bg-danger text-danger', label: 'COA missing', icon: XCircle },
+  current: { bg: 'bg-success/15 text-success', label: 'COA current', icon: FlaskConical },
+  expiring: { bg: 'bg-warning/15 text-warning', label: 'COA expiring', icon: Clock },
+  missing: { bg: 'bg-danger/15 text-danger', label: 'COA missing', icon: XCircle },
 } as const;
 
 function Kpi({ icon: Icon, value, label, tone }: { icon: typeof Package; value: string; label: string; tone?: string }) {
@@ -120,7 +120,7 @@ export default function ItemComplianceDemo() {
                   {it.frameworks.map((f) => <Badge key={f} variant="secondary" className="text-micro">{f}</Badge>)}
                   <Badge className={`gap-1 text-micro ${C.bg}`}><CIcon className="h-3 w-3" />{C.label}</Badge>
                   {it.allergens.length > 0
-                    ? it.allergens.map((a) => <Badge key={a} className="gap-1 bg-warning text-micro text-warning"><Leaf className="h-3 w-3" />{a}</Badge>)
+                    ? it.allergens.map((a) => <Badge key={a} className="gap-1 bg-warning/15 text-micro text-warning"><Leaf className="h-3 w-3" />{a}</Badge>)
                     : <Badge variant="outline" className="text-micro text-muted-foreground">Allergen-free</Badge>}
                 </div>
               </div>

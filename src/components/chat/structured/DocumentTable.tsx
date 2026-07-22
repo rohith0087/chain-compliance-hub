@@ -29,7 +29,7 @@ const getStatusBadge = (status: string) => {
   switch (normalizedStatus) {
     case 'approved':
       return (
-        <Badge className="bg-success text-success border-success gap-1">
+        <Badge className="bg-success/15 text-success border-success/30 gap-1">
           <CheckCircle2 className="h-3 w-3" />
           Approved
         </Badge>
@@ -38,21 +38,21 @@ const getStatusBadge = (status: string) => {
     case 'pending_review':
     case 'submitted':
       return (
-        <Badge className="bg-warning text-warning border-warning gap-1">
+        <Badge className="bg-warning/15 text-warning border-warning/30 gap-1">
           <Clock className="h-3 w-3" />
           Pending
         </Badge>
       );
     case 'rejected':
       return (
-        <Badge className="bg-danger text-danger border-danger gap-1">
+        <Badge className="bg-danger/15 text-danger border-danger/30 gap-1">
           <XCircle className="h-3 w-3" />
           Rejected
         </Badge>
       );
     case 'expired':
       return (
-        <Badge className="bg-danger text-danger border-danger gap-1">
+        <Badge className="bg-danger/15 text-danger border-danger/30 gap-1">
           <AlertTriangle className="h-3 w-3" />
           Expired
         </Badge>

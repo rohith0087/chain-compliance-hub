@@ -500,7 +500,7 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
             section.type === 'alert' || section.title?.includes('⚠️') ? 
             'border-l-4 border-l-destructive bg-destructive/5' :
             section.title?.includes('✅') ?
-            'border-l-4 border-l-green-500 bg-success' :
+            'border-l-4 border-l-success bg-success/5' :
             'border-l-2 border-l-muted-foreground/30 bg-muted/20';
 
           return (
@@ -582,8 +582,8 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
                     
                     return (
                       <div key={i} className={`flex items-start gap-2 text-sm p-2 rounded ${
-                        isPriority ? 'bg-danger/10 border-l-2 border-l-red-500' :
-                        isImportant ? 'bg-warning/10 border-l-2 border-l-yellow-500' :
+                        isPriority ? 'bg-danger/10 border-l-2 border-l-danger' :
+                        isImportant ? 'bg-warning/10 border-l-2 border-l-warning' :
                         'hover:bg-muted/50'
                       }`}>
                         <div className={`w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0 ${
@@ -658,10 +658,10 @@ const ChatAgentPanel: React.FC<ChatAgentPanelProps> = ({
             {response.documents.map((doc, idx) => {
               const statusColor = 
                 doc.status === "approved" 
-                  ? "border-l-emerald-500 bg-success/10"
+                  ? "border-l-success bg-success/10"
                   : doc.status === "pending_review" || doc.status === "submitted"
-                  ? "border-l-amber-500 bg-warning/10"
-                  : "border-l-red-500 bg-danger/10";
+                  ? "border-l-warning bg-warning/10"
+                  : "border-l-danger bg-danger/10";
                   
               return (
                 <Card key={idx} className={`border-l-4 transition-all hover:shadow-lg ${statusColor}`}>

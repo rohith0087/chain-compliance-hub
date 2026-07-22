@@ -90,7 +90,7 @@ export default function SupplierDetailPage({ buyerId, supplierId, supplierName, 
                 <h1 className="text-2xl font-semibold text-foreground">{name}</h1>
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                   {data?.supplier.industry && <Badge variant="outline">{data.supplier.industry}</Badge>}
-                  <Badge className="bg-success text-success hover:bg-success">{data?.supplier.connection_status ?? 'Connected'}</Badge>
+                  <Badge className="bg-success/15 text-success hover:bg-success/15">{data?.supplier.connection_status ?? 'Connected'}</Badge>
                   {data?.supplier.contact_email && <span className="inline-flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{data.supplier.contact_email}</span>}
                 </div>
               </div>

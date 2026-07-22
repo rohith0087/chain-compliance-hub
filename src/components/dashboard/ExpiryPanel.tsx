@@ -152,11 +152,11 @@ export function ExpiryPanel({ buyerId, onNavigateToDocuments }: ExpiryPanelProps
 
   // White card background with colored left border — no more full-red tint
   const getDocumentBorderColor = (daysUntil: number) => {
-    if (daysUntil < -90) return 'border-l-4 border-l-red-600 bg-card border-border/30';
-    if (daysUntil < 0) return 'border-l-4 border-l-red-500 bg-card border-border/30';
-    if (daysUntil <= 7) return 'border-l-4 border-l-red-400 bg-card border-border/30';
-    if (daysUntil <= 30) return 'border-l-4 border-l-amber-500 bg-card border-border/30';
-    return 'border-l-4 border-l-yellow-500 bg-card border-border/30';
+    if (daysUntil < -90) return 'border-l-4 border-l-danger bg-card border-border/30';
+    if (daysUntil < 0) return 'border-l-4 border-l-danger bg-card border-border/30';
+    if (daysUntil <= 7) return 'border-l-4 border-l-danger bg-card border-border/30';
+    if (daysUntil <= 30) return 'border-l-4 border-l-warning bg-card border-border/30';
+    return 'border-l-4 border-l-warning bg-card border-border/30';
   };
 
   // Severity scaling — expired > 90 days gets bolder badge styling

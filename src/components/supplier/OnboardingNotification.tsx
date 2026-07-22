@@ -94,7 +94,7 @@ export const OnboardingNotification: React.FC<OnboardingNotificationProps> = ({
   };
 
   return (
-    <Card className="border-l-4 border-l-blue-500">
+    <Card className="border-l-4 border-l-primary">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

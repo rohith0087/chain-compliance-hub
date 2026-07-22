@@ -136,7 +136,7 @@ export const MFASettingsSection = () => {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${mfaEnrolled ? 'bg-success' : 'bg-muted'}`}>
+            <div className={`p-2 rounded-lg ${mfaEnrolled ? 'bg-success/10' : 'bg-muted'}`}>
               {mfaEnrolled ? (
                 <ShieldCheck className="w-5 h-5 text-success" />
               ) : (
@@ -158,7 +158,7 @@ export const MFASettingsSection = () => {
       <CardContent className="space-y-4">
         {mfaEnrolled ? (
           <>
-            <Alert className="border-success bg-success">
+            <Alert className="border-success/50 bg-success/10">
               <ShieldCheck className="h-4 w-4 text-success" />
               <AlertDescription className="text-success">
                 Your account is protected with two-factor authentication using an authenticator app.

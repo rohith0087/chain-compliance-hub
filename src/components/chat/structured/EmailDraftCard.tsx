@@ -33,7 +33,7 @@ export const EmailDraftCard: React.FC<EmailDraftCardProps> = ({ subject, body })
     .trim();
   
   return (
-    <Card className="p-4 border-l-4 border-l-blue-500 bg-card">
+    <Card className="p-4 border-l-4 border-l-primary bg-card">
       <div className="flex items-center gap-2 mb-4">
         <Mail className="w-5 h-5 text-primary" />
         <h3 className="font-semibold text-lg text-foreground">Follow-Up Email Draft</h3>

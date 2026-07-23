@@ -879,8 +879,17 @@ export function BuyerSidebarLayout({
       const TIER2_W = 232;
       const overlayTopOffset = isImpersonating ? 48 : 0;
 
+      // Virtual drill-down tabs (a supplier's detail / compliance workspace)
+      // aren't their own nav entries, but they belong to the Suppliers section —
+      // so its tier-2 nav stays pinned instead of collapsing, keeping the
+      // drill-down feeling like part of Suppliers rather than a new page.
+      const SECTION_ALIASES: Record<string, string> = {
+        'supplier-detail': 'suppliers',
+        'supplier-compliance': 'suppliers',
+      };
+      const sectionTab = SECTION_ALIASES[activeTab] ?? activeTab;
       const activeSection =
-        navigationItems.find((i) => isActiveRoute(i.value) || (i.submenu?.some((s) => isActiveRoute(s.value)) ?? false)) ?? null;
+        navigationItems.find((i) => i.value === sectionTab || (i.submenu?.some((s) => s.value === sectionTab) ?? false)) ?? null;
       const pinnedSection = mode === 'pinned' && activeSection?.submenu ? activeSection : null;
       const previewCandidate = previewValue ? navigationItems.find((i) => i.value === previewValue) ?? null : null;
       const previewSection =

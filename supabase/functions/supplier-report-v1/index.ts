@@ -14,7 +14,26 @@ import { aiComplete, resolveAiConfig } from '../_shared/ai/complete.ts';
 const requestSchema = z.object({
   buyer_id: z.string().uuid(),
   supplier_id: z.string().uuid(),
+  // When true, bypass the fingerprint cache and force a fresh AI summary.
+  force: z.boolean().optional().default(false),
 }).strict();
+
+// Stable JSON (sorted keys) so the fingerprint is order-independent.
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value as Record<string, unknown>).sort()
+      .map((k) => `${JSON.stringify(k)}:${stableStringify((value as Record<string, unknown>)[k])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const bytes = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
 
 const summarySchema = z.object({
   headline: z.string().max(300),
@@ -36,7 +55,7 @@ Deno.serve(async (req) => {
 
     const parsed = requestSchema.safeParse(await req.json());
     if (!parsed.success) return jsonResponse(context, { error: 'Invalid request', details: parsed.error.flatten() }, 400);
-    const { buyer_id, supplier_id } = parsed.data;
+    const { buyer_id, supplier_id, force } = parsed.data;
 
     const admin = createClient(requireEnv('SUPABASE_URL'), getSupabaseSecretKey(), {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -122,29 +141,63 @@ Deno.serve(async (req) => {
     const compliantReq = coverage.reduce((a, r) => a + r.compliant, 0);
     const openGaps = coverage.reduce((a, r) => a + r.gaps, 0);
 
-    // AI executive summary — grounded in the snapshot above.
+    // AI executive summary — grounded in the snapshot above, and cached by a
+    // fingerprint of that snapshot: it is only regenerated when the underlying
+    // compliance data actually changes (a new/updated/expired document, a
+    // requirement outcome flip, etc.). Unchanged supplier → cached summary,
+    // no model call.
     let ai_summary: z.infer<typeof summarySchema> | null = null;
-    const aiConfig = await resolveAiConfig(admin, buyer_id);
-    if (aiConfig) {
-      try {
-        const snapshot = {
-          supplier: supplier.company_name,
-          industry: supplier.industry,
-          compliance_score,
-          request_metrics: metrics,
-          framework_coverage: coverage,
-          requirement_status: requirements.map((r) => ({ framework: r.framework_code, requirement: r.title ?? r.requirement_key, outcome: r.outcome, valid_until: r.effective_to })),
-        };
-        const system = `You are a supply-chain compliance analyst writing the executive summary of a supplier compliance report for a procurement/QA leader. Be precise, factual, and grounded ONLY in the provided snapshot. Do not invent documents, dates, or statuses. Respond with strict JSON: {"headline": "one-line status verdict", "overall_assessment": "2-4 sentences", "strengths": ["..."], "risks": ["..."], "recommendations": ["concrete next action", ...]}.`;
-        const raw = await aiComplete(aiConfig, { system, user: JSON.stringify(snapshot), jsonMode: true, maxTokens: 900 });
-        ai_summary = summarySchema.parse(JSON.parse(raw));
-        await admin.from('agent_activities').insert({
-          agent_type: 'supplier_report_writer', action_type: 'generate_summary',
-          entity_id: supplier_id, entity_type: 'supplier',
-          reasoning: ai_summary.headline, details: { model: `${aiConfig.provider}:${aiConfig.model}` }, success: true,
-        });
-      } catch (e) {
-        logEvent('warn', 'supplier_report_ai_summary_failed', context, { error: e instanceof Error ? e.message : String(e) });
+    let ai_summary_meta: { from_cache: boolean; generated_at: string | null } = { from_cache: false, generated_at: null };
+
+    const snapshot = {
+      supplier: supplier.company_name,
+      industry: supplier.industry,
+      compliance_score,
+      request_metrics: metrics,
+      framework_coverage: coverage,
+      requirement_status: requirements.map((r) => ({ framework: r.framework_code, requirement: r.title ?? r.requirement_key, outcome: r.outcome, valid_until: r.effective_to })),
+    };
+    const fingerprint = await sha256Hex(stableStringify(snapshot));
+
+    // Reuse the cached summary when the inputs are unchanged (unless forced).
+    if (!force) {
+      const { data: cached } = await admin.from('supplier_report_ai_summaries')
+        .select('summary, input_fingerprint, generated_at')
+        .eq('buyer_id', buyer_id).eq('supplier_id', supplier_id).maybeSingle();
+      if (cached && cached.input_fingerprint === fingerprint) {
+        const reuse = summarySchema.safeParse(cached.summary);
+        if (reuse.success) {
+          ai_summary = reuse.data;
+          ai_summary_meta = { from_cache: true, generated_at: (cached.generated_at as string) ?? null };
+          await admin.from('supplier_report_ai_summaries')
+            .update({ checked_at: new Date().toISOString() })
+            .eq('buyer_id', buyer_id).eq('supplier_id', supplier_id);
+        }
+      }
+    }
+
+    // Nothing usable cached (or forced) → generate a fresh summary and cache it.
+    if (!ai_summary) {
+      const aiConfig = await resolveAiConfig(admin, buyer_id);
+      if (aiConfig) {
+        try {
+          const system = `You are a supply-chain compliance analyst writing the executive summary of a supplier compliance report for a procurement/QA leader. Be precise, factual, and grounded ONLY in the provided snapshot. Do not invent documents, dates, or statuses. Respond with strict JSON: {"headline": "one-line status verdict", "overall_assessment": "2-4 sentences", "strengths": ["..."], "risks": ["..."], "recommendations": ["concrete next action", ...]}.`;
+          const raw = await aiComplete(aiConfig, { system, user: JSON.stringify(snapshot), jsonMode: true, maxTokens: 900 });
+          ai_summary = summarySchema.parse(JSON.parse(raw));
+          const nowIso = new Date().toISOString();
+          ai_summary_meta = { from_cache: false, generated_at: nowIso };
+          await admin.from('supplier_report_ai_summaries').upsert({
+            buyer_id, supplier_id, summary: ai_summary, input_fingerprint: fingerprint,
+            model: `${aiConfig.provider}:${aiConfig.model}`, generated_at: nowIso, checked_at: nowIso,
+          });
+          await admin.from('agent_activities').insert({
+            agent_type: 'supplier_report_writer', action_type: 'generate_summary',
+            entity_id: supplier_id, entity_type: 'supplier',
+            reasoning: ai_summary.headline, details: { model: `${aiConfig.provider}:${aiConfig.model}` }, success: true,
+          });
+        } catch (e) {
+          logEvent('warn', 'supplier_report_ai_summary_failed', context, { error: e instanceof Error ? e.message : String(e) });
+        }
       }
     }
 
@@ -168,6 +221,7 @@ Deno.serve(async (req) => {
       })),
       recent_documents,
       ai_summary,
+      ai_summary_meta,
     });
   } catch (error) {
     logEvent('error', 'supplier_report_failed', context, { error: error instanceof Error ? error.message : String(error) });

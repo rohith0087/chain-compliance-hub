@@ -15,6 +15,9 @@ export interface SupplierReportData {
   requirements: Array<{ framework_code: string; requirement: string; outcome: string; valid_until: string | null; explanation: string | null }>;
   recent_documents: Array<{ title: string; document_type: string | null; status: string; expiration_date: string | null; created_at: string }>;
   ai_summary: { headline: string; overall_assessment: string; strengths: string[]; risks: string[]; recommendations: string[] } | null;
+  // Whether the AI summary was reused from cache (unchanged inputs) and when it
+  // was originally generated. Absent on older function versions.
+  ai_summary_meta?: { from_cache: boolean; generated_at: string | null };
 }
 
 // Brand palette (matches the app)
@@ -63,10 +66,20 @@ export function supplierReportFileName(d: SupplierReportData): string {
   return `${name}-compliance-report-${new Date(d.generated_at).toISOString().slice(0, 10)}.pdf`;
 }
 
+export function requirementScore(d: SupplierReportData): number {
+  // Requirement-based headline score — compliant ÷ total requirements — so the
+  // donut always matches the "Requirements met" KPI beside it.
+  return d.totals.framework_requirements > 0
+    ? Math.round((d.totals.compliant / d.totals.framework_requirements) * 100)
+    : 0;
+}
+
 export function renderSupplierReport(d: SupplierReportData): Blob {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const W = doc.internal.pageSize.getWidth();
-  const sc = scoreColor(d.compliance_score);
+  const reqScore = requirementScore(d);
+  const sc = scoreColor(reqScore);
+  const reqInReview = d.framework_coverage.reduce((a, f) => a + (f.pending ?? 0), 0);
 
   // ---------- Header band ----------
   doc.setFillColor(...BRAND.primary); doc.rect(0, 0, W, 96, 'F');
@@ -80,13 +93,13 @@ export function renderSupplierReport(d: SupplierReportData): Blob {
 
   // ---------- Score donut + KPI cards ----------
   let y = 122;
-  const donut = donutDataUrl(d.compliance_score, sc);
+  const donut = donutDataUrl(reqScore, sc);
   if (donut) doc.addImage(donut, 'PNG', M, y, 120, 120);
 
   const kpis: Array<[string, string, readonly [number, number, number]]> = [
     [`${d.totals.compliant}/${d.totals.framework_requirements}`, 'Requirements met', BRAND.ink],
     [String(d.totals.open_gaps), 'Open gaps', d.totals.open_gaps > 0 ? BRAND.red : BRAND.green],
-    [String(d.metrics.pending + d.metrics.submitted), 'Pending review', BRAND.amber],
+    [String(reqInReview), 'Requirements in review', BRAND.amber],
     [String(d.metrics.overdue), 'Overdue requests', d.metrics.overdue > 0 ? BRAND.red : BRAND.ink],
   ];
   const kx = M + 150, kw = (W - M - kx - 12) / 2, kh = 54;

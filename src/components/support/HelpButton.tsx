@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { HelpCenterWorkspace } from './HelpCenterWorkspace';
 import { useTour } from './TourProvider';
 
@@ -18,9 +19,16 @@ interface HelpButtonProps {
   user?: HelpButtonUser;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /**
+   * Optional override for the floating button styling. Needed on surfaces that
+   * don't define the `--r2c-*` theme vars (e.g. the login page renders on plain
+   * black), where the default `bg-[var(--r2c-stamp)]` falls back to transparent
+   * and the icon disappears.
+   */
+  className?: string;
 }
 
-export const HelpButton = ({ source, user, isOpen: externalOpen, onOpenChange }: HelpButtonProps) => {
+export const HelpButton = ({ source, user, isOpen: externalOpen, onOpenChange, className }: HelpButtonProps) => {
   const [internalOpen, setInternalOpen] = useState(false);
   const { isRunning } = useTour();
 
@@ -46,7 +54,10 @@ export const HelpButton = ({ source, user, isOpen: externalOpen, onOpenChange }:
         onClick={() => setIsOpen(true)}
         size="icon"
         variant="outline"
-        className="fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full shadow-lg bg-[var(--r2c-stamp)] text-white hover:bg-[var(--r2c-stamp-deep)] border-0"
+        className={cn(
+          "fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full shadow-lg bg-[var(--r2c-stamp)] text-white hover:bg-[var(--r2c-stamp-deep)] border-0",
+          className,
+        )}
         aria-label="Get Help"
       >
         <MessageSquare className="h-6 w-6" />

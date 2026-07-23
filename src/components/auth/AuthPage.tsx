@@ -106,6 +106,11 @@ const checkPasswordRequirements = (password: string) => [
 // Check if Turnstile is enabled via environment variable
 const isTurnstileEnabled = import.meta.env.VITE_TURNSTILE_ENABLED === 'true';
 
+// Self-serve sign up is currently disabled. The signup form + handlers below are
+// intentionally kept intact; flip this to `true` to re-enable the Sign Up tab,
+// the tab toggle, and the "Don't have an account? Sign up" link.
+const SIGNUP_ENABLED = false;
+
 const Wordmark = ({ size = 24, className = "", invertLogo = false }: { size?: number, className?: string, invertLogo?: boolean }) => (
   <span className={`flex items-center gap-3 ${className}`}>
     <img src="/logo.png" alt="TraceR2C Logo" className={`object-contain ${invertLogo ? 'brightness-0 invert' : ''}`} style={{ width: size * 1.6, height: size * 1.6 }} />
@@ -653,7 +658,7 @@ const AuthPage = () => {
               <p className="text-[13px] text-white/55 mt-1">
                 {authStep === 'mfa'
                   ? 'Complete two-factor authentication'
-                  : 'Sign up or sign in to your account'}
+                  : SIGNUP_ENABLED ? 'Sign up or sign in to your account' : 'Sign in to your account'}
               </p>
             </div>
 
@@ -688,7 +693,7 @@ const AuthPage = () => {
 
 
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                {authStep === 'credentials' && (
+                {SIGNUP_ENABLED && authStep === 'credentials' && (
                   <TabsList className="grid w-full grid-cols-2 mb-6 bg-[var(--r2c-surface-2)]">
                     <TabsTrigger value="login" className="data-[state=active]:bg-[var(--r2c-stamp)] data-[state=active]:text-white text-[var(--r2c-muted)]">
                       Login
@@ -934,6 +939,7 @@ const AuthPage = () => {
                   )}
                 </TabsContent>
                 
+                {SIGNUP_ENABLED && (
                 <TabsContent value="signup" className="mt-0">
                   <form onSubmit={handleSignUp} className="space-y-4">
                     <div className="space-y-2">
@@ -1129,10 +1135,11 @@ const AuthPage = () => {
                     </Button>
                   </form>
                 </TabsContent>
+                )}
               </Tabs>
 
               {/* Sign-in / Sign-up toggle line (matches reference) */}
-              {authStep === 'credentials' && (
+              {SIGNUP_ENABLED && authStep === 'credentials' && (
                 <p className="text-center text-sm text-white/55 mt-5">
                   {activeTab === 'login' ? (
                     <>Don't have an account?{' '}
@@ -1143,6 +1150,24 @@ const AuthPage = () => {
                       <button type="button" onClick={() => setActiveTab('login')} className="text-[#2fbf8f] hover:text-[#5fd4ab] font-medium">Sign in</button>
                     </>
                   )}
+                </p>
+              )}
+
+              {/* Enterprise access note — shown when self-serve sign up is off.
+                  Framed as invitation-only rather than "you can't sign up". */}
+              {!SIGNUP_ENABLED && authStep === 'credentials' && (
+                <p className="text-center text-[13px] leading-relaxed text-white/45 mt-6">
+                  New to TraceR2C? Access is granted by invitation.
+                  <br className="hidden sm:block" />
+                  <a
+                    href="https://tracer2c.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#2fbf8f] hover:text-[#5fd4ab] font-medium underline-offset-4 hover:underline"
+                  >
+                    Book a demo
+                  </a>{' '}
+                  to get your team onboarded.
                 </p>
               )}
             </div>
@@ -1159,9 +1184,13 @@ const AuthPage = () => {
         and to receive periodic emails with updates.
       </p>
 
-      {/* Floating Help Button for unauthenticated users */}
+      {/* Floating Help Button for unauthenticated users.
+          The login page renders on plain black without the `--r2c-*` theme vars,
+          so we pass an explicit bright-teal style — otherwise the button's
+          default `bg-[var(--r2c-stamp)]` resolves to transparent and vanishes. */}
       <HelpButton
         source="login_page"
+        className="bg-[#0d9e8a] hover:bg-[#0a7a6b] text-white ring-1 ring-white/15 shadow-[0_10px_30px_-8px_rgba(13,158,138,0.6)]"
         user={{
           email: email || undefined,
           name: fullName || undefined,

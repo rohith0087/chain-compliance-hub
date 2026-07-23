@@ -23,10 +23,12 @@ export function ComplianceRing({ score, size = 140, strokeWidth = 10, label, sub
     return 'stroke-[hsl(var(--danger))]';
   };
 
+  // Glow is dark-mode-only: on the light paper background the colored halo
+  // reads as a smear around the ring rather than an accent.
   const getGlowColor = (score: number) => {
-    if (score >= 80) return 'drop-shadow-[0_0_8px_rgba(34,197,94,0.5)]';
-    if (score >= 60) return 'drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]';
-    return 'drop-shadow-[0_0_8px_rgba(244,123,116,0.5)]';
+    if (score >= 80) return 'dark:drop-shadow-[0_0_8px_rgba(34,197,94,0.5)]';
+    if (score >= 60) return 'dark:drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]';
+    return 'dark:drop-shadow-[0_0_8px_rgba(244,123,116,0.5)]';
   };
 
   const ring = (

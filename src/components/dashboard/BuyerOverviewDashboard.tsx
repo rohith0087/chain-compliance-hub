@@ -99,6 +99,17 @@ export const Empty = ({ icon: Icon, children }: { icon: typeof Inbox; children: 
   </div>
 );
 
+/** Renders AI-summary bullet text with the numbers (incl. percentages) in
+ *  emphasized foreground ink, so the figures pop out of the muted copy. */
+export const highlightNumbers = (text: string) =>
+  text.split(/(\d+(?:\.\d+)?%?)/g).map((part, i) =>
+    /^\d/.test(part) ? (
+      <span key={i} className="font-semibold text-foreground">{part}</span>
+    ) : (
+      part
+    )
+  );
+
 /** Real delta or nothing. There is no placeholder percentage here by design. */
 export const Delta = ({ value, suffix = '' }: { value: number | null; suffix?: string }) => {
   if (value === null) {
@@ -419,7 +430,7 @@ export const BuyerOverviewDashboard = ({
                         : 'bg-primary'
                   }`}
                 />
-                <span>{b.text}</span>
+                <span>{highlightNumbers(b.text)}</span>
               </li>
             ))}
           </ul>

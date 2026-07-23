@@ -16,6 +16,7 @@ import {
   Empty,
   LinkOut,
   Panel,
+  highlightNumbers,
 } from '@/components/dashboard/BuyerOverviewDashboard';
 import { dashboardCardClass } from '@/components/documents/buyerReviewDesignSystem';
 import { Button } from '@/components/ui/button';
@@ -284,7 +285,7 @@ export const BuyerFocusDashboard = ({
                         : 'bg-primary'
                   }`}
                 />
-                <span>{b.text}</span>
+                <span>{highlightNumbers(b.text)}</span>
               </li>
             ))}
             {!ai.loading && ai.bullets.length === 0 && (

@@ -4,6 +4,16 @@ import { Resend } from "npm:resend@2.0.0";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/corsHeaders.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 
+// Escape HTML-special characters before interpolating plain-text fields into the email.
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 interface PasswordResetRequest {
@@ -62,6 +72,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { email, name, temp_password, admin_name }: PasswordResetRequest = await req.json();
 
+    // Escape user/admin-controlled fields before HTML interpolation. Escaping
+    // temp_password is display-safe: HTML entities render as the original
+    // characters, so the password the user reads and types is unchanged.
+    const safeName = escapeHtml(name ?? '');
+    const safeAdminName = escapeHtml(admin_name ?? '');
+    const safeTempPassword = escapeHtml(temp_password ?? '');
+
     const emailResponse = await resend.emails.send({
       from: "Compliance Platform <no-reply@tracer2c.com>",
       to: [email],
@@ -81,11 +98,11 @@ const handler = async (req: Request): Promise<Response> => {
               <p>A platform administrator has reset your password</p>
             </div>
             <div style="padding: 40px 30px;">
-              <p>Hello <strong>${name}</strong>,</p>
-              <p>Your password has been reset by platform administrator <strong>${admin_name}</strong>. Please use the temporary password below to log in:</p>
+              <p>Hello <strong>${safeName}</strong>,</p>
+              <p>Your password has been reset by platform administrator <strong>${safeAdminName}</strong>. Please use the temporary password below to log in:</p>
               <div style="background: #f1f5f9; border: 2px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 24px 0; text-align: center; font-family: 'Monaco', 'Consolas', monospace;">
                 <div style="font-size: 14px; color: #64748b; margin-bottom: 8px; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Temporary Password</div>
-                <div style="font-size: 24px; font-weight: bold; color: #1e293b; letter-spacing: 2px;">${temp_password}</div>
+                <div style="font-size: 24px; font-weight: bold; color: #1e293b; letter-spacing: 2px;">${safeTempPassword}</div>
               </div>
               <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; border-radius: 4px;">
                 <div style="font-weight: 600; color: #92400e; margin-bottom: 8px;">⚠️ Important Security Notice</div>

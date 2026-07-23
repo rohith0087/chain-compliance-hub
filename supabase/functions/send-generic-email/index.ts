@@ -3,6 +3,17 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { Resend } from "npm:resend@2.0.0";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/corsHeaders.ts";
 import { sanitizeEmailBody } from "../_shared/rateLimiter.ts";
+import { isServiceRoleRequest } from "../_shared/systemAuth.ts";
+
+// Escape HTML-special characters in plain-text fields before template interpolation.
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -344,6 +355,20 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // ============= LEGACY DIRECT SEND (backward compatibility) =============
+    // SECURITY: the legacy path lets the caller send arbitrary content with an
+    // arbitrary sender_company in the From line. No in-repo caller uses it, so
+    // restrict it to internal/service-role callers; normal user JWTs get 403.
+    if (!isServiceRoleRequest(req)) {
+      console.error("[send-generic-email] Legacy direct-send rejected: not a service-role request");
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Forbidden: legacy direct-send requires service-role credentials"
+      }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { to_email, to_name, subject, body, sender_name, sender_company, sender_context } = requestBody;
 
     // Validate email format
@@ -423,7 +448,9 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Build email HTML
-    const recipientName = to_name || "there";
+    const recipientName = escapeHtml(to_name || "there");
+    const escapedSubject = escapeHtml(subject);
+    const escapedSenderContext = escapeHtml(sender_context || 'Sent via Compliance Compass');
     // Sanitize body to prevent HTML injection
     const sanitizedBody = sanitizeEmailBody(body);
     const formattedBody = sanitizedBody
@@ -431,17 +458,20 @@ const handler = async (req: Request): Promise<Response> => {
       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
       .replace(/\*(.*?)\*/g, "<em>$1</em>");
 
+    const escapedSenderName = escapeHtml(finalSenderName);
+    const escapedSenderCompany = escapeHtml(finalSenderCompany);
+
     const emailHtml = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${subject}</title>
+  <title>${escapedSubject}</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 20px; border-radius: 8px 8px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 20px;">${finalSenderCompany}</h1>
+    <h1 style="color: white; margin: 0; font-size: 20px;">${escapedSenderCompany}</h1>
   </div>
   
   <div style="background: #f8fafc; padding: 24px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;">
@@ -455,13 +485,13 @@ const handler = async (req: Request): Promise<Response> => {
     
     <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
       <p style="margin: 0 0 4px 0; font-weight: 600;">Best regards,</p>
-      <p style="margin: 0 0 4px 0; font-weight: 600;">${finalSenderName}</p>
-      <p style="margin: 0; color: #64748b; font-size: 14px;">${finalSenderCompany}</p>
+      <p style="margin: 0 0 4px 0; font-weight: 600;">${escapedSenderName}</p>
+      <p style="margin: 0; color: #64748b; font-size: 14px;">${escapedSenderCompany}</p>
     </div>
   </div>
   
   <div style="text-align: center; margin-top: 16px; color: #94a3b8; font-size: 12px;">
-    <p>${sender_context || 'Sent via Compliance Compass'}</p>
+    <p>${escapedSenderContext}</p>
   </div>
 </body>
 </html>

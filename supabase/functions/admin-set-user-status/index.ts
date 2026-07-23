@@ -53,10 +53,26 @@ Deno.serve(async (req) => {
     if (profErr) throw new Error(`Failed to update profile: ${profErr.message}`);
 
     // Hard enforcement: ban invalidates refresh tokens / existing sessions.
+    // If the ban/unban fails, roll back the profile flag so the UI never shows
+    // a state that isn't actually enforced, and report an honest failure.
     const { error: banErr } = await supabase.auth.admin.updateUserById(user_id, {
       ban_duration: disabled ? '876000h' : 'none',
     });
-    if (banErr) console.error('ban update failed (flag still applied):', banErr.message);
+    if (banErr) {
+      console.error('ban update failed, rolling back profile flag:', banErr.message);
+      const { error: rollbackErr } = await supabase.from('profiles')
+        .update({ account_disabled: !disabled }).eq('id', user_id);
+      if (rollbackErr) {
+        console.error('profile flag rollback failed:', rollbackErr.message);
+      }
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Failed to ${disabled ? 'ban' : 'unban'} user session: ${banErr.message}. Profile flag was rolled back.`,
+        }),
+        { status: 500, headers },
+      );
+    }
 
     return new Response(
       JSON.stringify({ success: true, disabled, message: disabled ? 'User disabled' : 'User re-enabled' }),

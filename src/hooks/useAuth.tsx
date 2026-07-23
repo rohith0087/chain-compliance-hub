@@ -5,6 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import logger from '@/utils/logger';
 import { shouldPreserveWorkspaceState } from '@/utils/authState';
 
+export const ACCOUNT_DISABLED_MESSAGE =
+  "There's a problem with your account and you can't sign in right now. Please contact support@tracer2c.com for help.";
+
 // Get client IP address using public API
 const getClientIP = async (): Promise<string | null> => {
   try {
@@ -48,6 +51,10 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   resetPassword: (email: string, captchaToken?: string) => Promise<{ error: any }>;
   updatePassword: (password: string) => Promise<{ error: any }>;
+  // Set when a session is rejected because the profile has account_disabled === true
+  // (e.g. OAuth / passkey / restored session). Mirrors the password-flow error.
+  accountDisabledError: string | null;
+  clearAccountDisabledError: () => void;
   loading: boolean;
 }
 
@@ -58,8 +65,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accountDisabledError, setAccountDisabledError] = useState<string | null>(null);
   const isInitializedRef = useRef(false);
   const currentUserIdRef = useRef<string | null>(null);
+
+  const clearAccountDisabledError = () => setAccountDisabledError(null);
 
   const createMissingProfile = async (user: User) => {
     logger.debug('Creating missing profile for user:', user.id);
@@ -127,6 +137,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       logger.debug('Profile fetched successfully');
+
+      // Disabled-account gate (covers OAuth, passkey, and restored sessions).
+      // Only an explicit account_disabled === true signs out — profile fetch
+      // failures above never reach this branch and must not sign users out.
+      if (profile?.account_disabled === true) {
+        // Only act if a session is still active. If the password flow already
+        // detected the disabled account and signed out, there is no session and
+        // we must not raise a duplicate error signal.
+        const { data: { session: activeSession } } = await supabase.auth.getSession();
+        if (!activeSession) return;
+        logger.debug('Account is disabled; signing out');
+        setAccountDisabledError(ACCOUNT_DISABLED_MESSAGE);
+        setProfile(null);
+        await supabase.auth.signOut();
+        return;
+      }
+
       setProfile(profile);
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
@@ -197,9 +224,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signIn = async (email: string, password: string, captchaToken?: string) => {
-    const ACCOUNT_DISABLED_MESSAGE =
-      "There's a problem with your account and you can't sign in right now. Please contact support@tracer2c.com for help.";
-
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -225,6 +249,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .eq('id', data.user.id)
         .maybeSingle();
       if (prof?.account_disabled) {
+        // This flow surfaces the error via its return value; if the delayed
+        // onAuthStateChange profile fetch already raised the signal, clear it
+        // so the user doesn't see the message twice.
+        setAccountDisabledError(null);
         await supabase.auth.signOut();
         return { error: { message: ACCOUNT_DISABLED_MESSAGE, code: 'account_disabled' } };
       }
@@ -314,6 +342,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signOut,
     resetPassword,
     updatePassword,
+    accountDisabledError,
+    clearAccountDisabledError,
     loading,
   };
 

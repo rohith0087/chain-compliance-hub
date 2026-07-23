@@ -21,6 +21,8 @@ Deno.serve(async (req) => {
     const body = await req.json();
     let { buyerId, clientId, engagementId, userId } = body as { buyerId?: string; clientId: string; engagementId?: string; userId?: string };
 
+    const forbidden = (message: string) => new Response(JSON.stringify({ error: message }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+
     const authHeader = req.headers.get("Authorization");
     const isSystem = authHeader === `Bearer ${SERVICE_KEY}` || (SYSTEM_SECRET && authHeader === `Bearer ${SYSTEM_SECRET}`);
     if (!isSystem) {
@@ -29,16 +31,30 @@ Deno.serve(async (req) => {
       const { data: { user } } = await sbUser.auth.getUser();
       if (!user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...cors, "Content-Type": "application/json" } });
       userId = user.id;
-      if (!buyerId) {
-        const { data: tm } = await sb.from("company_users").select("company_id").eq("profile_id", user.id).eq("company_type", "buyer").eq("status", "active").maybeSingle();
-        buyerId = (tm?.company_id as string) ?? null as any;
-        if (!buyerId) {
-          const { data: own } = await sb.from("buyers").select("id").eq("profile_id", user.id).maybeSingle();
-          buyerId = (own?.id as string) ?? undefined;
-        }
+      // Always resolve the caller's buyer company server-side; never trust a
+      // body-supplied buyerId (same approach as execute-chat-action).
+      let resolvedBuyerId: string | null = null;
+      const { data: tm } = await sb.from("company_users").select("company_id").eq("profile_id", user.id).eq("company_type", "buyer").eq("status", "active").maybeSingle();
+      resolvedBuyerId = (tm?.company_id as string) ?? null;
+      if (!resolvedBuyerId) {
+        const { data: own } = await sb.from("buyers").select("id").eq("profile_id", user.id).maybeSingle();
+        resolvedBuyerId = (own?.id as string) ?? null;
       }
+      if (!resolvedBuyerId) return forbidden("Not a buyer account");
+      if (buyerId && buyerId !== resolvedBuyerId) return forbidden("buyerId does not match your organization");
+      buyerId = resolvedBuyerId;
     }
     if (!buyerId || !clientId) return new Response(JSON.stringify({ error: "buyerId and clientId required" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+
+    // The supplier must have an approved connection to the resolved buyer.
+    const { data: conn } = await sb
+      .from("buyer_supplier_connections")
+      .select("id")
+      .eq("buyer_id", buyerId)
+      .eq("supplier_id", clientId)
+      .eq("status", "approved")
+      .maybeSingle();
+    if (!conn) return forbidden("Supplier is not connected to your organization");
 
     const [client, buyer, findingsRes, evidenceRes, engagementRes] = await Promise.all([
       sb.from("suppliers").select("company_name, industry, country").eq("id", clientId).maybeSingle(),

@@ -27,11 +27,67 @@ serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    const user = userData.user;
 
     console.log('Document content extraction requested');
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { document_id, file_path } = await req.json();
+    // file_path from the body is ignored; it is derived from the document row.
+    const { document_id } = await req.json();
+    if (!document_id) {
+      return new Response(
+        JSON.stringify({ error: 'document_id required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Resolve the caller's supplier company (team membership first, then owner).
+    let callerSupplierId: string | null = null;
+    const { data: tm } = await supabase
+      .from('company_users')
+      .select('company_id')
+      .eq('profile_id', user.id)
+      .eq('company_type', 'supplier')
+      .eq('status', 'active')
+      .maybeSingle();
+    callerSupplierId = (tm?.company_id as string) ?? null;
+    if (!callerSupplierId) {
+      const { data: own } = await supabase
+        .from('suppliers')
+        .select('id')
+        .eq('profile_id', user.id)
+        .maybeSingle();
+      callerSupplierId = (own?.id as string) ?? null;
+    }
+    if (!callerSupplierId) {
+      return new Response(
+        JSON.stringify({ error: 'Not a supplier account' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Get document info first and enforce tenant ownership.
+    const { data: docData } = await supabase
+      .from('supplier_document_library')
+      .select('supplier_id, document_name, category, description, document_type, file_path')
+      .eq('id', document_id)
+      .maybeSingle();
+
+    if (!docData) {
+      return new Response(
+        JSON.stringify({ error: 'Document not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (docData.supplier_id !== callerSupplierId) {
+      return new Response(
+        JSON.stringify({ error: 'Document does not belong to your organization' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const file_path = docData.file_path as string;
 
     console.log('Processing document with Vision API');
 
@@ -40,17 +96,6 @@ serve(async (req) => {
       .from('supplier_document_library')
       .update({ extraction_status: 'processing' })
       .eq('id', document_id);
-
-    // Get document info for context
-    const { data: docData } = await supabase
-      .from('supplier_document_library')
-      .select('supplier_id, document_name, category, description, document_type')
-      .eq('id', document_id)
-      .single();
-
-    if (!docData) {
-      throw new Error('Document not found');
-    }
 
     // Download file from storage
     const { data: fileData, error: downloadError } = await supabase.storage

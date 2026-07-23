@@ -119,6 +119,22 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Disabled-account gate: refuse to mint a sign-in token for disabled accounts
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('account_disabled')
+      .eq('id', passkey.user_id)
+      .maybeSingle();
+
+    if (profile?.account_disabled === true) {
+      return new Response(JSON.stringify({
+        error: "There's a problem with your account and you can't sign in right now. Please contact support@tracer2c.com for help.",
+        code: 'account_disabled',
+      }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Mint a magic link and return its token hash — the client verifies it to establish a session
     const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
       type: 'magiclink',

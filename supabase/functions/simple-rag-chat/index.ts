@@ -4764,6 +4764,29 @@ serve(async (req) => {
       }
     }
     
+    // SECURITY: Verify session ownership before any read/write on it.
+    // Mirrors the check in verifyConfirmationToken (session.user_id !== userId).
+    // A session just created above for this user passes trivially.
+    if (session_id && session_id === incoming_session_id) {
+      const { data: sessionOwnerRow, error: sessionOwnerError } = await supabase
+        .from('chat_sessions')
+        .select('id, user_id')
+        .eq('id', session_id)
+        .single();
+
+      if (sessionOwnerError || !sessionOwnerRow || sessionOwnerRow.user_id !== user.id) {
+        console.warn('⚠️ SECURITY: session_id ownership check failed', {
+          session_id,
+          caller: user.id,
+          owner: sessionOwnerRow?.user_id ?? null
+        });
+        return new Response(
+          JSON.stringify({ error: 'Forbidden: session does not belong to the authenticated user' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     console.log('simple-rag-chat request:', { question: question?.substring(0, 50), session_id });
     console.log('User context:', { company_type: companyType, industry });
 

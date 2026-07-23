@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/corsHeaders.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rateLimiter.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -30,6 +31,13 @@ serve(async (req) => {
     }
 
     console.log('Expiry notification triggered');
+
+    // Per-user rate limit: 10 sends per hour (same shared in-memory limiter
+    // used by send-password-reset and coa-analyzer; per-isolate, see rateLimiter.ts).
+    const { allowed, retryAfterMs } = checkRateLimit(`expiry-notify:${userData.user.id}`, 10, 3_600_000);
+    if (!allowed) {
+      return rateLimitResponse({ ...corsHeaders, 'Content-Type': 'application/json' }, retryAfterMs);
+    }
 
     const { 
       supplier_email, 

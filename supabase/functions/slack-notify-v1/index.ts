@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
 import { handleCorsPreflightRequest } from '../_shared/corsHeaders.ts';
 import { getSupabaseSecretKey, requireEnv } from '../_shared/env.ts';
 import { createRequestContext, jsonResponse, logEvent } from '../_shared/requestContext.ts';
+import { isServiceRoleRequest } from '../_shared/systemAuth.ts';
 
 export type SlackEvent =
   | 'document_submitted'
@@ -111,6 +112,13 @@ Deno.serve(async (req) => {
   const preflight = handleCorsPreflightRequest(req);
   if (preflight) return preflight;
   if (req.method !== 'POST') return jsonResponse(context, { error: 'Method not allowed' }, 405, { Allow: 'POST' });
+
+  // Internal-only endpoint: accept service-role bearer calls from other edge
+  // functions (e.g. review-document-submission-v2) and reject everything else.
+  if (!isServiceRoleRequest(req)) {
+    logEvent('warn', 'slack_notify_unauthorized', context, {});
+    return jsonResponse(context, { error: 'Unauthorized: service-role credentials required' }, 401);
+  }
 
   const admin = createClient(requireEnv('SUPABASE_URL'), getSupabaseSecretKey(), {
     auth: { persistSession: false, autoRefreshToken: false },

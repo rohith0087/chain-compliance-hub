@@ -170,8 +170,20 @@ const AuthPage = () => {
   const isResetCooling = resetCooldownRemaining > 0;
   const isSignupCooling = signupCooldownRemaining > 0;
   
-  const { signIn, signUp, resetPassword } = useAuth();
+  const { signIn, signUp, resetPassword, accountDisabledError, clearAccountDisabledError } = useAuth();
   const { toast } = useToast();
+
+  // Mirror the password flow's UX when a session is rejected because the
+  // account is disabled (OAuth, passkey, or restored session).
+  useEffect(() => {
+    if (!accountDisabledError) return;
+    toast({
+      title: "Sign In Failed",
+      description: accountDisabledError,
+      variant: "destructive",
+    });
+    clearAccountDisabledError();
+  }, [accountDisabledError, clearAccountDisabledError, toast]);
 
   const passwordStrength = useMemo(() => getPasswordStrength(password), [password]);
   const passwordRequirements = useMemo(() => checkPasswordRequirements(password), [password]);
@@ -283,7 +295,17 @@ const AuthPage = () => {
         body: { response: assertion },
       });
       if (finishRes.error || !finishRes.data?.verified || !finishRes.data?.token_hash) {
-        throw new Error(finishRes.error?.message || 'Passkey verification failed');
+        // Non-2xx responses carry a generic FunctionsHttpError message; read the
+        // actual error body so disabled-account (and other) messages surface.
+        let message = 'Passkey verification failed';
+        const ctx = (finishRes.error as { context?: Response } | null)?.context;
+        if (ctx && typeof ctx.json === 'function') {
+          try {
+            const errBody = await ctx.json();
+            if (errBody?.error) message = errBody.error;
+          } catch { /* keep default message */ }
+        }
+        throw new Error(message);
       }
 
       const { error: verifyErr } = await supabase.auth.verifyOtp({

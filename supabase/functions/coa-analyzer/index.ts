@@ -379,6 +379,74 @@ function calculateScore(
   return { score, passFail };
 }
 
+// ============ TENANT RESOLUTION / AUTHORIZATION ============
+
+// Resolve the caller's company (buyer or supplier) server-side. Body-supplied
+// tenant ids are never trusted on their own.
+async function getCallerCompany(
+  sb: ReturnType<typeof createClient>,
+  userId: string,
+): Promise<{ companyId: string; companyType: string } | null> {
+  const { data: cu } = await sb
+    .from("company_users")
+    .select("company_id, company_type")
+    .eq("profile_id", userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (cu?.company_id) return { companyId: cu.company_id as string, companyType: cu.company_type as string };
+  const { data: buyer } = await sb.from("buyers").select("id").eq("profile_id", userId).maybeSingle();
+  if (buyer) return { companyId: buyer.id as string, companyType: "buyer" };
+  const { data: supplier } = await sb.from("suppliers").select("id").eq("profile_id", userId).maybeSingle();
+  if (supplier) return { companyId: supplier.id as string, companyType: "supplier" };
+  return null;
+}
+
+// A document upload belongs to the caller's company if the uploader is a member
+// of that company, or the linked document request targets that company
+// (supplier side) or was created by one of its members (buyer side).
+async function documentBelongsToCompany(
+  sb: ReturnType<typeof createClient>,
+  documentUploadId: string,
+  companyId: string,
+): Promise<boolean> {
+  const profileInCompany = async (profileId: string | null): Promise<boolean> => {
+    if (!profileId) return false;
+    const { data: cu } = await sb
+      .from("company_users")
+      .select("id")
+      .eq("profile_id", profileId)
+      .eq("company_id", companyId)
+      .maybeSingle();
+    if (cu) return true;
+    const { data: b } = await sb.from("buyers").select("id").eq("profile_id", profileId).eq("id", companyId).maybeSingle();
+    if (b) return true;
+    const { data: s } = await sb.from("suppliers").select("id").eq("profile_id", profileId).eq("id", companyId).maybeSingle();
+    return !!s;
+  };
+
+  const { data: doc } = await sb
+    .from("document_uploads")
+    .select("uploader_id, request_id")
+    .eq("id", documentUploadId)
+    .maybeSingle();
+  if (!doc) return false;
+
+  if (await profileInCompany(doc.uploader_id as string | null)) return true;
+
+  if (doc.request_id) {
+    const { data: docReq } = await sb
+      .from("document_requests")
+      .select("supplier_id, requester_id")
+      .eq("id", doc.request_id)
+      .maybeSingle();
+    if (docReq) {
+      if (docReq.supplier_id === companyId) return true;
+      if (await profileInCompany(docReq.requester_id as string | null)) return true;
+    }
+  }
+  return false;
+}
+
 // ============ MAIN HANDLER ============
 
 serve(async (req) => {
@@ -412,15 +480,46 @@ serve(async (req) => {
 
     const { submission_id, document_upload_id, buyer_id, supplier_id } = await req.json();
 
+    // --- Tenant resolution: the caller's company comes from the database,
+    // never from the request body. ---
+    const caller = await getCallerCompany(supabase, claimsData.claims.sub as string);
+    if (!caller) {
+      return new Response(JSON.stringify({ error: "No company associated with this account" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const forbidden = (message: string) => new Response(
+      JSON.stringify({ error: message }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+
+    // Reject body tenant ids that contradict the caller's resolved company.
+    if (buyer_id && caller.companyType === "buyer" && buyer_id !== caller.companyId) {
+      return forbidden("buyer_id does not match your organization");
+    }
+    if (supplier_id && caller.companyType === "supplier" && supplier_id !== caller.companyId) {
+      return forbidden("supplier_id does not match your organization");
+    }
+
     let submissionId = submission_id;
 
     // If no submission_id, create one from document_upload_id
     if (!submissionId && document_upload_id) {
+      // The referenced document must belong to the caller's company.
+      if (!(await documentBelongsToCompany(supabase, document_upload_id, caller.companyId))) {
+        return forbidden("Document upload does not belong to your organization");
+      }
+      // Force the caller-side tenant id to the server-resolved company; only
+      // the counterparty id may come from the body.
+      const effectiveBuyerId = caller.companyType === "buyer" ? caller.companyId : buyer_id;
+      const effectiveSupplierId = caller.companyType === "supplier" ? caller.companyId : supplier_id;
+      if (!effectiveBuyerId || !effectiveSupplierId) {
+        return new Response(JSON.stringify({ error: "buyer_id and supplier_id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
       const { data: newSub, error: subErr } = await supabase
         .from("coa_submissions")
         .insert({
-          buyer_id,
-          supplier_id,
+          buyer_id: effectiveBuyerId,
+          supplier_id: effectiveSupplierId,
           document_upload_id,
           analysis_status: "analyzing",
         })
@@ -432,6 +531,18 @@ serve(async (req) => {
 
     if (!submissionId) {
       return new Response(JSON.stringify({ error: "submission_id or document_upload_id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Verify the submission belongs to the caller's company (either side)
+    // before mutating or reading it.
+    const { data: submissionOwner, error: ownerErr } = await supabase
+      .from("coa_submissions")
+      .select("buyer_id, supplier_id")
+      .eq("id", submissionId)
+      .single();
+    if (ownerErr || !submissionOwner) throw new Error("Submission not found");
+    if (submissionOwner.buyer_id !== caller.companyId && submissionOwner.supplier_id !== caller.companyId) {
+      return forbidden("Submission does not belong to your organization");
     }
 
     // Update status to analyzing

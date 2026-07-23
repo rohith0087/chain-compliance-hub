@@ -99,11 +99,48 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log("[send-compliance-followup] Sender profile found");
 
-    // Get buyer company info
+    // Resolve the caller's buyer company server-side (ownership check) —
+    // never trust a buyer_id supplied in the request body.
+    const { data: buyerMembership } = await supabase
+      .from("company_users")
+      .select("company_id")
+      .eq("profile_id", user.id)
+      .eq("company_type", "buyer")
+      .eq("status", "active")
+      .maybeSingle();
+
+    let resolvedBuyerId: string | null = buyerMembership?.company_id ?? null;
+    if (!resolvedBuyerId) {
+      const { data: ownedBuyer } = await supabase
+        .from("buyers")
+        .select("id")
+        .eq("profile_id", user.id)
+        .maybeSingle();
+      resolvedBuyerId = ownedBuyer?.id ?? null;
+    }
+
+    if (!resolvedBuyerId) {
+      console.error("[send-compliance-followup] No buyer company for user:", user.id);
+      return new Response(JSON.stringify({ error: "No buyer company associated with this account" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const claimedBuyerId = emails[0].buyer_id;
+    if (claimedBuyerId && claimedBuyerId !== resolvedBuyerId) {
+      console.error("[send-compliance-followup] buyer_id mismatch:", claimedBuyerId, "vs", resolvedBuyerId);
+      return new Response(JSON.stringify({ error: "buyer_id does not match your buyer company" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Get buyer company info (using the server-resolved buyer)
     const { data: buyer } = await supabase
       .from("buyers")
       .select("company_name, id")
-      .eq("id", emails[0].buyer_id)
+      .eq("id", resolvedBuyerId)
       .single();
     
     console.log("[send-compliance-followup] Buyer:", buyer?.company_name);
@@ -160,7 +197,7 @@ const handler = async (req: Request): Promise<Response> => {
             subject: emailPayload.subject,
             body_preview: emailPayload.body.substring(0, 500),
             supplier_id: emailPayload.supplier_id,
-            buyer_id: emailPayload.buyer_id,
+            buyer_id: resolvedBuyerId,
             action_type: emailPayload.action_type,
             status: "sent",
             resend_id: emailResponse?.data?.id || null,
@@ -206,7 +243,7 @@ const handler = async (req: Request): Promise<Response> => {
             subject: emailPayload.subject,
             body_preview: emailPayload.body.substring(0, 500),
             supplier_id: emailPayload.supplier_id,
-            buyer_id: emailPayload.buyer_id,
+            buyer_id: resolvedBuyerId,
             action_type: emailPayload.action_type,
             status: "failed",
             error_message: sendError.message,

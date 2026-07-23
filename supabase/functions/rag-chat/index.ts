@@ -110,8 +110,8 @@ interface DailyOverview {
 }
 
 // Get comprehensive compliance metrics for a company
-async function getComplianceMetrics(companyId: string, companyType: string): Promise<ComplianceMetrics> {
-  const { data: docs, error } = await supabase
+async function getComplianceMetrics(companyId: string, companyType: string, buyerId?: string): Promise<ComplianceMetrics> {
+  let query = supabase
     .from('document_uploads')
     .select(`
       id,
@@ -125,6 +125,14 @@ async function getComplianceMetrics(companyId: string, companyType: string): Pro
       )
     `)
     .eq(`document_requests.${companyType}_id`, companyId);
+
+  // SECURITY: when a buyer context is provided (e.g. a buyer asking about a
+  // connected supplier), only count documents from that buyer's own requests.
+  if (buyerId) {
+    query = query.eq('document_requests.buyer_id', buyerId);
+  }
+
+  const { data: docs, error } = await query;
 
   if (error) {
     console.error('Compliance metrics error:', error);
@@ -179,6 +187,8 @@ async function getComplianceMetrics(companyId: string, companyType: string): Pro
 }
 
 // Get supplier-specific compliance data
+// SECURITY: buyerId scopes all queries so a caller only ever sees data from
+// document requests issued by their own buyer company.
 async function getSupplierComplianceData(supplierId: string, buyerId?: string): Promise<SupplierComplianceData> {
   const { data: supplier } = await supabase
     .from('suppliers')
@@ -190,9 +200,9 @@ async function getSupplierComplianceData(supplierId: string, buyerId?: string): 
     throw new Error('Supplier not found');
   }
 
-  const metrics = await getComplianceMetrics(supplierId, 'supplier');
-  
-  const { data: recentDocs } = await supabase
+  const metrics = await getComplianceMetrics(supplierId, 'supplier', buyerId);
+
+  let docsQuery = supabase
     .from('document_uploads')
     .select(`
       id,
@@ -208,6 +218,13 @@ async function getSupplierComplianceData(supplierId: string, buyerId?: string): 
     .eq('document_requests.supplier_id', supplierId)
     .order('created_at', { ascending: false })
     .limit(5);
+
+  // Scope to the caller's buyer company when provided
+  if (buyerId) {
+    docsQuery = docsQuery.eq('document_requests.buyer_id', buyerId);
+  }
+
+  const { data: recentDocs } = await docsQuery;
 
   const recentDocuments: DocumentReference[] = (recentDocs || []).map(doc => ({
     id: doc.id,
@@ -1426,6 +1443,31 @@ serve(async (req) => {
       throw new Error('User company information not found');
     }
 
+    // SECURITY: Verify session ownership before any read/write on it.
+    // A supplied session_id must belong to the authenticated caller;
+    // otherwise any authenticated user could read/inject another user's chat.
+    if (session_id) {
+      const { data: sessionRow, error: sessionLookupError } = await supabase
+        .from('chat_sessions')
+        .select('id, user_id')
+        .eq('id', session_id)
+        .single();
+
+      if (sessionLookupError || !sessionRow || sessionRow.user_id !== user.id) {
+        console.warn('⚠️ SECURITY: session_id ownership check failed', {
+          session_id,
+          caller: user.id,
+          owner: sessionRow?.user_id ?? null
+        });
+        return new Response(JSON.stringify({
+          error: 'Forbidden: session does not belong to the authenticated user'
+        }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // Step 1: Analyze query intent for smarter responses
     const queryIntent = await analyzeQueryIntent(message, userInfo.companyType);
     console.log('Query intent analysis:', queryIntent);
@@ -1449,12 +1491,47 @@ serve(async (req) => {
       const supplierName = queryIntent.entities.supplier_names[0];
       const { data: suppliers } = await supabase
         .from('suppliers')
-        .select('id')
+        .select('id, company_name')
         .ilike('company_name', `%${supplierName}%`)
         .limit(1);
-      
+
       if (suppliers && suppliers.length > 0) {
-        supplierData = await getSupplierComplianceData(suppliers[0].id);
+        const candidateSupplier = suppliers[0];
+
+        // SECURITY: the global name lookup above can match ANY supplier in the
+        // platform. Only expose data when the caller's buyer company has an
+        // approved connection to this supplier (or the caller IS this supplier).
+        let isAuthorized = false;
+        if (userInfo.companyType === 'supplier') {
+          isAuthorized = candidateSupplier.id === userInfo.companyId;
+        } else {
+          const { data: connection } = await supabase
+            .from('buyer_supplier_connections')
+            .select('id')
+            .eq('buyer_id', userInfo.companyId)
+            .eq('supplier_id', candidateSupplier.id)
+            .eq('status', 'approved')
+            .limit(1);
+          isAuthorized = !!(connection && connection.length > 0);
+        }
+
+        if (!isAuthorized) {
+          // Graceful 200 for chat UX: do not hard-403 the whole conversation
+          return new Response(JSON.stringify({
+            response: `I couldn't find an approved connection between your company and "${candidateSupplier.company_name}". I can only share compliance data for suppliers that are connected to your account. If you believe this supplier should be connected, please check your supplier connections.`,
+            session_id: session_id || null,
+            actionable_items: [],
+            suggested_actions: ["View my connected suppliers", "Check supplier connections"],
+            metadata: { knowledge_entries_used: 0, documents_found: 0, sources: [], not_connected: true }
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        supplierData = await getSupplierComplianceData(
+          candidateSupplier.id,
+          userInfo.companyType === 'buyer' ? userInfo.companyId : undefined
+        );
       }
     }
 

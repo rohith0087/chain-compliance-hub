@@ -3,6 +3,9 @@ project_id = "edwerzutsknhuplidhsj"
 [functions.audit-assistant]
 verify_jwt = true
 
+[functions.request-ai-assist]
+verify_jwt = true
+
 [functions.generate-audit-report]
 verify_jwt = false
 

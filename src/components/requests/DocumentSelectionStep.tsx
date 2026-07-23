@@ -1,14 +1,23 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ClipboardCheck, X, Filter, Search, Package, Save } from 'lucide-react';
+import { Filter, Search, Loader2, Sparkles, Check, ExternalLink } from 'lucide-react';
 import { ComplianceDocument } from './ComplianceDocuments';
 import { useDocumentSets } from '@/hooks/useDocumentSets';
 import { SaveDocumentSetDialog } from '@/components/buyer/SaveDocumentSetDialog';
+import { recommendDocuments, type DocRecommendation } from '@/lib/requestAiAssist';
+import {
+  cardClass,
+  cardPadClass,
+  sectionLabelClass,
+  pillClass,
+  pillAccentClass,
+  emptyStateClass,
+  hoverSurfaceClass,
+  inlineIconClass,
+} from '@/design/system';
 
 interface DocumentSelectionStepProps {
   complianceDocuments: ComplianceDocument[];
@@ -17,6 +26,7 @@ interface DocumentSelectionStepProps {
   onRemoveSelected: (docId: string) => void;
   onNext: () => void;
   buyerId?: string;
+  entityType?: string;
 }
 
 const DocumentSelectionStep = ({
@@ -25,7 +35,8 @@ const DocumentSelectionStep = ({
   onDocumentToggle,
   onRemoveSelected,
   onNext,
-  buyerId
+  buyerId,
+  entityType = 'General Supplier'
 }: DocumentSelectionStepProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -37,7 +48,58 @@ const DocumentSelectionStep = ({
 
   const { documentSets, incrementUsage } = useDocumentSets(buyerId);
 
-  // Get unique categories and regulatory bodies
+  // ── AI document recommendations (fail soft — falls back to `required` docs) ──
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string>('');
+  const [aiRecs, setAiRecs] = useState<DocRecommendation[]>([]);
+
+  const fallbackRecs = useMemo(
+    () => complianceDocuments.filter((d) => d.required).slice(0, 6),
+    [complianceDocuments],
+  );
+
+  useEffect(() => {
+    if (!buyerId || complianceDocuments.length === 0) return;
+    let cancelled = false;
+    setAiLoading(true);
+    setAiSummary('');
+    setAiRecs([]);
+    recommendDocuments(
+      buyerId,
+      entityType,
+      complianceDocuments.map((d) => ({ id: d.id, title: d.title, category: d.category })),
+    ).then((result) => {
+      if (cancelled) return;
+      if (result && result.recommendations.length > 0) {
+        setAiRecs(result.recommendations);
+        setAiSummary(result.summary);
+      }
+      setAiLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [buyerId, entityType, complianceDocuments]);
+
+  const recommendedDocs: ComplianceDocument[] = useMemo(() => {
+    if (aiRecs.length > 0) {
+      return aiRecs
+        .map((r) => complianceDocuments.find((d) => d.id === r.id))
+        .filter((d): d is ComplianceDocument => Boolean(d));
+    }
+    return fallbackRecs;
+  }, [aiRecs, complianceDocuments, fallbackRecs]);
+
+  const suggestedIds = useMemo(() => new Set(recommendedDocs.map((d) => d.id)), [recommendedDocs]);
+
+  const applyRecommendations = () => {
+    recommendedDocs.forEach((doc) => {
+      if (!selectedDocuments.find((sd) => sd.id === doc.id)) {
+        onDocumentToggle(doc, true);
+      }
+    });
+    setShowAIBanner(false);
+  };
+
+  // ── Filters ──────────────────────────────────────────────────────────────────
   const categories = useMemo(() => {
     const uniqueCategories = [...new Set(complianceDocuments.map(doc => doc.category))];
     return uniqueCategories.sort();
@@ -48,7 +110,6 @@ const DocumentSelectionStep = ({
     return uniqueBodies.sort();
   }, [complianceDocuments]);
 
-  // Filter documents based on search and filters
   const filteredDocuments = useMemo(() => {
     return complianceDocuments.filter(doc => {
       const matchesSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -56,18 +117,9 @@ const DocumentSelectionStep = ({
       const matchesCategory = selectedCategory === 'all' || doc.category === selectedCategory;
       const matchesRegulatoryBody = selectedRegulatoryBody === 'all' || doc.regulatoryBody === selectedRegulatoryBody;
       const matchesRequired = !showRequiredOnly || doc.required;
-
       return matchesSearch && matchesCategory && matchesRegulatoryBody && matchesRequired;
     });
   }, [complianceDocuments, searchTerm, selectedCategory, selectedRegulatoryBody, showRequiredOnly]);
-
-  const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedCategory('all');
-    setSelectedRegulatoryBody('all');
-    setShowRequiredOnly(false);
-    setSelectedSetId('none');
-  };
 
   // Handle document set selection
   const handleSetSelection = (setId: string) => {
@@ -77,7 +129,6 @@ const DocumentSelectionStep = ({
     const selectedSet = documentSets.find(s => s.id === setId);
     if (!selectedSet) return;
 
-    // Auto-select documents from the set
     selectedSet.document_ids.forEach(docId => {
       const doc = complianceDocuments.find(d => d.id === docId);
       if (doc && !selectedDocuments.find(sd => sd.id === docId)) {
@@ -85,192 +136,169 @@ const DocumentSelectionStep = ({
       }
     });
 
-    // Increment usage count
     incrementUsage(setId);
   };
 
   return (
-    <div className="flex flex-col h-full space-y-5">
-      {/* AI Recommendation Banner */}
+    // Full-height column on lg+ (the section pins the surrounding chrome):
+    // the strip / toolbar / count stay put and only the document list scrolls.
+    <div className="flex h-full min-h-0 flex-col gap-4">
+      {/* AI recommendation strip */}
       {showAIBanner && (
-        <div className="ai-card p-3 flex items-center justify-between gap-4 shrink-0">
-          <div className="flex items-center gap-3">
-            <span className="text-primary font-bold flex items-center gap-2 shrink-0">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-              </svg>
-              AI Recommendation
-              <Badge className="bg-primary/15 text-primary hover:bg-primary/15 border-0 text-[10px] px-1.5 py-0">BETA</Badge>
-            </span>
-            <p className="text-foreground/80 text-[13px] hidden sm:block">
-              General Suppliers commonly require ISO 9001, ISO 14001, Supplier Questionnaire, and Code of Conduct. <span className="font-medium text-foreground">4 suggested documents.</span>
-            </p>
+        <div className={`${cardClass} ${cardPadClass} flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between`}>
+          <div className="flex items-start gap-3 min-w-0">
+            <Sparkles className={`${inlineIconClass} text-primary mt-0.5 shrink-0`} />
+            <div className="min-w-0">
+              <p className={sectionLabelClass}>AI recommendation</p>
+              <p className="mt-1 text-small text-muted-foreground">
+                {aiLoading ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Analyzing {entityType} requirements…
+                  </span>
+                ) : (
+                  <>
+                    {aiSummary || `Suggested documents for ${entityType}.`}{' '}
+                    <span className="font-medium text-foreground">
+                      {recommendedDocs.length} suggested.
+                    </span>
+                  </>
+                )}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button className="bg-primary hover:bg-primary-hover text-white rounded-[10px] h-8 px-3 text-[12px] font-semibold shadow-sm transition-colors">
-              <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              Apply Suggestions
-            </Button>
-            <Button 
-              variant="ghost" 
-              onClick={() => setShowAIBanner(false)}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted rounded-[10px] h-8 px-3 text-[12px] font-semibold transition-colors"
+            <Button
+              size="sm"
+              onClick={applyRecommendations}
+              disabled={aiLoading || recommendedDocs.length === 0}
+              className="bg-primary text-primary-foreground hover:bg-primary-hover"
             >
+              <Check className="h-4 w-4 mr-1.5" /> Apply suggestions
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setShowAIBanner(false)}>
               Dismiss
             </Button>
           </div>
         </div>
       )}
 
-      {/* Filter Bar */}
-      <div className="bg-card border border-border rounded-[16px] p-2 flex flex-wrap items-center gap-2 shadow-sm shrink-0">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/70 w-4 h-4" />
+      {/* Filter toolbar */}
+      <div className={`${cardClass} flex shrink-0 flex-wrap items-center gap-2 p-2`}>
+        <div className="relative min-w-[200px] flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search documents..."
+            placeholder="Search documents…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-9 border-0 shadow-none focus-visible:ring-0 text-[14px]"
+            className="h-9 border-0 pl-9 text-body shadow-none focus-visible:ring-0"
           />
         </div>
-        <div className="w-[1px] h-5 bg-muted hidden sm:block"></div>
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="h-9 border-0 shadow-none focus:ring-0 text-[14px] w-auto">
-            <SelectValue placeholder="All Categories" />
-          </SelectTrigger>
+          <SelectTrigger className="h-9 w-auto gap-1 border-border text-small"><SelectValue placeholder="All categories" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {categories.map(category => (
-              <SelectItem key={category} value={category}>{category}</SelectItem>
-            ))}
+            <SelectItem value="all">All categories</SelectItem>
+            {categories.map(category => (<SelectItem key={category} value={category}>{category}</SelectItem>))}
           </SelectContent>
         </Select>
-        <div className="w-[1px] h-5 bg-muted hidden sm:block"></div>
         <Select value={selectedRegulatoryBody} onValueChange={setSelectedRegulatoryBody}>
-          <SelectTrigger className="h-9 border-0 shadow-none focus:ring-0 text-[14px] w-auto">
-            <SelectValue placeholder="All Regulatory Frameworks" />
-          </SelectTrigger>
+          <SelectTrigger className="h-9 w-auto gap-1 border-border text-small"><SelectValue placeholder="All frameworks" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Regulatory Frameworks</SelectItem>
-            {regulatoryBodies.map(body => (
-              <SelectItem key={body} value={body}>{body}</SelectItem>
-            ))}
+            <SelectItem value="all">All frameworks</SelectItem>
+            {regulatoryBodies.map(body => (<SelectItem key={body} value={body}>{body}</SelectItem>))}
           </SelectContent>
         </Select>
         {buyerId && documentSets && documentSets.length > 0 && (
-          <>
-            <div className="w-[1px] h-5 bg-muted hidden sm:block"></div>
-            <Select value={selectedSetId} onValueChange={handleSetSelection}>
-              <SelectTrigger className="h-9 border-0 shadow-none focus:ring-0 text-[14px] w-auto">
-                <SelectValue placeholder="All Document Sets" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No Set Selected</SelectItem>
-                {documentSets.map(set => (
-                  <SelectItem key={set.id} value={set.id}>
-                    {set.set_name} ({set.document_ids.length})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </>
+          <Select value={selectedSetId} onValueChange={handleSetSelection}>
+            <SelectTrigger className="h-9 w-auto gap-1 border-border text-small"><SelectValue placeholder="Document sets" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No set selected</SelectItem>
+              {documentSets.map(set => (
+                <SelectItem key={set.id} value={set.id}>{set.set_name} ({set.document_ids.length})</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
-        <div className="w-[1px] h-5 bg-muted hidden sm:block"></div>
-        <div className="flex items-center gap-2 px-3">
-          <Checkbox 
+        <div className="flex items-center gap-2 px-2">
+          <Checkbox
             id="required-only"
             checked={showRequiredOnly}
             onCheckedChange={(checked) => setShowRequiredOnly(checked === true)}
-            className="rounded-[4px] border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
           />
-          <label htmlFor="required-only" className="text-[13px] font-medium text-foreground/80 cursor-pointer">
-            Required only
-          </label>
+          <label htmlFor="required-only" className="cursor-pointer text-small font-medium text-muted-foreground">Required only</label>
         </div>
-        <div className="ml-auto pr-3 pl-2 flex items-center gap-2 border-l border-border">
-          <Badge className="bg-primary/10 text-primary hover:bg-primary/10 border-0 text-[13px] font-semibold px-2 py-0.5 rounded-[8px]">
-            {selectedDocuments.length} selected
-          </Badge>
+        <div className="ml-auto pl-2 pr-1">
+          <span className={pillAccentClass}>{selectedDocuments.length} selected</span>
         </div>
       </div>
 
-      <div className="text-[13px] text-muted-foreground">
+      <p className="shrink-0 text-caption text-muted-foreground">
         Showing {filteredDocuments.length} of {complianceDocuments.length} documents
-      </div>
+      </p>
 
-      {/* Document List */}
-      <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-        <div className="bg-card border border-border rounded-[16px] divide-y divide-[#E4E7EC] overflow-hidden shadow-sm">
-          {filteredDocuments.length === 0 ? (
-            <div className="p-10 text-center text-muted-foreground">
-              <Filter className="w-10 h-10 mx-auto mb-3 text-muted-foreground/70" />
-              <h3 className="text-[16px] font-bold mb-1 text-foreground">No documents found</h3>
-              <p className="text-[14px]">Try adjusting your search criteria or filters</p>
-            </div>
-          ) : (
-            filteredDocuments.map((doc) => {
-              const isSelected = !!selectedDocuments.find(d => d.id === doc.id);
-              const isSuggested = ['ISO 9001 Certificate', 'ISO 14001 Environmental Certificate', 'Completed Supplier Questionnaire', 'Supplier Code of Conduct'].includes(doc.title);
-              
-              return (
-                <div 
-                  key={doc.id} 
-                  className={`flex items-center justify-between p-4 transition-colors hover:bg-muted cursor-pointer ${isSelected ? 'bg-muted' : ''}`}
-                  onClick={() => onDocumentToggle(doc, !isSelected)}
-                >
-                  <div className="flex items-center gap-4 flex-1">
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={(checked) => onDocumentToggle(doc, checked === true)}
-                        className="w-5 h-5 rounded-[6px] border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                      />
-                    </div>
-                    <div className={`w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0 ${isSelected ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                      <doc.icon className="w-5 h-5" />
-                    </div>
-                    <div className="min-w-0 flex-1 pr-4">
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <span className="text-[15px] font-bold text-foreground">{doc.title}</span>
-                        <Badge className="bg-primary/10 text-primary hover:bg-primary/10 border-0 text-[11px] font-semibold px-2 py-0 rounded-[6px]">{doc.category}</Badge>
-                        <Badge variant="outline" className="text-muted-foreground border-border text-[11px] font-semibold px-2 py-0 rounded-[6px]">{doc.regulatoryBody}</Badge>
-                        {doc.required && (
-                          <Badge className="bg-danger/15 text-danger hover:bg-danger/15 border-0 text-[11px] font-semibold px-2 py-0 rounded-[6px]">Required</Badge>
-                        )}
-                        {!doc.required && (
-                          <Badge className="bg-muted text-muted-foreground hover:bg-muted border-0 text-[11px] font-semibold px-2 py-0 rounded-[6px]">Optional</Badge>
-                        )}
-                      </div>
-                      <p className="text-[13px] text-muted-foreground truncate">{doc.description}</p>
-                    </div>
+      {/* Document list — the one internally-scrolling region of step 1 */}
+      <div className={`${cardClass} divide-y divide-border overflow-hidden lg:min-h-0 lg:flex-1 lg:overflow-y-auto`}>
+        {filteredDocuments.length === 0 ? (
+          <div className={emptyStateClass}>
+            <Filter className="h-8 w-8 text-muted-foreground/70" />
+            <p className="text-body font-medium text-foreground">No documents found</p>
+            <p className="text-small">Try adjusting your search or filters.</p>
+          </div>
+        ) : (
+          filteredDocuments.map((doc) => {
+            const isSelected = !!selectedDocuments.find(d => d.id === doc.id);
+            const isSuggested = suggestedIds.has(doc.id);
+            return (
+              <div
+                key={doc.id}
+                className={`flex items-center justify-between gap-4 px-4 py-3.5 cursor-pointer ${hoverSurfaceClass} ${isSelected ? 'bg-muted/60' : ''}`}
+                onClick={() => onDocumentToggle(doc, !isSelected)}
+              >
+                <div className="flex min-w-0 flex-1 items-center gap-3.5">
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={(checked) => onDocumentToggle(doc, checked === true)}
+                      className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
                   </div>
-                  
-                  <div className="flex items-center gap-6 shrink-0">
-                    {isSuggested && (
-                      <span className="text-primary text-[12px] font-semibold flex items-center gap-1.5 bg-primary/10 px-2.5 py-1 rounded-full border border-primary/25">
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                        </svg>
-                        AI Suggested
-                      </span>
-                    )}
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); /* Preview action */ }}
-                      className="text-primary text-[13px] font-semibold hover:underline flex items-center gap-1.5"
-                    >
-                      Preview Template
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                    </button>
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-control ${isSelected ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                    <doc.icon className="h-[18px] w-[18px]" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-body font-semibold text-foreground">{doc.title}</span>
+                      <span className={pillClass}>{doc.category}</span>
+                      <span className={pillClass}>{doc.regulatoryBody}</span>
+                      {doc.required ? (
+                        <span className="inline-flex items-center rounded-pill border border-danger/30 bg-danger/10 px-2.5 py-0.5 text-caption font-medium text-danger">Required</span>
+                      ) : (
+                        <span className={pillClass}>Optional</span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 truncate text-small text-muted-foreground">{doc.description}</p>
                   </div>
                 </div>
-              );
-            })
-          )}
-        </div>
+
+                <div className="flex shrink-0 items-center gap-3">
+                  {isSuggested && (
+                    <span className={pillAccentClass}>
+                      <Sparkles className="h-3 w-3" /> AI
+                    </span>
+                  )}
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={(e) => { e.stopPropagation(); /* Preview action */ }}
+                    className="h-auto gap-1.5 p-0 text-small text-primary"
+                  >
+                    Preview template <ExternalLink className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {buyerId && (

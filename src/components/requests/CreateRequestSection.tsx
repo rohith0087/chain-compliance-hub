@@ -1,23 +1,25 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle,
-  DialogDescription 
-} from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { FileText } from 'lucide-react';
-import DocumentSelectionStep from './requests/DocumentSelectionStep';
-import RequestConfigurationStep from './requests/RequestConfigurationStep';
+import { Check, FileText } from 'lucide-react';
+import DocumentSelectionStep from './DocumentSelectionStep';
+import RequestConfigurationStep from './RequestConfigurationStep';
 import RequestReusePreflightStep, {
   type RequestPreflightResult,
   type RequestReuseResolution,
-} from './requests/RequestReusePreflightStep';
-import RequestReviewStep from './requests/RequestReviewStep';
-import { getComplianceDocuments, ComplianceDocument } from './requests/ComplianceDocuments';
+} from './RequestReusePreflightStep';
+import RequestReviewStep, { ReviewAiSummaryPanel } from './RequestReviewStep';
+import RequestSummaryRail from './RequestSummaryRail';
+import { getComplianceDocuments, ComplianceDocument } from './ComplianceDocuments';
+import {
+  cardClass,
+  cardPadClass,
+  pageTitleClass,
+  sectionLabelClass,
+  mutedBodyClass,
+  emptyStateClass,
+} from '@/design/system';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -26,11 +28,9 @@ import { getWorkspaceProfileForIndustry } from '@/config/workspaceProfiles';
 import { useCanonicalEvidenceFeature } from '@/hooks/useCanonicalEvidenceFeature';
 import { useOrganizationFeature } from '@/hooks/useOrganizationFeature';
 
-interface NewRequestModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface CreateRequestSectionProps {
   onCreateRequest: (request: any) => void;
-  userType: string;
+  onDone: () => void;
   currentBranch?: { id: string; branch_name: string } | null;
 }
 
@@ -55,13 +55,19 @@ interface CanonicalRequestResult {
 
 const errorMessage = (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback;
 
-const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBranch }: NewRequestModalProps) => {
+const STEPS = [
+  { n: 1, label: 'Select Documents' },
+  { n: 2, label: 'Configure Request' },
+  { n: 3, label: 'Review & Send' },
+];
+
+const CreateRequestSection = ({ onCreateRequest, onDone, currentBranch }: CreateRequestSectionProps) => {
   const [step, setStep] = useState(1);
   const [selectedSupplierType, setSelectedSupplierType] = useState<string>('General Supplier');
   const [selectedDocuments, setSelectedDocuments] = useState<ComplianceDocument[]>([]);
   const [formData, setFormData] = useState({
     suppliers: [] as string[],
-    supplierBranches: {} as Record<string, string>, // supplierId -> branchId
+    supplierBranches: {} as Record<string, string>,
     priority: 'medium' as 'high' | 'medium' | 'low' | 'urgent',
     dueDate: '',
     notes: '',
@@ -80,39 +86,30 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
   const { enabled: reliableDeliveryEnabled } = useOrganizationFeature('reliable_request_delivery_v1', buyerProfile?.id, 'buyer');
   const staticComplianceDocuments = useMemo(() => getComplianceDocuments(selectedSupplierType), [selectedSupplierType]);
 
-  // Use branch-specific supplier connections if branch is provided, otherwise fall back to all connections
-  const { 
-    connections: branchSupplierConnections, 
-    loading: branchSuppliersLoading 
-  } = useBranchSupplierConnections(currentBranch?.id);
-  
+  const { connections: branchSupplierConnections, loading: branchSuppliersLoading } = useBranchSupplierConnections(currentBranch?.id);
   const [allConnectedSuppliers, setAllConnectedSuppliers] = useState<any[]>([]);
 
-  // Get the appropriate suppliers based on branch context
-  const connectedSuppliers = currentBranch 
-    ? branchSupplierConnections
-        .map(conn => ({ id: conn.supplier_id, company_name: conn.supplier?.company_name || 'Supplier' }))
+  const connectedSuppliers = currentBranch
+    ? branchSupplierConnections.map(conn => ({ id: conn.supplier_id, company_name: conn.supplier?.company_name || 'Supplier' }))
     : allConnectedSuppliers;
 
-  // Fetch buyer data and connected suppliers when modal opens
-  React.useEffect(() => {
-    if (isOpen && user) {
-      fetchBuyerData();
-    }
-  }, [isOpen, user]);
+  useEffect(() => {
+    if (user) fetchBuyerData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   // Apply auditor workspace defaults: lock entity type to "Auditor"
   const wsProfile = getWorkspaceProfileForIndustry(buyerProfile?.industry);
   const wsFlags = wsProfile.flags;
-  React.useEffect(() => {
+  useEffect(() => {
     if (wsFlags.defaultEntityType && selectedSupplierType !== wsFlags.defaultEntityType) {
       setSelectedSupplierType(wsFlags.defaultEntityType);
       setSelectedDocuments([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wsFlags.defaultEntityType]);
 
-  // Combine static documents with custom templates
-  React.useEffect(() => {
+  useEffect(() => {
     const transformedCustomTemplates: ComplianceDocument[] = customTemplates.map(template => ({
       id: `custom-${template.id}`,
       title: template.template_name,
@@ -121,19 +118,15 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
       icon: staticComplianceDocuments[0]?.icon || FileText,
       required: false,
       regulatoryBody: 'Custom Template',
-      template: {
-        sections: template.required_fields || []
-      },
+      template: { sections: template.required_fields || [] },
       isCustomTemplate: true,
-      customTemplateId: template.id
+      customTemplateId: template.id,
     }));
-
     setAllDocuments([...staticComplianceDocuments, ...transformedCustomTemplates]);
   }, [staticComplianceDocuments, customTemplates]);
 
   const fetchBuyerData = async () => {
     try {
-      // Step 1: Check if user is a team member
       const { data: teamMember } = await supabase
         .from('company_users')
         .select('company_id')
@@ -142,10 +135,8 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
         .eq('status', 'active')
         .maybeSingle();
 
-      // Step 2: Resolve buyer ID (team member uses company_id, owner uses profile_id)
       const buyerId = teamMember?.company_id || user?.id;
 
-      // Step 3: Get buyer profile using resolved ID
       const { data: buyer, error: buyerError } = await supabase
         .from('buyers')
         .select('*')
@@ -159,14 +150,10 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
 
       setBuyerProfile(buyer);
 
-      // Only fetch all connected suppliers if no branch is selected (backward compatibility)
       if (!currentBranch) {
         const { data: connections, error: connectionsError } = await supabase
           .from('buyer_supplier_connections')
-          .select(`
-            *,
-            suppliers (*)
-          `)
+          .select(`*, suppliers (*)`)
           .eq('buyer_id', buyer.id)
           .eq('status', 'approved');
 
@@ -174,11 +161,9 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
           console.error('Error fetching connections:', connectionsError);
           return;
         }
-
         setAllConnectedSuppliers(connections?.map(conn => conn.suppliers) || []);
       }
 
-      // Fetch custom templates
       const { data: templates, error: templatesError } = await supabase
         .from('custom_document_templates')
         .select('*')
@@ -213,12 +198,9 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
 
   const handleSuppliersChange = (suppliers: string[]) => {
     setFormData(prev => {
-      // Clean up branch selections for removed suppliers
       const newSupplierBranches = { ...prev.supplierBranches };
       Object.keys(newSupplierBranches).forEach(supplierId => {
-        if (!suppliers.includes(supplierId)) {
-          delete newSupplierBranches[supplierId];
-        }
+        if (!suppliers.includes(supplierId)) delete newSupplierBranches[supplierId];
       });
       return { ...prev, suppliers, supplierBranches: newSupplierBranches };
     });
@@ -227,10 +209,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
   const handleSupplierBranchChange = (supplierId: string, branchId: string) => {
     setFormData(prev => ({
       ...prev,
-      supplierBranches: {
-        ...prev.supplierBranches,
-        [supplierId]: branchId
-      }
+      supplierBranches: { ...prev.supplierBranches, [supplierId]: branchId },
     }));
   };
 
@@ -284,177 +263,110 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
 
   const handleLegacyCreateRequests = async (sampleDocument?: SampleDocumentSelection) => {
     if (!user || !buyerProfile || selectedDocuments.length === 0 || formData.suppliers.length === 0) {
-      toast({
-        title: "Error",
-        description: "Please select at least one document and one supplier.",
-        variant: "destructive",
-      });
+      toast({ title: 'Error', description: 'Please select at least one document and one supplier.', variant: 'destructive' });
       return;
     }
-
     setLoading(true);
-
     try {
-      // Upload sample document if provided
-      let sampleData: {
-        sample_file_path?: string;
-        sample_file_name?: string;
-        sample_file_size?: number;
-        sample_mime_type?: string;
-        sample_uploaded_by?: string;
-        sample_uploaded_at?: string;
-      } = {};
+      let sampleData: Record<string, unknown> = {};
 
       if (sampleDocument?.source === 'device' && sampleDocument.file) {
         const file = sampleDocument.file;
         const fileExt = file.name.split('.').pop();
         const timestamp = Date.now();
         const fileKey = `${buyerProfile.id}/${crypto.randomUUID()}_${timestamp}.${fileExt}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('sample-documents')
-          .upload(fileKey, file);
-
+        const { error: uploadError } = await supabase.storage.from('sample-documents').upload(fileKey, file);
         if (uploadError) {
           console.error('Sample upload error:', uploadError);
           throw new Error('Failed to upload sample document');
         }
-
         sampleData = {
-          sample_file_path: fileKey,
-          sample_file_name: file.name,
-          sample_file_size: file.size,
-          sample_mime_type: file.type,
-          sample_uploaded_by: user.id,
-          sample_uploaded_at: new Date().toISOString()
+          sample_file_path: fileKey, sample_file_name: file.name, sample_file_size: file.size,
+          sample_mime_type: file.type, sample_uploaded_by: user.id, sample_uploaded_at: new Date().toISOString(),
         };
       } else if (sampleDocument?.source === 'library' && sampleDocument.libraryDoc) {
         const libDoc = sampleDocument.libraryDoc;
         sampleData = {
-          sample_file_path: libDoc.file_path,
-          sample_file_name: libDoc.document_name,
-          sample_file_size: libDoc.file_size,
-          sample_mime_type: libDoc.mime_type,
-          sample_uploaded_by: user.id,
-          sample_uploaded_at: new Date().toISOString()
+          sample_file_path: libDoc.file_path, sample_file_name: libDoc.document_name, sample_file_size: libDoc.file_size,
+          sample_mime_type: libDoc.mime_type, sample_uploaded_by: user.id, sample_uploaded_at: new Date().toISOString(),
         };
       }
 
       let totalRequestsCreated = 0;
-      
-      // Collect request IDs per supplier for batch email
       const requestsBySupplier: Record<string, string[]> = {};
-      
-      // Create a separate request for each selected document AND each selected supplier
+
       for (const doc of selectedDocuments) {
         for (const supplierId of formData.suppliers) {
           const supplierBranchId = formData.supplierBranches[supplierId] === 'all' ? null : (formData.supplierBranches[supplierId] || null);
-          
-          // Auto-fetch sample template for this document type if not manually provided
+
           let finalSampleData = { ...sampleData };
           if (!sampleDocument?.source) {
-            // Check for a saved sample template for this document type
             const { data: templateData } = await supabase
               .from('buyer_sample_templates')
               .select('*')
               .eq('buyer_id', buyerProfile.id)
               .eq('document_type', doc.title)
               .maybeSingle();
-
             if (templateData) {
               finalSampleData = {
-                sample_file_path: templateData.sample_file_path,
-                sample_file_name: templateData.sample_file_name,
-                sample_file_size: templateData.sample_file_size,
-                sample_mime_type: templateData.sample_mime_type,
-                sample_uploaded_by: templateData.uploaded_by,
-                sample_uploaded_at: templateData.created_at
+                sample_file_path: templateData.sample_file_path, sample_file_name: templateData.sample_file_name,
+                sample_file_size: templateData.sample_file_size, sample_mime_type: templateData.sample_mime_type,
+                sample_uploaded_by: templateData.uploaded_by, sample_uploaded_at: templateData.created_at,
               };
             }
           }
-          
-          const insertData: any = {
-            title: doc.title,
-            description: doc.description,
-            document_type: doc.title,
-            category: doc.category,
-            priority: formData.priority,
-            due_date: formData.dueDate || null,
-            supplier_id: supplierId,
-            buyer_id: buyerProfile.id,
-            requester_id: user.id,
-            branch_id: currentBranch?.id || null, // Buyer's branch
-            supplier_branch_id: supplierBranchId, // Target supplier branch
-            notes: formData.notes || null,
-            template_sections: doc.template || null,
-            ...finalSampleData // Include sample document data (manual or auto-attached)
-          };
 
-          // Add custom template ID if this is a custom template
+          const insertData: any = {
+            title: doc.title, description: doc.description, document_type: doc.title, category: doc.category,
+            priority: formData.priority, due_date: formData.dueDate || null, supplier_id: supplierId,
+            buyer_id: buyerProfile.id, requester_id: user.id, branch_id: currentBranch?.id || null,
+            supplier_branch_id: supplierBranchId, notes: formData.notes || null,
+            template_sections: doc.template || null, ...finalSampleData,
+          };
           if ((doc as any).isCustomTemplate && (doc as any).customTemplateId) {
             insertData.custom_template_id = (doc as any).customTemplateId;
             insertData.template_type = 'custom';
           }
 
-          const { data: request, error } = await supabase
-            .from('document_requests')
-            .insert(insertData)
-            .select()
-            .single();
-
+          const { data: request, error } = await supabase.from('document_requests').insert(insertData).select().single();
           if (error) {
             console.error('Error creating request:', error);
             throw error;
           }
 
-          // Create notification for supplier
           const supplier = connectedSuppliers.find(s => s.id === supplierId);
           if (supplier) {
             await supabase.rpc('create_notification', {
-              p_user_id: supplier.profile_id,
-              p_title: 'New Document Request',
+              p_user_id: supplier.profile_id, p_title: 'New Document Request',
               p_message: `You have received a new document request: ${doc.title}`,
-              p_type: 'request_created',
-              p_reference_id: request.id
+              p_type: 'request_created', p_reference_id: request.id,
             });
           }
 
-          // Collect request ID for batch email
-          if (!requestsBySupplier[supplierId]) {
-            requestsBySupplier[supplierId] = [];
-          }
+          if (!requestsBySupplier[supplierId]) requestsBySupplier[supplierId] = [];
           requestsBySupplier[supplierId].push(request.id);
 
-          // Call the callback to update the parent component
           onCreateRequest(request);
           totalRequestsCreated++;
         }
       }
 
-      // Send ONE batch email per supplier (instead of one per document)
       if (!reliableDeliveryEnabled) {
         for (const [supplierId, requestIds] of Object.entries(requestsBySupplier)) {
-          supabase.functions.invoke('send-batch-request-email', {
-            body: { requestIds, supplierId }
-          }).catch(err => console.error('Failed to send batch request email:', err));
+          supabase.functions.invoke('send-batch-request-email', { body: { requestIds, supplierId } })
+            .catch(err => console.error('Failed to send batch request email:', err));
         }
       }
 
       toast({
-        title: "Requests Created",
+        title: 'Requests Created',
         description: `Successfully created ${totalRequestsCreated} document request(s) for ${formData.suppliers.length} supplier(s).`,
       });
-
-      // Reset form and close modal
       resetForm();
-      onClose();
+      onDone();
     } catch (error: any) {
       console.error('Error creating requests:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create requests. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: 'Error', description: error.message || 'Failed to create requests. Please try again.', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -494,13 +406,10 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
           priority: formData.priority, due_date: formData.dueDate || null, notes: formData.notes || null,
           branch_id: currentBranch?.id || null, supplier_branch_id: supplierBranchId,
           subject_type: 'supplier', subject_id: result.supplier_id, jurisdiction: null,
-          required_standards: [],
-          reuse_preference: resolution.choice, request_reason_code: resolution.reasonCode || null,
+          required_standards: [], reuse_preference: resolution.choice, request_reason_code: resolution.reasonCode || null,
           request_reason_notes: resolution.reasonNotes || null, idempotency_key: crypto.randomUUID(),
-          template_sections: doc.template || null,
-          template_type: doc.isCustomTemplate ? 'custom' : 'standard',
-          custom_template_id: doc.customTemplateId || null,
-          ...sampleData,
+          template_sections: doc.template || null, template_type: doc.isCustomTemplate ? 'custom' : 'standard',
+          custom_template_id: doc.customTemplateId || null, ...sampleData,
         };
       });
       const { data, error } = await supabase.functions.invoke('create-document-requests-v2', { body: { requests } });
@@ -510,7 +419,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
       const bySupplier: Record<string, string[]> = {};
       created.forEach(({ result, request }) => {
         if (request.supplier_id && result.fulfillment_status !== 'fulfilled_existing') {
-          (bySupplier[request.supplier_id] ||= []).push(result.request_id);
+          (bySupplier[request.supplier_id] ||= []).push(result.request_id!);
         }
         onCreateRequest(result);
       });
@@ -524,7 +433,7 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
         description: `${created.length} request(s) created or fulfilled; ${requests.length - created.length} duplicate request(s) cancelled.`,
       });
       resetForm();
-      onClose();
+      onDone();
     } catch (error: unknown) {
       toast({ title: 'Request creation failed', description: errorMessage(error, 'Could not create requests.'), variant: 'destructive' });
     } finally {
@@ -537,220 +446,236 @@ const NewRequestModal = ({ isOpen, onClose, onCreateRequest, userType, currentBr
     setSelectedDocuments([]);
     setPreflightResults([]);
     setReuseResolutions({});
-    setPendingSampleDocument(undefined);
-    setFormData({
-      suppliers: [],
-      supplierBranches: {},
-      priority: 'medium' as 'high' | 'medium' | 'low' | 'urgent',
-      dueDate: '',
-      notes: '',
-    });
+    setPendingSampleDocument({ source: null });
+    setFormData({ suppliers: [], supplierBranches: {}, priority: 'medium', dueDate: '', notes: '' });
   };
 
-  // Show setup message if buyer profile is not available
-  if (isOpen && !buyerProfile) {
+  // ── Guard states ────────────────────────────────────────────────────────────
+  const Header = () => (
+    <div className="space-y-1">
+      <p className={sectionLabelClass}>New request</p>
+      <h1 className={pageTitleClass}>Create Document Request</h1>
+    </div>
+  );
+
+  if (buyerProfile === null) {
+    // still loading, or profile missing — fetchBuyerData bails silently on error
     return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Setup Required</DialogTitle>
-          </DialogHeader>
-          <div className="text-center py-4">
-            <p>Please complete your buyer profile setup before creating document requests.</p>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <div className="mx-auto w-full max-w-[1120px] space-y-6">
+        <Header />
+        <div className={emptyStateClass}>Loading your workspace…</div>
+      </div>
     );
   }
 
-  // Show connection message if no suppliers are connected
-  if (isOpen && connectedSuppliers.length === 0 && !branchSuppliersLoading) {
-    const message = currentBranch 
-      ? `No suppliers are assigned to the "${currentBranch.branch_name}" branch. Please assign suppliers to this branch first.`
+  if (connectedSuppliers.length === 0 && !branchSuppliersLoading) {
+    const message = currentBranch
+      ? `No suppliers are assigned to the "${currentBranch.branch_name}" branch. Assign suppliers to this branch first.`
       : 'You need to connect with suppliers before creating document requests.';
-    
     return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {currentBranch ? 'No Branch Suppliers' : 'No Connected Suppliers'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="text-center py-4">
-            <p>{message}</p>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <div className="mx-auto w-full max-w-[1120px] space-y-6">
+        <Header />
+        <div className={emptyStateClass}>
+          <p>{message}</p>
+          <Button variant="outline" size="sm" onClick={onDone} className="mt-2">Back to requests</Button>
+        </div>
+      </div>
     );
   }
+
+  // Steps 1-3 share the two-column layout; the right column holds the live
+  // summary + AI guidance while building (1-2) and the AI send-summary on
+  // review (3). The preflight step (4) is full-width.
+  const twoColumn = step === 1 || step === 2 || step === 3;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[1100px] h-[90vh] bg-muted rounded-[20px] p-0 overflow-hidden border-0 shadow-2xl flex flex-col gap-0 backdrop-blur-sm">
-        
-        {/* Modal Header & Stepper */}
-        <div className="bg-card border-b border-border px-8 py-5 flex items-center justify-between sticky top-0 z-10 shrink-0">
-          <div>
-            <DialogTitle className="text-[22px] font-bold text-foreground mb-1">
-              Create Document Request
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground text-[15px]">
-              {step === 1 ? 'Choose the compliance documents you want to request from suppliers.' : step === 2 ? 'Configure who should receive this request and set the request details.' : 'Review the request details before sending it to suppliers.'}
-              {currentBranch && (
-                <span className="block mt-1">
-                  Requests will be sent to entities assigned to {currentBranch.branch_name}
-                </span>
-              )}
-            </DialogDescription>
-          </div>
-          
-          {/* Stepper */}
-          <div className="flex items-center gap-3 pr-8">
-            <div className="flex items-center gap-2">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-bold ${step >= 1 ? 'bg-primary text-white' : 'bg-muted text-muted-foreground/70'}`}>1</div>
-              <span className={`text-[14px] font-semibold ${step >= 1 ? 'text-primary' : 'text-muted-foreground/70'}`}>Select Documents</span>
-            </div>
-            <div className="w-12 h-[1px] bg-muted"></div>
-            <div className="flex items-center gap-2">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-bold ${step >= 2 ? 'bg-primary text-white' : 'bg-muted text-muted-foreground/70'}`}>2</div>
-              <span className={`text-[14px] font-semibold ${step >= 2 ? 'text-primary' : 'text-muted-foreground/70'}`}>Configure Request</span>
-            </div>
-            <div className="w-12 h-[1px] bg-muted"></div>
-            <div className="flex items-center gap-2">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-bold ${step >= 3 ? 'bg-primary text-white' : 'bg-muted text-muted-foreground/70'}`}>3</div>
-              <span className={`text-[14px] font-semibold ${step >= 3 ? 'text-primary' : 'text-muted-foreground/70'}`}>Review & Send</span>
-            </div>
-          </div>
-        </div>
+    // Viewport-locked on lg+: the shell header is 72px and the shell main has
+    // py-5 (40px), so the section claims the remaining height and pins its own
+    // chrome — tall content scrolls internally instead of the page. Below lg
+    // the section falls back to normal page flow (nested scrollbars are poor
+    // UX on touch).
+    <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-5 lg:h-[calc(100vh-112px)]">
+      {/* Header + stepper */}
+      <div className="flex shrink-0 flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <Header />
+        <ol className="flex items-center gap-2">
+          {STEPS.map((s, i) => {
+            const state = step > s.n ? 'done' : step === s.n ? 'active' : 'todo';
+            return (
+              <React.Fragment key={s.n}>
+                <li className="flex items-center gap-2">
+                  <span
+                    className={
+                      'flex h-6 w-6 items-center justify-center rounded-full text-caption font-semibold ' +
+                      (state === 'done'
+                        ? 'bg-primary text-primary-foreground'
+                        : state === 'active'
+                          ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
+                          : 'bg-muted text-muted-foreground')
+                    }
+                  >
+                    {state === 'done' ? <Check className="h-3.5 w-3.5" /> : s.n}
+                  </span>
+                  <span className={`text-small font-medium ${state === 'todo' ? 'text-muted-foreground' : 'text-foreground'} hidden md:inline`}>
+                    {s.label}
+                  </span>
+                </li>
+                {i < STEPS.length - 1 && <span className="h-px w-6 bg-border" />}
+              </React.Fragment>
+            );
+          })}
+        </ol>
+      </div>
 
-        {/* Non-scrollable Body Container */}
-        <div className="flex-1 flex flex-col overflow-hidden p-8">
+      {/* Body — fills the remaining height; each step decides what scrolls. */}
+      <div className={`flex-1 lg:min-h-0 ${twoColumn ? 'flex flex-col gap-6 lg:flex-row' : 'flex flex-col'}`}>
+        <div
+          className={
+            step === 1
+              // Step 1: chrome (entity type, AI strip, filters) stays pinned;
+              // only the document list scrolls (inside DocumentSelectionStep).
+              ? 'flex min-w-0 flex-1 flex-col gap-4 lg:min-h-0'
+              // Steps 2-4: no single dominant list, so the whole working
+              // column scrolls internally under the pinned header/footer.
+              : 'min-w-0 flex-1 space-y-5 lg:min-h-0 lg:overflow-y-auto lg:pr-1'
+          }
+        >
           {step === 1 && (
-          <div className="flex flex-col h-full space-y-6 overflow-hidden">
-            {/* Entity Type Selection */}
-            <div className="flex items-center gap-4 shrink-0">
-              <Label htmlFor="entity-type" className="font-bold text-foreground text-[14px]">
-                {wsFlags.lockEntityType ? 'Engagement Type' : 'Entity Type'}
-              </Label>
-              <Select 
-                value={selectedSupplierType} 
-                onValueChange={(value) => {
-                  setSelectedSupplierType(value);
-                  setSelectedDocuments([]); // Clear selected documents when entity type changes
-                }}
-                disabled={wsFlags.lockEntityType}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select entity type" />
-                </SelectTrigger>
-              <SelectContent>
-                {wsFlags.lockEntityType ? (
-                  <SelectItem value="Auditor">Auditor</SelectItem>
-                ) : (
-                  <>
-                    <SelectItem value="General Supplier">General Supplier</SelectItem>
-                    <SelectItem value="Egg Processing">Egg Processing / Hatchery</SelectItem>
-                  </>
-                )}
-              </SelectContent>
-              </Select>
-            </div>
+            <>
+              {/* Entity type */}
+              <div className={`${cardClass} ${cardPadClass} flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4`}>
+                <Label htmlFor="entity-type" className="text-small font-semibold text-foreground shrink-0">
+                  {wsFlags.lockEntityType ? 'Engagement type' : 'Entity type'}
+                </Label>
+                <Select
+                  value={selectedSupplierType}
+                  onValueChange={(value) => { setSelectedSupplierType(value); setSelectedDocuments([]); }}
+                  disabled={wsFlags.lockEntityType}
+                >
+                  <SelectTrigger className="h-10 sm:max-w-sm">
+                    <SelectValue placeholder="Select entity type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {wsFlags.lockEntityType ? (
+                      <SelectItem value="Auditor">Auditor</SelectItem>
+                    ) : (
+                      <>
+                        <SelectItem value="General Supplier">General Supplier</SelectItem>
+                        <SelectItem value="Egg Processing">Egg Processing / Hatchery</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
 
+              <div className="flex-1 lg:min-h-0">
+                <DocumentSelectionStep
+                  complianceDocuments={allDocuments}
+                  selectedDocuments={selectedDocuments}
+                  onDocumentToggle={handleDocumentToggle}
+                  onRemoveSelected={removeSelectedDocument}
+                  onNext={() => setStep(2)}
+                  buyerId={buyerProfile?.id}
+                  entityType={selectedSupplierType}
+                />
+              </div>
+            </>
+          )}
 
-            <div className="flex-1 overflow-hidden min-h-[400px]">
-              <DocumentSelectionStep
-                complianceDocuments={allDocuments}
-                selectedDocuments={selectedDocuments}
-                onDocumentToggle={handleDocumentToggle}
-                onRemoveSelected={removeSelectedDocument}
-                onNext={() => setStep(2)}
-                buyerId={buyerProfile?.id}
-              />
-            </div>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="overflow-y-auto h-full pr-2 custom-scrollbar">
+          {step === 2 && (
             <RequestConfigurationStep
-            selectedDocuments={selectedDocuments}
-            formData={formData}
-            onFormDataChange={handleFormDataChange}
-            onSuppliersChange={handleSuppliersChange}
-            onSupplierBranchChange={handleSupplierBranchChange}
-            onBack={() => setStep(1)}
-            onCreateRequests={handleCreateRequests}
-            onCancel={onClose}
-            loading={loading}
-            connectedSuppliers={connectedSuppliers}
-            buyerId={buyerProfile?.id}
-          />
-          </div>
-        )}
+              selectedDocuments={selectedDocuments}
+              formData={formData}
+              onFormDataChange={handleFormDataChange}
+              onSuppliersChange={handleSuppliersChange}
+              onSupplierBranchChange={handleSupplierBranchChange}
+              onBack={() => setStep(1)}
+              onCreateRequests={handleCreateRequests}
+              onCancel={onDone}
+              loading={loading}
+              connectedSuppliers={connectedSuppliers}
+              buyerId={buyerProfile?.id}
+              entityType={selectedSupplierType}
+            />
+          )}
 
-        {step === 3 && (
-          <div className="overflow-y-auto h-full pr-2 custom-scrollbar">
+          {step === 3 && (
             <RequestReviewStep
-            selectedDocuments={selectedDocuments}
-            formData={formData}
-            buyerId={buyerProfile?.id}
-            sampleDocument={pendingSampleDocument}
-            setSampleDocument={setPendingSampleDocument}
-          />
-          </div>
-        )}
+              selectedDocuments={selectedDocuments}
+              formData={formData}
+              buyerId={buyerProfile?.id}
+              entityType={selectedSupplierType}
+              sampleDocument={pendingSampleDocument}
+              setSampleDocument={setPendingSampleDocument}
+            />
+          )}
 
-        {step === 4 && (
-          <div className="overflow-y-auto h-full pr-2 custom-scrollbar">
+          {step === 4 && (
             <RequestReusePreflightStep
-            results={preflightResults}
-            suppliers={connectedSuppliers}
-            resolutions={reuseResolutions}
-            onResolutionChange={(clientKey, resolution) => setReuseResolutions((current) => ({ ...current, [clientKey]: resolution }))}
-            onBack={() => setStep(3)}
-            onSubmit={handleCanonicalRequests}
-            loading={loading}
-          />
-          </div>
-        )}
+              results={preflightResults}
+              suppliers={connectedSuppliers}
+              resolutions={reuseResolutions}
+              onResolutionChange={(clientKey, resolution) => setReuseResolutions((current) => ({ ...current, [clientKey]: resolution }))}
+              onBack={() => setStep(3)}
+              onSubmit={handleCanonicalRequests}
+              loading={loading}
+            />
+          )}
         </div>
 
-        {/* Sticky Footer */}
-        {step !== 4 && (
-        <div className="bg-card border-t border-border px-8 py-5 flex items-center justify-between sticky bottom-0 z-10 shrink-0">
-          <Button variant="outline" className="border-border text-foreground bg-card rounded-[10px] h-11 px-6 font-semibold shadow-sm" onClick={onClose}>
-            Cancel
-          </Button>
-          <div className="flex items-center gap-3">
+        {twoColumn && (
+          <aside className="w-full shrink-0 lg:w-[320px] lg:min-h-0 lg:overflow-y-auto">
+            {step === 3 ? (
+              <ReviewAiSummaryPanel
+                selectedDocuments={selectedDocuments}
+                formData={formData}
+                buyerId={buyerProfile?.id}
+                entityType={selectedSupplierType}
+              />
+            ) : (
+              <RequestSummaryRail
+                entityType={selectedSupplierType}
+                buyerId={buyerProfile?.id}
+                selectedDocuments={selectedDocuments}
+                formData={formData}
+                onFormDataChange={handleFormDataChange}
+              />
+            )}
+          </aside>
+        )}
+      </div>
+
+      {/* Footer actions — pinned below the scroll area (hidden on the
+          preflight step, which owns its own submit) */}
+      {step !== 4 && (
+        <div className="flex shrink-0 items-center justify-between border-t border-border pt-4">
+          <Button variant="outline" onClick={onDone}>Cancel</Button>
+          <div className="flex items-center gap-2">
             {step > 1 && (
-              <Button variant="outline" className="border-border text-foreground bg-card rounded-[10px] h-11 px-6 font-semibold shadow-sm" onClick={() => setStep(step - 1)}>
-                Back
-              </Button>
+              <Button variant="ghost" onClick={() => setStep(step - 1)}>Back</Button>
             )}
             {step < 3 ? (
-              <Button 
-                className="cta-texture text-white rounded-[10px] h-11 px-8 font-semibold shadow-sm" 
+              <Button
                 onClick={() => setStep(step + 1)}
                 disabled={step === 1 && selectedDocuments.length === 0}
+                className="bg-primary text-primary-foreground hover:bg-primary-hover"
               >
                 Continue
               </Button>
             ) : (
-              <Button 
-                className="cta-texture text-white rounded-[10px] h-11 px-8 font-semibold shadow-sm" 
+              <Button
                 onClick={() => handleCreateRequests(pendingSampleDocument)}
                 disabled={loading || selectedDocuments.length === 0 || formData.suppliers.length === 0}
+                className="bg-primary text-primary-foreground hover:bg-primary-hover"
               >
-                {loading ? 'Sending...' : `Send ${selectedDocuments.length} Requests`}
+                {loading ? 'Sending…' : `Send ${selectedDocuments.length} request${selectedDocuments.length === 1 ? '' : 's'}`}
               </Button>
             )}
           </div>
         </div>
-        )}
-      </DialogContent>
-    </Dialog>
+      )}
+    </div>
   );
 };
 
-export default NewRequestModal;
+export default CreateRequestSection;

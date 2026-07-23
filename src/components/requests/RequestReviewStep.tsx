@@ -1,21 +1,32 @@
-import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { FileText, Users, Flag, CalendarIcon, MessageSquare, Paperclip, Sparkles, Send } from 'lucide-react';
+import { useState, useEffect, useMemo, type ReactNode } from 'react';
+import { FileText, Users, Flag, CalendarIcon, MessageSquare, Paperclip, Sparkles, Loader2, Check, Copy } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { ComplianceDocument } from './ComplianceDocuments';
 import SampleDocumentUpload from './SampleDocumentUpload';
 import { Button } from '@/components/ui/button';
+import { draftMessage } from '@/lib/requestAiAssist';
+import {
+  cardClass,
+  cardPadClass,
+  sectionLabelClass,
+  mutedBodyClass,
+  pillClass,
+  pillAccentClass,
+  inlineIconClass,
+} from '@/design/system';
+
+interface ReviewFormData {
+  suppliers: string[];
+  priority: string;
+  dueDate: string;
+  notes: string;
+}
 
 interface RequestReviewStepProps {
   selectedDocuments: ComplianceDocument[];
-  formData: {
-    suppliers: string[];
-    priority: string;
-    dueDate: string;
-    notes: string;
-  };
+  formData: ReviewFormData;
   buyerId?: string;
+  entityType?: string;
   sampleDocument: SampleDocumentSelection;
   setSampleDocument: (sample: SampleDocumentSelection) => void;
 }
@@ -35,6 +46,120 @@ interface SampleDocumentSelection {
   source: 'device' | 'library' | null;
 }
 
+const FALLBACK_MESSAGE = 'Please upload the latest valid certificates with clearly visible scopes and expiration dates.';
+
+/**
+ * Compact AI panel for the review step's right column (where the summary rail
+ * sits on steps 1–2): the what-you're-about-to-send recap plus the AI-drafted
+ * supplier message with Regenerate / Copy. Fails soft to a static default.
+ */
+export const ReviewAiSummaryPanel = ({
+  selectedDocuments,
+  formData,
+  buyerId,
+  entityType = 'General Supplier',
+}: {
+  selectedDocuments: ComplianceDocument[];
+  formData: ReviewFormData;
+  buyerId?: string;
+  entityType?: string;
+}) => {
+  const daysUntilDue = formData.dueDate ? differenceInDays(new Date(formData.dueDate), new Date()) : null;
+
+  const [aiMessage, setAiMessage] = useState<string>('');
+  const [messageLoading, setMessageLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const loadMessage = async () => {
+    if (!buyerId) return;
+    setMessageLoading(true);
+    const result = await draftMessage(
+      buyerId,
+      entityType,
+      selectedDocuments.map((d) => d.title),
+      formData.priority,
+      formData.dueDate || null,
+    );
+    setAiMessage(result?.message || '');
+    setMessageLoading(false);
+  };
+
+  useEffect(() => {
+    if (!buyerId || selectedDocuments.length === 0) return;
+    let cancelled = false;
+    setMessageLoading(true);
+    draftMessage(buyerId, entityType, selectedDocuments.map((d) => d.title), formData.priority, formData.dueDate || null)
+      .then((result) => {
+        if (cancelled) return;
+        setAiMessage(result?.message || '');
+        setMessageLoading(false);
+      });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buyerId, entityType, selectedDocuments.length]);
+
+  const suggestedMessage = aiMessage || FALLBACK_MESSAGE;
+
+  const copySummary = async () => {
+    const summary =
+      `Request: ${selectedDocuments.length} document(s) from ${formData.suppliers.length} supplier(s), ` +
+      `${formData.priority} priority${formData.dueDate ? `, due ${format(new Date(formData.dueDate), 'MMM d, yyyy')}` : ''}.\n\n` +
+      `Message: ${suggestedMessage}`;
+    try {
+      await navigator.clipboard.writeText(summary);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* clipboard unavailable */ }
+  };
+
+  return (
+    <div className={`${cardClass} ${cardPadClass} space-y-3`}>
+      <div className="flex items-center gap-2">
+        <Sparkles className={`${inlineIconClass} text-primary`} />
+        <p className={sectionLabelClass}>AI summary</p>
+      </div>
+
+      <p className={`${mutedBodyClass} text-small`}>
+        You are about to request{' '}
+        <span className="font-medium text-foreground">{selectedDocuments.length} document{selectedDocuments.length === 1 ? '' : 's'}</span> from{' '}
+        <span className="font-medium text-foreground">{formData.suppliers.length} supplier{formData.suppliers.length === 1 ? '' : 's'}</span> at{' '}
+        <span className="font-medium capitalize text-foreground">{formData.priority}</span> priority
+        {daysUntilDue ? <>, due in <span className="font-medium text-foreground">{daysUntilDue}</span> days.</> : ', with no due date.'}
+      </p>
+
+      <div className="border-t border-border pt-3">
+        <p className="text-caption font-medium uppercase tracking-[0.06em] text-muted-foreground">Suggested message</p>
+        <p className="mt-1.5 text-small text-foreground/90">
+          {messageLoading ? (
+            <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Drafting…
+            </span>
+          ) : (
+            suggestedMessage
+          )}
+        </p>
+      </div>
+
+      <div className="space-y-2 pt-1">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={loadMessage}
+          disabled={messageLoading || !buyerId}
+          className="w-full justify-start"
+        >
+          {messageLoading ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-2 h-3.5 w-3.5" />}
+          Regenerate message
+        </Button>
+        <Button variant="outline" size="sm" onClick={copySummary} className="w-full justify-start">
+          {copied ? <Check className="mr-2 h-3.5 w-3.5 text-success" /> : <Copy className="mr-2 h-3.5 w-3.5" />}
+          {copied ? 'Copied' : 'Copy summary'}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 const RequestReviewStep = ({
   selectedDocuments,
   formData,
@@ -42,115 +167,90 @@ const RequestReviewStep = ({
   sampleDocument,
   setSampleDocument
 }: RequestReviewStepProps) => {
-  
-  const daysUntilDue = formData.dueDate ? differenceInDays(new Date(formData.dueDate), new Date()) : null;
+
+  // Inline preview for a device-uploaded reference sample (we hold the File
+  // object, so no storage round-trip is needed).
+  const devicePreviewUrl = useMemo(() => {
+    if (sampleDocument?.source === 'device' && sampleDocument.file) {
+      return URL.createObjectURL(sampleDocument.file);
+    }
+    return null;
+  }, [sampleDocument]);
+
+  useEffect(() => {
+    return () => { if (devicePreviewUrl) URL.revokeObjectURL(devicePreviewUrl); };
+  }, [devicePreviewUrl]);
+
+  const sampleName = sampleDocument?.source === 'device'
+    ? sampleDocument.file?.name
+    : sampleDocument?.libraryDoc?.document_name;
+  const sampleMime = (sampleDocument?.source === 'device'
+    ? sampleDocument.file?.type
+    : sampleDocument?.libraryDoc?.mime_type) || '';
+  const isImage = sampleMime.startsWith('image/');
+  const isPdf = sampleMime === 'application/pdf';
+
+  const detailCells: Array<{ icon: typeof Users; label: string; value: ReactNode }> = [
+    { icon: Users, label: 'Suppliers', value: `${formData.suppliers.length} selected` },
+    { icon: Flag, label: 'Priority', value: <span className="capitalize">{formData.priority}</span> },
+    { icon: CalendarIcon, label: 'Due date', value: formData.dueDate ? format(new Date(formData.dueDate), 'MMM d, yyyy') : 'Not set' },
+  ];
 
   return (
-    <div className="flex flex-col space-y-5 max-w-5xl mx-auto pb-4">
-      
-      {/* Header */}
-      <div>
-        <h2 className="text-[22px] font-bold text-foreground">Review & Send Request</h2>
-        <p className="text-[14px] text-muted-foreground">Review the request details before sending it to suppliers.</p>
-      </div>
+    <div className="space-y-4">
 
-      {/* Selected Documents */}
-      <Card className="border-border rounded-[16px] shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-border flex items-center justify-between bg-card">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-md bg-primary/10">
-              <FileText className="h-4 w-4 text-primary" />
-            </div>
-            <h3 className="font-bold text-[15px] text-foreground">Selected Documents</h3>
-          </div>
-          <Badge className="bg-primary/10 text-primary hover:bg-primary/10 border-0 px-3 py-1 font-semibold rounded-[8px]">
-            {selectedDocuments.length} selected
-          </Badge>
+      {/* Selected documents */}
+      <div className={cardClass}>
+        <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
+          <p className={sectionLabelClass}>Selected documents</p>
+          <span className={pillAccentClass}>{selectedDocuments.length} selected</span>
         </div>
-        <CardContent className="p-4 bg-card">
-          <div className="flex flex-wrap gap-3">
+        <div className={cardPadClass}>
+          <div className="flex flex-wrap gap-2">
             {selectedDocuments.map(doc => (
-              <Badge 
-                key={doc.id} 
-                variant="secondary" 
-                className="flex items-center gap-1.5 bg-primary/10 text-primary hover:bg-primary/10 border border-primary/30 shadow-sm px-4 py-2 rounded-[8px]"
-              >
-                <FileText className="h-4 w-4" />
-                <span className="font-semibold text-[14px]">{doc.title}</span>
-              </Badge>
+              <span key={doc.id} className={`${pillClass} gap-1.5`}>
+                <FileText className="h-3 w-3" />
+                {doc.title}
+              </span>
             ))}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Recipients & Details */}
-      <Card className="border-border rounded-[16px] shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-border flex items-center gap-2 bg-card">
-          <div className="p-1.5 rounded-md bg-primary/10">
-            <Users className="h-4 w-4 text-primary" />
-          </div>
-          <h3 className="font-bold text-[15px] text-foreground">Recipients & Details</h3>
         </div>
-        <CardContent className="p-0 bg-card">
-          <div className="flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-[#E4E7EC]">
-            
-            <div className="flex-1 p-5 space-y-1">
-              <div className="flex items-center gap-1.5 text-muted-foreground mb-2">
-                <Users className="w-4 h-4" />
-                <span className="text-[13px] font-medium">Suppliers</span>
-              </div>
-              <div className="text-[14px] font-bold text-foreground">
-                {formData.suppliers.length} selected
-              </div>
-            </div>
+      </div>
 
-            <div className="flex-1 p-5 space-y-1">
-              <div className="flex items-center gap-1.5 text-muted-foreground mb-2">
-                <Flag className="w-4 h-4" />
-                <span className="text-[13px] font-medium">Priority</span>
-              </div>
-              <div className="flex items-center gap-2 text-[14px] font-bold text-foreground capitalize">
-                {formData.priority === 'low' && <span className="h-2 w-2 rounded-full bg-slate-400" />}
-                {formData.priority === 'medium' && <span className="h-2 w-2 rounded-full bg-orange-500" />}
-                {formData.priority === 'high' && <span className="h-2 w-2 rounded-full bg-amber-500" />}
-                {formData.priority === 'urgent' && <span className="h-2 w-2 rounded-full bg-red-500" />}
-                {formData.priority}
-              </div>
-            </div>
-
-            <div className="flex-1 p-5 space-y-1">
-              <div className="flex items-center gap-1.5 text-muted-foreground mb-2">
-                <CalendarIcon className="w-4 h-4" />
-                <span className="text-[13px] font-medium">Due Date</span>
-              </div>
-              <div className="text-[14px] font-bold text-foreground">
-                {formData.dueDate ? format(new Date(formData.dueDate), "MMM d, yyyy") : 'Not set'}
-              </div>
-            </div>
-
-            <div className="flex-[1.5] p-5 space-y-1">
-              <div className="flex items-center gap-1.5 text-muted-foreground mb-2">
-                <MessageSquare className="w-4 h-4" />
-                <span className="text-[13px] font-medium">Notes</span>
-              </div>
-              <div className="text-[13px] text-foreground/80 font-medium line-clamp-2">
-                {formData.notes || "No additional notes provided."}
-              </div>
-            </div>
-
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Reference Sample */}
-      <Card className="border-border rounded-[16px] shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-border flex items-center gap-2 bg-card">
-          <div className="p-1.5 rounded-md bg-orange-500/15">
-            <Paperclip className="h-4 w-4 text-orange-500" />
-          </div>
-          <h3 className="font-bold text-[15px] text-foreground">Reference Sample <span className="text-muted-foreground/70 font-normal">(Optional)</span></h3>
+      {/* Recipients & details */}
+      <div className={`${cardClass} overflow-hidden`}>
+        <div className="border-b border-border px-5 py-3.5">
+          <p className={sectionLabelClass}>Recipients &amp; details</p>
         </div>
-        <CardContent className="p-5 bg-card">
+        <div className="flex flex-col divide-y divide-border sm:flex-row sm:divide-x sm:divide-y-0">
+          {detailCells.map(({ icon: Icon, label, value }) => (
+            <div key={label} className="flex-1 p-5">
+              <div className="mb-1.5 flex items-center gap-1.5 text-muted-foreground">
+                <Icon className={inlineIconClass} />
+                <span className="text-caption font-medium">{label}</span>
+              </div>
+              <div className="text-body font-semibold text-foreground">{value}</div>
+            </div>
+          ))}
+          <div className="flex-[1.5] p-5">
+            <div className="mb-1.5 flex items-center gap-1.5 text-muted-foreground">
+              <MessageSquare className={inlineIconClass} />
+              <span className="text-caption font-medium">Instructions</span>
+            </div>
+            <div className="line-clamp-2 text-small text-foreground/90">
+              {formData.notes || 'No additional instructions provided.'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Reference sample */}
+      <div className={cardClass}>
+        <div className="flex items-center gap-2 border-b border-border px-5 py-3.5">
+          <Paperclip className={`${inlineIconClass} text-muted-foreground`} />
+          <p className={sectionLabelClass}>Reference sample <span className="font-normal normal-case tracking-normal">(optional)</span></p>
+        </div>
+        <div className={`${cardPadClass} space-y-4`}>
           {buyerId && (
             <SampleDocumentUpload
               buyerId={buyerId}
@@ -158,42 +258,35 @@ const RequestReviewStep = ({
               onSampleChange={setSampleDocument}
             />
           )}
-        </CardContent>
-      </Card>
 
-      {/* AI Preview */}
-      <Card className="ai-card border-0 shadow-none">
-        <CardContent className="p-5">
-          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-primary" />
-                <h3 className="font-bold text-[15px] text-foreground">AI Preview</h3>
-                <Badge className="bg-primary/15 text-primary hover:bg-primary/15 border-0 px-2 py-0.5 text-[10px] rounded-[6px]">BETA</Badge>
+          {/* Inline preview so buyers can confirm the right reference before sending. */}
+          {sampleName && (
+            <div className="overflow-hidden rounded-control border border-border">
+              <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/50 px-3 py-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className="truncate text-small font-medium text-foreground">{sampleName}</span>
+                </div>
+                <span className="shrink-0 text-caption text-muted-foreground">Reference preview</span>
               </div>
-              <p className="text-[14px] text-foreground/80 max-w-2xl leading-relaxed">
-                You are about to request <span className="font-bold">{selectedDocuments.length} compliance documents</span> from <span className="font-bold">{formData.suppliers.length} suppliers</span>. 
-                This request is <span className="font-bold">{formData.priority} priority</span> 
-                {daysUntilDue ? ` and due in ${daysUntilDue} days` : ' with no due date'}.
-              </p>
-              <p className="text-[14px] text-foreground/80">
-                <strong>Suggested message:</strong> Please upload the latest valid certificates with clearly visible scopes and expiration dates.
-              </p>
+              {devicePreviewUrl && isImage ? (
+                <img src={devicePreviewUrl} alt={sampleName} className="max-h-[320px] w-full bg-background object-contain" />
+              ) : devicePreviewUrl && isPdf ? (
+                <object data={devicePreviewUrl} type="application/pdf" className="h-[360px] w-full bg-background">
+                  <div className="p-4 text-small text-muted-foreground">Preview unavailable — {sampleName}</div>
+                </object>
+              ) : (
+                <div className="flex items-center gap-2 p-4 text-small text-muted-foreground">
+                  <FileText className={inlineIconClass} />
+                  {sampleDocument?.source === 'library'
+                    ? 'Selected from library — preview opens after the request is created.'
+                    : 'No inline preview for this file type.'}
+                </div>
+              )}
             </div>
-            
-            <div className="flex items-center gap-2 shrink-0">
-              <Button variant="outline" className="bg-card border-primary/25 text-primary hover:bg-primary/10 rounded-[8px] h-9 text-[13px] font-semibold">
-                <Sparkles className="w-3.5 h-3.5 mr-2" />
-                Regenerate Message
-              </Button>
-              <Button variant="outline" className="bg-card border-primary/25 text-foreground/80 hover:bg-muted rounded-[8px] h-9 text-[13px] font-semibold">
-                <FileText className="w-3.5 h-3.5 mr-2" />
-                Copy Summary
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          )}
+        </div>
+      </div>
 
     </div>
   );

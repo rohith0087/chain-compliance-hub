@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import logger from '@/utils/logger';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -6,7 +6,7 @@ import { useCompanyPermissions } from '@/hooks/useCompanyPermissions';
 import { useTranslation } from 'react-i18next';
 import RequestsList from '@/components/requests/RequestsList';
 import SupplierDiscovery from '@/components/buyer/SupplierDiscovery';
-import NewRequestModal from '@/components/NewRequestModal';
+import CreateRequestSection from '@/components/requests/CreateRequestSection';
 import BuyerComplianceDashboard from '@/components/dashboard/BuyerComplianceDashboard';
 import AgentManagementDashboard from '@/components/agents/AgentManagementDashboard';
 import BuyerDocumentsDashboard from '@/components/documents/BuyerDocumentsDashboard';
@@ -105,8 +105,15 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
     }
   }, []);
   const { view: dashboardView } = useBuyerDashboardView();
-  const [showRequestForm, setShowRequestForm] = useState(false);
   const [showBulkInvite, setShowBulkInvite] = useState(false);
+  // "New Request" opens the in-shell create-request section (nav-less tab).
+  // The ref marks an intentional open so the reload guard below can tell it
+  // apart from a stale localStorage restore.
+  const createRequestOpenedRef = useRef(false);
+  const handleNewRequest = () => {
+    createRequestOpenedRef.current = true;
+    setActiveTab('create-request');
+  };
   const [buyerProfile, setBuyerProfile] = useState<any>(null);
   const [companyId, setCompanyId] = useState<string | undefined>(impersonatedBuyerId);
   const [documentsKey, setDocumentsKey] = useState(0); // Force remount when navigating from dashboard
@@ -172,6 +179,15 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
       setActiveTab('suppliers');
     }
   }, [activeTab, complianceSupplier, detailSupplier, requirementEngineEnabled]);
+
+  // Guard the transient create-request tab: it should only be entered via the
+  // "New Request" buttons in this session, never restored from localStorage on
+  // a reload (which would reopen an empty form).
+  useEffect(() => {
+    if (activeTab === 'create-request' && !createRequestOpenedRef.current) {
+      setActiveTab('dashboard');
+    }
+  }, [activeTab]);
   
   // Get permissions to check if user is company owner
   const { isOwner, loading: permissionsLoading } = useCompanyPermissions(companyId, 'buyer');
@@ -349,7 +365,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
         user={user}
         onLogout={handleLogoutClick}
         onRoleSwitch={onRoleSwitch}
-        onShowRequestForm={() => setShowRequestForm(true)}
+        onShowRequestForm={handleNewRequest}
         onShowSettings={() => setActiveTab('settings')}
         onShowQuickOnboarding={() => setActiveTab('onboarding')}
         onShowBulkInvite={() => setShowBulkInvite(true)}
@@ -375,7 +391,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
               buyerId={companyId}
               branchId={!allBranchesView && currentBranch?.id ? currentBranch.id : null}
               onTabChange={setActiveTab}
-              onNewRequest={() => setShowRequestForm(true)}
+              onNewRequest={handleNewRequest}
               onAddSupplier={() => setShowBulkInvite(true)}
             />
           ) : dashboardView === 'focus' ? (
@@ -383,7 +399,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
               buyerId={companyId}
               branchId={!allBranchesView && currentBranch?.id ? currentBranch.id : null}
               onTabChange={setActiveTab}
-              onNewRequest={() => setShowRequestForm(true)}
+              onNewRequest={handleNewRequest}
               onAddSupplier={() => setShowBulkInvite(true)}
             />
           ) : dashboardView === 'pulse' ? (
@@ -532,7 +548,7 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
               >
                 <ActivityQuickActionsPanel 
                   buyerId={companyId}
-                  onNewRequest={() => setShowRequestForm(true)}
+                  onNewRequest={handleNewRequest}
                   onInviteSupplier={() => setShowBulkInvite(true)}
                   onNavigateToDocuments={(filter) => {
                     if (filter) sessionStorage.setItem('buyer_docs_filter_status', filter);
@@ -614,7 +630,17 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
 
         {/* Requests Content */}
         {activeTab === 'requests' && (
-          <RequestsList onNewRequest={() => setShowRequestForm(true)} />
+          <RequestsList onNewRequest={handleNewRequest} />
+        )}
+
+        {/* Create Request — nav-less in-shell section, opened via the
+            "New Request" buttons (dashboard, sidebar, command palette). */}
+        {activeTab === 'create-request' && (
+          <CreateRequestSection
+            currentBranch={currentBranch}
+            onCreateRequest={handleCreateRequest}
+            onDone={() => setActiveTab('requests')}
+          />
         )}
 
         {/* Documents Content */}
@@ -782,14 +808,6 @@ const BuyerDashboard = ({ user, onLogout, onRoleSwitch, impersonatedBuyerId }: B
         )}
 
         {/* Modals */}
-      <NewRequestModal
-        isOpen={showRequestForm}
-        onClose={() => setShowRequestForm(false)}
-        onCreateRequest={handleCreateRequest}
-        userType="buyer"
-        currentBranch={currentBranch}
-      />
-
       {companyId && profile && (
           <BulkInviteModal
             isOpen={showBulkInvite}

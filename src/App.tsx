@@ -31,7 +31,6 @@ import SharedDocumentViewer from "./components/shared/SharedDocumentViewer";
 import NotFound from "./pages/NotFound";
 import HelpCenterPage from "./pages/HelpCenterPage";
 import SubscriptionPage from "./pages/SubscriptionPage";
-import SupplierSimulation from "./pages/SupplierSimulation";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import MessagesPage from "./pages/MessagesPage";
 import WhitePaperPage from "./pages/WhitePaperPage";
@@ -485,7 +484,6 @@ const AppRoutes = () => {
                   } />
                   
                   <Route path="/shared-document/:token" element={<SharedDocumentViewer />} />
-                  <Route path="/supplier-simulation" element={<SupplierSimulation />} />
                   <Route path="/white-paper" element={<WhitePaperPage />} />
                   <Route path="/help" element={<HelpCenterPage />} />
                   <Route path="*" element={<NotFound />} />

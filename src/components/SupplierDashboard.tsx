@@ -9,35 +9,28 @@ import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
-  FileCheck, 
-  Upload, 
+import {
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  FileCheck,
+  Upload,
   Calendar,
   Bell,
   Download,
   Plus,
   Settings,
   Users,
-  Building2,
   BarChart3,
   MessageSquare,
-  FileText,
   Search,
   Package,
   UserCog,
-  TrendingUp,
   ArrowRight,
-  RefreshCw,
-  Play,
-  X
+  RefreshCw
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { ComplianceRing } from '@/components/dashboard/ComplianceRing';
-import { MetricChip } from '@/components/dashboard/MetricChip';
-import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { cardClass, cardLiftedClass, pillClass, sectionLabelClass, hoverSurfaceClass } from '@/design/system';
 import { UnifiedSettingsModal } from '@/components/settings/UnifiedSettingsModal';
 import { SupplierSidebarLayout } from '@/components/supplier/SupplierSidebarLayout';
 import { SidebarProvider } from '@/components/ui/sidebar';
@@ -81,7 +74,6 @@ interface SupplierDashboardProps {
 const SupplierDashboard = ({ user, onLogout, onRoleSwitch, impersonatedSupplierId }: SupplierDashboardProps) => {
   const { t } = useTranslation(['supplier', 'common']);
   const { t: wsT } = useWorkspaceProfile();
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('supplierDashboard_activeTab') || 'overview';
   });
@@ -94,10 +86,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch, impersonatedSupplierI
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [highlightedTab, setHighlightedTab] = useState<string | null>(null);
   const [onboardingRequests, setOnboardingRequests] = useState<any[]>([]);
-  const [showSimulationBanner, setShowSimulationBanner] = useState(() => {
-    return localStorage.getItem('supplierSimulationBannerDismissed') !== 'true';
-  });
-  
+
   // Filter state for document requests
   const [filters, setFilters] = useState({
     search: '',
@@ -109,9 +98,6 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch, impersonatedSupplierI
   });
   
   // Dashboard data state
-  const [activityTrend, setActivityTrend] = useState<{ day: string; requests: number; completed: number }[]>([]);
-  const [upcomingDeadlines, setUpcomingDeadlines] = useState<any[]>([]);
-  const [actionItems, setActionItems] = useState<any[]>([]);
   const [expiringDocuments, setExpiringDocuments] = useState<any[]>([]);
   const [renewingDocument, setRenewingDocument] = useState<any>(null);
   
@@ -166,6 +152,7 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch, impersonatedSupplierI
     pendingRequests: documentRequests.filter(req => req.status === 'pending').length,
     documentsSubmitted: documentRequests.filter(req => req.status === 'submitted').length,
     approvedDocuments: documentRequests.filter(req => req.status === 'approved').length,
+    rejectedDocuments: documentRequests.filter(req => req.status === 'rejected').length,
     expiringDocuments: 0, // This would need a separate query for expiring documents
     pendingOnboarding: onboardingRequests.filter(req => req.status === 'pending').length
   };
@@ -439,84 +426,6 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch, impersonatedSupplierI
     loadSupplierData();
   };
 
-  // Calculate dashboard data from loaded requests
-  useEffect(() => {
-    if (documentRequests.length > 0) {
-      // Generate activity trend for last 7 days
-      const trend = [];
-      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const dayRequests = documentRequests.filter(req => {
-          const reqDate = new Date(req.created_at);
-          return reqDate.toDateString() === date.toDateString();
-        });
-        trend.push({
-          day: days[date.getDay()],
-          requests: dayRequests.length,
-          completed: dayRequests.filter(r => r.status === 'approved' || r.status === 'submitted').length
-        });
-      }
-      setActivityTrend(trend);
-
-      // Calculate upcoming deadlines
-      const deadlines = documentRequests
-        .filter(req => req.due_date && req.status === 'pending')
-        .map(req => {
-          const dueDate = new Date(req.due_date);
-          const today = new Date();
-          const daysLeft = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-          return {
-            id: req.id,
-            title: req.title,
-            buyer: req.buyers?.company_name || 'Unknown',
-            daysLeft,
-            priority: req.priority || 'medium',
-            dueDate: req.due_date
-          };
-        })
-        .filter(d => d.daysLeft >= 0 && d.daysLeft <= 30)
-        .sort((a, b) => a.daysLeft - b.daysLeft)
-        .slice(0, 5);
-      setUpcomingDeadlines(deadlines);
-
-      // Calculate action items
-      const actions = [];
-      const overdueRequests = documentRequests.filter(req => {
-        if (req.status !== 'pending' || !req.due_date) return false;
-        return new Date(req.due_date) < new Date();
-      });
-      if (overdueRequests.length > 0) {
-        actions.push({
-          id: 'overdue',
-          type: 'urgent',
-          title: `${overdueRequests.length} overdue document${overdueRequests.length > 1 ? 's' : ''} require attention`,
-          action: () => handleNotificationNavigation('requests', undefined)
-        });
-      }
-      const pendingRequests = documentRequests.filter(req => req.status === 'pending');
-      if (pendingRequests.length > 0) {
-        actions.push({
-          id: 'pending',
-          type: 'warning',
-          title: `${pendingRequests.length} pending request${pendingRequests.length > 1 ? 's' : ''} awaiting submission`,
-          action: () => handleNotificationNavigation('requests', undefined)
-        });
-      }
-      const rejectedRequests = documentRequests.filter(req => req.status === 'rejected');
-      if (rejectedRequests.length > 0) {
-        actions.push({
-          id: 'rejected',
-          type: 'error',
-          title: `${rejectedRequests.length} rejected document${rejectedRequests.length > 1 ? 's' : ''} need resubmission`,
-          action: () => handleNotificationNavigation('requests', undefined)
-        });
-      }
-      setActionItems(actions);
-    }
-  }, [documentRequests]);
-
   // Filter document requests based on current filters
   const filteredRequests = documentRequests.filter(request => {
     const searchLower = filters.search.toLowerCase();
@@ -585,397 +494,252 @@ const SupplierDashboard = ({ user, onLogout, onRoleSwitch, impersonatedSupplierI
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'overview':
-        // Prepare chart data
-        const documentStatusData = [
-          { name: 'Approved', value: stats.approvedDocuments, color: 'hsl(var(--green-accent))' },
-          { name: 'Pending', value: stats.pendingRequests, color: 'hsl(var(--amber-accent))' },
-          { name: 'Submitted', value: stats.documentsSubmitted, color: 'hsl(var(--blue-accent))' },
-        ].filter(d => d.value > 0);
+      case 'overview': {
+        // Single-viewport bento: one row of six scannable metrics, then the
+        // work surface sized by day-to-day weight — pending requests are the
+        // daily driver so they get the hero panel (lifted, e3); rejections and
+        // expiry/onboarding are compact stacked cards on the right. Rows keep
+        // natural height and lists scroll internally, so the page never does.
+        const metricTiles: Array<{
+          key: string;
+          label: string;
+          value: number;
+          icon: typeof Clock;
+          tone: 'warning' | 'primary' | 'success' | 'danger';
+          onClick: () => void;
+        }> = [
+          {
+            key: 'pending', label: 'Pending', value: stats.pendingRequests, icon: Clock, tone: 'warning',
+            onClick: () => { sessionStorage.setItem('supplier_docs_filter_status', 'pending'); setActiveTab('documents'); },
+          },
+          {
+            key: 'submitted', label: 'Submitted', value: stats.documentsSubmitted, icon: FileCheck, tone: 'primary',
+            onClick: () => { sessionStorage.setItem('supplier_docs_filter_status', 'submitted'); setActiveTab('documents'); },
+          },
+          {
+            key: 'approved', label: 'Approved', value: stats.approvedDocuments, icon: CheckCircle, tone: 'success',
+            onClick: () => { sessionStorage.setItem('supplier_docs_filter_status', 'approved'); setActiveTab('documents'); },
+          },
+          {
+            key: 'rejected', label: 'Rejected', value: stats.rejectedDocuments, icon: AlertTriangle, tone: 'danger',
+            onClick: () => { sessionStorage.setItem('supplier_docs_filter_status', 'rejected'); setActiveTab('documents'); },
+          },
+          {
+            key: 'buyers', label: wsT.buyers, value: connectedBuyers.length, icon: Users, tone: 'primary',
+            onClick: () => setActiveTab('connections'),
+          },
+        ];
 
-        const COLORS = ['hsl(142, 76%, 36%)', 'hsl(38, 92%, 50%)', 'hsl(221, 83%, 53%)'];
+        const toneClass: Record<string, string> = {
+          warning: 'bg-warning/10 text-warning',
+          primary: 'bg-primary/10 text-primary',
+          success: 'bg-success/10 text-success',
+          danger: 'bg-danger/10 text-danger',
+        };
 
-        // Check if supplier is new (no connections and no document requests)
-        const isNewSupplier = connectedBuyers.length === 0 && documentRequests.length === 0;
+        const buyerNameById = new Map(
+          connectedBuyers.map((c: any) => [c.buyer_id, c.buyers?.company_name || 'Buyer'])
+        );
+
+        const now = new Date();
+        const attentionRequests = documentRequests
+          .filter(req => req.status === 'pending')
+          .sort((a, b) => {
+            if (!a.due_date) return 1;
+            if (!b.due_date) return -1;
+            return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+          })
+          .slice(0, 12);
+
+        const rejectedList = documentRequests.filter(req => req.status === 'rejected').slice(0, 8);
+        const pendingOnboardingList = onboardingRequests.filter(req => req.status === 'pending').slice(0, 8);
+        const showOnboarding = pendingOnboardingList.length > 0;
+        const expiringList = expiringDocuments.slice(0, 8);
+
+        const fmtDate = (iso: string) =>
+          new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+        const ColumnHeader = ({ icon: Icon, iconTone, label, count }: {
+          icon: typeof Clock; iconTone: string; label: string; count: number;
+        }) => (
+          <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
+            <span className="flex items-center gap-2">
+              <Icon className={`h-4 w-4 ${iconTone}`} />
+              <span className={sectionLabelClass}>{label}</span>
+            </span>
+            <span className={pillClass}>{count}</span>
+          </div>
+        );
+
+        const EmptyState = ({ label }: { label: string }) => (
+          <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-8 text-center">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-success/10 text-success">
+              <CheckCircle className="h-[18px] w-[18px]" />
+            </span>
+            <p className="text-small text-muted-foreground">{label}</p>
+          </div>
+        );
 
         return (
-          <div className="space-y-6">
-            {/* Simulation Banner for New Suppliers */}
-            {showSimulationBanner && isNewSupplier && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <Card className="bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
-                  <CardContent className="py-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="p-2 bg-amber-100 rounded-lg">
-                          <Play className="h-5 w-5 text-amber-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-amber-900">New here? Try our Interactive Simulation</h3>
-                          <p className="text-sm text-amber-700">Learn how to connect with buyers, complete onboarding, and submit documents - all with practice data.</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 shrink-0">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            localStorage.setItem('supplierSimulationBannerDismissed', 'true');
-                            setShowSimulationBanner(false);
-                          }}
-                          className="border-amber-300 text-amber-700 hover:bg-amber-100"
-                        >
-                          <X className="h-4 w-4 mr-1" />
-                          Maybe Later
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          className="bg-amber-600 hover:bg-amber-700 text-white"
-                          onClick={() => navigate('/supplier-simulation')}
-                        >
-                          <Play className="h-4 w-4 mr-1" />
-                          Start Simulation
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
+          <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 lg:h-[calc(100vh-72px-48px)]">
 
-            {/* Hero Section */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="grid grid-cols-1 lg:grid-cols-3 gap-6"
-            >
-              {/* Welcome Card */}
-              <div className="lg:col-span-2">
-                <Card className="h-full bg-gradient-to-br from-green-500/10 via-emerald-500/5 to-teal-500/10 border-green-500/20">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-4">
-                        <div>
-                          <h1 className="text-2xl font-bold text-foreground">
-                            Welcome back, {supplierProfile?.company_name || user.name}
-                          </h1>
-                          <p className="text-muted-foreground mt-1">
-                            Here's your compliance overview for today
-                          </p>
-                        </div>
-                        
-                        {/* Metric Chips */}
-                        <div className="flex flex-wrap gap-3 mt-6">
-                          <MetricChip 
-                            label="Pending" 
-                            value={stats.pendingRequests} 
-                            color="amber"
-                            pulse={stats.pendingRequests > 0}
-                            onClick={() => {
-                              sessionStorage.setItem('supplier_docs_filter_status', 'pending');
-                              setActiveTab('documents');
-                            }}
-                          />
-                          <MetricChip 
-                            label="Submitted" 
-                            value={stats.documentsSubmitted} 
-                            color="blue"
-                            onClick={() => {
-                              sessionStorage.setItem('supplier_docs_filter_status', 'submitted');
-                              setActiveTab('documents');
-                            }}
-                          />
-                          <MetricChip 
-                            label="Approved" 
-                            value={stats.approvedDocuments} 
-                            color="green"
-                            onClick={() => {
-                              sessionStorage.setItem('supplier_docs_filter_status', 'approved');
-                              setActiveTab('documents');
-                            }}
-                          />
-                          <MetricChip 
-                            label={wsT.buyers} 
-                            value={connectedBuyers.length} 
-                            color="purple"
-                            onClick={() => setActiveTab('buyers')}
-                          />
-                        </div>
-                      </div>
-                      
-                      {/* Company Logo */}
-                      {supplierProfile?.company_logo_url ? (
-                        <img
-                          src={supplierProfile.company_logo_url}
-                          alt={`${supplierProfile.company_name} logo`}
-                          className="w-16 h-16 object-contain rounded-lg border border-border/50"
-                        />
-                      ) : (
-                        <div className="w-16 h-16 bg-green-500/10 rounded-lg flex items-center justify-center">
-                          <Building2 className="w-8 h-8 text-green-500" />
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+            {/* Metrics — one row of six */}
+            <div className="grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              {metricTiles.map(({ key, label, value, icon: Icon, tone, onClick }) => (
+                <button
+                  key={key}
+                  onClick={onClick}
+                  className={`${cardClass} group flex items-center gap-3 px-4 py-3 text-left transition-all hover:shadow-e3 hover:border-border`}
+                >
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-control ${toneClass[tone]}`}>
+                    <Icon className="h-[18px] w-[18px]" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-display text-h2 font-bold leading-none text-foreground">{value}</div>
+                    <div className="mt-1 truncate text-caption font-medium text-muted-foreground">{label}</div>
+                  </div>
+                </button>
+              ))}
+
+              <div className={`${cardClass} flex items-center gap-3 px-4 py-3`}>
+                <ComplianceRing score={completionRate} size={38} strokeWidth={4} showLabel={false} />
+                <div className="min-w-0">
+                  <div className="font-display text-h2 font-bold leading-none text-foreground">{completionRate}%</div>
+                  <div className="mt-1 truncate text-caption font-medium text-muted-foreground">Completion</div>
+                </div>
               </div>
-
-              {/* Compliance Ring */}
-              <Card className="flex items-center justify-center">
-                <CardContent className="p-6 text-center">
-                  <ComplianceRing score={completionRate} size={140} />
-                  <p className="text-sm text-muted-foreground mt-2">Completion Rate</p>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Document Status Pie Chart */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <Card className="h-full">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base font-medium flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-muted-foreground" />
-                      Document Status
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {documentStatusData.length > 0 ? (
-                      <div className="h-[200px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={documentStatusData}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={50}
-                              outerRadius={80}
-                              paddingAngle={5}
-                              dataKey="value"
-                            >
-                              {documentStatusData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                              ))}
-                            </Pie>
-                            <Tooltip 
-                              contentStyle={{ 
-                                backgroundColor: 'hsl(var(--card))', 
-                                border: '1px solid hsl(var(--border))',
-                                borderRadius: '8px'
-                              }}
-                            />
-                          </PieChart>
-                        </ResponsiveContainer>
-                        <div className="flex justify-center gap-4 mt-2">
-                          {documentStatusData.map((item, index) => (
-                            <div key={item.name} className="flex items-center gap-1.5 text-xs">
-                              <div 
-                                className="w-2.5 h-2.5 rounded-full" 
-                                style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                              />
-                              <span className="text-muted-foreground">{item.name}: {item.value}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="h-[200px] flex items-center justify-center text-muted-foreground">
-                        No documents yet
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              {/* Activity Trend */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="lg:col-span-2"
-              >
-                <Card className="h-full">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base font-medium flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4 text-muted-foreground" />
-                      7-Day Activity
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-[200px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={activityTrend}>
-                          <defs>
-                            <linearGradient id="colorRequests" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0.3}/>
-                              <stop offset="95%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0}/>
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                          <XAxis 
-                            dataKey="day" 
-                            tick={{ fontSize: 12 }} 
-                            stroke="hsl(var(--muted-foreground))"
-                          />
-                          <YAxis 
-                            tick={{ fontSize: 12 }} 
-                            stroke="hsl(var(--muted-foreground))"
-                          />
-                          <Tooltip 
-                            contentStyle={{ 
-                              backgroundColor: 'hsl(var(--card))', 
-                              border: '1px solid hsl(var(--border))',
-                              borderRadius: '8px'
-                            }}
-                          />
-                          <Area 
-                            type="monotone" 
-                            dataKey="requests" 
-                            stroke="hsl(142, 76%, 36%)" 
-                            fillOpacity={1} 
-                            fill="url(#colorRequests)" 
-                            name="Requests"
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
             </div>
 
-            {/* Expiring Documents */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-medium flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-orange-500" />
-                    Expiring Documents
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {expiringDocuments.length > 0 ? (
-                    <ScrollArea className="h-[280px] pr-4">
-                      <div className="space-y-3">
-                        {expiringDocuments.map((doc) => (
-                          <div 
-                            key={doc.id}
-                            className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors border"
-                            onClick={() => {
-                              setActiveTab('documents');
-                              const url = new URL(window.location.href);
-                              url.searchParams.set('tab', 'documents');
-                              url.searchParams.set('subtab', 'expiring');
-                              url.searchParams.set('highlightDoc', doc.request_id);
-                              window.history.pushState({}, '', url.toString());
-                            }}
-                          >
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm truncate">{doc.title}</p>
-                              <p className="text-xs text-muted-foreground">{doc.buyer_name}</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge 
-                                variant={doc.is_expired ? 'destructive' : 'warning'}
-                                className="shrink-0"
-                              >
-                                {doc.is_expired 
-                                  ? 'Expired' 
-                                  : doc.days_until_expiry === 0 
-                                    ? 'Today' 
-                                    : `${doc.days_until_expiry}d left`
-                                }
-                              </Badge>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="shrink-0"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setRenewingDocument(doc);
-                                }}
-                              >
-                                <RefreshCw className="w-3 h-3 mr-1" />
-                                Renew
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
-                      <p className="text-sm">All documents are up to date!</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
+            {/* Work surface */}
+            <div className="grid flex-1 grid-cols-1 gap-4 lg:min-h-0 lg:grid-cols-3">
 
-            {/* Recent Document Requests */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-medium flex items-center justify-between">
-                    <span className="flex items-center gap-2">
-                      <FileCheck className="w-4 h-4 text-muted-foreground" />
-                      Recent Requests
-                    </span>
-                    <Badge variant="outline" className="text-xs">
-                      {documentRequests.length} total
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {documentRequests.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">{t('supplier:sections.noRecentRequests')}</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {documentRequests.slice(0, 5).map((request) => (
-                        <div 
-                          key={request.id} 
-                          className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"
+              {/* Hero — needs attention (the one panel the user acts on daily) */}
+              <div className={`${cardLiftedClass} flex min-h-0 flex-col overflow-hidden lg:col-span-2`}>
+                <ColumnHeader icon={Clock} iconTone="text-warning" label="Needs attention" count={stats.pendingRequests} />
+                {attentionRequests.length === 0 ? (
+                  <EmptyState label="Nothing pending — you're all caught up." />
+                ) : (
+                  <div className="min-h-0 flex-1 divide-y divide-border overflow-y-auto">
+                    {attentionRequests.map((request: any) => {
+                      const overdue = request.due_date && new Date(request.due_date) < now;
+                      return (
+                        <button
+                          key={request.id}
                           onClick={() => handleNotificationNavigation('requests', request.id)}
+                          className={`flex w-full items-center gap-3 px-4 py-3 text-left ${hoverSurfaceClass}`}
                         >
-                          <div className="flex items-center gap-3 min-w-0">
-                            {getStatusIcon(request.status)}
-                            <div className="min-w-0">
-                              <p className="font-medium text-sm truncate">{request.title}</p>
-                              <p className="text-xs text-muted-foreground">{request.buyers?.company_name}</p>
-                            </div>
+                          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-control ${overdue ? 'bg-danger/10 text-danger' : 'bg-warning/10 text-warning'}`}>
+                            {overdue ? <AlertTriangle className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
                           </div>
-                          <Badge className={`${getStatusColor(request.status)} shrink-0`}>
-                            {request.status}
-                          </Badge>
-                        </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-body font-medium text-foreground">{request.title}</p>
+                            <p className="truncate text-caption text-muted-foreground">{request.buyers?.company_name}</p>
+                          </div>
+                          {overdue ? (
+                            <span className="inline-flex shrink-0 items-center rounded-pill border border-danger/30 bg-danger/10 px-2.5 py-0.5 text-caption font-medium text-danger">
+                              Overdue
+                            </span>
+                          ) : request.due_date ? (
+                            <span className={`${pillClass} shrink-0`}>Due {fmtDate(request.due_date)}</span>
+                          ) : (
+                            <span className="shrink-0 text-caption text-muted-foreground">No due date</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {stats.pendingRequests > attentionRequests.length && (
+                  <button
+                    onClick={() => { sessionStorage.setItem('supplier_docs_filter_status', 'pending'); setActiveTab('documents'); }}
+                    className="shrink-0 border-t border-border px-4 py-2.5 text-caption font-semibold text-primary transition-colors hover:bg-muted/40"
+                  >
+                    View all {stats.pendingRequests} pending
+                  </button>
+                )}
+              </div>
+
+              {/* Right stack — rejections + (onboarding | expiring) */}
+              <div className="flex min-h-0 flex-col gap-4">
+
+                <div className={`${cardClass} flex min-h-0 flex-1 flex-col overflow-hidden`}>
+                  <ColumnHeader icon={AlertTriangle} iconTone="text-danger" label="Rejected" count={stats.rejectedDocuments} />
+                  {rejectedList.length === 0 ? (
+                    <EmptyState label="No rejections." />
+                  ) : (
+                    <div className="min-h-0 flex-1 divide-y divide-border overflow-y-auto">
+                      {rejectedList.map((request: any) => (
+                        <button
+                          key={request.id}
+                          onClick={() => handleNotificationNavigation('requests', request.id)}
+                          className={`flex w-full items-center gap-3 px-4 py-3 text-left ${hoverSurfaceClass}`}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-body font-medium text-foreground">{request.title}</p>
+                            <p className="truncate text-caption text-muted-foreground">{request.buyers?.company_name}</p>
+                          </div>
+                          <span className="shrink-0 text-caption font-semibold text-danger">Resubmit</span>
+                        </button>
                       ))}
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            </motion.div>
+                </div>
+
+                {showOnboarding ? (
+                  <div className={`${cardClass} flex min-h-0 flex-1 flex-col overflow-hidden`}>
+                    <ColumnHeader icon={UserCog} iconTone="text-primary" label="Onboarding" count={pendingOnboardingList.length} />
+                    <div className="min-h-0 flex-1 divide-y divide-border overflow-y-auto">
+                      {pendingOnboardingList.map((req: any) => (
+                        <button
+                          key={req.id}
+                          onClick={() => setActiveTab('connections')}
+                          className={`flex w-full items-center gap-3 px-4 py-3 text-left ${hoverSurfaceClass}`}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-body font-medium text-foreground">{buyerNameById.get(req.buyer_id) || 'Buyer'}</p>
+                            <p className="truncate text-caption text-muted-foreground">Onboarding in progress</p>
+                          </div>
+                          <span className="shrink-0 text-caption text-muted-foreground">{fmtDate(req.created_at)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className={`${cardClass} flex min-h-0 flex-1 flex-col overflow-hidden`}>
+                    <ColumnHeader icon={RefreshCw} iconTone="text-primary" label="Expiring soon" count={expiringDocuments.length} />
+                    {expiringList.length === 0 ? (
+                      <EmptyState label="All documents current." />
+                    ) : (
+                      <div className="min-h-0 flex-1 divide-y divide-border overflow-y-auto">
+                        {expiringList.map((doc: any) => (
+                          <div key={doc.id} className={`flex items-center gap-3 px-4 py-3 ${hoverSurfaceClass}`}>
+                            <button
+                              onClick={() => setActiveTab('documents')}
+                              className="min-w-0 flex-1 text-left"
+                            >
+                              <p className="truncate text-body font-medium text-foreground">{doc.title}</p>
+                              <p className="truncate text-caption text-muted-foreground">{doc.buyer_name}</p>
+                            </button>
+                            <span className={`shrink-0 inline-flex items-center rounded-pill px-2.5 py-0.5 text-caption font-medium ${doc.is_expired ? 'border border-danger/30 bg-danger/10 text-danger' : 'border border-warning/30 bg-warning/10 text-warning'}`}>
+                              {doc.is_expired ? 'Expired' : `${doc.days_until_expiry}d`}
+                            </span>
+                            <button
+                              onClick={() => setRenewingDocument(doc)}
+                              className="shrink-0 text-caption font-semibold text-primary hover:underline"
+                            >
+                              Renew
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         );
+      }
       case 'requests':
         return (
           <div className="space-y-6">

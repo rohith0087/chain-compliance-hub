@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
-  Building2, 
-  Users, 
-  ListChecks, 
-  FileCheck, 
+  Building2,
+  Users,
+  FileCheck,
   FileText, 
   BarChart3, 
   Plus, 
@@ -26,7 +25,6 @@ import {
   CreditCard,
   Package,
   UserCog,
-  Play,
   Volume2,
   VolumeX,
   HelpCircle,
@@ -345,12 +343,9 @@ export function SupplierSidebarLayout({
       icon: Home,
       value: 'overview'
     },
-    {
-      title: t('supplier:tabs.requests'),
-      icon: ListChecks,
-      value: 'requests',
-      badge: pendingRequests > 0 ? pendingRequests : undefined
-    },
+    // Document Requests tab removed from nav for now (pending a redesign);
+    // the 'requests' view and its data plumbing are left intact so internal
+    // deep links (dashboard notifications, pending-request cards) still work.
     {
       title: t('supplier:tabs.documents'),
       icon: FileCheck,
@@ -396,11 +391,6 @@ export function SupplierSidebarLayout({
       value: 'compliance'
     },
     {
-      title: 'Simulation Mode',
-      icon: Play,
-      value: 'simulation'
-    },
-    {
       title: 'Settings',
       icon: Settings,
       value: 'settings',
@@ -436,11 +426,6 @@ export function SupplierSidebarLayout({
     // Navigate to /messages instead of changing tabs
     if (value === 'messages') {
       navigate('/messages');
-      return;
-    }
-    // Simulation Mode lives on its own route
-    if (value === 'simulation') {
-      navigate('/supplier-simulation');
       return;
     }
     // Open Settings Modal
@@ -561,7 +546,7 @@ export function SupplierSidebarLayout({
   };
 
   const SupplierLogo = ({ size = 'h-10 w-10', icon = 'h-5 w-5' }: { size?: string; icon?: string }) => (
-    <div className={`flex ${size} items-center justify-center rounded-xl bg-primary overflow-hidden shrink-0`}>
+    <div className={`flex ${size} items-center justify-center rounded-full bg-primary overflow-hidden shrink-0`}>
       {supplierProfile?.company_logo_url ? (
         <>
           <img

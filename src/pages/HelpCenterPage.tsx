@@ -1,11 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Headphones, 
-  Phone, 
-  Mail, 
-  Activity, 
-  Search, 
+import {
+  Headphones,
+  Phone,
+  Mail,
+  Activity,
+  Search,
   ArrowLeft,
   ChevronRight,
   ExternalLink
@@ -20,191 +20,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-
-interface FAQ {
-  question: string;
-  answer: string;
-}
-
-interface FAQCategory {
-  id: string;
-  name: string;
-  icon: string;
-  faqs: FAQ[];
-}
-
-const faqCategories: FAQCategory[] = [
-  {
-    id: 'getting-started',
-    name: 'Getting Started',
-    icon: '🚀',
-    faqs: [
-      {
-        question: 'How do I create a buyer or supplier account?',
-        answer: 'To create an account, click "Sign Up" on the login page. You\'ll be asked to provide your company details and choose whether you\'re registering as a Buyer (requesting compliance documents) or a Supplier (providing compliance documents). Complete the registration form with your company information, and you\'ll receive a verification email to activate your account.'
-      },
-      {
-        question: 'What is the difference between a buyer and supplier role?',
-        answer: 'Buyers are companies that need to collect and verify compliance documents from their supply chain partners. They can request documents, manage supplier onboarding, and track compliance status. Suppliers are companies that provide goods or services and need to submit compliance documentation to their buyers. They upload documents, respond to requests, and maintain their compliance status across multiple buyer relationships.'
-      },
-      {
-        question: 'How do I navigate the dashboard?',
-        answer: 'Your dashboard is your command center. The left sidebar provides access to all main features: Documents, Suppliers/Buyers, Onboarding, Messages, and Settings. The main dashboard shows key metrics like compliance scores, pending actions, and expiring documents. Use the notification bell to see recent activity and the search bar to quickly find specific items.'
-      },
-      {
-        question: 'How do I invite team members to my company?',
-        answer: 'Go to Settings > Team Management. Click "Invite Team Member" and enter their email address. You can assign roles like Admin, Manager, or Viewer to control their access level. The invited person will receive an email with instructions to join your company account.'
-      },
-      {
-        question: 'How do I switch between buyer and supplier roles?',
-        answer: 'If your company operates as both a buyer and supplier, you can switch roles using the role selector in the sidebar. Click your company name at the top of the sidebar and select the role you want to use. Your dashboard and available features will update accordingly.'
-      },
-      {
-        question: 'How do I set up my company profile?',
-        answer: 'Navigate to Settings > Company Profile. Here you can add your company logo, update contact information, set your industry category, and configure company-wide preferences. A complete profile helps build trust with your trading partners and ensures smooth communication.'
-      }
-    ]
-  },
-  {
-    id: 'document-management',
-    name: 'Document Management',
-    icon: '📄',
-    faqs: [
-      {
-        question: 'How do I request documents from suppliers?',
-        answer: 'Go to the Documents section and click "New Request". Select the supplier, choose the document type (e.g., Certificate of Insurance, Quality Certification), set a due date, and add any specific instructions. The supplier will receive a notification and can upload the requested document directly through their portal.'
-      },
-      {
-        question: 'How do I upload compliance documents as a supplier?',
-        answer: 'Navigate to your Documents section where you\'ll see pending requests from your buyers. Click on a request to view details, then use the upload area to drag and drop your document or browse to select it. Supported formats include PDF, DOC, DOCX, and common image formats. Add an expiration date if applicable and submit for review.'
-      },
-      {
-        question: 'What document formats are supported?',
-        answer: 'We support PDF, DOC, DOCX, XLS, XLSX, PNG, JPG, and JPEG formats. PDF is recommended for most compliance documents as it preserves formatting and is widely accepted. Maximum file size is 25MB per document.'
-      },
-      {
-        question: 'How do I renew an expiring document?',
-        answer: 'You\'ll receive notifications as documents approach their expiration date (typically 60, 30, and 7 days before). Click on the expiring document notification or find it in your Documents list, then click "Upload New Version". The new document will go through the approval process while the current version remains active until approved.'
-      },
-      {
-        question: 'What do the different document statuses mean?',
-        answer: 'Pending: Document has been requested but not yet uploaded. Submitted: Document uploaded and awaiting review. Under Review: Currently being reviewed by the buyer. Approved: Document accepted and compliance verified. Rejected: Document not accepted (see rejection notes for details). Expired: Document past its validity date and needs renewal.'
-      },
-      {
-        question: 'How do I view and download documents?',
-        answer: 'Click on any document in your Documents list to open the detail view. You can preview most document types directly in the browser. Use the download button to save a copy to your device. For bulk downloads, select multiple documents using the checkboxes and click "Download Selected".'
-      },
-      {
-        question: 'How do I request multiple documents at once (bulk requests)?',
-        answer: 'When creating a new request, you can add multiple document types to a single request. Alternatively, use the "Bulk Request" feature to send the same document requirements to multiple suppliers simultaneously. This is especially useful during initial onboarding or annual renewal periods.'
-      }
-    ]
-  },
-  {
-    id: 'supplier-onboarding',
-    name: 'Supplier Onboarding',
-    icon: '🤝',
-    faqs: [
-      {
-        question: 'How does the supplier onboarding process work?',
-        answer: 'The onboarding process has three stages: 1) Invitation - You send an onboarding request with required documents and information. 2) Submission - The supplier creates an account (if new) and submits all required documents and completes any forms. 3) Review - You review submissions, request any clarifications, and approve the supplier once all requirements are met.'
-      },
-      {
-        question: 'How do I create an onboarding template for suppliers?',
-        answer: 'Go to Settings > Onboarding Templates. Click "Create Template" and configure the documents, forms, and information you require from new suppliers. You can create different templates for different supplier types (e.g., manufacturing, services, logistics). Templates can be reused for efficient onboarding of multiple suppliers.'
-      },
-      {
-        question: 'What documents are typically required during onboarding?',
-        answer: 'Common onboarding documents include: Certificate of Insurance (COI), W-9 Tax Form, Business License, Quality Certifications (ISO, etc.), Safety Certifications, Banking Information, Company Registration Documents, and Supplier Questionnaires. You can customize requirements based on your industry and compliance needs.'
-      },
-      {
-        question: 'How do I track onboarding progress?',
-        answer: 'The Onboarding section shows all active onboarding requests with their current status. Each request displays a progress indicator showing completed vs. pending items. Click on any request to see detailed status of each required document and form. You\'ll receive notifications when suppliers submit items or if requests become overdue.'
-      },
-      {
-        question: 'How do I approve or reject a supplier onboarding request?',
-        answer: 'Open the onboarding request to review all submitted documents and information. You can approve individual items or the entire request. For rejections, provide clear feedback explaining what needs to be corrected. The supplier will be notified and can make corrections and resubmit. Once all items are approved, the supplier relationship becomes active.'
-      }
-    ]
-  },
-  {
-    id: 'compliance-expiration',
-    name: 'Compliance & Expiration',
-    icon: '✅',
-    faqs: [
-      {
-        question: 'How does the compliance score work?',
-        answer: 'The compliance score is calculated based on the percentage of required documents that are current and approved. A score of 100% means all required documents are valid and up-to-date. The score decreases when documents expire or are missing. Scores are shown for individual suppliers and as an aggregate across your entire supplier base.'
-      },
-      {
-        question: 'What happens when a document expires?',
-        answer: 'When a document expires: 1) The document status changes to "Expired" and is highlighted in red. 2) The supplier\'s compliance score is affected. 3) Both parties receive notifications. 4) The supplier should upload a renewed version. Until a new version is approved, the expired document remains visible for reference but doesn\'t count toward compliance.'
-      },
-      {
-        question: 'How do I set up expiration reminders?',
-        answer: 'Go to Settings > Notification Preferences to configure when you receive expiration alerts. Default reminders are sent at 60 days, 30 days, 7 days, and on the expiration date. You can customize these intervals and choose to receive reminders via email, in-app notifications, or both.'
-      },
-      {
-        question: 'How do I view all expiring documents in one place?',
-        answer: 'Your dashboard includes an Expiry Panel that categorizes documents by urgency: Already Expired, Expiring in 7 days, Expiring in 30 days, and Expiring in 60 days. Click on any category to see the full list. You can also use filters in the Documents section to show only documents expiring within a specific timeframe.'
-      },
-      {
-        question: 'What is the document attention panel on the dashboard?',
-        answer: 'The Attention Panel highlights documents requiring immediate action. "For Review" shows documents submitted by suppliers awaiting your approval. "Overdue" shows document requests past their due date. This panel helps you prioritize your daily compliance management tasks and ensures nothing falls through the cracks.'
-      }
-    ]
-  },
-  {
-    id: 'notifications-alerts',
-    name: 'Notifications & Alerts',
-    icon: '🔔',
-    faqs: [
-      {
-        question: 'How do I enable notification sounds?',
-        answer: 'Click the notification bell icon in the header, then click the sound/speaker icon to toggle notification sounds on or off. When enabled, you\'ll hear an audio alert for new notifications. This setting is saved to your browser and persists across sessions.'
-      },
-      {
-        question: 'What types of notifications will I receive?',
-        answer: 'You\'ll receive notifications for: New document requests, Document submissions, Document approvals/rejections, Upcoming expirations, Overdue documents, Onboarding updates, New messages, Team activity (for admins), and System announcements. Each type can be individually enabled or disabled in Settings.'
-      },
-      {
-        question: 'How do I manage my notification preferences?',
-        answer: 'Go to Settings > Notifications to customize your preferences. You can choose which events trigger notifications, select your preferred channels (email and/or in-app), set quiet hours when you don\'t want to be disturbed, and configure digest emails for daily or weekly summaries instead of individual alerts.'
-      },
-      {
-        question: 'How do I contact a buyer or supplier through the platform?',
-        answer: 'Use the Messages feature in the sidebar to communicate securely with your trading partners. You can start a new conversation from the Messages section or click the message icon on any supplier/buyer profile. All communications are logged and associated with relevant documents for easy reference and audit trails.'
-      }
-    ]
-  },
-  {
-    id: 'account-security',
-    name: 'Account & Security',
-    icon: '🔐',
-    faqs: [
-      {
-        question: 'How do I enable two-factor authentication (MFA)?',
-        answer: 'Go to Settings > Security and click "Enable Two-Factor Authentication". You\'ll need an authenticator app like Google Authenticator or Authy. Scan the QR code with your app, enter the verification code to confirm, and save your backup recovery codes in a secure location. MFA adds an extra layer of protection to your account.'
-      },
-      {
-        question: 'How do I reset my password?',
-        answer: 'Click "Forgot Password" on the login page and enter your email address. You\'ll receive a password reset link valid for 1 hour. Click the link and create a new password meeting our security requirements (minimum 8 characters, including uppercase, lowercase, number, and special character). If you\'re logged in, you can change your password in Settings > Security.'
-      },
-      {
-        question: 'How do I update my profile information?',
-        answer: 'Click your profile picture or name in the top right corner and select "Profile" or go to Settings > My Profile. Here you can update your name, email, phone number, profile photo, and notification preferences. Some changes may require verification for security purposes.'
-      },
-      {
-        question: 'How do I manage company branches?',
-        answer: 'If your organization has multiple locations, go to Settings > Branches. You can add new branches with their address and contact information, assign team members to specific branches, and set branch-specific document requirements. Branch management helps organize your compliance operations across multiple locations.'
-      },
-      {
-        question: 'How do I manage team member permissions?',
-        answer: 'Go to Settings > Team Management. Click on any team member to view and modify their role and permissions. Available roles include: Admin (full access), Manager (can approve documents and manage suppliers), and Viewer (read-only access). You can also create custom roles with specific permission sets tailored to your organization\'s needs.'
-      }
-    ]
-  }
-];
+import { HelpRichText, helpPlainText } from '@/components/help/HelpRichText';
+import { faqCategories } from '@/components/help/helpContent';
 
 export default function HelpCenterPage() {
   const navigate = useNavigate();
@@ -225,7 +42,7 @@ export default function HelpCenterPage() {
         faqs: category.faqs.filter(
           faq =>
             faq.question.toLowerCase().includes(query) ||
-            faq.answer.toLowerCase().includes(query)
+            helpPlainText(faq.answer).toLowerCase().includes(query)
         )
       }))
       .filter(category => category.faqs.length > 0);
@@ -371,7 +188,7 @@ export default function HelpCenterPage() {
                 onClick={() => setSelectedCategory(category.id)}
                 className="rounded-full"
               >
-                <span className="mr-1">{category.icon}</span>
+                <category.icon className="mr-1 h-3.5 w-3.5" />
                 {category.name}
                 <Badge variant="secondary" className="ml-2 bg-white/20">
                   {category.faqs.length}
@@ -387,7 +204,9 @@ export default function HelpCenterPage() {
                 <Card key={category.id}>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <span>{category.icon}</span>
+                      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10">
+                        <category.icon className="h-4 w-4 text-primary" />
+                      </span>
                       {category.name}
                       <Badge variant="outline" className="ml-auto">
                         {category.faqs.length} questions
@@ -404,8 +223,8 @@ export default function HelpCenterPage() {
                               {faq.question}
                             </span>
                           </AccordionTrigger>
-                          <AccordionContent className="text-muted-foreground pl-6">
-                            {faq.answer}
+                          <AccordionContent className="pl-6 pr-2">
+                            <HelpRichText content={faq.answer} />
                           </AccordionContent>
                         </AccordionItem>
                       ))}

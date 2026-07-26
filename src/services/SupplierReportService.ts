@@ -9,11 +9,20 @@ export interface SupplierReportData {
   generated_at: string;
   supplier: { id: string; company_name: string; industry: string | null; contact_email: string | null; description: string | null; connection_status: string };
   compliance_score: number;
-  metrics: { total: number; approved: number; pending: number; submitted: number; rejected: number; overdue: number };
+  metrics: {
+    total: number; approved: number; pending: number; submitted: number; rejected: number; overdue: number;
+    // Responsiveness signals (null until the supplier has responded at least once).
+    avg_reply_days?: number | null;
+    on_time_rate?: number | null;
+    fastest_reply_days?: number | null;
+    slowest_reply_days?: number | null;
+  };
   totals: { framework_requirements: number; compliant: number; open_gaps: number; frameworks: number };
   framework_coverage: Array<{ framework_code: string; total: number; compliant: number; gaps: number; pending: number }>;
   requirements: Array<{ framework_code: string; requirement: string; outcome: string; valid_until: string | null; explanation: string | null }>;
   recent_documents: Array<{ title: string; document_type: string | null; status: string; expiration_date: string | null; created_at: string }>;
+  // Six-month operational trend: requests raised vs. documents received.
+  activity_trend?: Array<{ month: string; requested: number; received: number }>;
   ai_summary: { headline: string; overall_assessment: string; strengths: string[]; risks: string[]; recommendations: string[] } | null;
   // Whether the AI summary was reused from cache (unchanged inputs) and when it
   // was originally generated. Absent on older function versions.

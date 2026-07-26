@@ -49,7 +49,7 @@ const Monogram: React.FC<{ companyName: string; size: keyof typeof sizeClasses; 
 }) => (
   <div
     aria-hidden="true"
-    className={`${sizeClasses[size]} flex shrink-0 items-center justify-center rounded-[10px] bg-primary/10 text-primary ring-1 ring-primary/15 ${className}`}
+    className={`${sizeClasses[size]} flex shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/15 ${className}`}
   >
     <span className={`font-mono font-semibold leading-none tracking-[0.02em] ${monogramTextClasses[size]}`}>
       {getInitials(companyName)}
@@ -77,7 +77,7 @@ export const CompanyLogo: React.FC<CompanyLogoProps> = ({
       <img
         src={logoUrl}
         alt={`${companyName} logo`}
-        className={`${sizeClasses[size]} shrink-0 rounded-[10px] border border-border object-contain ${className}`}
+        className={`${sizeClasses[size]} shrink-0 rounded-full border border-border object-contain ${className}`}
         onError={() => setFailed(true)}
       />
     );
@@ -86,7 +86,7 @@ export const CompanyLogo: React.FC<CompanyLogoProps> = ({
   if (fallbackIcon) {
     return (
       <div
-        className={`${sizeClasses[size]} flex shrink-0 items-center justify-center rounded-[10px] bg-primary/10 text-primary ring-1 ring-primary/15 ${className}`}
+        className={`${sizeClasses[size]} flex shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/15 ${className}`}
       >
         {fallbackIcon}
       </div>

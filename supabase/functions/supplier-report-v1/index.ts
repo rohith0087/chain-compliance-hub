@@ -88,23 +88,68 @@ Deno.serve(async (req) => {
       rejected: reqRows.filter((r) => r.status === 'rejected').length,
       overdue: reqRows.filter((r) => r.status === 'pending' && r.due_date && r.due_date < today).length,
       avg_reply_days: null as number | null,
+      on_time_rate: null as number | null,
+      fastest_reply_days: null as number | null,
+      slowest_reply_days: null as number | null,
     };
     const compliance_score = metrics.total > 0 ? Math.round((metrics.approved / metrics.total) * 100) : 0;
 
-    // Average reply time: days from a request being created to the supplier's
-    // first upload against it. A concrete "how responsive is this supplier" signal.
-    const reqCreatedById = new Map(reqRows.map((r) => [r.id, r.created_at]));
+    // Responsiveness, measured on each request's FIRST upload: days from the
+    // request being raised to the supplier's first response. Plus the share of
+    // those first responses that landed on or before the due date.
+    const reqById = new Map(reqRows.map((r) => [r.id, r]));
     const { data: uploadRows } = await admin.from('document_uploads')
       .select('created_at, request_id, document_requests!inner(buyer_id, supplier_id)')
       .eq('document_requests.buyer_id', buyer_id).eq('document_requests.supplier_id', supplier_id);
-    const replyDeltas: number[] = [];
-    for (const u of (uploadRows ?? []) as Array<{ created_at: string; request_id: string }>) {
-      const reqCreated = reqCreatedById.get(u.request_id);
-      if (!reqCreated) continue;
-      const days = (new Date(u.created_at).getTime() - new Date(reqCreated).getTime()) / 86400000;
-      if (days >= 0 && days < 3650) replyDeltas.push(days);
+    const uploads = (uploadRows ?? []) as Array<{ created_at: string; request_id: string }>;
+
+    const firstUploadByRequest = new Map<string, string>();
+    for (const u of uploads) {
+      const prev = firstUploadByRequest.get(u.request_id);
+      if (!prev || new Date(u.created_at).getTime() < new Date(prev).getTime()) {
+        firstUploadByRequest.set(u.request_id, u.created_at);
+      }
     }
-    if (replyDeltas.length) metrics.avg_reply_days = Math.round((replyDeltas.reduce((a, b) => a + b, 0) / replyDeltas.length) * 10) / 10;
+
+    const replyDeltas: number[] = [];
+    let dueConsidered = 0;
+    let onTime = 0;
+    for (const [requestId, firstAt] of firstUploadByRequest) {
+      const req = reqById.get(requestId);
+      if (!req) continue;
+      const days = (new Date(firstAt).getTime() - new Date(req.created_at).getTime()) / 86400000;
+      if (days >= 0 && days < 3650) replyDeltas.push(days);
+      if (req.due_date) {
+        dueConsidered++;
+        if (firstAt.slice(0, 10) <= req.due_date) onTime++;
+      }
+    }
+    if (replyDeltas.length) {
+      metrics.avg_reply_days = Math.round((replyDeltas.reduce((a, b) => a + b, 0) / replyDeltas.length) * 10) / 10;
+      metrics.fastest_reply_days = Math.round(Math.min(...replyDeltas) * 10) / 10;
+      metrics.slowest_reply_days = Math.round(Math.max(...replyDeltas) * 10) / 10;
+    }
+    if (dueConsidered > 0) metrics.on_time_rate = Math.round((onTime / dueConsidered) * 100);
+
+    // Six-month operational trend: requests raised vs. documents received.
+    const activity_trend: Array<{ month: string; requested: number; received: number }> = [];
+    {
+      const now = new Date();
+      const key = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+      const requestedBy = new Map<string, number>();
+      const receivedBy = new Map<string, number>();
+      for (const r of reqRows) requestedBy.set(key(new Date(r.created_at)), (requestedBy.get(key(new Date(r.created_at))) ?? 0) + 1);
+      for (const u of uploads) receivedBy.set(key(new Date(u.created_at)), (receivedBy.get(key(new Date(u.created_at))) ?? 0) + 1);
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+        const k = key(d);
+        activity_trend.push({
+          month: d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }),
+          requested: requestedBy.get(k) ?? 0,
+          received: receivedBy.get(k) ?? 0,
+        });
+      }
+    }
 
     // Categories requested from this supplier.
     const categories = [...new Set(reqRows.map((r) => r.category).filter((c): c is string => Boolean(c)))].slice(0, 20);
@@ -220,6 +265,7 @@ Deno.serve(async (req) => {
         outcome: r.outcome, valid_until: r.effective_to, explanation: r.explanation,
       })),
       recent_documents,
+      activity_trend,
       ai_summary,
       ai_summary_meta,
     });

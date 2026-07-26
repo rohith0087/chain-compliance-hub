@@ -132,6 +132,22 @@
   outline: none;
 }
 
+/* Dark mode: the base panel uses --card (a raised ink tone) which sits too
+   close to the dashboard behind it and reads as camouflaged. Drop to a near-
+   black surface so the floating assistant clearly separates from the page,
+   lifted by a stronger shadow and a faint accent border. Inner chips keep
+   their --muted backgrounds, so they now read as raised against the darker
+   panel rather than blending in. */
+.dark .compliance-assistant-panel {
+  background: hsl(200 42% 4% / 0.99);
+  border-color: hsl(var(--primary) / 0.22);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.72);
+}
+
+.dark .compliance-assistant-panel__header {
+  background: linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(200 42% 5%));
+}
+
 .compliance-assistant-panel__header {
   display: flex;
   align-items: flex-start;

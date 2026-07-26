@@ -349,7 +349,7 @@ export const BuyerOverviewDashboard = ({
         </Panel>
 
         {/* Compliance score + risk hotspots */}
-        <div className="flex flex-col gap-3.5 lg:col-span-4">
+        <div className="flex flex-col gap-3.5 lg:col-span-4 lg:min-h-0">
           <section className={`${dashboardCardClass} shrink-0 p-4`}>
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0 space-y-1">
@@ -394,7 +394,7 @@ export const BuyerOverviewDashboard = ({
         </div>
 
         {/* AI Summary — kept, now on-brand and driven by real numbers */}
-        <section className="ai-card flex flex-col p-4 lg:col-span-3">
+        <section className="ai-card flex flex-col p-4 lg:col-span-3 lg:min-h-0">
           <header className="mb-3 flex items-center justify-between">
             <div className="flex min-w-0 items-center gap-2">
               <Sparkles className="h-4 w-4 shrink-0 text-primary" />

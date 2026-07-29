@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   Flag,
   Database,
+  Store,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -60,6 +61,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     label: 'People',
     items: [
       { title: 'User Management', section: 'users', url: '/platform-admin/dashboard?tab=users', icon: Users },
+      { title: 'Resellers', section: 'resellers', url: '/platform-admin/dashboard?tab=resellers', icon: Store },
       { title: 'Invitations', section: 'invitations', url: '/platform-admin/dashboard?tab=invitations', icon: UserPlus },
       { title: 'Support Tickets', section: 'tickets', url: '/platform-admin/dashboard?tab=tickets', icon: Ticket },
     ],

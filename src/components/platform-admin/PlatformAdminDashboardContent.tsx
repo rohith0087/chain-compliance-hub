@@ -12,6 +12,7 @@ import { PlatformEmailIntakeOperations } from './PlatformEmailIntakeOperations';
 import { PlatformAdminSupplierRisk } from './PlatformAdminSupplierRisk';
 import { PlatformAdminFeatureFlags } from './PlatformAdminFeatureFlags';
 import { PlatformAdminDataExplorer } from './PlatformAdminDataExplorer';
+import { PlatformAdminResellers } from './PlatformAdminResellers';
 import { AdminPageHeader, AdminCard, AdminStatCard, AdminBadge, type AdminTone } from './ui';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -34,6 +35,7 @@ export function PlatformAdminDashboardContent() {
   if (activeTab === 'supplier-risk') return <PlatformAdminSupplierRisk />;
   if (activeTab === 'feature-flags') return <PlatformAdminFeatureFlags />;
   if (activeTab === 'data-explorer') return <PlatformAdminDataExplorer />;
+  if (activeTab === 'resellers') return <PlatformAdminResellers />;
 
   const statsCards = [
     { title: 'Total Users', value: stats?.total_users ?? 0, icon: Users, hint: `${stats?.recent_signups ?? 0} new this week` },

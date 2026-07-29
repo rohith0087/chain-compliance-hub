@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Loader2, MoreHorizontal, Search, Settings, RotateCcw, Users, Database, Shield, CreditCard, DollarSign, Ban, ShieldCheck } from 'lucide-react';
+import { Loader2, MoreHorizontal, Search, Settings, RotateCcw, Users, Database, Shield, CreditCard, DollarSign, Ban, ShieldCheck, UserPlus } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { usePlatformAdmin, type DetailedUser } from '@/hooks/usePlatformAdmin';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -44,6 +45,27 @@ export function PlatformAdminUserManagement() {
     await updateUserRole(selectedUser.id, newRoles);
     setShowRoleDialog(false);
     setSelectedUser(null);
+  };
+
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteName, setInviteName] = useState('');
+  const [inviteBusy, setInviteBusy] = useState(false);
+
+  const handleInvite = async () => {
+    if (!inviteEmail.trim()) return;
+    setInviteBusy(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any).functions.invoke('create-user', {
+      body: { kind: 'account', email: inviteEmail.trim(), full_name: inviteName.trim() || null },
+    });
+    if (error || !data?.success) {
+      toast({ title: 'Error', description: data?.error || error?.message || 'Failed to invite', variant: 'destructive' });
+    } else {
+      toast({ title: data.invited ? 'Invitation sent' : 'User already exists', description: inviteEmail });
+      setInviteEmail(''); setInviteName(''); setInviteOpen(false); await fetchAllUsers();
+    }
+    setInviteBusy(false);
   };
 
   const handleSetStatus = async (userId: string, disabled: boolean) => {
@@ -182,7 +204,35 @@ export function PlatformAdminUserManagement() {
                 <SelectItem value="admin">Admins</SelectItem>
               </SelectContent>
             </Select>
+            <button onClick={() => setInviteOpen((v) => !v)}
+              className="inline-flex h-12 items-center justify-center gap-1.5 rounded-md px-4 text-sm font-medium"
+              style={{ background: 'hsl(var(--admin-accent-blue))', color: 'white' }}>
+              <UserPlus className="h-4 w-4" /> Invite user
+            </button>
           </div>
+
+          {inviteOpen && (
+            <div className="mb-8 flex flex-wrap items-end gap-3 rounded-xl border p-6"
+              style={{ backgroundColor: 'hsl(var(--admin-card))', borderColor: 'hsl(var(--admin-border))' }}>
+              <div>
+                <label className="text-xs" style={{ color: 'hsl(var(--admin-text-muted))' }}>Email</label>
+                <input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} type="email" placeholder="user@company.com"
+                  className="mt-1 block rounded-md px-3 py-2 text-sm outline-none" style={{ background: 'hsl(var(--admin-background))', border: '1px solid hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }} />
+              </div>
+              <div>
+                <label className="text-xs" style={{ color: 'hsl(var(--admin-text-muted))' }}>Full name</label>
+                <input value={inviteName} onChange={(e) => setInviteName(e.target.value)} placeholder="Jane Doe"
+                  className="mt-1 block rounded-md px-3 py-2 text-sm outline-none" style={{ background: 'hsl(var(--admin-background))', border: '1px solid hsl(var(--admin-border))', color: 'hsl(var(--admin-text))' }} />
+              </div>
+              <button onClick={handleInvite} disabled={inviteBusy || !inviteEmail}
+                className="rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50" style={{ background: 'hsl(var(--admin-accent-blue))', color: 'white' }}>
+                {inviteBusy ? 'Inviting…' : 'Send invite'}
+              </button>
+              <span className="max-w-xs text-xs" style={{ color: 'hsl(var(--admin-text-muted))' }}>
+                Emails an invite to set a password. Assign them to a company from the customer or reseller screens.
+              </span>
+            </div>
+          )}
 
           {/* Professional Users Table */}
           <div className="rounded-xl border overflow-hidden" 

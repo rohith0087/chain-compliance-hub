@@ -26,6 +26,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AgentManagementDashboard from "./components/agents/AgentManagementDashboard";
 import PlatformAdminLogin from "./pages/PlatformAdminLogin";
 import PlatformAdminDashboard from "./pages/PlatformAdminDashboard";
+import PartnerDashboard from "./pages/PartnerDashboard";
 
 import SharedDocumentViewer from "./components/shared/SharedDocumentViewer";
 import NotFound from "./pages/NotFound";
@@ -390,6 +391,45 @@ const PlatformAdminRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// Guards the partner/reseller portal. Gates on an active partner_members row
+// whose partner is active. Unauthenticated → /auth; authenticated non-partners
+// → the app dashboard.
+const PartnerRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading: authLoading } = useAuth();
+  const [isPartner, setIsPartner] = useState<boolean | null>(null);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    const check = async () => {
+      if (!user) { setIsPartner(false); setChecking(false); return; }
+      try {
+        const { data, error } = await supabase
+          .from('partner_members')
+          .select('id, status, partners(status)')
+          .eq('profile_id', user.id)
+          .eq('status', 'active');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setIsPartner(!error && !!(data ?? []).some((r: any) => r.partners?.status === 'active'));
+      } catch {
+        setIsPartner(false);
+      }
+      setChecking(false);
+    };
+    check();
+  }, [user]);
+
+  if (authLoading || checking) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
+  if (!user) return <Navigate to="/auth" replace />;
+  if (!isPartner) return <Navigate to="/dashboard" replace />;
+  return <>{children}</>;
+};
+
 const AppRoutes = () => {
   return (
     <BrowserRouter>
@@ -481,6 +521,11 @@ const AppRoutes = () => {
                     <PlatformAdminRoute>
                       <PlatformAdminDashboard />
                     </PlatformAdminRoute>
+                  } />
+                  <Route path="/partner/dashboard" element={
+                    <PartnerRoute>
+                      <PartnerDashboard />
+                    </PartnerRoute>
                   } />
                   
                   <Route path="/shared-document/:token" element={<SharedDocumentViewer />} />

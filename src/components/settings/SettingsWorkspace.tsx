@@ -5,6 +5,7 @@ import { PasswordChangeForm } from './PasswordChangeForm';
 import { NotificationSettingsForm } from './NotificationSettingsForm';
 import { IntegrationsPanel } from './IntegrationsPanel';
 import { CompanyManagementDashboard } from '@/components/company/CompanyManagementDashboard';
+import { CompanyPartnerPanel } from './CompanyPartnerPanel';
 import SubscriptionPage from '@/pages/SubscriptionPage';
 
 export interface SettingsWorkspaceProps {
@@ -99,13 +100,16 @@ export function SettingsWorkspace({
           </div>
         )}
         {needsCompany.has(active) && (companyReady ? (
-          <CompanyManagementDashboard
-            companyId={companyId!}
-            companyType={companyType!}
-            companyName={companyName || 'Company'}
-            defaultTab={active === 'general' ? 'overview' : active === 'users' ? 'users' : 'branches'}
-            embedded
-          />
+          <div className="space-y-6">
+            {active === 'general' && <CompanyPartnerPanel companyId={companyId!} companyType={companyType!} />}
+            <CompanyManagementDashboard
+              companyId={companyId!}
+              companyType={companyType!}
+              companyName={companyName || 'Company'}
+              defaultTab={active === 'general' ? 'overview' : active === 'users' ? 'users' : 'branches'}
+              embedded
+            />
+          </div>
         ) : (
           <p className="text-sm text-muted-foreground">Company management requires an active company context.</p>
         ))}

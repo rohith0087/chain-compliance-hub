@@ -28,3 +28,11 @@ supabase/.temp/
 
 # Tooling scratch
 .codex-tmp/
+
+# Session scratch / output artifacts (screenshots, briefings, reports)
+brag-output/
+security-briefing/
+security-briefing-screenshots/
+/shot2.png
+/shot3.png
+/supplier-report.png

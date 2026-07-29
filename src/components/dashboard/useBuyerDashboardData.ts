@@ -63,6 +63,8 @@ export interface BuyerDashboardData {
 
   trend: MonthBucket[];
   hasHistory: boolean;
+  /** Daily approvals over the last 30 days — a fine-grained momentum sparkline. */
+  spark30: number[];
 
   complianceScore: number;
   scoreDelta: number | null;
@@ -89,6 +91,7 @@ const EMPTY: BuyerDashboardData = {
   expiringItems: [],
   trend: [],
   hasHistory: false,
+  spark30: [],
   complianceScore: 0,
   scoreDelta: null,
   approvedTotal: 0,
@@ -220,6 +223,10 @@ export function useBuyerDashboardData(
         // --- 6-month trend, bucketed by the month the request moved ---
         const skeleton = buildMonthSkeleton();
         const byKey = new Map(skeleton.map((m) => [m.key, m]));
+        // --- 30-day daily approvals, for the momentum sparkline ---
+        const DAY = 86400000;
+        const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+        const spark30 = new Array(30).fill(0) as number[];
         for (const r of requests) {
           // Terminal states are bucketed by when they were decided; open states
           // by when they were raised.
@@ -227,11 +234,19 @@ export function useBuyerDashboardData(
           const stamp = isTerminal ? (r.updated_at ?? r.created_at) : r.created_at;
           if (!stamp) continue;
           const bucket = byKey.get(monthKey(new Date(stamp)));
-          if (!bucket) continue;
-          if (r.status === 'approved') bucket.approved += 1;
-          else if (r.status === 'rejected') bucket.rejected += 1;
-          else if (r.status === 'submitted') bucket.submitted += 1;
-          else if (r.status === 'pending') bucket.pending += 1;
+          if (bucket) {
+            if (r.status === 'approved') bucket.approved += 1;
+            else if (r.status === 'rejected') bucket.rejected += 1;
+            else if (r.status === 'submitted') bucket.submitted += 1;
+            else if (r.status === 'pending') bucket.pending += 1;
+          }
+          // Approvals per day across the trailing 30-day window (index 0 = 29
+          // days ago, index 29 = today).
+          if (r.status === 'approved') {
+            const dayStart = new Date(stamp); dayStart.setHours(0, 0, 0, 0);
+            const idx = 29 - Math.round((startOfToday.getTime() - dayStart.getTime()) / DAY);
+            if (idx >= 0 && idx < 30) spark30[idx] += 1;
+          }
         }
         const trend = skeleton;
         const monthsWithData = trend.filter(
@@ -345,6 +360,7 @@ export function useBuyerDashboardData(
           expiringItems,
           trend,
           hasHistory: monthsWithData >= 2,
+          spark30,
           complianceScore,
           scoreDelta,
           approvedTotal: totalApproved,

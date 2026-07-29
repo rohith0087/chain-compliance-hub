@@ -565,7 +565,7 @@ export function BuyerSidebarLayout({
         <SidebarHeader className="border-b border-sidebar-border px-4 py-3 bg-transparent">
           <div className="flex items-center gap-3">
             {/* Company Logo - displays uploaded logo or default Building2 icon */}
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary overflow-hidden shrink-0">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary overflow-hidden shrink-0">
               {buyerProfile?.company_logo_url ? (
                 <>
                   <img 
@@ -776,7 +776,7 @@ export function BuyerSidebarLayout({
       const railBody = (
         <div className="flex h-full flex-col items-center py-3 gap-2">
           {/* Logo */}
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary overflow-hidden shrink-0">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary overflow-hidden shrink-0">
             {buyerProfile?.company_logo_url ? (
               <img src={buyerProfile.company_logo_url} alt="Logo" className="h-full w-full object-contain" />
             ) : (

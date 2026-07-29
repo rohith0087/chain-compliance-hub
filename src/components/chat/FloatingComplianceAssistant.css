@@ -39,29 +39,12 @@
   z-index: -1;
 }
 
+/* Dark mode: a clean neutral elevation + hairline ring. The teal breathing
+   glow was removed on purpose — it read as a gradient smear around the icon. */
 .dark .compliance-assistant-launcher__halo {
   box-shadow:
-    0 10px 26px hsl(var(--primary) / 0.22),
-    0 2px 8px hsl(199 40% 6% / 0.18),
-    0 0 0 1px hsl(var(--primary) / 0.22);
-  animation: assistant-halo-pulse 4.8s ease-in-out infinite;
-}
-
-/* Ambient breathing glow, so the launcher has presence at rest rather than
-   only reacting to hover. */
-@keyframes assistant-halo-pulse {
-  0%, 100% {
-    box-shadow:
-      0 10px 26px hsl(var(--primary) / 0.20),
-      0 2px 8px hsl(199 40% 6% / 0.18),
-      0 0 0 1px hsl(var(--primary) / 0.20);
-  }
-  50% {
-    box-shadow:
-      0 10px 32px hsl(var(--primary) / 0.38),
-      0 2px 8px hsl(199 40% 6% / 0.18),
-      0 0 0 1px hsl(var(--primary) / 0.34);
-  }
+    0 8px 20px rgba(0, 0, 0, 0.45),
+    0 0 0 1px hsl(var(--border));
 }
 
 .compliance-assistant-launcher__face {
@@ -74,7 +57,7 @@
 }
 
 .dark .compliance-assistant-launcher__face {
-  filter: drop-shadow(0 7px 14px hsl(var(--primary) / 0.28));
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4));
 }
 
 .compliance-assistant-launcher:hover .compliance-assistant-launcher__face {

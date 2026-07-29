@@ -111,6 +111,11 @@ const isTurnstileEnabled = import.meta.env.VITE_TURNSTILE_ENABLED === 'true';
 // the tab toggle, and the "Don't have an account? Sign up" link.
 const SIGNUP_ENABLED = false;
 
+// Google SSO is currently disabled on the login page. The button and its
+// handler are kept intact; flip to `true` to re-enable "Continue with Google"
+// and the divider above the email form.
+const GOOGLE_SIGNIN_ENABLED = false;
+
 const Wordmark = ({ size = 24, className = "", invertLogo = false }: { size?: number, className?: string, invertLogo?: boolean }) => (
   <span className={`flex items-center gap-3 ${className}`}>
     <img src="/logo.png" alt="TraceR2C Logo" className={`object-contain ${invertLogo ? 'brightness-0 invert' : ''}`} style={{ width: size * 1.6, height: size * 1.6 }} />
@@ -663,7 +668,7 @@ const AuthPage = () => {
             </div>
 
             {/* Google sign-in (hidden during MFA & signup-only flows show it too) */}
-            {authStep === 'credentials' && (
+            {GOOGLE_SIGNIN_ENABLED && authStep === 'credentials' && (
               <>
                 <Button
                   type="button"

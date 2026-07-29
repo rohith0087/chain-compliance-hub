@@ -1,4 +1,15 @@
-import { formatDistanceToNow } from 'date-fns';
+// Ultra-compact relative time for the tight AI-summary header: "now", "5m",
+// "18h", "3d". date-fns' formatDistanceToNow ("about 18 hours ago") overflows
+// the header next to the BETA badge and refresh control.
+function compactAgo(iso: string): string {
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (mins < 1) return 'now';
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h`;
+  return `${Math.round(hrs / 24)}d`;
+}
+import { useId, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -90,6 +101,86 @@ export const LinkOut = ({ label, onClick }: { label: string; onClick: () => void
     {label} <ChevronRight className="h-3 w-3" />
   </button>
 );
+
+/**
+ * Axis-less momentum sparkline — a smooth area curve over a series of daily
+ * counts. No gridlines, labels, or points at rest, by design: it reads as
+ * direction, not exact figures. On hover it surfaces a marker + a compact
+ * "date · count" readout, so precision is available without cluttering the
+ * resting state. Hand-rolled SVG (no recharts overhead).
+ *
+ * `data[i]` is the count for the day (data.length-1-i) days before today, so
+ * the last point is today.
+ */
+const Sparkline = ({ data, color, unit }: { data: number[]; color: string; unit: string }) => {
+  const W = 600, H = 48, PAD = 4;
+  const gid = `spark-${useId().replace(/:/g, '')}`;
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [hover, setHover] = useState<number | null>(null);
+
+  if (data.length < 2) return null;
+  const n = data.length;
+  const max = Math.max(1, ...data);
+  const stepX = (W - PAD * 2) / (n - 1);
+  const pts = data.map((v, i) => [PAD + i * stepX, H - PAD - (v / max) * (H - PAD * 2)] as const);
+  const line = pts.reduce((acc, [x, y], i, arr) => {
+    if (i === 0) return `M ${x},${y}`;
+    const [px, py] = arr[i - 1];
+    const cx = (px + x) / 2;
+    return `${acc} C ${cx},${py} ${cx},${y} ${x},${y}`;
+  }, '');
+  const area = `${line} L ${pts[pts.length - 1][0]},${H - PAD} L ${pts[0][0]},${H - PAD} Z`;
+
+  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = wrapRef.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0) return;
+    const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    setHover(Math.round(ratio * (n - 1)));
+  };
+
+  const dateLabel = (i: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (n - 1 - i));
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  const hx = hover != null ? (hover / (n - 1)) * 100 : 0; // % across for the HTML tooltip
+
+  return (
+    <div
+      ref={wrapRef}
+      className="relative"
+      onMouseMove={onMove}
+      onMouseLeave={() => setHover(null)}
+    >
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-12 w-full" role="img" aria-label="30-day approval trend">
+        <defs>
+          <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity={0.22} />
+            <stop offset="100%" stopColor={color} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <path d={area} fill={`url(#${gid})`} />
+        <path d={line} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        {hover != null && (
+          <>
+            <line x1={pts[hover][0]} y1={0} x2={pts[hover][0]} y2={H} stroke={color} strokeOpacity={0.25} strokeWidth={1} vectorEffect="non-scaling-stroke" />
+            <circle cx={pts[hover][0]} cy={pts[hover][1]} r={3.5} fill={color} stroke="hsl(var(--card))" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+          </>
+        )}
+      </svg>
+      {hover != null && (
+        <div
+          className="pointer-events-none absolute -top-1 z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md border border-border bg-card px-2 py-1 text-[11px] shadow-md"
+          style={{ left: `${Math.min(92, Math.max(8, hx))}%` }}
+        >
+          <span className="font-medium text-foreground">{dateLabel(hover)}</span>
+          <span className="text-muted-foreground"> · {data[hover]} {unit}</span>
+        </div>
+      )}
+    </div>
+  );
+};
 
 /** Shown wherever the data genuinely isn't there -- never a fabricated curve. */
 export const Empty = ({ icon: Icon, children }: { icon: typeof Inbox; children: React.ReactNode }) => (
@@ -273,8 +364,8 @@ export const BuyerOverviewDashboard = ({
   const updatedLabel = ai.loading
     ? ''
     : usingLive && ai.generatedAt
-      ? `Updated ${formatDistanceToNow(new Date(ai.generatedAt), { addSuffix: true })}`
-      : 'Live view';
+      ? compactAgo(ai.generatedAt)
+      : 'Live';
 
   /**
    * Hands the briefing plus the chosen question to the chat page and asks it to
@@ -403,8 +494,16 @@ export const BuyerOverviewDashboard = ({
                 Beta
               </span>
             </div>
-            <div className="flex shrink-0 items-center gap-1.5">
-              <span className="font-mono text-[10px] text-muted-foreground">{updatedLabel}</span>
+            <div className="flex shrink-0 items-center gap-1">
+              {updatedLabel && (
+                <span
+                  title={ai.generatedAt ? `Updated ${new Date(ai.generatedAt).toLocaleString()}` : undefined}
+                  className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
+                >
+                  <Clock className="h-2.5 w-2.5" />
+                  {updatedLabel}
+                </span>
+              )}
               <button
                 onClick={ai.refresh}
                 disabled={ai.refreshing || !buyerId}
@@ -492,6 +591,22 @@ export const BuyerOverviewDashboard = ({
               <p className="mt-1.5 shrink-0 font-mono text-[11px] text-muted-foreground">
                 {d.approvedThisMonth} approved this month · <Delta value={d.approvedDelta} />
               </p>
+
+              {/* 30-day approval-momentum sparkline — a finer-grained companion to
+                  the monthly bars, filling the card's lower space. */}
+              {d.spark30.some((v) => v > 0) && (
+                <div className="mt-auto border-t border-border/60 pt-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+                      Last 30 days
+                    </span>
+                    <LinkOut label="View insights" onClick={goDocs} />
+                  </div>
+                  <div className="mt-2">
+                    <Sparkline data={d.spark30} color={SERIES.accent} unit="approved" />
+                  </div>
+                </div>
+              )}
             </>
           )}
         </Panel>

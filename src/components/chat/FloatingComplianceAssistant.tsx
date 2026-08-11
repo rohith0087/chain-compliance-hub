@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { publicEnvironment } from '@/config/env';
 import { StructuredResponseRenderer, hasStructuredContent } from '@/components/chat/structured';
 import ComplianceEmailComposer from '@/components/chat/ComplianceEmailComposer';
+import { topHelpArticles } from '@/components/help/helpRetrieval';
 import './FloatingComplianceAssistant.css';
 
 interface QuickAction {
@@ -240,6 +241,9 @@ export function FloatingComplianceAssistant() {
           buyer_id: info.id,
           session_id: sessionId,
           user_context: { user_id: user.id, company_type: info.type, industry: info.industry || 'General' },
+          // Grounding for product/how-to questions: the most relevant Help
+          // Center articles for this question (single source: helpContent.ts).
+          help_context: topHelpArticles(question, 4),
           stream: true,
         }),
       });

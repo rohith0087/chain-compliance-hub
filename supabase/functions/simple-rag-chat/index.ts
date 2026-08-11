@@ -4689,7 +4689,21 @@ serve(async (req) => {
     console.log('✓ User authenticated');
 
     // Parse request body
-    const { buyer_id: requested_buyer_id, question, session_id: incoming_session_id, user_context, stream: wantsStream, supplier_id: scoped_supplier_id_raw } = await req.json();
+    const { buyer_id: requested_buyer_id, question, session_id: incoming_session_id, user_context, stream: wantsStream, supplier_id: scoped_supplier_id_raw, help_context } = await req.json();
+
+    // Product/how-to grounding: relevant Help Center articles the client
+    // retrieved for this question (see components/help/helpRetrieval.ts). Kept
+    // compact and defensively bounded so it can't blow the prompt budget.
+    const helpArticles = Array.isArray(help_context)
+      ? (help_context as Array<{ category?: string; question?: string; answer?: string }>).slice(0, 5)
+      : [];
+    const helpKnowledge = helpArticles.length
+      ? `\n\nPRODUCT HELP (official Help Center articles — use these to answer "how do I…" / product-usage questions):\n${
+          helpArticles
+            .map((a, i) => `${i + 1}. [${a.category ?? 'Help'}] ${a.question ?? ''}\n${String(a.answer ?? '').slice(0, 900)}`)
+            .join('\n\n')
+        }\n\nWhen the user asks how to use the product or how to perform an action, answer using the PRODUCT HELP above in your own words, then point them to the in-app Help Center at /help for the full guide. Only describe features actually documented here — never invent steps or settings.`
+      : '';
 
     // ============= RESOLVE USER'S ACTUAL BUYER ID =============
     let actualBuyerId: string | null = null;
@@ -5243,6 +5257,7 @@ Use the available tools to answer questions about:
 - Suppliers and their connection status
 - Compliance metrics and statistics
 - Creating document requests for suppliers
+${helpKnowledge}
 
 RESPONSE FORMATTING (for plain text answers, not the tagged compliance cards):
 - Use GitHub-flavored markdown. When you list more than ~3 items that share fields (documents, suppliers, requirements, dates), render a markdown TABLE with a header row instead of a long run-on sentence or nested bullets.

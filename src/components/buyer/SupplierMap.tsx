@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
-import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
-import { Building2, Warehouse, MapPin, Phone, Filter, Search, Store, Truck } from 'lucide-react';
-import { toast } from 'sonner';
+import { Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
+import { Building2, Warehouse, MapPin, Phone, Filter, Search, Store, Truck, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,22 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { demoSuppliers, demoFacilities, demoBuyerBranches } from '@/data/demoSuppliers';
+import { useSupplierMapData, type MapMarker } from '@/hooks/useSupplierMapData';
 import { reviewCardContainerClass, reviewToolbarSelectTriggerClass } from '@/components/documents/buyerReviewDesignSystem';
-
-interface MapMarker {
-  id: string;
-  lat: number;
-  lng: number;
-  title: string;
-  type: 'supplier' | 'facility' | 'buyer-branch';
-  industry?: string;
-  facilityType?: string;
-  address?: string;
-  email?: string;
-  phone?: string;
-  connectionStatus?: string;
-}
 
 const INDUSTRY_COLORS: Record<string, string> = {
   'Food Service': '#3b82f6',
@@ -66,65 +51,16 @@ function getBuyerBranchColor(locationType?: string): string {
   return BUYER_BRANCH_COLORS[locationType as keyof typeof BUYER_BRANCH_COLORS] || BUYER_BRANCH_COLORS.default;
 }
 
-// Hardcoded coordinates for demo locations (approximate)
-const DEMO_COORDINATES: Record<string, { lat: number; lng: number }> = {
-  // HishōSushi
-  'demo-hisho-sushi': { lat: 35.1167, lng: -80.9278 }, // Charlotte, NC
-  'demo-hisho-hq': { lat: 35.1167, lng: -80.9278 },
-  'demo-hisho-troy-mein': { lat: 31.8089, lng: -85.9633 }, // Troy, AL
-  'demo-hisho-troy-sushi': { lat: 31.8089, lng: -85.9633 },
-  'demo-hisho-sprouts': { lat: 33.3968, lng: -84.5957 }, // Peachtree City, GA
-  
-  // Blue Ocean Seafood
-  'demo-blue-ocean': { lat: 47.6062, lng: -122.3321 }, // Seattle, WA
-  'demo-blue-hq': { lat: 47.6062, lng: -122.3321 },
-  'demo-blue-portland': { lat: 45.5152, lng: -122.6784 }, // Portland, OR
-  'demo-blue-pike': { lat: 47.6097, lng: -122.3421 }, // Pike Place
-  'demo-blue-wharf': { lat: 37.8087, lng: -122.4098 }, // SF Fisherman's Wharf
-  
-  // Atlantic Fresh
-  'demo-atlantic-fresh': { lat: 42.3601, lng: -71.0589 }, // Boston, MA
-  'demo-atlantic-hq': { lat: 42.3601, lng: -71.0589 },
-  'demo-atlantic-newark': { lat: 40.7357, lng: -74.1724 }, // Newark, NJ
-  'demo-atlantic-quincy': { lat: 42.3601, lng: -71.0545 }, // Quincy Market
-  'demo-atlantic-chelsea': { lat: 40.7425, lng: -74.0064 }, // Chelsea Market, NYC
-  
-  // Buyer Branches
-  'demo-buyer-elizabeth': { lat: 40.6640, lng: -74.2107 }, // Elizabeth, NJ (HQ)
-  'demo-buyer-monticello': { lat: 41.6556, lng: -74.6893 }, // Monticello, NY
-  'demo-buyer-newhampton': { lat: 43.0594, lng: -92.3168 }, // New Hampton, IA
-  'demo-buyer-sherburne': { lat: 42.6784, lng: -75.4988 }, // Sherburne, NY
-};
-
-// Static demo marker data - only buyer branches
-const generateDemoMarkers = (): MapMarker[] => {
-  const markers: MapMarker[] = [];
-  
-  // Add buyer branch markers only
-  demoBuyerBranches.forEach(branch => {
-    markers.push({
-      id: branch.id,
-      lat: DEMO_COORDINATES[branch.id]?.lat || 0,
-      lng: DEMO_COORDINATES[branch.id]?.lng || 0,
-      title: branch.branch_name,
-      type: 'buyer-branch',
-      facilityType: branch.location,
-      address: branch.address,
-      email: branch.email,
-      phone: branch.phone
-    });
-  });
-  
-  return markers;
-};
-
 export function SupplierMap() {
-  // Generate static demo markers
-  const allMarkers = useMemo(() => generateDemoMarkers(), []);
+  // Real suppliers, their facilities, and the buyer's own branches -- pins use
+  // stored lat/lng when the address was captured via Places Autocomplete, and
+  // fall back to geocoding only for older rows that predate it. See
+  // useSupplierMapData for the resolution logic.
+  const { markers: allMarkers, loading, error } = useSupplierMapData();
 
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const [showSuppliers, setShowSuppliers] = useState(true);
   const [showFacilities, setShowFacilities] = useState(true);
   const [showBuyerBranches, setShowBuyerBranches] = useState(true);
@@ -151,10 +87,10 @@ export function SupplierMap() {
       // Search query filter
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
-        const matchesTitle = marker.title?.toLowerCase().includes(query);
+        const matchesTitle = marker.name?.toLowerCase().includes(query);
         const matchesIndustry = marker.industry?.toLowerCase().includes(query);
         const matchesAddress = marker.address?.toLowerCase().includes(query);
-        
+
         if (!matchesTitle && !matchesIndustry && !matchesAddress) {
           return false;
         }
@@ -192,6 +128,16 @@ export function SupplierMap() {
       <Card>
         <CardContent className="p-6">
           <p className="text-destructive">Google Maps API key not configured</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <p className="text-destructive">Couldn't load the supplier map: {error}</p>
         </CardContent>
       </Card>
     );
@@ -382,110 +328,131 @@ export function SupplierMap() {
       {/* Results Count */}
       <div className={`${reviewCardContainerClass} absolute top-4 right-4 z-10`}>
         <div className="p-3">
-          <p className="text-small font-medium text-foreground">
-            Showing {filteredMarkers.length} of {allMarkers.length} locations
-          </p>
+          {loading ? (
+            <p className="flex items-center gap-2 text-small font-medium text-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Locating suppliers…
+            </p>
+          ) : (
+            <p className="text-small font-medium text-foreground">
+              Showing {filteredMarkers.length} of {allMarkers.length} locations
+            </p>
+          )}
         </div>
       </div>
 
+      {/* Nothing plottable -- say why, rather than showing a blank world map.
+          A location needs a saved address; older records without coordinates
+          are looked up on the fly, which needs Maps billing to be active. */}
+      {!loading && allMarkers.length === 0 && (
+        <div className={`${reviewCardContainerClass} absolute left-1/2 top-1/2 z-10 w-[380px] max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2`}>
+          <div className="p-5 text-center">
+            <MapPin className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
+            <p className="text-body font-semibold text-foreground">No locations to show yet</p>
+            <p className="mt-1.5 text-small text-muted-foreground">
+              Suppliers and branches appear here once they have an address saved. If you expect
+              to see pins, check that Google Maps billing is active — locations without stored
+              coordinates are looked up at load time.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Map */}
-      <APIProvider apiKey={apiKey}>
-        <Map
-          defaultCenter={{ lat: 39.8283, lng: -98.5795 }}
-          defaultZoom={4}
-          mapId="supplier-map"
-          style={{ width: '100%', height: '100%' }}
-        >
-          {/* Render markers */}
-          {filteredMarkers.map((marker) => (
-            <AdvancedMarker
-              key={marker.id}
-              position={{ lat: marker.lat, lng: marker.lng }}
-              onClick={() => setSelectedMarker(marker)}
-            >
-              <div className="relative">
-                {marker.type === 'supplier' ? (
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg cursor-pointer"
-                    style={{ backgroundColor: getIndustryColor(marker.industry) }}
-                  >
+      <Map
+        defaultCenter={{ lat: 39.8283, lng: -98.5795 }}
+        defaultZoom={4}
+        mapId="supplier-map"
+        style={{ width: '100%', height: '100%' }}
+      >
+        {/* Render markers */}
+        {filteredMarkers.map((marker) => (
+          <AdvancedMarker
+            key={marker.id}
+            position={{ lat: marker.lat, lng: marker.lng }}
+            onClick={() => setSelectedMarker(marker)}
+          >
+            <div className="relative">
+              {marker.type === 'supplier' ? (
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg cursor-pointer"
+                  style={{ backgroundColor: getIndustryColor(marker.industry) }}
+                >
+                  <Building2 className="w-6 h-6 text-white" />
+                </div>
+              ) : marker.type === 'buyer-branch' ? (
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg cursor-pointer ring-2 ring-white"
+                  style={{ backgroundColor: getBuyerBranchColor(marker.facilityType) }}
+                >
+                  {marker.facilityType === 'headquarters' ? (
                     <Building2 className="w-6 h-6 text-white" />
-                  </div>
-                ) : marker.type === 'buyer-branch' ? (
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg cursor-pointer ring-2 ring-white"
-                    style={{ backgroundColor: getBuyerBranchColor(marker.facilityType) }}
-                  >
-                    {marker.facilityType === 'headquarters' ? (
-                      <Building2 className="w-6 h-6 text-white" />
-                    ) : (
-                      <MapPin className="w-6 h-6 text-white" />
-                    )}
-                  </div>
-                ) : (
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg cursor-pointer"
-                    style={{ backgroundColor: getFacilityColor(marker.facilityType) }}
-                  >
-                    {marker.facilityType === 'headquarters' && <Building2 className="w-4 h-4 text-white" />}
-                    {marker.facilityType === 'distribution' && <Truck className="w-4 h-4 text-white" />}
-                    {marker.facilityType === 'store' && <Store className="w-4 h-4 text-white" />}
-                    {!marker.facilityType && <Warehouse className="w-4 h-4 text-white" />}
-                  </div>
-                )}
-              </div>
-            </AdvancedMarker>
-          ))}
-
-          {/* Info Window */}
-          {selectedMarker && (
-            <InfoWindow
-              position={{ lat: selectedMarker.lat, lng: selectedMarker.lng }}
-              onCloseClick={() => setSelectedMarker(null)}
-            >
-              <div className="p-2 max-w-xs">
-                <h3 className="font-semibold text-base mb-2">{selectedMarker.title}</h3>
-                
-                {selectedMarker.industry && (
-                  <Badge variant="secondary" className="mb-2">
-                    {selectedMarker.industry}
-                  </Badge>
-                )}
-                
-                {selectedMarker.type === 'buyer-branch' && (
-                  <Badge className="mb-2 bg-success hover:bg-success">
-                    Your Branch
-                  </Badge>
-                )}
-                
-                {selectedMarker.facilityType && (
-                  <Badge variant="outline" className="mb-2 ml-2">
-                    {selectedMarker.facilityType === 'headquarters' && 'HQ'}
-                    {selectedMarker.facilityType === 'distribution' && 'Distribution'}
-                    {selectedMarker.facilityType === 'store' && 'Store'}
-                    {selectedMarker.facilityType === 'branch' && 'Branch'}
-                  </Badge>
-                )}
-
-                <div className="space-y-1 text-sm">
-                  {selectedMarker.address && (
-                    <div className="flex items-start gap-2">
-                      <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
-                      <span>{selectedMarker.address}</span>
-                    </div>
-                  )}
-                  {selectedMarker.phone && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="w-4 h-4 text-muted-foreground" />
-                      <span>{selectedMarker.phone}</span>
-                    </div>
+                  ) : (
+                    <MapPin className="w-6 h-6 text-white" />
                   )}
                 </div>
+              ) : (
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg cursor-pointer"
+                  style={{ backgroundColor: getFacilityColor(marker.facilityType) }}
+                >
+                  {marker.facilityType === 'headquarters' && <Building2 className="w-4 h-4 text-white" />}
+                  {marker.facilityType === 'distribution' && <Truck className="w-4 h-4 text-white" />}
+                  {marker.facilityType === 'store' && <Store className="w-4 h-4 text-white" />}
+                  {!marker.facilityType && <Warehouse className="w-4 h-4 text-white" />}
+                </div>
+              )}
+            </div>
+          </AdvancedMarker>
+        ))}
+
+        {/* Info Window */}
+        {selectedMarker && (
+          <InfoWindow
+            position={{ lat: selectedMarker.lat, lng: selectedMarker.lng }}
+            onCloseClick={() => setSelectedMarker(null)}
+          >
+            <div className="p-2 max-w-xs">
+              <h3 className="font-semibold text-base mb-2">{selectedMarker.name}</h3>
+
+              {selectedMarker.industry && (
+                <Badge variant="secondary" className="mb-2">
+                  {selectedMarker.industry}
+                </Badge>
+              )}
+
+              {selectedMarker.type === 'buyer-branch' && (
+                <Badge className="mb-2 bg-success hover:bg-success">
+                  Your Branch
+                </Badge>
+              )}
+
+              {selectedMarker.facilityType && (
+                <Badge variant="outline" className="mb-2 ml-2">
+                  {selectedMarker.facilityType === 'headquarters' && 'HQ'}
+                  {selectedMarker.facilityType === 'distribution' && 'Distribution'}
+                  {selectedMarker.facilityType === 'store' && 'Store'}
+                  {selectedMarker.facilityType === 'branch' && 'Branch'}
+                </Badge>
+              )}
+
+              <div className="space-y-1 text-sm">
+                {selectedMarker.address && (
+                  <div className="flex items-start gap-2">
+                    <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                    <span>{selectedMarker.address}</span>
+                  </div>
+                )}
+                {selectedMarker.phone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-muted-foreground" />
+                    <span>{selectedMarker.phone}</span>
+                  </div>
+                )}
               </div>
-            </InfoWindow>
-          )}
-        </Map>
-      </APIProvider>
+            </div>
+          </InfoWindow>
+        )}
+      </Map>
 
       {/* Legend */}
       <div className={`${reviewCardContainerClass} absolute bottom-4 left-4 z-10`}>

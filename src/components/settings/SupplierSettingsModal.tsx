@@ -17,7 +17,7 @@ import { SafeSelect, SafeSelectItem } from '@/components/ui/SafeSelect';
 import { VALID_INDUSTRIES } from '@/config/industries';
 import { useSupplierNotificationSettings } from '@/hooks/useSupplierNotificationSettings';
 import { Bell, Mail, MessageSquare } from 'lucide-react';
-import { AddressFields, AddressData, emptyAddressData } from '@/components/shared/AddressFields';
+import { AddressFields, AddressData, emptyAddressData, emptyAddressCoordinates, type AddressCoordinates } from '@/components/shared/AddressFields';
 import { IntegrationsDirectoryModal } from './IntegrationsDirectoryModal';
 
 interface SupplierSettingsModalProps {
@@ -61,7 +61,8 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
     company_logo_url: '',
     ...emptyAddressData(),
   });
-  
+  const [coords, setCoords] = useState<AddressCoordinates>(emptyAddressCoordinates());
+
   const [loading, setLoading] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [supplierId, setSupplierId] = useState<string | null>(null);
@@ -134,6 +135,11 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
             postal_code: data.postal_code || '',
             country: data.country || '',
           });
+          setCoords({
+            latitude: data.latitude ?? null,
+            longitude: data.longitude ?? null,
+            place_id: data.place_id ?? null,
+          });
         }
       } else {
         // Company owner - direct lookup
@@ -163,6 +169,11 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
             state: data.state || '',
             postal_code: data.postal_code || '',
             country: data.country || '',
+          });
+          setCoords({
+            latitude: data.latitude ?? null,
+            longitude: data.longitude ?? null,
+            place_id: data.place_id ?? null,
           });
         }
       }
@@ -195,6 +206,9 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
         state: supplierData.state,
         postal_code: supplierData.postal_code,
         country: supplierData.country,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        place_id: coords.place_id,
         updated_at: new Date().toISOString()
       };
 
@@ -360,6 +374,7 @@ export const SupplierSettingsModal: React.FC<SupplierSettingsModalProps> = ({
                           country: supplierData.country,
                         }}
                         onChange={(field, value) => handleInputChange(field as keyof SupplierData, value)}
+                        onPlaceSelect={setCoords}
                       />
                     </div>
                     

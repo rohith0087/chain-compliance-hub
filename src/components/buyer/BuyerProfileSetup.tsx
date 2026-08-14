@@ -12,7 +12,7 @@ import { Building2 } from 'lucide-react';
 import { VALID_INDUSTRIES } from '@/config/industries';
 import { SafeSelect, SafeSelectItem } from '@/components/ui/SafeSelect';
 import { createSafeSelectValue } from '@/utils/selectValidation';
-import { AddressFields, emptyAddressData } from '@/components/shared/AddressFields';
+import { AddressFields, emptyAddressData, emptyAddressCoordinates, type AddressCoordinates } from '@/components/shared/AddressFields';
 
 interface BuyerProfileSetupProps {
   onProfileCreated: () => void;
@@ -30,6 +30,7 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
     description: '',
     ...emptyAddressData(),
   });
+  const [coords, setCoords] = useState<AddressCoordinates>(emptyAddressCoordinates());
 
   // Pre-populate form with user data from signup
   useEffect(() => {
@@ -80,6 +81,9 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
             state: formData.state,
             postal_code: formData.postal_code,
             country: formData.country,
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            place_id: coords.place_id,
             updated_at: new Date().toISOString()
           })
           .eq('id', existingBuyer.id)
@@ -106,6 +110,9 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
             state: formData.state,
             postal_code: formData.postal_code,
             country: formData.country,
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            place_id: coords.place_id,
           })
           .select()
           .single();
@@ -296,6 +303,7 @@ const BuyerProfileSetup = ({ onProfileCreated }: BuyerProfileSetupProps) => {
                   country: formData.country,
                 }}
                 onChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
+                onPlaceSelect={setCoords}
               />
             </div>
 

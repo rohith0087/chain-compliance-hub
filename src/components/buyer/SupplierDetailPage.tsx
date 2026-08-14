@@ -160,7 +160,22 @@ export default function SupplierDetailPage({ buyerId, supplierId, supplierName, 
   const m = data?.metrics;
   const responseRate = m && m.total > 0 ? Math.round(((m.total - m.pending) / m.total) * 100) : null;
 
+  // Risk is a separate measure from requirement completion and must never be
+  // blended with it — higher risk score means MORE risk (banding matches
+  // riskLevelOf() so the supplier reads the same here, on the dashboard, and
+  // in the PDF).
+  const risk = data?.risk ?? null;
+
   const kpis = m ? [
+    ...(risk ? [{
+      label: `Risk score (${risk.level})`,
+      value: `${risk.score}/100`,
+      hint: risk.delta != null && risk.previous_score != null
+        ? `${risk.delta > 0 ? '+' : ''}${risk.delta} vs previous (${risk.previous_score}) · higher = more risk`
+        : 'higher = more risk',
+      icon: ShieldCheck,
+      tone: risk.level === 'High' ? 'text-danger' : risk.level === 'Medium' ? 'text-warning' : 'text-success',
+    }] : []),
     { label: 'Avg. response', value: m.avg_reply_days != null ? `${m.avg_reply_days}d` : '—',
       hint: m.fastest_reply_days != null ? `fastest ${m.fastest_reply_days}d · slowest ${m.slowest_reply_days}d` : 'no responses yet',
       icon: Timer, tone: m.avg_reply_days == null ? 'text-muted-foreground' : m.avg_reply_days <= 7 ? 'text-success' : m.avg_reply_days <= 21 ? 'text-warning' : 'text-danger' },
@@ -248,7 +263,7 @@ export default function SupplierDetailPage({ buyerId, supplierId, supplierName, 
                 <ComplianceRing score={score ?? 0} size={72} strokeWidth={8} />
                 <div>
                   <p className={`text-3xl font-bold ${scoreTone}`}>{score === null ? '—' : `${score}%`}</p>
-                  <p className="text-xs font-medium text-foreground">{score === null ? 'Not evaluated yet' : 'Requirements compliant'}</p>
+                  <p className="text-xs font-medium text-foreground">{score === null ? 'Not evaluated yet' : 'Requirements met'}</p>
                   <p className="mt-0.5 text-micro text-muted-foreground">
                     {score === null ? 'Run a compliance evaluation to score this supplier' : `${reqMet} of ${reqTotal} requirements met`}
                   </p>

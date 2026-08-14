@@ -53,6 +53,7 @@ import { DocumentSetManager } from "@/components/buyer/DocumentSetManager";
 import BuyerComplianceDashboard from "@/components/dashboard/BuyerComplianceDashboard";
 import SupplierDiscovery from "@/components/buyer/SupplierDiscovery";
 import { FloatingComplianceAssistant } from "@/components/chat/FloatingComplianceAssistant";
+import { APIProvider } from "@vis.gl/react-google-maps";
 
 const REQUIREMENT_TEST_BUYER_ID = '00000000-0000-4000-8000-000000000001';
 const EVIDENCE_SHARING_TEST_SUPPLIER_ID = '00000000-0000-4000-8000-000000000020';
@@ -542,6 +543,21 @@ const AppRoutes = () => {
   );
 };
 
+// Mounted once at the root so every consumer of Google Maps/Places
+// (the Supplier Map, and PlaceAutocompleteInput wherever an address is
+// entered) shares a single script load instead of each re-requesting it.
+// When no key is configured, children just render without it -- map/
+// autocomplete components already degrade gracefully in that case.
+const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+const MapsProvider = ({ children }: { children: React.ReactNode }) =>
+  googleMapsApiKey ? (
+    <APIProvider apiKey={googleMapsApiKey} libraries={["places"]}>
+      {children}
+    </APIProvider>
+  ) : (
+    <>{children}</>
+  );
+
 const App = () => {
   // Dark is the default surface (the brand's "ledger" palette); the toggle
   // still switches to light and the choice persists under storageKey.
@@ -551,7 +567,9 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <AppRoutes />
+          <MapsProvider>
+            <AppRoutes />
+          </MapsProvider>
         </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>

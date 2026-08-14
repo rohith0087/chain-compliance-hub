@@ -6,10 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { CompanyBranch, CompanyUser } from '@/hooks/useCompanyBranches';
+import { PlaceAutocompleteInput } from '@/components/shared/PlaceAutocompleteInput';
 
 interface BranchManagementProps {
   branches: CompanyBranch[];
@@ -26,6 +26,11 @@ interface BranchFormData {
   branch_name: string;
   location: string;
   address: string;
+  // Captured from Google Places when the user picks a suggestion for
+  // `address` -- lets the Supplier Map plot this branch precisely.
+  latitude: number | null;
+  longitude: number | null;
+  place_id: string | null;
   phone: string;
   email: string;
   manager_id: string | null;
@@ -74,12 +79,18 @@ const BranchForm: React.FC<BranchFormProps> = ({
 
     <div className="space-y-2">
       <Label htmlFor="address">Address</Label>
-      <Textarea
+      <PlaceAutocompleteInput
         id="address"
         value={formData.address}
-        onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-        placeholder="Full address"
-        rows={3}
+        onChange={(value) => setFormData(prev => ({ ...prev, address: value }))}
+        onPlaceSelect={(result) => setFormData(prev => ({
+          ...prev,
+          address: result.formatted_address,
+          latitude: result.latitude,
+          longitude: result.longitude,
+          place_id: result.place_id,
+        }))}
+        placeholder="Start typing the full address…"
       />
     </div>
 
@@ -166,6 +177,9 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({
     branch_name: '',
     location: '',
     address: '',
+    latitude: null,
+    longitude: null,
+    place_id: null,
     phone: '',
     email: '',
     manager_id: null
@@ -177,6 +191,9 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({
       branch_name: '',
       location: '',
       address: '',
+      latitude: null,
+      longitude: null,
+      place_id: null,
       phone: '',
       email: '',
       manager_id: null
@@ -247,6 +264,9 @@ export const BranchManagement: React.FC<BranchManagementProps> = ({
       branch_name: branch.branch_name,
       location: branch.location || '',
       address: branch.address || '',
+      latitude: branch.latitude ?? null,
+      longitude: branch.longitude ?? null,
+      place_id: branch.place_id ?? null,
       phone: branch.phone || '',
       email: branch.email || '',
       manager_id: branch.manager_id || null

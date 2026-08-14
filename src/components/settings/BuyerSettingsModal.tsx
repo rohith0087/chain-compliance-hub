@@ -22,7 +22,8 @@ import { PasswordChangeForm } from './PasswordChangeForm';
 import { LogoUploadWidget } from './LogoUploadWidget';
 import { DefaultOnboardingSettings } from './DefaultOnboardingSettings';
 import { NotificationSettingsForm } from './NotificationSettingsForm';
-import { AddressFields, AddressData, emptyAddressData } from '@/components/shared/AddressFields';
+import { AddressFields, AddressData, emptyAddressData, emptyAddressCoordinates, type AddressCoordinates } from '@/components/shared/AddressFields';
+import type { PlaceSelectResult } from '@/components/shared/PlaceAutocompleteInput';
 import { IntegrationsPanel } from './IntegrationsPanel';
 
 interface BuyerSettingsModalProps {
@@ -69,6 +70,7 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
     company_logo_url: '',
     ...emptyAddressData(),
   });
+  const [coords, setCoords] = useState<AddressCoordinates>(emptyAddressCoordinates());
   const [loading, setLoading] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
@@ -149,6 +151,11 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
           postal_code: bd.postal_code || '',
           country: bd.country || '',
         });
+        setCoords({
+          latitude: bd.latitude ?? null,
+          longitude: bd.longitude ?? null,
+          place_id: bd.place_id ?? null,
+        });
       }
     } catch (error: any) {
       toast({ title: 'Error', description: 'Failed to load company information', variant: 'destructive' });
@@ -174,6 +181,9 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
           state: buyerData.state,
           postal_code: buyerData.postal_code,
           country: buyerData.country,
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          place_id: coords.place_id,
         })
         .eq('id', companyId);
       if (error) throw error;
@@ -282,6 +292,7 @@ export const BuyerSettingsModal: React.FC<BuyerSettingsModalProps> = ({
               <CompanyPanel
                 buyerData={buyerData}
                 setBuyerData={setBuyerData}
+                onPlaceSelect={setCoords}
                 canEdit={canEdit}
                 loading={loading}
                 handleLogoUpdate={handleLogoUpdate}
@@ -344,6 +355,7 @@ interface CompanyPanelProps {
     company_logo_url: string;
   } & AddressData;
   setBuyerData: React.Dispatch<React.SetStateAction<any>>;
+  onPlaceSelect: (result: PlaceSelectResult) => void;
   canEdit: boolean;
   loading: boolean;
   handleLogoUpdate: (url: string | null) => void;
@@ -351,7 +363,7 @@ interface CompanyPanelProps {
 }
 
 function CompanyPanel({
-  buyerData, setBuyerData, canEdit, loading, handleLogoUpdate, handleCompanySubmit,
+  buyerData, setBuyerData, onPlaceSelect, canEdit, loading, handleLogoUpdate, handleCompanySubmit,
 }: CompanyPanelProps) {
   return (
     <div className="space-y-6 max-w-[560px]">
@@ -437,6 +449,7 @@ function CompanyPanel({
                 country: buyerData.country,
               }}
               onChange={(field, value) => setBuyerData((p: any) => ({ ...p, [field]: value }))}
+              onPlaceSelect={onPlaceSelect}
             />
           </div>
 

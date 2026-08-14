@@ -19,7 +19,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { DefaultOnboardingSettings } from '@/components/settings/DefaultOnboardingSettings';
 import { NotificationSettingsForm } from '@/components/settings/NotificationSettingsForm';
 import { LogoUploadWidget } from '@/components/settings/LogoUploadWidget';
-import { AddressFields, emptyAddressData, AddressData } from '@/components/shared/AddressFields';
+import { AddressFields, emptyAddressData, AddressData, emptyAddressCoordinates, type AddressCoordinates } from '@/components/shared/AddressFields';
 import { SafeSelect, SafeSelectItem } from '@/components/ui/SafeSelect';
 import { VALID_INDUSTRIES } from '@/config/industries';
 import { toast } from 'sonner';
@@ -85,6 +85,7 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
     company_logo_url: '',
     address: emptyAddressData()
   });
+  const [companyCoords, setCompanyCoords] = useState<AddressCoordinates>(emptyAddressCoordinates());
   
   // State for "other" company info (for dual-role user invitations)
   const [otherCompanyInfo, setOtherCompanyInfo] = useState<{
@@ -156,6 +157,11 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
             country: data.country || ''
           }
         });
+        setCompanyCoords({
+          latitude: data.latitude ?? null,
+          longitude: data.longitude ?? null,
+          place_id: data.place_id ?? null,
+        });
       }
     };
     
@@ -179,7 +185,10 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
           city: companyData.address.city,
           state: companyData.address.state,
           postal_code: companyData.address.postal_code,
-          country: companyData.address.country
+          country: companyData.address.country,
+          latitude: companyCoords.latitude,
+          longitude: companyCoords.longitude,
+          place_id: companyCoords.place_id
         })
         .eq('id', companyId);
       
@@ -711,12 +720,13 @@ export const CompanyManagementDashboard: React.FC<CompanyManagementDashboardProp
                 <Label>Company Address</Label>
                 <AddressFields
                   data={companyData.address}
-                  onChange={(field, value) => 
+                  onChange={(field, value) =>
                     setCompanyData(prev => ({
                       ...prev,
                       address: { ...prev.address, [field]: value }
                     }))
                   }
+                  onPlaceSelect={setCompanyCoords}
                 />
               </div>
 

@@ -4,6 +4,7 @@ import { Label } from '@/components/ui/label';
 import { SafeSelect, SafeSelectItem } from '@/components/ui/SafeSelect';
 import { POPULAR_COUNTRIES, ALL_COUNTRIES } from '@/config/countries';
 import { Separator } from '@/components/ui/separator';
+import { PlaceAutocompleteInput, type PlaceSelectResult } from '@/components/shared/PlaceAutocompleteInput';
 
 export interface AddressData {
   address_line1: string;
@@ -14,9 +15,29 @@ export interface AddressData {
   country: string;
 }
 
+/** Coordinates captured alongside AddressData when a place is picked from the
+ *  autocomplete. Kept separate from AddressData (which stays string-only) so
+ *  the existing onChange contract never has to carry numeric fields. */
+export interface AddressCoordinates {
+  latitude: number | null;
+  longitude: number | null;
+  place_id: string | null;
+}
+
+export const emptyAddressCoordinates = (): AddressCoordinates => ({
+  latitude: null,
+  longitude: null,
+  place_id: null,
+});
+
 interface AddressFieldsProps {
   data: AddressData;
   onChange: (field: keyof AddressData, value: string) => void;
+  /** Fires once with every parsed field (incl. lat/lng/place_id) when the user
+   *  picks a suggestion from the search box. Optional -- omit it and the
+   *  search box still fills the string fields below via onChange, just
+   *  without persisting coordinates. */
+  onPlaceSelect?: (result: PlaceSelectResult) => void;
   disabled?: boolean;
   required?: boolean;
 }
@@ -24,6 +45,7 @@ interface AddressFieldsProps {
 export const AddressFields: React.FC<AddressFieldsProps> = ({
   data,
   onChange,
+  onPlaceSelect,
   disabled = false,
   required = false,
 }) => {
@@ -31,8 +53,36 @@ export const AddressFields: React.FC<AddressFieldsProps> = ({
   const popularSet = new Set(POPULAR_COUNTRIES);
   const otherCountries = ALL_COUNTRIES.filter(c => !popularSet.has(c));
 
+  const handlePlaceSelect = (result: PlaceSelectResult) => {
+    // Always fill the string fields via the normal onChange path -- this is
+    // what makes coordinate capture optional for callers that haven't wired
+    // onPlaceSelect yet: the address still fills in correctly either way.
+    onChange('address_line1', result.address_line1);
+    onChange('address_line2', result.address_line2);
+    onChange('city', result.city);
+    onChange('state', result.state);
+    onChange('postal_code', result.postal_code);
+    onChange('country', result.country);
+    onPlaceSelect?.(result);
+  };
+
   return (
     <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="address_search">Search address</Label>
+        <PlaceAutocompleteInput
+          id="address_search"
+          value={data.address_line1}
+          onChange={(value) => onChange('address_line1', value)}
+          onPlaceSelect={handlePlaceSelect}
+          placeholder="Start typing to search…"
+          disabled={disabled}
+        />
+        <p className="text-xs text-muted-foreground">
+          Pick a suggestion to fill the fields below accurately, or enter them manually.
+        </p>
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="address_line1">
           Address Line 1 {required && <span className="text-destructive">*</span>}

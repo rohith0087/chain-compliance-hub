@@ -12,7 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { VALID_INDUSTRIES } from '@/config/industries';
-import { AddressFields, AddressData, emptyAddressData } from '@/components/shared/AddressFields';
+import { AddressFields, AddressData, emptyAddressData, emptyAddressCoordinates, type AddressCoordinates } from '@/components/shared/AddressFields';
 
 interface SupplierProfileSetupProps {
   onProfileCreated?: () => void;
@@ -25,6 +25,7 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
   const [description, setDescription] = useState('');
   const [autoApproveConnections, setAutoApproveConnections] = useState(false);
   const [addressData, setAddressData] = useState<AddressData>(emptyAddressData());
+  const [coords, setCoords] = useState<AddressCoordinates>(emptyAddressCoordinates());
   const [existingProfile, setExistingProfile] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -83,6 +84,11 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
           postal_code: supplier.postal_code || '',
           country: supplier.country || '',
         });
+        setCoords({
+          latitude: supplier.latitude ?? null,
+          longitude: supplier.longitude ?? null,
+          place_id: supplier.place_id ?? null,
+        });
       } else {
         // Pre-fill with profile data if available
         setCompanyName(profile?.company_name || '');
@@ -115,6 +121,9 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
             state: addressData.state,
             postal_code: addressData.postal_code,
             country: addressData.country,
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            place_id: coords.place_id,
             updated_at: new Date().toISOString()
           })
           .eq('id', existingProfile.id);
@@ -143,6 +152,9 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
             state: addressData.state,
             postal_code: addressData.postal_code,
             country: addressData.country,
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            place_id: coords.place_id,
           });
 
         if (error) throw error;
@@ -240,6 +252,7 @@ const SupplierProfileSetup = ({ onProfileCreated }: SupplierProfileSetupProps) =
             <AddressFields
               data={addressData}
               onChange={(field, value) => setAddressData(prev => ({ ...prev, [field]: value }))}
+              onPlaceSelect={setCoords}
             />
           </div>
 

@@ -10,6 +10,11 @@ export interface CompanyBranch {
   branch_name: string;
   location?: string;
   address?: string;
+  // Captured from Google Places at address-entry time -- lets the Supplier
+  // Map plot this branch precisely without runtime geocoding.
+  latitude?: number | null;
+  longitude?: number | null;
+  place_id?: string | null;
   phone?: string;
   email?: string;
   manager_id?: string;

@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -1174,7 +1174,10 @@ export type Database = {
           created_at: string | null
           id: string
           industry: string | null
+          latitude: number | null
+          longitude: number | null
           phone: string | null
+          place_id: string | null
           postal_code: string | null
           profile_id: string | null
           state: string | null
@@ -1193,7 +1196,10 @@ export type Database = {
           created_at?: string | null
           id?: string
           industry?: string | null
+          latitude?: number | null
+          longitude?: number | null
           phone?: string | null
+          place_id?: string | null
           postal_code?: string | null
           profile_id?: string | null
           state?: string | null
@@ -1212,7 +1218,10 @@ export type Database = {
           created_at?: string | null
           id?: string
           industry?: string | null
+          latitude?: number | null
+          longitude?: number | null
           phone?: string | null
+          place_id?: string | null
           postal_code?: string | null
           profile_id?: string | null
           state?: string | null
@@ -2066,9 +2075,12 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          latitude: number | null
           location: string | null
+          longitude: number | null
           manager_id: string | null
           phone: string | null
+          place_id: string | null
           status: string | null
           updated_at: string
         }
@@ -2080,9 +2092,12 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          latitude?: number | null
           location?: string | null
+          longitude?: number | null
           manager_id?: string | null
           phone?: string | null
+          place_id?: string | null
           status?: string | null
           updated_at?: string
         }
@@ -2094,9 +2109,12 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          latitude?: number | null
           location?: string | null
+          longitude?: number | null
           manager_id?: string | null
           phone?: string | null
+          place_id?: string | null
           status?: string | null
           updated_at?: string
         }
@@ -7881,6 +7899,173 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_action_audit: {
+        Row: {
+          action: string
+          actor_profile_id: string | null
+          company_id: string | null
+          company_type: string | null
+          created_at: string
+          detail: Json
+          id: string
+          partner_id: string | null
+          target_profile_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_profile_id?: string | null
+          company_id?: string | null
+          company_type?: string | null
+          created_at?: string
+          detail?: Json
+          id?: string
+          partner_id?: string | null
+          target_profile_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_profile_id?: string | null
+          company_id?: string | null
+          company_type?: string | null
+          created_at?: string
+          detail?: Json
+          id?: string
+          partner_id?: string | null
+          target_profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_action_audit_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_customer_links: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          company_id: string
+          company_type: string
+          id: string
+          partner_id: string
+          status: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          company_id: string
+          company_type: string
+          id?: string
+          partner_id: string
+          status?: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          company_id?: string
+          company_type?: string
+          id?: string
+          partner_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_customer_links_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_members: {
+        Row: {
+          created_at: string
+          id: string
+          invited_by: string | null
+          joined_at: string
+          partner_id: string
+          profile_id: string
+          role: Database["public"]["Enums"]["partner_role"]
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          joined_at?: string
+          partner_id: string
+          profile_id: string
+          role?: Database["public"]["Enums"]["partner_role"]
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          joined_at?: string
+          partner_id?: string
+          profile_id?: string
+          role?: Database["public"]["Enums"]["partner_role"]
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_members_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partners: {
+        Row: {
+          contact_email: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          contact_email?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          contact_email?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       passkey_challenges: {
         Row: {
           ceremony_type: string
@@ -10011,6 +10196,51 @@ export type Database = {
           },
         ]
       }
+      supplier_report_ai_summaries: {
+        Row: {
+          buyer_id: string
+          checked_at: string
+          generated_at: string
+          input_fingerprint: string
+          model: string | null
+          summary: Json
+          supplier_id: string
+        }
+        Insert: {
+          buyer_id: string
+          checked_at?: string
+          generated_at?: string
+          input_fingerprint: string
+          model?: string | null
+          summary: Json
+          supplier_id: string
+        }
+        Update: {
+          buyer_id?: string
+          checked_at?: string
+          generated_at?: string
+          input_fingerprint?: string
+          model?: string | null
+          summary?: Json
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_report_ai_summaries_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_report_ai_summaries_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_response_metrics: {
         Row: {
           buyer_id: string
@@ -10404,7 +10634,10 @@ export type Database = {
           description: string | null
           id: string
           industry: string | null
+          latitude: number | null
+          longitude: number | null
           phone: string | null
+          place_id: string | null
           postal_code: string | null
           profile_id: string | null
           state: string | null
@@ -10424,7 +10657,10 @@ export type Database = {
           description?: string | null
           id?: string
           industry?: string | null
+          latitude?: number | null
+          longitude?: number | null
           phone?: string | null
+          place_id?: string | null
           postal_code?: string | null
           profile_id?: string | null
           state?: string | null
@@ -10444,7 +10680,10 @@ export type Database = {
           description?: string | null
           id?: string
           industry?: string | null
+          latitude?: number | null
+          longitude?: number | null
           phone?: string | null
+          place_id?: string | null
           postal_code?: string | null
           profile_id?: string | null
           state?: string | null
@@ -11330,9 +11569,38 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_add_partner_member: {
+        Args: {
+          p_partner_id: string
+          p_profile_id: string
+          p_role?: Database["public"]["Enums"]["partner_role"]
+        }
+        Returns: string
+      }
+      admin_assign_company_to_partner: {
+        Args: {
+          p_company_id: string
+          p_company_type: string
+          p_partner_id: string
+        }
+        Returns: string
+      }
+      admin_create_partner: {
+        Args: { p_contact_email?: string; p_name: string }
+        Returns: string
+      }
       admin_delete_org_feature_flag: {
         Args: { p_key: string; p_org_id: string; p_org_type: string }
         Returns: undefined
+      }
+      admin_list_companies: {
+        Args: { p_search?: string }
+        Returns: {
+          company_id: string
+          company_name: string
+          company_type: string
+          current_partner: string
+        }[]
       }
       admin_list_feature_flags: {
         Args: never
@@ -11353,6 +11621,40 @@ export type Database = {
           feature_key: string
           organization_id: string
           organization_type: string
+        }[]
+      }
+      admin_list_partner_customers: {
+        Args: { p_partner_id: string }
+        Returns: {
+          assigned_at: string
+          company_id: string
+          company_name: string
+          company_type: string
+          link_id: string
+          status: string
+        }[]
+      }
+      admin_list_partner_members: {
+        Args: { p_partner_id: string }
+        Returns: {
+          email: string
+          full_name: string
+          member_id: string
+          profile_id: string
+          role: Database["public"]["Enums"]["partner_role"]
+          status: string
+        }[]
+      }
+      admin_list_partners: {
+        Args: never
+        Returns: {
+          contact_email: string
+          created_at: string
+          customer_count: number
+          id: string
+          member_count: number
+          name: string
+          status: string
         }[]
       }
       admin_list_tables: {
@@ -11388,12 +11690,28 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_set_partner_member: {
+        Args: {
+          p_member_id: string
+          p_role?: Database["public"]["Enums"]["partner_role"]
+          p_status?: string
+        }
+        Returns: undefined
+      }
+      admin_set_partner_status: {
+        Args: { p_partner_id: string; p_status: string }
+        Returns: undefined
+      }
       admin_table_columns: {
         Args: { p_table: string }
         Returns: {
           column_name: string
           data_type: string
         }[]
+      }
+      admin_unassign_company: {
+        Args: { p_company_id: string; p_company_type: string }
+        Returns: undefined
       }
       approve_connection_with_onboarding: {
         Args: {
@@ -11622,6 +11940,26 @@ export type Database = {
       }
       cleanup_expired_knowledge_entries: { Args: never; Returns: number }
       command_center_summary_v1: { Args: { p_buyer_id: string }; Returns: Json }
+      company_partner_activity: {
+        Args: { p_company_id: string; p_company_type: string; p_limit?: number }
+        Returns: {
+          action: string
+          actor_name: string
+          created_at: string
+          detail: Json
+          id: string
+          partner_name: string
+          target_name: string
+        }[]
+      }
+      company_partner_info: {
+        Args: { p_company_id: string; p_company_type: string }
+        Returns: {
+          assigned_at: string
+          partner_id: string
+          partner_name: string
+        }[]
+      }
       complete_compliance_task_v1: {
         Args: { p_task_id: string }
         Returns: undefined
@@ -11902,6 +12240,13 @@ export type Database = {
       }
       get_onboarding_supplier_ids_for_buyer: { Args: never; Returns: string[] }
       get_org_ai_key_v1: { Args: { p_buyer_id: string }; Returns: string }
+      get_partner_managed_companies: {
+        Args: never
+        Returns: {
+          company_id: string
+          company_type: string
+        }[]
+      }
       get_platform_admin_invitations: {
         Args: never
         Returns: {
@@ -11979,6 +12324,11 @@ export type Database = {
         Returns: Json
       }
       get_user_buyer_ids: { Args: never; Returns: string[] }
+      get_user_partner_id: { Args: never; Returns: string }
+      get_user_partner_role: {
+        Args: never
+        Returns: Database["public"]["Enums"]["partner_role"]
+      }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: {
@@ -12076,9 +12426,64 @@ export type Database = {
         }
         Returns: string
       }
-      platform_admin_reset_password: {
-        Args: { user_id: string }
-        Returns: Json
+      partner_list_activity: {
+        Args: { p_limit?: number }
+        Returns: {
+          action: string
+          actor_name: string
+          company_id: string
+          company_name: string
+          company_type: string
+          created_at: string
+          detail: Json
+          id: string
+          target_name: string
+        }[]
+      }
+      partner_list_company_users: {
+        Args: { p_company_id: string; p_company_type: string }
+        Returns: {
+          account_disabled: boolean
+          company_user_id: string
+          email: string
+          full_name: string
+          last_login_at: string
+          profile_id: string
+          role: Database["public"]["Enums"]["user_role"]
+          status: string
+        }[]
+      }
+      partner_list_customers: {
+        Args: never
+        Returns: {
+          company_id: string
+          company_name: string
+          company_type: string
+          industry: string
+          user_count: number
+        }[]
+      }
+      partner_list_members: {
+        Args: never
+        Returns: {
+          email: string
+          full_name: string
+          member_id: string
+          profile_id: string
+          role: Database["public"]["Enums"]["partner_role"]
+          status: string
+        }[]
+      }
+      partner_remove_company_user: {
+        Args: { p_company_user_id: string }
+        Returns: undefined
+      }
+      partner_set_company_user_role: {
+        Args: {
+          p_company_user_id: string
+          p_new_role: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: undefined
       }
       platform_admin_update_user_role: {
         Args: {
@@ -12421,6 +12826,7 @@ export type Database = {
         | "viewer"
       contact_role: "recall" | "sales" | "quality" | "compliance" | "general"
       participant_type: "buyer" | "supplier"
+      partner_role: "partner_admin" | "partner_manager" | "partner_agent"
       permission_type:
         | "read"
         | "write"
@@ -12600,6 +13006,7 @@ export const Constants = {
       ],
       contact_role: ["recall", "sales", "quality", "compliance", "general"],
       participant_type: ["buyer", "supplier"],
+      partner_role: ["partner_admin", "partner_manager", "partner_agent"],
       permission_type: [
         "read",
         "write",

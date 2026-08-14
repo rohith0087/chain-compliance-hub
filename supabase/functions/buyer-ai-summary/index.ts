@@ -10,7 +10,7 @@
 // model as read-only facts; enforceNumbers() then discards any bullet quoting a
 // figure that isn't in that set. The model chooses wording and priority only.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/corsHeaders.ts';
 import { isInternalSystemRequest } from '../_shared/systemAuth.ts';
 import { resolveAiConfig, aiComplete } from '../_shared/ai/complete.ts';

@@ -12,7 +12,7 @@
 // a static fallback, so a missing key or model error degrades gracefully rather
 // than blocking request creation.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/corsHeaders.ts';
 import { resolveAiConfig, aiComplete } from '../_shared/ai/complete.ts';
 

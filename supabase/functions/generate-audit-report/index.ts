@@ -1,7 +1,7 @@
 // Generate Audit Report PDF for an engagement.
 // Called by the audit-assistant edge function or directly from UI.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { jsPDF } from "npm:jspdf@2.5.1";
 import autoTableMod from "npm:jspdf-autotable@3.8.2";
 const autoTable: any = (autoTableMod as any)?.default ?? autoTableMod;

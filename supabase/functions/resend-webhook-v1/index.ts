@@ -1,5 +1,5 @@
 import { Webhook } from 'npm:svix@1.42.0';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.2';
 import { getSupabaseSecretKey, requireEnv } from '../_shared/env.ts';
 import { createRequestContext, jsonResponse, logEvent } from '../_shared/requestContext.ts';
 

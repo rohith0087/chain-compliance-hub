@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.2';
 
 // Bring-your-own-AI provider abstraction. One entry point, three providers.
 // OpenAI and xAI share the OpenAI chat-completions shape; Anthropic uses the

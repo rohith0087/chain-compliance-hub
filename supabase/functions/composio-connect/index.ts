@@ -8,7 +8,7 @@
 //
 // We store no credentials. Composio holds them; we keep only metadata.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/corsHeaders.ts';
 import { TOOLKITS, composioUserId, type ToolkitSlug } from '../_shared/composioToolkits.ts';
 

@@ -8,7 +8,7 @@
 // live grant on the third party that the user believes they revoked, which is
 // worse than not offering the button at all.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.2';
 
 const COMPOSIO_BASE = 'https://backend.composio.dev/api/v3.1';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;

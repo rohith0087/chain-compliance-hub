@@ -14,7 +14,7 @@ serve(async (req) => {
   try {
     // Validate authentication
     const authHeader = req.headers.get('Authorization') ?? '';
-    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.50.0');
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.57.2');
     const userClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',

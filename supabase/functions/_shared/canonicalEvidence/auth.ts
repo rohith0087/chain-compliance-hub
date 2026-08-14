@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.2';
 import { getSupabasePublishableKey, getSupabaseSecretKey, requireEnv } from '../env.ts';
 
 export async function createCanonicalEvidenceClients(req: Request) {

@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.2';
 import { extractText as pdfExtractText, getDocumentProxy } from 'npm:unpdf@0.12.1';
 
 type SupabaseAdmin = ReturnType<typeof createClient>;

@@ -9,19 +9,18 @@
 // worse than not offering the button at all.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.2';
+import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/corsHeaders.ts';
 
 const COMPOSIO_BASE = 'https://backend.composio.dev/api/v3.1';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-const cors = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
+  // Shared allowlisted CORS (security audit 2026-09-02, F-12): no wildcard origin.
+  const cors = getCorsHeaders(req);
+  const preflight = handleCorsPreflightRequest(req);
+  if (preflight) return preflight;
   const json = (b: unknown, s = 200) =>
     new Response(JSON.stringify(b), { status: s, headers: { ...cors, 'Content-Type': 'application/json' } });
 

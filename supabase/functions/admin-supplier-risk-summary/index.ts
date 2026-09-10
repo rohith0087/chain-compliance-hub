@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.2';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
       return { type: r.source_type, title: p.title ?? p.Title ?? p.name ?? p.recall_number ?? p.recalling_firm ?? null, url: r.source_url };
     };
 
-    const user = JSON.stringify({
+    const userPayload = JSON.stringify({
       supplier: { name: supplier.company_name, industry: supplier.industry, country: supplier.country },
       signal_count: evs.length,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
       })),
     });
 
-    const summary = await aiComplete(system, user);
+    const summary = await aiComplete(system, userPayload);
     return new Response(JSON.stringify({ success: true, summary: summary.trim() }), { headers });
   } catch (error) {
     console.error('admin-supplier-risk-summary error:', error);

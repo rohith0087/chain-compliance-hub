@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/corsHeaders.ts";
-import { validateSystemSecret, systemAuthErrorResponse } from "../_shared/systemAuth.ts";
+import { isInternalSystemRequest, systemAuthErrorResponse } from "../_shared/systemAuth.ts";
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 
@@ -213,16 +213,18 @@ serve(async (req) => {
   const preflight = handleCorsPreflightRequest(req);
   if (preflight) return preflight;
 
-  // Validate system secret for cron invocations
-  if (!validateSystemSecret(req)) {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  // Trusted callers only: a service-role bearer, SYSTEM_INVOCATION_SECRET, or the
+  // vault-backed cron secret every other scheduled job sends (the daily cron only
+  // sends the latter, which is why this endpoint 401'd every morning).
+  if (!(await isInternalSystemRequest(req, supabase))) {
     return systemAuthErrorResponse(corsHeaders);
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
     console.log('Starting document expiry check...');
 
     // Get only the LATEST approved upload per request (handles document renewals)

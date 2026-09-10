@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.2';
 import { generateRegistrationOptions } from 'npm:@simplewebauthn/server@13.1.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/corsHeaders.ts';
 
@@ -38,6 +38,8 @@ Deno.serve(async (req) => {
       .select('credential_id, transports')
       .eq('user_id', user.id);
 
+    // Security audit 2026-09-02 (F-14): passkey sign-in bypasses the TOTP step, so
+    // every enrolled authenticator must be able to verify the person (PIN/biometric).
     const options = await generateRegistrationOptions({
       rpName: RP_NAME,
       rpID: RP_ID,
@@ -46,7 +48,7 @@ Deno.serve(async (req) => {
       attestationType: 'none',
       authenticatorSelection: {
         residentKey: 'preferred',
-        userVerification: 'preferred',
+        userVerification: 'required',
       },
       excludeCredentials: (existing ?? []).map((c) => ({
         id: c.credential_id,

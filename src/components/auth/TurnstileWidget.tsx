@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useCallback, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 
 interface TurnstileWidgetProps {
@@ -28,18 +28,29 @@ declare global {
   }
 }
 
-export function TurnstileWidget({
+export const TurnstileWidget = forwardRef<{ reset: () => void }, TurnstileWidgetProps>(function TurnstileWidget({
   siteKey,
   onSuccess,
   onExpire,
   onError,
   theme = 'auto',
   size = 'normal',
-}: TurnstileWidgetProps) {
+}, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
-  const scriptLoadedRef = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const callbacks = useRef({ onSuccess, onExpire, onError });
+  useEffect(() => { callbacks.current = { onSuccess, onExpire, onError }; }, [onSuccess, onExpire, onError]);
+
+  const reportError = useCallback((code: string) => {
+    setIsLoading(false);
+    setError(code === '110200'
+      ? 'Security verification is not configured for this address. Contact your administrator.'
+      : `Security verification could not load (${code}). Retry, or open this page in Chrome or Edge.`);
+    callbacks.current.onError?.(code);
+  }, []);
 
   const renderWidget = useCallback(() => {
     if (!containerRef.current || !window.turnstile || widgetIdRef.current) {
@@ -51,52 +62,51 @@ export function TurnstileWidget({
         sitekey: siteKey,
         callback: (token) => {
           setIsLoading(false);
-          onSuccess(token);
+          setError(null);
+          callbacks.current.onSuccess(token);
         },
-        'expired-callback': onExpire,
-        'error-callback': (error) => {
-          setIsLoading(false);
-          onError?.(error);
-        },
+        'expired-callback': () => callbacks.current.onExpire?.(),
+        'error-callback': reportError,
         theme,
         size,
       });
-      // Widget rendered, hide loading after a short delay
-      setTimeout(() => setIsLoading(false), 500);
+      setIsLoading(false);
     } catch (error) {
       console.error('Error rendering Turnstile widget:', error);
-      setIsLoading(false);
+      reportError('render-failed');
     }
-  }, [siteKey, onSuccess, onExpire, onError, theme, size]);
+  }, [siteKey, reportError, theme, size]);
 
   useEffect(() => {
-    // Check if script is already loaded
-    if (window.turnstile) {
-      renderWidget();
-      return;
+    setIsLoading(true);
+    setError(null);
+    let script = document.querySelector<HTMLScriptElement>('script[src*="challenges.cloudflare.com/turnstile/v0/api.js"]');
+    if (script?.dataset.failed === 'true') {
+      script.remove();
+      script = null;
     }
-
-    // Check if script tag already exists
-    const existingScript = document.querySelector('script[src*="turnstile"]');
-    if (existingScript) {
-      window.onTurnstileLoad = renderWidget;
-      return;
+    const needsScript = !script && !window.turnstile;
+    if (needsScript) {
+      script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async = true;
     }
-
-    // Load Turnstile script
-    const script = document.createElement('script');
-    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad';
-    script.async = true;
-    script.defer = true;
-
-    window.onTurnstileLoad = () => {
-      scriptLoadedRef.current = true;
-      renderWidget();
+    const onLoadError = () => {
+      if (script) script.dataset.failed = 'true';
+      reportError('network-error');
     };
-
-    document.head.appendChild(script);
+    script?.addEventListener('load', renderWidget);
+    script?.addEventListener('error', onLoadError);
+    if (window.turnstile) renderWidget();
+    else if (needsScript && script) document.head.appendChild(script);
+    const timeout = window.setTimeout(() => {
+      if (!widgetIdRef.current) reportError('load-timeout');
+    }, 15000);
 
     return () => {
+      window.clearTimeout(timeout);
+      script?.removeEventListener('load', renderWidget);
+      script?.removeEventListener('error', onLoadError);
       // Cleanup widget on unmount
       if (widgetIdRef.current && window.turnstile) {
         try {
@@ -107,31 +117,36 @@ export function TurnstileWidget({
         widgetIdRef.current = null;
       }
     };
-  }, [renderWidget]);
+  }, [renderWidget, reportError, attempt]);
 
   // Reset function exposed via ref if needed
   const reset = useCallback(() => {
-    if (widgetIdRef.current && window.turnstile) {
-      setIsLoading(true);
-      window.turnstile.reset(widgetIdRef.current);
-    }
+    callbacks.current.onExpire?.();
+    setAttempt((value) => value + 1);
   }, []);
+  useImperativeHandle(ref, () => ({ reset }), [reset]);
 
   return (
-    <div className="relative min-h-[65px]">
+    <div className="relative min-h-[65px] space-y-2">
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-muted/30 rounded-lg">
+        <div role="status" className="flex items-center justify-center gap-2 rounded-lg bg-muted/30 p-3 text-sm text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          Loading security verification…
         </div>
       )}
       <div 
         ref={containerRef} 
         className="flex justify-center [&>iframe]:rounded-lg [&>iframe]:shadow-sm [&>*]:!bg-transparent"
-        data-reset={reset}
       />
+      {error && (
+        <div role="alert" className="rounded-lg border border-destructive/40 p-3 text-sm text-muted-foreground">
+          <p>{error}</p>
+          <button type="button" onClick={reset} className="mt-2 font-medium text-foreground underline">Retry verification</button>
+        </div>
+      )}
     </div>
   );
-}
+});
 
 // Hook to manage Turnstile state
 export function useTurnstile() {

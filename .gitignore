@@ -36,3 +36,6 @@ security-briefing-screenshots/
 /shot2.png
 /shot3.png
 /supplier-report.png
+
+# Local environment (was committed by mistake; purge from history separately)
+.env

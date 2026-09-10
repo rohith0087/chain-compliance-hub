@@ -1,6 +1,7 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.2';
 import { verifyAuthenticationResponse } from 'npm:@simplewebauthn/server@13.1.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/corsHeaders.ts';
+import { checkRateLimit, rateLimitResponse } from '../_shared/rateLimiter.ts';
 
 const RP_ID = 'compliance.tracer2c.com';
 const ALLOWED_ORIGINS = [
@@ -9,10 +10,36 @@ const ALLOWED_ORIGINS = [
   'https://id-preview--d13fec6e-29ed-4735-a9d4-57941fe886cc.lovable.app',
 ];
 
+function clientIp(req: Request): string {
+  return (
+    req.headers.get('cf-connecting-ip') ||
+    req.headers.get('x-real-ip') ||
+    (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() ||
+    'unknown'
+  );
+}
+
+/** The challenge the authenticator actually signed, read from clientDataJSON (base64url). */
+function challengeFromAssertion(assertion: { response?: { clientDataJSON?: unknown } }): string | null {
+  try {
+    const raw = String(assertion?.response?.clientDataJSON ?? '');
+    if (!raw) return null;
+    const b64 = raw.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+    const json = JSON.parse(atob(padded));
+    return typeof json?.challenge === 'string' && json.challenge.length > 0 ? json.challenge : null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
   const pre = handleCorsPreflightRequest(req);
   if (pre) return pre;
+
+  const rl = checkRateLimit(`passkey-auth-finish:${clientIp(req)}`, 20, 60_000);
+  if (!rl.allowed) return rateLimitResponse(corsHeaders, rl.retryAfterMs);
 
   try {
     const supabase = createClient(
@@ -41,19 +68,36 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Grab latest authentication challenge that either matches this user OR is discoverable (user_id null)
+    // Security audit 2026-09-02 (F-14): bind the ceremony to the challenge we issued.
+    // The row is looked up by the exact challenge the authenticator signed, must be an
+    // authentication challenge, unexpired, and — when it was issued for a specific
+    // account — that account must own this passkey. It is consumed on first use.
+    const signedChallenge = challengeFromAssertion(assertion);
+    if (!signedChallenge) {
+      return new Response(JSON.stringify({ error: 'Malformed response' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { data: challengeRow } = await supabase
       .from('passkey_challenges')
       .select('id, challenge, expires_at, user_id')
       .eq('ceremony_type', 'authentication')
-      .or(`user_id.eq.${passkey.user_id},user_id.is.null`)
-      .order('created_at', { ascending: false })
-      .limit(1)
+      .eq('challenge', signedChallenge)
       .maybeSingle();
 
     if (!challengeRow || new Date(challengeRow.expires_at) < new Date()) {
       return new Response(JSON.stringify({ error: 'Challenge expired' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Single use, whatever happens next.
+    await supabase.from('passkey_challenges').delete().eq('id', challengeRow.id);
+
+    if (challengeRow.user_id && challengeRow.user_id !== passkey.user_id) {
+      return new Response(JSON.stringify({ error: 'Verification failed' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -79,12 +123,14 @@ Deno.serve(async (req) => {
       publicKeyBytes = new Uint8Array(pk as ArrayBufferLike);
     }
 
+    // requireUserVerification: passkey sign-in skips the TOTP step, so possession of the
+    // authenticator alone is not enough — it must have verified the person (PIN/biometric).
     const verification = await verifyAuthenticationResponse({
       response: assertion,
       expectedChallenge: challengeRow.challenge,
       expectedOrigin: ALLOWED_ORIGINS,
       expectedRPID: RP_ID,
-      requireUserVerification: false,
+      requireUserVerification: true,
       credential: {
         id: passkey.credential_id,
         publicKey: publicKeyBytes,
@@ -107,9 +153,6 @@ Deno.serve(async (req) => {
         last_used_at: new Date().toISOString(),
       })
       .eq('id', passkey.id);
-
-    // Cleanup used challenge
-    await supabase.from('passkey_challenges').delete().eq('id', challengeRow.id);
 
     // Fetch user to get email
     const { data: userRes, error: userErr } = await supabase.auth.admin.getUserById(passkey.user_id);

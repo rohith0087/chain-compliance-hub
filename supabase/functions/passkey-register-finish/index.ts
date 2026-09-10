@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.2';
 import { verifyRegistrationResponse } from 'npm:@simplewebauthn/server@13.1.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/corsHeaders.ts';
 
@@ -8,6 +8,20 @@ const ALLOWED_ORIGINS = [
   'https://chain-compliance-hub.lovable.app',
   'https://id-preview--d13fec6e-29ed-4735-a9d4-57941fe886cc.lovable.app',
 ];
+
+/** The challenge the authenticator actually signed, read from clientDataJSON (base64url). */
+function challengeFromAttestation(attestation: { response?: { clientDataJSON?: unknown } }): string | null {
+  try {
+    const raw = String(attestation?.response?.clientDataJSON ?? '');
+    if (!raw) return null;
+    const b64 = raw.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+    const json = JSON.parse(atob(padded));
+    return typeof json?.challenge === 'string' && json.challenge.length > 0 ? json.challenge : null;
+  } catch {
+    return null;
+  }
+}
 
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -44,14 +58,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Latest challenge for this user
+    // Security audit 2026-09-02 (F-14): bind the ceremony to the exact challenge we
+    // issued to THIS user, and consume it on first use.
+    const signedChallenge = challengeFromAttestation(attestation);
+    if (!signedChallenge) {
+      return new Response(JSON.stringify({ error: 'Malformed response' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { data: challengeRow } = await supabase
       .from('passkey_challenges')
       .select('id, challenge, expires_at')
       .eq('user_id', user.id)
       .eq('ceremony_type', 'registration')
-      .order('created_at', { ascending: false })
-      .limit(1)
+      .eq('challenge', signedChallenge)
       .maybeSingle();
 
     if (!challengeRow || new Date(challengeRow.expires_at) < new Date()) {
@@ -60,12 +81,14 @@ Deno.serve(async (req) => {
       });
     }
 
+    await supabase.from('passkey_challenges').delete().eq('id', challengeRow.id);
+
     const verification = await verifyRegistrationResponse({
       response: attestation,
       expectedChallenge: challengeRow.challenge,
       expectedOrigin: ALLOWED_ORIGINS,
       expectedRPID: RP_ID,
-      requireUserVerification: false,
+      requireUserVerification: true,
     });
 
     if (!verification.verified || !verification.registrationInfo) {
@@ -94,9 +117,6 @@ Deno.serve(async (req) => {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    // Cleanup challenge
-    await supabase.from('passkey_challenges').delete().eq('id', challengeRow.id);
 
     return new Response(JSON.stringify({ verified: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

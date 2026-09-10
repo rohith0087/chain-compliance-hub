@@ -21,7 +21,14 @@
     "resend-webhook-v1": "Requires a valid Svix signature produced with RESEND_WEBHOOK_SECRET over the raw request body.",
     "process-inbound-email-jobs-v1": "Requires a service-role bearer token or the rotated SYSTEM_INVOCATION_SECRET verified against its Vault-backed hash.",
     "cleanup-inbound-email-v1": "Requires a service-role bearer token or the rotated SYSTEM_INVOCATION_SECRET verified against its Vault-backed hash.",
-    "process-evidence-auto-verification-v1": "Requires a service-role bearer token or the rotated SYSTEM_INVOCATION_SECRET verified against its Vault-backed hash."
+    "process-evidence-auto-verification-v1": "Requires a service-role bearer token or the rotated SYSTEM_INVOCATION_SECRET verified against its Vault-backed hash.",
+    "process-compliance-events-v1": "Requires isInternalSystemRequest (service-role bearer, SYSTEM_INVOCATION_SECRET, or the Vault-backed cron secret).",
+    "ingest-ofac-sanctions": "System connector; requires isInternalSystemRequest (service-role bearer, SYSTEM_INVOCATION_SECRET, or the Vault-backed cron secret).",
+    "ingest-cpsc-recalls": "System connector; requires isInternalSystemRequest (service-role bearer, SYSTEM_INVOCATION_SECRET, or the Vault-backed cron secret).",
+    "ingest-openfda-enforcement": "System connector; requires isInternalSystemRequest (service-role bearer, SYSTEM_INVOCATION_SECRET, or the Vault-backed cron secret).",
+    "ingest-adverse-media": "System connector; requires isInternalSystemRequest (service-role bearer, SYSTEM_INVOCATION_SECRET, or the Vault-backed cron secret).",
+    "buyer-ai-summary": "Cron path requires isInternalSystemRequest; user path validates the caller JWT and buyer membership inside the function.",
+    "composio-callback": "OAuth browser redirect target: trusts nothing from the query string, looks the connection up by the id we issued and re-fetches status from Composio server-side."
   },
   "systemSecretFunctions": [
     "generate-audit-report",

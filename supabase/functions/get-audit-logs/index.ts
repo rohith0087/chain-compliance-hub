@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/corsHeaders.ts";
 
 interface AuditLogEntry {
@@ -62,7 +62,9 @@ serve(async (req) => {
       .eq('is_active', true)
       .single();
 
-    const isSuperAdmin = user.user_metadata?.roles?.includes('super_admin');
+    // Server-controlled role sources only: user_metadata is writable by the user
+    // themselves and must never gate access (security audit 2026-09-02, F-04).
+    const { data: isSuperAdmin } = await supabaseAuth.rpc('has_role', { _user_id: user.id, _role: 'super_admin' });
 
     if (!platformAdmin && !isSuperAdmin) {
       return new Response(

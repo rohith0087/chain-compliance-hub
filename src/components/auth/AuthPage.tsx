@@ -762,6 +762,7 @@ const AuthPage = () => {
                       {/* Turnstile Widget - only show when enabled */}
                       {isTurnstileEnabled && (
                         <TurnstileWidget
+                          ref={turnstileRef}
                           siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ''}
                           onSuccess={(token) => setTurnstileToken(token)}
                           onExpire={() => setTurnstileToken(null)}
@@ -1122,6 +1123,7 @@ const AuthPage = () => {
                     {/* Turnstile Widget - only show when enabled */}
                     {isTurnstileEnabled && (
                       <TurnstileWidget
+                        ref={turnstileRef}
                         siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ''}
                         onSuccess={(token) => setTurnstileToken(token)}
                         onExpire={() => setTurnstileToken(null)}
